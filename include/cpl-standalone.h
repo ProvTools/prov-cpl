@@ -104,6 +104,16 @@ typedef long long cpl_return_t;
  */
 #define CPL_E_INSUFFICIENT_RESOURCES	-2
 
+/**
+ * Database backend connection error
+ */
+#define CPL_E_DB_CONNECTION_ERROR		-3
+
+/**
+ * The requested feature is not (yet) implemented
+ */
+#define CPL_E_NOT_IMPLEMENTED			-4
+
 
 /***************************************************************************/
 /** Provenance functions                                                  **/

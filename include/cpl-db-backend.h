@@ -49,11 +49,22 @@ extern "C" {
 /** Database Backend Interface                                            **/
 /***************************************************************************/
 
-typedef struct {
+typedef struct _cpl_db_backend_t {
+
+	/**
+	 * Destructor. If the constructor allocated the backend structure, it
+	 * should be freed by this function
+	 *
+	 * @param backend the pointer to the backend structure
+	 * @param the error code
+	 */
+	cpl_return_t
+	(*cpl_db_destroy)(struct _cpl_db_backend_t* backend);
 
 	/**
 	 * Create an object.
 	 *
+	 * @param backend the pointer to the backend structure
 	 * @param originator the originator ID
 	 * @param name the object name
 	 * @param type the object type
@@ -63,7 +74,8 @@ typedef struct {
 	 * @return the object ID, or a negative value on error
 	 */
 	cpl_id_t
-	(*cpl_db_create_object)(const cpl_id_t originator,
+	(*cpl_db_create_object)(struct _cpl_db_backend_t* backend,
+							const cpl_id_t originator,
 							const char* name,
 							const char* type,
 							const cpl_id_t container,
@@ -73,26 +85,31 @@ typedef struct {
 	 * Look up an object by name. If multiple objects share the same name,
 	 * get the latest one.
 	 *
+	 * @param backend the pointer to the backend structure
 	 * @param name the object name
 	 * @param type the object type
 	 * @return the object ID, or a negative value on error
 	 */
 	cpl_id_t
-	(*cpl_db_lookup_by_name)(const char* name,
+	(*cpl_db_lookup_by_name)(struct _cpl_db_backend_t* backend,
+							 const char* name,
 					   		 const char* type);
 
 	/**
 	 * Determine the version of the object
 	 *
+	 * @param backend the pointer to the backend structure
 	 * @param id the object ID
 	 * @return the object version or an error code
 	 */
 	cpl_version_t
-	(*cpl_db_get_version)(const cpl_id_t id);
+	(*cpl_db_get_version)(struct _cpl_db_backend_t* backend,
+						  const cpl_id_t id);
 
 	/**
 	 * Add an ancestry edge
 	 *
+	 * @param backend the pointer to the backend structure
 	 * @param from_id the edge source ID
 	 * @param from_ver the edge source version
 	 * @param to_id the edge destination ID
@@ -100,7 +117,8 @@ typedef struct {
 	 * @return the error code
 	 */
 	cpl_return_t
-	(*cpl_db_add_ancestry_edge)(const cpl_id_t from_id,
+	(*cpl_db_add_ancestry_edge)(struct _cpl_db_backend_t* backend,
+								const cpl_id_t from_id,
 								const cpl_version_t from_ver,
 								const cpl_id_t to_id,
 								const cpl_version_t to_ver);

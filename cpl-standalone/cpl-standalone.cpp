@@ -53,7 +53,7 @@ static cpl_lock_t cpl_open_objects_lock;
 /**
  * The database backend
  */
-static cpl_db_backend_t cpl_db_backend;
+static cpl_db_backend_t* cpl_db_backend = NULL;
 
 
 
@@ -113,7 +113,7 @@ cpl_get_open_object_handle(const cpl_id_t id, cpl_open_object_t** out)
 
 	// If not, look up the object in a database
 
-	cpl_version_t v = cpl_db_backend.cpl_db_get_version(id);
+	cpl_version_t v = cpl_db_backend->cpl_db_get_version(cpl_db_backend, id);
 	CPL_RUNTIME_VERIFY(v);
 
 
@@ -187,11 +187,12 @@ cpl_create_object(const cpl_id_t originator,
 
 	// Call the backend
 
-	cpl_id_t id = cpl_db_backend.cpl_db_create_object(originator,
-													  name,
-													  type,
-													  container,
-													  container_version);
+	cpl_id_t id = cpl_db_backend->cpl_db_create_object(cpl_db_backend,
+													   originator,
+													   name,
+													   type,
+													   container,
+													   container_version);
 	CPL_RUNTIME_VERIFY(id);
 
 
@@ -230,7 +231,9 @@ cpl_lookup_by_name(const char* name,
 
 	// Call the backend
 
-	cpl_id_t id = cpl_db_backend.cpl_db_lookup_by_name(name, type);
+	cpl_id_t id = cpl_db_backend->cpl_db_lookup_by_name(cpl_db_backend,
+														name,
+														type);
 	CPL_RUNTIME_VERIFY(id);
 
 
@@ -293,10 +296,11 @@ cpl_disclose_data_transfer(const cpl_id_t originator,
 	// Call the database backend (the provenance "depends on"/"input" edges
 	// are oriented opposite to the data flow)
 
-	CPL_RUNTIME_VERIFY(cpl_db_backend.cpl_db_add_ancestry_edge(dest,
-															   dest_version,
-															   source,
-															   source_version));
+	CPL_RUNTIME_VERIFY(cpl_db_backend->cpl_db_add_ancestry_edge(cpl_db_backend,
+																dest,
+																dest_version,
+																source,
+																source_version));
 
 	return CPL_OK;
 }
