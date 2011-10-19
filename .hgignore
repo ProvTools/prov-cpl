@@ -15,4 +15,5 @@ cscope.out
 .directory
 
 syntax: regexp
+^.*/build/.*/project.mk$
 
