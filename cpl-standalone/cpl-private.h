@@ -51,6 +51,10 @@
 using namespace __gnu_cxx;
 #endif
 
+#if defined _WIN32 || defined _WIN64
+using namespace stdext;
+#endif
+
 
 /***************************************************************************/
 /** Types for the private state                                           **/
@@ -59,8 +63,14 @@ using namespace __gnu_cxx;
 /**
  * Hash map: cpl_id_t --> cpl_version_t
  */
+#if defined _WIN32 || defined _WIN64
+typedef hash_map<cpl_id_t, cpl_version_t, cpl_traits_id_t>
+	cpl_hash_map_id_to_version_t;
+#else
 typedef hash_map<cpl_id_t, cpl_version_t, cpl_hash_id_t, cpl_equals_id_t>
 	cpl_hash_map_id_to_version_t;
+#endif
+
 
 /**
  * State of an open object ID
@@ -94,11 +104,17 @@ typedef struct {
 
 } cpl_open_object_t;
 
+
 /**
  * Hash map: cpl_id_t --> cpl_open_object_t*
  */
+#if defined _WIN32 || defined _WIN64
+typedef hash_map<cpl_id_t, cpl_open_object_t*, cpl_traits_id_t>
+	cpl_hash_map_id_to_open_object_t;
+#else
 typedef hash_map<cpl_id_t, cpl_open_object_t*, cpl_hash_id_t, cpl_equals_id_t>
 	cpl_hash_map_id_to_open_object_t;
+#endif
 
 
 /***************************************************************************/

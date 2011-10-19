@@ -166,7 +166,7 @@ cpl_hash_id(const cpl_id_t key)
 {
 	// From: http://www.concentric.net/~ttwang/tech/inthash.htm
 
-	size_t k = key;
+	long long k = key;
 
 	k = (~k) + (k << 21); // k = (k << 21) - k - 1;
 	k = k ^ (k >> 24);
@@ -176,7 +176,7 @@ cpl_hash_id(const cpl_id_t key)
 	k = k ^ (k >> 28);
 	k = k + (k << 31);
 
-	return k;
+	return (size_t) k;
 }
 
 
@@ -223,6 +223,45 @@ struct cpl_hash_id_t
 	inline size_t operator() (const cpl_id_t key) const
 	{
 		return cpl_hash_id(key);
+	}
+};
+
+/**
+ * Traits
+ */
+struct cpl_traits_id_t
+{
+	/**
+	 * Mean bucket size that the container should try not to exceed
+	 */
+	static const size_t bucket_size = 10;
+
+	/**
+	 * Minimum number of buckets, power of 2, >0
+	 */
+	static const size_t min_buckets = (1 << 10);
+
+	/**
+	 * Compute the hash value for the given argument
+	 *
+	 * @param key the argument
+	 * @return the hash value
+	 */
+	inline size_t operator() (const cpl_id_t key) const
+	{
+		return cpl_hash_id(key);
+	}
+
+	/**
+	 * Determine whether the two parameters are equal
+	 *
+	 * @param a the first argument
+	 * @param b the second argument
+	 * @return true if they are equal
+	 */
+	inline bool operator() (const cpl_id_t a, const cpl_id_t b) const
+	{
+		return a == b;
 	}
 };
 

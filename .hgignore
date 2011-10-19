@@ -13,7 +13,17 @@ cscope.out
 *.blg
 *.log
 .directory
-
+*.tlog
+*.obj
+*.lib
+*.lastbuildstate
+*.bak
+*.idb
+*.pdb
+*.sdf
+*.opensdf
+*.ipch
+*.suo
 syntax: regexp
 ^.*/build/.*/project.mk$
 
