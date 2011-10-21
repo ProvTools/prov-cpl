@@ -40,6 +40,10 @@
 #include <sql.h>
 #include <sqlext.h>
 
+#if !(defined _WIN32 || defined _WIN64)
+#include <pthread.h>
+#endif
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -47,6 +51,84 @@ extern "C" {
 #if 0
 }	/* Hack for editors that try to be too smart about indentation */
 #endif
+
+
+/***************************************************************************/
+/** Cross-Platform Compatibility                                          **/
+/***************************************************************************/
+
+#if defined _WIN32 || defined _WIN64
+
+/**
+ * Mutex
+ */
+typedef CRITICAL_SECTION mutex_t;
+
+/**
+ * Initialize a mutex
+ *
+ * @param m the mutex
+ */
+#define mutex_init(m) InitializeCriticalSection(&(m));
+
+/**
+ * Destroy a mutex
+ *
+ * @param m the mutex
+ */
+#define mutex_destroy(m) DeleteCriticalSection(&(m));
+
+/**
+ * Lock a mutex
+ *
+ * @param m the mutex
+ */
+#define mutex_lock(m) EnterCriticalSection(&(m));
+
+/**
+ * Unlock a mutex
+ *
+ * @param m the mutex
+ */
+#define mutex_unlock(m) LeaveCriticalSection(&(m));
+
+#else
+
+/**
+ * Mutex
+ */
+typedef pthread_mutex_t mutex_t;
+
+/**
+ * Initialize a mutex
+ *
+ * @param m the mutex
+ */
+#define mutex_init(m) pthread_mutex_init(&(m), NULL);
+
+/**
+ * Destroy a mutex
+ *
+ * @param m the mutex
+ */
+#define mutex_destroy(m) pthread_mutex_destroy(&(m));
+
+/**
+ * Lock a mutex
+ *
+ * @param m the mutex
+ */
+#define mutex_lock(m) pthread_mutex_lock(&(m));
+
+/**
+ * Unlock a mutex
+ *
+ * @param m the mutex
+ */
+#define mutex_unlock(m) pthread_mutex_unlock(&(m));
+
+#endif
+
 
 
 /***************************************************************************/
@@ -72,6 +154,47 @@ typedef struct {
 	 * The ODBC database connection handle
 	 */
 	SQLHDBC db_connection;
+
+	/**
+	 * The database type
+	 */
+	int db_type;
+
+	/**
+	 * Lock for object creation
+	 */
+	mutex_t create_object_lock;
+
+	/**
+	 * The insert statement for object creation
+	 */
+	SQLHSTMT create_object_insert_stmt;
+
+	/**
+	 * The insert statement for object creation - with container
+	 */
+	SQLHSTMT create_object_insert_container_stmt;
+
+	/**
+	 * The statement that determines the ID of the object that was just created
+	 */
+	SQLHSTMT create_object_get_id_stmt;
+
+	/**
+	 * Insert a new 0th version to the versions table (to be used while
+	 * creating a new object)
+	 */
+	SQLHSTMT create_object_insert_version_stmt;
+
+	/**
+	 * The lock for get_version
+	 */
+	mutex_t get_version_lock;
+
+	/**
+	 * The statement that determines the version of an object given its ID
+	 */
+	SQLHSTMT get_version_stmt;
 
 } cpl_odbc_t;
 

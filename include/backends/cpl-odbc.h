@@ -46,15 +46,43 @@ extern "C" {
 #endif
 
 
+/***************************************************************************/
+/** Database Types                                                        **/
+/***************************************************************************/
+
+/**
+ * A generic SQL database
+ */
+#define CPL_ODBC_GENERIC		0
+#define CPL_ODBC_UNKNOWN		CPL_ODBC_GENERIC
+
+/**
+ * MySQL
+ */
+#define CPL_ODBC_MYSQL			1
+
+/**
+ * PostgreSQL
+ */
+#define CPL_ODBC_POSTGRESQL		2
+
+
+
+/***************************************************************************/
+/** Constructor                                                           **/
+/***************************************************************************/
+
 /**
  * Create an ODBC backend
  *
  * @param connection_string the ODBC connection string
+ * @param db_type the database type
  * @param out the pointer to the database backend variable
  * @return the error code
  */
 cpl_return_t
 cpl_create_odbc_backend(const char* connection_string,
+						int db_type,
 						cpl_db_backend_t** out);
 
 #ifdef __cplusplus

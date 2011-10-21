@@ -38,11 +38,14 @@
 #include <stddef.h>
 
 #ifdef __cplusplus
+#include <exception>
 extern "C" {
 #endif
 #if 0
 }	/* Hack for editors that try to be too smart about indentation */
 #endif
+
+struct _cpl_db_backend_t;
 
 
 /***************************************************************************/
@@ -113,6 +116,64 @@ typedef long long cpl_return_t;
  * The requested feature is not (yet) implemented
  */
 #define CPL_E_NOT_IMPLEMENTED			-4
+
+/**
+ * The CPL library is already initialized
+ */
+#define CPL_E_ALREADY_INITIALIZED		-5
+
+/**
+ * The CPL library was not yet initialized
+ */
+#define CPL_E_NOT_INITIALIZED			-6
+
+/**
+ * The database backend failed to compile a query / prepare a statement
+ */
+#define CPL_E_PREPARE_STATEMENT_ERROR	-7
+
+/**
+ * The database backend failed to execute a statement (or bind a parameter)
+ */
+#define CPL_E_STATEMENT_ERROR			-8
+
+/**
+ * The internal error
+ */
+#define CPL_E_INTERNAL_ERROR			-9
+
+/**
+ * The backend internal error
+ */
+#define CPL_E_BACKEND_INTERNAL_ERROR	-10
+
+/**
+ * The requested object/version/etc. was not found
+ */
+#define CPL_E_NOT_FOUND					-11
+
+
+
+/***************************************************************************/
+/** Initialization and Cleanup                                            **/
+/***************************************************************************/
+
+/**
+ * Initialize the library. Please note that this function is not thread-safe.
+ *
+ * @param backend the database backend
+ * @return the error code
+ */
+cpl_return_t
+cpl_initialize(struct _cpl_db_backend_t* backend);
+
+/**
+ * Perform the cleanup. Please note that this function is not thread-safe.
+ *
+ * @return the error code
+ */
+cpl_return_t
+cpl_cleanup(void);
 
 
 /***************************************************************************/
@@ -272,6 +333,35 @@ struct cpl_traits_id_t
 	inline bool operator() (const cpl_id_t a, const cpl_id_t b) const
 	{
 		return a == b;
+	}
+};
+
+/**
+ * The initialization & cleanup helper
+ */
+class CPL_InitializationHelper
+{
+
+public:
+
+	/**
+	 * Create the instance of the class and initialize the library
+	 *
+	 * @param backend the database backend
+	 */
+	CPL_InitializationHelper(struct _cpl_db_backend_t* backend)
+	{
+		if (!CPL_IS_OK(cpl_initialize(backend))) {
+			throw std::exception();
+		}
+	}
+
+	/**
+	 * Destroy the instance of this class and deinitialize the library
+	 */
+	~CPL_InitializationHelper(void)
+	{
+		cpl_cleanup();
 	}
 };
 

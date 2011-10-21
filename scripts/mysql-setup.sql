@@ -55,7 +55,13 @@ USE cpl;
 
 CREATE TABLE IF NOT EXISTS cpl_objects (
        id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-       name VARCHAR(100),
+       name VARCHAR(255),
        type VARCHAR(100),
-       container INT REFERENCES cpl_objects(id),
+       container_id INT REFERENCES cpl_objects(id),
        container_ver INT);
+
+CREATE TABLE IF NOT EXISTS cpl_versions (
+       id INT NOT NULL REFERENCES cpl_objects(id),
+       version INT,
+       created TIMESTAMP DEFAULT NOW(),
+       PRIMARY KEY(id, version));
