@@ -46,6 +46,11 @@
 static bool cpl_initialized = false;
 
 /**
+ * Flag for whether the library can use the object cache
+ */
+static bool cpl_cache = false;
+
+/**
  * The cache of open objects
  */
 static cpl_hash_map_id_to_open_object_t cpl_open_objects;
@@ -112,16 +117,18 @@ cpl_get_open_object_handle(const cpl_id_t id, cpl_open_object_t** out)
 
 	// Check to see if the object is already in the open objects cache
 
-	cpl_lock(&cpl_open_objects_lock);
-	
-	i = cpl_open_objects.find(id);
-	if (i != cpl_open_objects.end()) {
-		*out = i->second;
-		cpl_lock(&(*out)->locked);
+	if (cpl_cache) {
+		cpl_lock(&cpl_open_objects_lock);
+		
+		i = cpl_open_objects.find(id);
+		if (i != cpl_open_objects.end()) {
+			*out = i->second;
+			cpl_lock(&(*out)->locked);
+			cpl_unlock(&cpl_open_objects_lock);
+			return CPL_OK;
+		}
 		cpl_unlock(&cpl_open_objects_lock);
-		return CPL_OK;
 	}
-	cpl_unlock(&cpl_open_objects_lock);
 
 
 	// If not, look up the object in a database
@@ -133,27 +140,58 @@ cpl_get_open_object_handle(const cpl_id_t id, cpl_open_object_t** out)
 	// Create the corresponding in-memory state, but do another check just
 	// in case
 
-	cpl_lock(&cpl_open_objects_lock);
-	
-	i = cpl_open_objects.find(id);
-	if (i != cpl_open_objects.end()) {
-		*out = i->second;
-		cpl_lock(&(*out)->locked);
-		cpl_unlock(&cpl_open_objects_lock);
-		return CPL_OK;
+	if (cpl_cache) {
+		cpl_lock(&cpl_open_objects_lock);
+		
+		i = cpl_open_objects.find(id);
+		if (i != cpl_open_objects.end()) {
+			*out = i->second;
+			cpl_lock(&(*out)->locked);
+			cpl_unlock(&cpl_open_objects_lock);
+			return CPL_OK;
+		}
 	}
 
 	cpl_open_object_t* obj = cpl_new_open_object(v);
 	if (obj == NULL) return CPL_E_INSUFFICIENT_RESOURCES;
-	cpl_open_objects[id] = obj;
 
-	cpl_unlock(&cpl_open_objects_lock);
+	if (cpl_cache) {
+		cpl_open_objects[id] = obj;
+
+		cpl_unlock(&cpl_open_objects_lock);
+	}
 
 
 	// Return
 
 	*out = obj;
 	return CPL_OK;
+}
+
+
+/**
+ * Get a version of an object
+ *
+ * @param id the object ID
+ * @return the version or an error code
+ */
+cpl_version_t
+cpl_get_version(cpl_id_t id)
+{
+	cpl_version_t version;
+
+	if (cpl_cache) {
+		cpl_open_object_t* obj = NULL;
+		CPL_RUNTIME_VERIFY(cpl_get_open_object_handle(id, &obj));
+		version = obj->version;
+		cpl_unlock(&obj->locked);
+	}
+	else {
+		version = cpl_db_backend->cpl_db_get_version(cpl_db_backend, id);
+		CPL_RUNTIME_VERIFY(version);
+	}
+
+	return version;
 }
 
 
@@ -234,14 +272,9 @@ cpl_create_object(const cpl_id_t originator,
 
 	// Get the container version
 
-	cpl_version_t container_version = 0;
-	if (container != CPL_NONE) {
-		cpl_open_object_t* obj_container = NULL;
-		CPL_RUNTIME_VERIFY(cpl_get_open_object_handle(container,
-													  &obj_container));
-		container_version = obj_container->version;
-		cpl_unlock(&obj_container->locked);
-	}
+	cpl_version_t container_version
+		= (container != CPL_NONE) ? cpl_get_version(container) : 0;
+	CPL_RUNTIME_VERIFY(container_version);
 
 
 	// Call the backend
@@ -257,14 +290,16 @@ cpl_create_object(const cpl_id_t originator,
 
 	// Create an in-memory state
 
-	cpl_open_object_t* obj = cpl_new_open_object(0);
-	if (obj == NULL) return CPL_E_INSUFFICIENT_RESOURCES;
-	cpl_unlock(&obj->locked);
+	if (cpl_cache) {
+		cpl_open_object_t* obj = cpl_new_open_object(0);
+		if (obj == NULL) return CPL_E_INSUFFICIENT_RESOURCES;
+		cpl_unlock(&obj->locked);
 
-	cpl_lock(&cpl_open_objects_lock);
-	assert(cpl_open_objects.find(id) == cpl_open_objects.end());
-	cpl_open_objects[id] = obj;
-	cpl_unlock(&cpl_open_objects_lock);
+		cpl_lock(&cpl_open_objects_lock);
+		assert(cpl_open_objects.find(id) == cpl_open_objects.end());
+		cpl_open_objects[id] = obj;
+		cpl_unlock(&cpl_open_objects_lock);
+	}
 
 	return id;
 }
@@ -328,17 +363,17 @@ cpl_disclose_data_transfer(const cpl_id_t originator,
 
 	// Get the data source version
 
-	cpl_open_object_t* obj_source = NULL;
-	CPL_RUNTIME_VERIFY(cpl_get_open_object_handle(source, &obj_source));
-	cpl_version_t source_version = obj_source->version;
-	cpl_unlock(&obj_source->locked);
-	obj_source = NULL;
+	cpl_version_t source_version = cpl_get_version(source);
+	CPL_RUNTIME_VERIFY(source_version);
 
 
 	// Get the handle of the destination
 
 	cpl_open_object_t* obj_dest = NULL;
 	CPL_RUNTIME_VERIFY(cpl_get_open_object_handle(dest, &obj_dest));
+
+
+	// TODO Auto-delete the object if !cpl_cache
 
 
 	// Automatically unlock the object if it is still locked by the time

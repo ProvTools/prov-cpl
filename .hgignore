@@ -27,4 +27,5 @@ cscope.out
 *.kate-swp
 syntax: regexp
 ^.*/build/.*/project.mk$
+^.*/build/.*/.*$
 

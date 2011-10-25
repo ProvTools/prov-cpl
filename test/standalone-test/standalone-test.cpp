@@ -67,10 +67,10 @@ main(int argc, char** argv)
 
 	cpl_id_t obj; 
 
-	//obj = cpl_create_object(0, "Object", "File", CPL_NONE);
-	//printf("cpl_create_object --> %lld\n", obj);
+	obj = cpl_create_object(0, "Object", "File", CPL_NONE);
+	printf("cpl_create_object --> %lld\n", obj);
 
-	obj = cpl_create_object(0, "Object-Yay", "File", 1);
+	obj = cpl_create_object(0, "Object-Yay", "File", obj);
 	printf("cpl_create_object --> %lld\n", obj);
 
 	return 0;

@@ -94,7 +94,7 @@ public:
 	/**
 	 * Destroy the class
 	 */
-	~CPL_AutoUnlock(void) { cpl_unlock(m_lock); }
+	~CPL_AutoUnlock(void) { if (m_lock != NULL) cpl_unlock(m_lock); }
 };
 
 
