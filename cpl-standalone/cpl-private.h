@@ -152,7 +152,7 @@ cpl_get_open_object_handle(const cpl_id_t id, cpl_open_object_t** out);
  * @param x the statement to run
  */
 #define CPL_RUNTIME_VERIFY(x) { \
-	cpl_return_t _x = (cpl_return_t) (x); if (!CPL_IS_OK(_x)) return _x; }
+	cpl_return_t _x = (cpl_return_t) (x); if (!CPL_IS_OK(_x)) return (int) _x; }
 
 /**
  * Ensure that the argument is not NULL

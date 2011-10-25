@@ -25,7 +25,9 @@ cscope.out
 *.ipch
 *.suo
 *.kate-swp
+^.*/Debug/.*$
 syntax: regexp
 ^.*/build/.*/project.mk$
 ^.*/build/.*/.*$
-
+^Debug/.*$
+/Debug/

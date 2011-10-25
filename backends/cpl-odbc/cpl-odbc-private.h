@@ -143,7 +143,7 @@ typedef struct {
 	/**
 	 * The backend interface (must be first)
 	 */
-	cpl_db_backend_t interface;
+	cpl_db_backend_t backend;
 
 	/**
 	 * The ODBC environment

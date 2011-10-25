@@ -58,7 +58,7 @@ print_odbc_error(const char *fn, SQLHANDLE handle, SQLSMALLINT type)
 {
 	// From: http://www.easysoft.com/developer/languages/c/odbc_tutorial.html
 
-	SQLINTEGER	 i = 0;
+	SQLSMALLINT	 i = 0;
 	SQLINTEGER	 native;
 	SQLCHAR	 state[ 7 ];
 	SQLCHAR	 text[256];
@@ -177,7 +177,7 @@ cpl_create_odbc_backend(const char* connection_string,
 
 	cpl_odbc_t* odbc = new cpl_odbc_t;
 	if (odbc == NULL) return CPL_E_INSUFFICIENT_RESOURCES;
-	memcpy(&odbc->interface, &CPL_ODBC_BACKEND, sizeof(odbc->interface));
+	memcpy(&odbc->backend, &CPL_ODBC_BACKEND, sizeof(odbc->backend));
 	odbc->db_type = db_type;
 
 
@@ -199,7 +199,14 @@ cpl_create_odbc_backend(const char* connection_string,
 		r = CPL_E_INSUFFICIENT_RESOURCES;
 		goto err_sync;
 	}
+
+#ifdef _WINDOWS
+	strcpy_s((char*) connection_string_copy,
+			 strlen(connection_string) + 1,
+			 connection_string);
+#else
 	strcpy((char*) connection_string_copy, connection_string);
+#endif
 
 	SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &odbc->db_environment);
 	SQLSetEnvAttr(odbc->db_environment,
@@ -526,7 +533,7 @@ cpl_odbc_get_version(struct _cpl_db_backend_t* backend,
 	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
 	
 	SQLRETURN ret;
-	long r;
+	long long r;
 
 	mutex_lock(odbc->get_version_lock);
 
@@ -555,14 +562,14 @@ cpl_odbc_get_version(struct _cpl_db_backend_t* backend,
 	r = cpl_sql_fetch_single_llong(stmt);
 	if (!CPL_IS_OK(r)) {
 		mutex_unlock(odbc->get_version_lock);
-		return r;
+		return (cpl_version_t) r;
 	}
 
 
 	// Cleanup
 
 	mutex_unlock(odbc->get_version_lock);
-	return r;
+	return (cpl_version_t) r;
 
 
 	// Error handling
