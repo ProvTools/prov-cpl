@@ -1,0 +1,29 @@
+syntax: glob
+*~
+*.o
+*.d
+*.dep
+*.swp
+*.a
+*.so
+cscope.out
+*.orig
+*.aux
+*.bbl
+*.blg
+*.log
+.directory
+*.tlog
+*.obj
+*.lib
+*.lastbuildstate
+*.bak
+*.idb
+*.pdb
+*.sdf
+*.opensdf
+*.ipch
+*.suo
+syntax: regexp
+^.*/build/.*/project.mk$
+
