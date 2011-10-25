@@ -1,5 +1,5 @@
 /*
- * stdafx.h
+ * cpl-odbc.h
  * Core Provenance Library
  *
  * Copyright 2011
@@ -32,20 +32,62 @@
  * Contributor(s): Peter Macko
  */
 
-#include <cassert>
-#include <cstddef>
-#include <cstdio>
+#ifndef __CPL_ODBC_H__
+#define __CPL_ODBC_H__
 
-#if defined _WIN64 || defined _WIN32
-#define _WINDOWS
+#include <cpl-db-backend.h>
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+#if 0
+}	/* Hack for editors that try to be too smart about indentation */
 #endif
 
-#ifdef _WINDOWS
-#include <windows.h>
-#include <intrin.h>
+
+/***************************************************************************/
+/** Database Types                                                        **/
+/***************************************************************************/
+
+/**
+ * A generic SQL database
+ */
+#define CPL_ODBC_GENERIC		0
+#define CPL_ODBC_UNKNOWN		CPL_ODBC_GENERIC
+
+/**
+ * MySQL
+ */
+#define CPL_ODBC_MYSQL			1
+
+/**
+ * PostgreSQL
+ */
+#define CPL_ODBC_POSTGRESQL		2
+
+
+
+/***************************************************************************/
+/** Constructor                                                           **/
+/***************************************************************************/
+
+/**
+ * Create an ODBC backend
+ *
+ * @param connection_string the ODBC connection string
+ * @param db_type the database type
+ * @param out the pointer to the database backend variable
+ * @return the error code
+ */
+cpl_return_t
+cpl_create_odbc_backend(const char* connection_string,
+						int db_type,
+						cpl_db_backend_t** out);
+
+#ifdef __cplusplus
+}
 #endif
 
-#ifdef __unix__
-#include <unistd.h>
 #endif
 

@@ -24,6 +24,7 @@ cscope.out
 *.opensdf
 *.ipch
 *.suo
+*.kate-swp
 syntax: regexp
 ^.*/build/.*/project.mk$
 

@@ -41,6 +41,11 @@
 /***************************************************************************/
 
 /**
+ * Flag marking whether the library has been initialized
+ */
+static bool cpl_initialized = false;
+
+/**
  * The cache of open objects
  */
 static cpl_hash_map_id_to_open_object_t cpl_open_objects;
@@ -53,13 +58,20 @@ static cpl_lock_t cpl_open_objects_lock;
 /**
  * The database backend
  */
-static cpl_db_backend_t cpl_db_backend;
+static cpl_db_backend_t* cpl_db_backend = NULL;
 
 
 
 /***************************************************************************/
 /** Private API                                                           **/
 /***************************************************************************/
+
+
+/**
+ * Make sure that the library has been initialized
+ */
+#define CPL_ENSURE_INITALIZED { \
+	if (!cpl_initialized) return CPL_E_NOT_INITIALIZED; }
 
 
 /**
@@ -95,13 +107,14 @@ cpl_return_t
 cpl_get_open_object_handle(const cpl_id_t id, cpl_open_object_t** out)
 {
 	assert(out != NULL);
+	cpl_hash_map_id_to_open_object_t::iterator i; 
 
 
 	// Check to see if the object is already in the open objects cache
 
 	cpl_lock(&cpl_open_objects_lock);
 	
-	cpl_hash_map_id_to_open_object_t::iterator i = cpl_open_objects.find(id);
+	i = cpl_open_objects.find(id);
 	if (i != cpl_open_objects.end()) {
 		*out = i->second;
 		cpl_lock(&(*out)->locked);
@@ -113,7 +126,7 @@ cpl_get_open_object_handle(const cpl_id_t id, cpl_open_object_t** out)
 
 	// If not, look up the object in a database
 
-	cpl_version_t v = cpl_db_backend.cpl_db_get_version(id);
+	cpl_version_t v = cpl_db_backend->cpl_db_get_version(cpl_db_backend, id);
 	CPL_RUNTIME_VERIFY(v);
 
 
@@ -146,6 +159,49 @@ cpl_get_open_object_handle(const cpl_id_t id, cpl_open_object_t** out)
 
 
 /***************************************************************************/
+/** Initialization and Cleanup                                            **/
+/***************************************************************************/
+
+
+/**
+ * Initialize the library. Please note that this function is not thread-safe.
+ *
+ * @param backend the database backend
+ * @return the error code
+ */
+extern "C" cpl_return_t
+cpl_initialize(struct _cpl_db_backend_t* backend)
+{
+	CPL_ENSURE_NOT_NULL(backend);
+	if (cpl_initialized) return CPL_E_ALREADY_INITIALIZED;
+	cpl_initialized = true;
+
+	cpl_db_backend = backend;
+
+	return CPL_OK;
+}
+
+
+/**
+ * Perform the cleanup. Please note that this function is not thread-safe.
+ *
+ * @return the error code
+ */
+extern "C" cpl_return_t
+cpl_cleanup(void)
+{
+	CPL_ENSURE_INITALIZED;
+	cpl_initialized = false;
+
+	cpl_db_backend->cpl_db_destroy(cpl_db_backend);
+	cpl_db_backend = NULL;
+
+	return CPL_OK;
+}
+
+
+
+/***************************************************************************/
 /** Public API                                                            **/
 /***************************************************************************/
 
@@ -166,6 +222,9 @@ cpl_create_object(const cpl_id_t originator,
 				  const char* type,
 				  const cpl_id_t container)
 {
+	CPL_ENSURE_INITALIZED;
+
+
 	// Argument check
 
 	CPL_ENSURE_ORIGINATOR(originator);
@@ -187,11 +246,12 @@ cpl_create_object(const cpl_id_t originator,
 
 	// Call the backend
 
-	cpl_id_t id = cpl_db_backend.cpl_db_create_object(originator,
-													  name,
-													  type,
-													  container,
-													  container_version);
+	cpl_id_t id = cpl_db_backend->cpl_db_create_object(cpl_db_backend,
+													   originator,
+													   name,
+													   type,
+													   container,
+													   container_version);
 	CPL_RUNTIME_VERIFY(id);
 
 
@@ -222,6 +282,9 @@ extern "C" cpl_id_t
 cpl_lookup_by_name(const char* name,
 				   const char* type)
 {
+	CPL_ENSURE_INITALIZED;
+
+
 	// Argument check
 
 	CPL_ENSURE_NOT_NULL(name);
@@ -230,7 +293,9 @@ cpl_lookup_by_name(const char* name,
 
 	// Call the backend
 
-	cpl_id_t id = cpl_db_backend.cpl_db_lookup_by_name(name, type);
+	cpl_id_t id = cpl_db_backend->cpl_db_lookup_by_name(cpl_db_backend,
+														name,
+														type);
 	CPL_RUNTIME_VERIFY(id);
 
 
@@ -253,6 +318,9 @@ cpl_disclose_data_transfer(const cpl_id_t originator,
 						   const cpl_id_t source,
 						   const cpl_id_t dest)
 {
+	CPL_ENSURE_INITALIZED;
+
+
 	// Check arguments
 
 	CPL_ENSURE_ORIGINATOR(originator);
@@ -293,10 +361,11 @@ cpl_disclose_data_transfer(const cpl_id_t originator,
 	// Call the database backend (the provenance "depends on"/"input" edges
 	// are oriented opposite to the data flow)
 
-	CPL_RUNTIME_VERIFY(cpl_db_backend.cpl_db_add_ancestry_edge(dest,
-															   dest_version,
-															   source,
-															   source_version));
+	CPL_RUNTIME_VERIFY(cpl_db_backend->cpl_db_add_ancestry_edge(cpl_db_backend,
+																dest,
+																dest_version,
+																source,
+																source_version));
 
 	return CPL_OK;
 }

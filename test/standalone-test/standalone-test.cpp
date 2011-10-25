@@ -1,5 +1,5 @@
 /*
- * stdafx.h
+ * standalone-test.cpp
  * Core Provenance Library
  *
  * Copyright 2011
@@ -32,20 +32,47 @@
  * Contributor(s): Peter Macko
  */
 
-#include <cassert>
-#include <cstddef>
-#include <cstdio>
+#include "stdafx.h"
+#include <backends/cpl-odbc.h>
+#include <cpl-standalone.h>
 
-#if defined _WIN64 || defined _WIN32
-#define _WINDOWS
-#endif
 
-#ifdef _WINDOWS
-#include <windows.h>
-#include <intrin.h>
-#endif
+/**
+ * The main function
+ *
+ * @param argc the number of command-line arguments
+ * @param argv the vector of command-line arguments
+ * @return the exit code
+ */
+int
+main(int argc, char** argv)
+{
+	// Initialize
 
-#ifdef __unix__
-#include <unistd.h>
-#endif
+	cpl_db_backend_t* backend;
+	cpl_return_t ret;
+
+	ret = cpl_create_odbc_backend("DSN=CPL;UID=cpl;PWD=cplcplcpl;",
+								  CPL_ODBC_MYSQL,
+								  &backend);
+	if (!CPL_IS_OK(ret)) {
+		fprintf(stderr, "Could not open the ODBC connection\n");
+		return 1;
+	}
+
+	CPL_InitializationHelper __cpl(backend); (void) __cpl;
+
+
+	// Yay
+
+	cpl_id_t obj; 
+
+	//obj = cpl_create_object(0, "Object", "File", CPL_NONE);
+	//printf("cpl_create_object --> %lld\n", obj);
+
+	obj = cpl_create_object(0, "Object-Yay", "File", 1);
+	printf("cpl_create_object --> %lld\n", obj);
+
+	return 0;
+}
 
