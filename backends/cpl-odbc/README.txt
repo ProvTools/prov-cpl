@@ -5,6 +5,7 @@
 Contents:
   1. Installing ODBC in Ubuntu
   2. Installing ODBC data sources in Ubuntu
+  3. Installing ODBC data sources in Windows
 
 Copyright 2011 The President and Fellows of Harvard College.
 Contributor(s): Peter Macko
@@ -28,9 +29,9 @@ Packages for ODBC drivers:
 
 After you install the MySQL driver, add the following to /etc/odbcinst.ini:
 
-[MySQL]                                                                                                                                                                                                        
-Description     = MySQL driver                                                                                                                                                                                 
-Driver          = /usr/lib/odbc/libmyodbc.so                                                                                                                                                                   
+[MySQL]
+Description     = MySQL driver
+Driver          = /usr/lib/odbc/libmyodbc.so
 Setup           = /usr/lib/odbc/libodbcmyS.so
 
 If you install the PostgreSQL driver, the installer performs the corresponding
@@ -59,3 +60,13 @@ Option          =
 Stmt            = 
 
 You can verify that the data source is installed by running: odbcinst -q -s
+
+
+  3. Installing ODBC data sources in Windows
+----------------------------------------------
+
+ODBC should be already installed if you are using a Server, a Professional, or
+an Ultimate edition of Microsoft Windows. To add a data source, please use the
+ODBC Data Source Administrator, located in Administrative Tools in the Control
+Panel.
+
