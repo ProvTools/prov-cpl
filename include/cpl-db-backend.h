@@ -65,7 +65,7 @@ typedef struct _cpl_db_backend_t {
 	 * Create an object.
 	 *
 	 * @param backend the pointer to the backend structure
-	 * @param originator the originator ID
+	 * @param originator the object originator
 	 * @param name the object name
 	 * @param type the object type
 	 * @param container the ID of the object that should contain this object
@@ -75,7 +75,7 @@ typedef struct _cpl_db_backend_t {
 	 */
 	cpl_id_t
 	(*cpl_db_create_object)(struct _cpl_db_backend_t* backend,
-							const cpl_id_t originator,
+							const char* originator,
 							const char* name,
 							const char* type,
 							const cpl_id_t container,
@@ -86,14 +86,16 @@ typedef struct _cpl_db_backend_t {
 	 * get the latest one.
 	 *
 	 * @param backend the pointer to the backend structure
+	 * @param originator the object originator
 	 * @param name the object name
 	 * @param type the object type
 	 * @return the object ID, or a negative value on error
 	 */
 	cpl_id_t
-	(*cpl_db_lookup_by_name)(struct _cpl_db_backend_t* backend,
-							 const char* name,
-					   		 const char* type);
+	(*cpl_db_lookup_object)(struct _cpl_db_backend_t* backend,
+							const char* originator,
+							const char* name,
+					   		const char* type);
 
 	/**
 	 * Determine the version of the object
@@ -114,6 +116,7 @@ typedef struct _cpl_db_backend_t {
 	 * @param from_ver the edge source version
 	 * @param to_id the edge destination ID
 	 * @param to_ver the edge destination version
+	 * @param type the data or the control dependency type
 	 * @return the error code
 	 */
 	cpl_return_t
@@ -121,7 +124,8 @@ typedef struct _cpl_db_backend_t {
 								const cpl_id_t from_id,
 								const cpl_version_t from_ver,
 								const cpl_id_t to_id,
-								const cpl_version_t to_ver);
+								const cpl_version_t to_ver,
+								const int type);
 
 } cpl_db_backend_t;
 

@@ -78,6 +78,61 @@ typedef long long cpl_return_t;
  */
 #define CPL_NONE						0
 
+/**
+ * An invalid version number
+ */
+#define CPL_VERSION_NONE				((cpl_version_t) -1)
+
+
+/***************************************************************************/
+/** Dependency Edge Types                                                 **/
+/***************************************************************************/
+
+/**
+ * The data dependency category
+ */
+#define CPL_DEPENDENCY_CATEGORY_DATA	1
+
+/**
+ * The control dependency category
+ */
+#define CPL_DEPENDENCY_CATEGORY_CONTROL	2
+
+
+/**
+ * Data dependency
+ *
+ * @param n the dependency subtype
+ */
+#define CPL_DATA_DEPENDENCY(n)		((CPL_DEPENDENCY_CATEGORY_DATA << 8) | (n))
+
+/**
+ * Control dependency
+ *
+ * @param n the dependency subtype
+ */
+#define CPL_CONTROL_DEPENDENCY(n)	((CPL_DEPENDENCY_CATEGORY_CONTROL<<8) | (n))
+
+
+/**
+ * Return the dependency category
+ *
+ * @param d the dependency code
+ * @return the dependency category
+ */
+#define CPL_GET_DEPENDENCY_CATEGORY(d)	((d) >> 8)
+
+
+/**
+ * Generic data dependency
+ */
+#define CPL_DATA_INPUT					CPL_DATA_DEPENDENCY(0)
+
+/**
+ * Generic control dependency
+ */
+#define CPL_CONTROL_OP					CPL_CONTROL_DEPENDENCY(0)
+
 
 /***************************************************************************/
 /** Error Codes                                                           **/
@@ -183,7 +238,8 @@ cpl_cleanup(void);
 /**
  * Create an object.
  *
- * @param originator the originator ID
+ * @param originator the application responsible for creating the object
+ *                   and generating unique names within its namespace
  * @param name the object name
  * @param type the object type
  * @param container the ID of the object that should contain this object
@@ -191,7 +247,7 @@ cpl_cleanup(void);
  * @return the object ID, or a negative value on error
  */
 cpl_id_t
-cpl_create_object(const cpl_id_t originator,
+cpl_create_object(const char* originator,
 				  const char* name,
 				  const char* type,
 				  const cpl_id_t container);
@@ -200,26 +256,28 @@ cpl_create_object(const cpl_id_t originator,
  * Look up an object by name. If multiple objects share the same name,
  * get the latest one.
  *
+ * @param originator the object originator
  * @param name the object name
  * @param type the object type
  * @return the object ID, or a negative value on error
  */
 cpl_id_t
-cpl_lookup_by_name(const char* name,
-				   const char* type);
+cpl_lookup_object(const char* originator,
+				  const char* name,
+				  const char* type);
 
 /**
- * Disclose a data transfer.
+ * Disclose a data flow.
  *
- * @param originator the provenance originator ID
- * @param source the source object
- * @param dest the destination object
+ * @param data_dest the destination object
+ * @param data_source the source object
+ * @param type the data dependency edge type
  * @return the operation return value
  */
 cpl_return_t
-cpl_disclose_data_transfer(const cpl_id_t originator,
-						   const cpl_id_t source,
-						   const cpl_id_t dest);
+cpl_data_flow(const cpl_id_t data_dest,
+			  const cpl_id_t data_source,
+			  const int type);
 
 
 /***************************************************************************/

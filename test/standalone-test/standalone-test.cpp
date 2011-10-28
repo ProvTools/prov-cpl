@@ -36,6 +36,8 @@
 #include <backends/cpl-odbc.h>
 #include <cpl-standalone.h>
 
+#define ORIGINATOR "standalone-test"
+
 
 /**
  * The main function
@@ -67,11 +69,17 @@ main(int argc, char** argv)
 
 	cpl_id_t obj; 
 
-	obj = cpl_create_object(0, "Object", "File", CPL_NONE);
+	obj = cpl_create_object(ORIGINATOR, "Object", "File", CPL_NONE);
 	printf("cpl_create_object --> %lld\n", obj);
 
-	obj = cpl_create_object(0, "Object-Yay", "File", obj);
-	printf("cpl_create_object --> %lld\n", obj);
+	obj = cpl_lookup_object(ORIGINATOR, "Object", "File");
+	printf("cpl_lookup_object --> %lld\n", obj);
+
+	cpl_id_t obj2 = cpl_create_object(ORIGINATOR, "Object-Yay", "File", obj);
+	printf("cpl_create_object --> %lld\n", obj2);
+
+	ret = cpl_data_flow(obj2, obj, CPL_DATA_INPUT);
+	printf("cpl_data_flow --> %lld\n", ret);
 
 	return 0;
 }

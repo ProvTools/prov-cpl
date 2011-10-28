@@ -184,7 +184,10 @@ cpl_create_odbc_backend(const char* connection_string,
 	// Initialize the synchronization primitives
 
 	mutex_init(odbc->create_object_lock);
+	mutex_init(odbc->lookup_object_lock);
 	mutex_init(odbc->get_version_lock);
+	mutex_init(odbc->add_ancestry_edge_lock);
+	mutex_init(odbc->has_immediate_ancestor_lock);
 
 
 	// Open the ODBC connection
@@ -238,7 +241,11 @@ cpl_create_odbc_backend(const char* connection_string,
 	ALLOC_STMT(create_object_insert_container_stmt);
 	ALLOC_STMT(create_object_get_id_stmt);
 	ALLOC_STMT(create_object_insert_version_stmt);
+	ALLOC_STMT(lookup_object_stmt);
 	ALLOC_STMT(get_version_stmt);
+	ALLOC_STMT(add_ancestry_edge_stmt);
+	ALLOC_STMT(has_immediate_ancestor_stmt);
+	ALLOC_STMT(has_immediate_ancestor_with_ver_stmt);
 
 #undef ALLOC_STMT
 
@@ -256,22 +263,22 @@ cpl_create_odbc_backend(const char* connection_string,
 	if (db_type == CPL_ODBC_POSTGRESQL) {
 		// TODO Check whether this works
 		PREPARE(create_object_insert_stmt,
-				"INSERT INTO cpl_objects SET name=?, type=? "
+				"INSERT INTO cpl_objects SET originator=?, name=?, type=? "
 				"RETURNING id;");
 		PREPARE(create_object_insert_container_stmt,
-				"INSERT INTO cpl_objects SET name=?, type=?, "
+				"INSERT INTO cpl_objects SET originator=?, name=?, type=?, "
 				"container_id=?, container_ver=? RETURNING id;");
 	}
 	else {
 		PREPARE(create_object_insert_stmt,
-				"INSERT INTO cpl_objects SET name=?, type=?;");
+				"INSERT INTO cpl_objects SET originator=?, name=?, type=?;");
 		PREPARE(create_object_insert_container_stmt,
-				"INSERT INTO cpl_objects SET name=?, type=?, "
+				"INSERT INTO cpl_objects SET originator=?, name=?, type=?, "
 				"container_id=?, container_ver=?;");
 	}
 
 	if (db_type == CPL_ODBC_MYSQL) {
-		// XXX This does not work so well - and it will need to change
+		// NOTE This does not work so well - and it will need to change
 		// if more than one table in the database uses auto increments
 		PREPARE(create_object_get_id_stmt,
 				"SELECT LAST_INSERT_ID();");
@@ -290,8 +297,24 @@ cpl_create_odbc_backend(const char* connection_string,
 	PREPARE(create_object_insert_version_stmt,
 			"INSERT INTO cpl_versions SET id=?, version=0;");
 
+	PREPARE(lookup_object_stmt,
+			"SELECT MAX(id) FROM cpl_objects WHERE originator=? "
+			"AND name=? AND type=?;");
+
 	PREPARE(get_version_stmt,
 			"SELECT MAX(version) FROM cpl_versions WHERE id=?;");
+
+	PREPARE(add_ancestry_edge_stmt,
+			"INSERT INTO cpl_ancestry SET from_id=?, from_version=?, "
+			"to_id=?, to_version=?, type=?;");
+
+	PREPARE(has_immediate_ancestor_stmt,
+			"SELECT to_version FROM cpl_ancestry WHERE to_id=? AND "
+			"to_version<=? AND from_id=? LIMIT 1;");
+
+	PREPARE(has_immediate_ancestor_with_ver_stmt,
+			"SELECT to_version FROM cpl_ancestry WHERE to_id=? AND "
+			"to_version<=? AND from_id=? AND from_version<=? LIMIT 1;");
 
 #undef PREPARE
 
@@ -311,7 +334,11 @@ err_stmts:
 	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->create_object_insert_container_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->create_object_get_id_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->create_object_insert_version_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->lookup_object_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->get_version_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->add_ancestry_edge_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->has_immediate_ancestor_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->has_immediate_ancestor_with_ver_stmt);
 
 	SQLDisconnect(odbc->db_connection);
 
@@ -321,7 +348,10 @@ err_handles:
 
 err_sync:
 	mutex_destroy(odbc->create_object_lock);
+	mutex_destroy(odbc->lookup_object_lock);
 	mutex_destroy(odbc->get_version_lock);
+	mutex_destroy(odbc->add_ancestry_edge_lock);
+	mutex_destroy(odbc->has_immediate_ancestor_lock);
 
 	delete odbc;
 	return r;
@@ -345,12 +375,19 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
 	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->create_object_insert_container_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->create_object_get_id_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->create_object_insert_version_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->lookup_object_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->get_version_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->add_ancestry_edge_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->has_immediate_ancestor_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->has_immediate_ancestor_with_ver_stmt);
 
 	SQLDisconnect(odbc->db_connection);
 	
 	mutex_destroy(odbc->create_object_lock);
+	mutex_destroy(odbc->lookup_object_lock);
 	mutex_destroy(odbc->get_version_lock);
+	mutex_destroy(odbc->add_ancestry_edge_lock);
+	mutex_destroy(odbc->has_immediate_ancestor_lock);
 
 	SQLFreeHandle(SQL_HANDLE_DBC, &odbc->db_connection);
 	SQLFreeHandle(SQL_HANDLE_ENV, &odbc->db_environment);
@@ -360,6 +397,40 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
 	return CPL_OK;
 }
 
+
+/**
+ * Bind a VARCHAR parameter. Jump to "err" on error. Variable "ret" must be
+ * already defined.
+ *
+ * @param stmt the statement
+ * @param arg the argument number
+ * @param size the VARCHAR size
+ * @param value the char* value
+ */
+#define SQL_BIND_VARCHAR(stmt, arg, size, value) { \
+	ret = SQLBindParameter(stmt, arg, SQL_PARAM_INPUT, \
+			SQL_C_CHAR, SQL_VARCHAR, size, 0, \
+			(SQLCHAR*) (value), 0, NULL); \
+	SQL_ASSERT_NO_ERROR(SQLBindParameter, stmt, err); \
+}
+
+
+/**
+ * Bind an INTEGER parameter. Jump to "err" on error. Variable "ret" must be
+ * already defined.
+ *
+ * @param stmt the statement
+ * @param arg the argument number
+ * @param value the int value
+ */
+#define SQL_BIND_INTEGER(stmt, arg, value) { \
+	long long* __p = (long long*) alloca(sizeof(long long)); \
+	*__p = value; \
+	ret = SQLBindParameter(stmt, arg, SQL_PARAM_INPUT, \
+			SQL_C_SBIGINT, SQL_INTEGER, 0, 0, \
+			(void*) __p, 0, NULL); \
+	SQL_ASSERT_NO_ERROR(SQLBindParameter, stmt, err); \
+}
 
 
 /***************************************************************************/
@@ -371,7 +442,7 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
  * Create an object.
  *
  * @param backend the pointer to the backend structure
- * @param originator the originator ID
+ * @param originator the originator
  * @param name the object name
  * @param type the object type
  * @param container the ID of the object that should contain this object
@@ -381,13 +452,13 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
  */
 extern "C" cpl_id_t
 cpl_odbc_create_object(struct _cpl_db_backend_t* backend,
-					   const cpl_id_t originator,
+					   const char* originator,
 					   const char* name,
 					   const char* type,
 					   const cpl_id_t container,
 					   const cpl_version_t container_version)
 {
-	assert(backend != NULL && name != NULL && type != NULL);
+	assert(backend != NULL && originator != NULL && name != NULL && type != NULL);
 	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
 	
 	SQLRETURN ret;
@@ -402,28 +473,13 @@ cpl_odbc_create_object(struct _cpl_db_backend_t* backend,
 		? odbc->create_object_insert_stmt
 		: odbc->create_object_insert_container_stmt;
 
-	ret = SQLBindParameter(stmt, 1, SQL_PARAM_INPUT,
-			SQL_C_CHAR, SQL_VARCHAR, 255, 0,
-			(SQLCHAR*) name, 0, NULL);
-	SQL_ASSERT_NO_ERROR(SQLBindParameter, stmt, err);
-
-	ret = SQLBindParameter(stmt, 2, SQL_PARAM_INPUT,
-			SQL_C_CHAR, SQL_VARCHAR, 100, 0,
-			(SQLCHAR*) type, 0, NULL);
-	SQL_ASSERT_NO_ERROR(SQLBindParameter, stmt, err);
+	SQL_BIND_VARCHAR(stmt, 1, 255, originator);
+	SQL_BIND_VARCHAR(stmt, 2, 255, name);
+	SQL_BIND_VARCHAR(stmt, 3, 100, type);
 
 	if (container != CPL_NONE) {
-		long _container_version = (long) container_version;
-
-		ret = SQLBindParameter(stmt, 3, SQL_PARAM_INPUT,
-				SQL_C_SBIGINT, SQL_INTEGER, 0, 0,
-				(void*) &container, 0, NULL);
-		SQL_ASSERT_NO_ERROR(SQLBindParameter, stmt, err);
-
-		ret = SQLBindParameter(stmt, 4, SQL_PARAM_INPUT,
-				SQL_C_SLONG, SQL_INTEGER, 0, 0,
-				(void*) &_container_version, 0, NULL);
-		SQL_ASSERT_NO_ERROR(SQLBindParameter, stmt, err);
+		SQL_BIND_INTEGER(stmt, 4, container);
+		SQL_BIND_INTEGER(stmt, 5, container_version);
 	}
 
 
@@ -476,12 +532,7 @@ cpl_odbc_create_object(struct _cpl_db_backend_t* backend,
 	// Insert the corresponding entry to the versions table
 
 	stmt = odbc->create_object_insert_version_stmt;
-
-	ret = SQLBindParameter(stmt, 1, SQL_PARAM_INPUT,
-			SQL_C_SBIGINT, SQL_INTEGER, 0, 0,
-			(void*) &r, 0, NULL);
-	SQL_ASSERT_NO_ERROR(SQLBindParameter, stmt, err);
-	
+	SQL_BIND_INTEGER(stmt, 1, r);
 	ret = SQLExecute(stmt);
 	if (!SQL_SUCCEEDED(ret)) {
 		print_odbc_error("SQLExecute", stmt, SQL_HANDLE_STMT);
@@ -505,16 +556,64 @@ err:
  * get the latest one.
  *
  * @param backend the pointer to the backend structure
+ * @param originator the object originator (namespace)
  * @param name the object name
  * @param type the object type
  * @return the object ID, or a negative value on error
  */
 extern "C" cpl_id_t
-cpl_odbc_lookup_by_name(struct _cpl_db_backend_t* backend,
-						const char* name,
-						const char* type)
+cpl_odbc_lookup_object(struct _cpl_db_backend_t* backend,
+					   const char* originator,
+					   const char* name,
+					   const char* type)
 {
-	return CPL_E_NOT_IMPLEMENTED;
+	assert(backend != NULL);
+	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
+	
+	SQLRETURN ret;
+	long long r;
+
+	mutex_lock(odbc->lookup_object_lock);
+
+
+	// Prepare the statement
+
+	SQLHSTMT stmt = odbc->lookup_object_stmt;
+
+	SQL_BIND_VARCHAR(stmt, 1, 255, originator);
+	SQL_BIND_VARCHAR(stmt, 2, 255, name);
+	SQL_BIND_VARCHAR(stmt, 3, 100, type);
+
+
+	// Execute
+	
+	ret = SQLExecute(stmt);
+	if (!SQL_SUCCEEDED(ret)) {
+		print_odbc_error("SQLExecute", stmt, SQL_HANDLE_STMT);
+		goto err;
+	}
+
+
+	// Fetch the result
+
+	r = cpl_sql_fetch_single_llong(stmt);
+	if (!CPL_IS_OK(r)) {
+		mutex_unlock(odbc->lookup_object_lock);
+		return r;
+	}
+
+
+	// Cleanup
+
+	mutex_unlock(odbc->lookup_object_lock);
+	return r;
+
+
+	// Error handling
+
+err:
+	mutex_unlock(odbc->lookup_object_lock);
+	return CPL_E_STATEMENT_ERROR;
 }
 
 
@@ -541,11 +640,7 @@ cpl_odbc_get_version(struct _cpl_db_backend_t* backend,
 	// Prepare the statement
 
 	SQLHSTMT stmt = odbc->get_version_stmt;
-
-	ret = SQLBindParameter(stmt, 1, SQL_PARAM_INPUT,
-			SQL_C_SBIGINT, SQL_INTEGER, 0, 0,
-			(void*) &id, 0, NULL);
-	SQL_ASSERT_NO_ERROR(SQLBindParameter, stmt, err);
+	SQL_BIND_INTEGER(stmt, 1, id);
 
 
 	// Execute
@@ -588,6 +683,7 @@ err:
  * @param from_ver the edge source version
  * @param to_id the edge destination ID
  * @param to_ver the edge destination version
+ * @param type the data or control dependency type
  * @return the error code
  */
 extern "C" cpl_return_t
@@ -595,9 +691,124 @@ cpl_odbc_add_ancestry_edge(struct _cpl_db_backend_t* backend,
 						   const cpl_id_t from_id,
 						   const cpl_version_t from_ver,
 						   const cpl_id_t to_id,
-						   const cpl_version_t to_ver)
+						   const cpl_version_t to_ver,
+						   const int type)
 {
-	return CPL_E_NOT_IMPLEMENTED;
+	assert(backend != NULL);
+	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
+	
+	SQLRETURN ret;
+
+	mutex_lock(odbc->add_ancestry_edge_lock);
+
+
+	// Prepare the statement
+
+	SQLHSTMT stmt = odbc->add_ancestry_edge_stmt;
+	SQL_BIND_INTEGER(stmt, 1, from_id);
+	SQL_BIND_INTEGER(stmt, 2, from_ver);
+	SQL_BIND_INTEGER(stmt, 3, to_id);
+	SQL_BIND_INTEGER(stmt, 4, to_ver);
+	SQL_BIND_INTEGER(stmt, 5, type);
+
+
+	// Execute
+	
+	ret = SQLExecute(stmt);
+	if (!SQL_SUCCEEDED(ret)) {
+		print_odbc_error("SQLExecute", stmt, SQL_HANDLE_STMT);
+		goto err;
+	}
+
+
+	// Cleanup
+
+	mutex_unlock(odbc->add_ancestry_edge_lock);
+	return CPL_OK;
+
+
+	// Error handling
+
+err:
+	mutex_unlock(odbc->add_ancestry_edge_lock);
+	return CPL_E_STATEMENT_ERROR;
+}
+
+
+/**
+ * Determine whether the given object has the given ancestor
+ *
+ * @param backend the pointer to the backend structure
+ * @param object_id the object ID
+ * @param version_hint the object version (if known), or CPL_VERSION_NONE
+ *                     otherwise
+ * @param query_object_id the object that we want to determine whether it
+ *                        is one of the immediate ancestors
+ * @param query_object_max_version the maximum version of the query
+ *                                 object to consider
+ * @return a positive number if yes, 0 if no, or a negative error code
+ */
+extern "C" cpl_return_t
+cpl_odbc_has_immediate_ancestor(struct _cpl_db_backend_t* backend,
+								const cpl_id_t object_id,
+								const cpl_version_t version_hint,
+								const cpl_id_t query_object_id,
+								const cpl_version_t query_object_max_version)
+{
+	assert(backend != NULL);
+	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
+	
+	SQLRETURN ret;
+	long long r;
+	cpl_return_t cr = CPL_E_INTERNAL_ERROR;
+
+	mutex_lock(odbc->has_immediate_ancestor_lock);
+
+
+	// Prepare the statement
+
+	SQLHSTMT stmt = version_hint == CPL_VERSION_NONE 
+		? odbc->has_immediate_ancestor_stmt
+		: odbc->has_immediate_ancestor_with_ver_stmt;
+	SQL_BIND_INTEGER(stmt, 1, query_object_id);
+	SQL_BIND_INTEGER(stmt, 2, query_object_max_version);
+	SQL_BIND_INTEGER(stmt, 3, object_id);
+	if (version_hint != CPL_VERSION_NONE) {
+		SQL_BIND_INTEGER(stmt, 4, version_hint);
+	}
+
+
+	// Execute
+	
+	ret = SQLExecute(stmt);
+	if (!SQL_SUCCEEDED(ret)) {
+		print_odbc_error("SQLExecute", stmt, SQL_HANDLE_STMT);
+		goto err;
+	}
+
+
+	// Fetch the data
+
+	r = cpl_sql_fetch_single_llong(stmt);
+	if (r >= 0) cr = 1;
+	if (r == CPL_E_NOT_FOUND) { r = CPL_OK; cr = 0; }
+	if (!CPL_IS_OK(r)) {
+		mutex_unlock(odbc->has_immediate_ancestor_lock);
+		return r;
+	}
+
+
+	// Cleanup
+
+	mutex_unlock(odbc->has_immediate_ancestor_lock);
+	return cr;
+
+
+	// Error handling
+
+err:
+	mutex_unlock(odbc->has_immediate_ancestor_lock);
+	return CPL_E_STATEMENT_ERROR;
 }
 
 
@@ -612,7 +823,7 @@ cpl_odbc_add_ancestry_edge(struct _cpl_db_backend_t* backend,
 const cpl_db_backend_t CPL_ODBC_BACKEND = {
 	cpl_odbc_destroy,
 	cpl_odbc_create_object,
-	cpl_odbc_lookup_by_name,
+	cpl_odbc_lookup_object,
 	cpl_odbc_get_version,
 	cpl_odbc_add_ancestry_edge,
 };

@@ -187,6 +187,17 @@ typedef struct {
 	SQLHSTMT create_object_insert_version_stmt;
 
 	/**
+	 * The lock for lookup_object
+	 */
+	mutex_t lookup_object_lock;
+
+	/**
+	 * The statement for looking up an object by name (including originator
+	 * and type)
+	 */
+	SQLHSTMT lookup_object_stmt;
+
+	/**
 	 * The lock for get_version
 	 */
 	mutex_t get_version_lock;
@@ -195,6 +206,33 @@ typedef struct {
 	 * The statement that determines the version of an object given its ID
 	 */
 	SQLHSTMT get_version_stmt;
+
+	/**
+	 * The lock for add_ancestry_edge
+	 */
+	mutex_t add_ancestry_edge_lock;
+
+	/**
+	 * The statement that adds a new ancestry edge
+	 */
+	SQLHSTMT add_ancestry_edge_stmt;
+
+	/**
+	 * The lock for has_immediate_ancestor
+	 */
+	mutex_t has_immediate_ancestor_lock;
+
+	/**
+	 * The statement that determines whether the given object is present
+	 * in the immediate ancestry
+	 */
+	SQLHSTMT has_immediate_ancestor_stmt;
+
+	/**
+	 * The statement that determines whether the given object is present
+	 * in the immediate ancestry -- also considering the version of the object
+	 */
+	SQLHSTMT has_immediate_ancestor_with_ver_stmt;
 
 } cpl_odbc_t;
 

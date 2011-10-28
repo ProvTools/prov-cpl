@@ -55,6 +55,7 @@ USE cpl;
 
 CREATE TABLE IF NOT EXISTS cpl_objects (
        id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+       originator VARCHAR(255),
        name VARCHAR(255),
        type VARCHAR(100),
        container_id INT REFERENCES cpl_objects(id),
@@ -65,3 +66,11 @@ CREATE TABLE IF NOT EXISTS cpl_versions (
        version INT,
        created TIMESTAMP DEFAULT NOW(),
        PRIMARY KEY(id, version));
+
+CREATE TABLE IF NOT EXISTS cpl_ancestry (
+       from_id INT NOT NULL REFERENCES cpl_objects(id),
+       from_version INT,
+       to_id INT NOT NULL REFERENCES cpl_objects(id),
+       to_version INT,
+       type INT,
+       PRIMARY KEY(from_id, from_version, to_id, to_version));

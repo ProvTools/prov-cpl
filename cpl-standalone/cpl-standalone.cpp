@@ -247,7 +247,8 @@ cpl_cleanup(void)
 /**
  * Create an object.
  *
- * @param originator the originator ID
+ * @param originator the application responsible for creating the object
+ *                   and generating unique names within its namespace
  * @param name the object name
  * @param type the object type
  * @param container the ID of the object that should contain this object
@@ -255,7 +256,7 @@ cpl_cleanup(void)
  * @return the object ID, or a negative value on error
  */
 extern "C" cpl_id_t
-cpl_create_object(const cpl_id_t originator,
+cpl_create_object(const char* originator,
 				  const char* name,
 				  const char* type,
 				  const cpl_id_t container)
@@ -265,9 +266,10 @@ cpl_create_object(const cpl_id_t originator,
 
 	// Argument check
 
-	CPL_ENSURE_ORIGINATOR(originator);
+	CPL_ENSURE_NOT_NULL(originator);
 	CPL_ENSURE_NOT_NULL(name);
 	CPL_ENSURE_NOT_NULL(type);
+	CPL_ENSURE_NOT_NEGATIVE(container);
 
 
 	// Get the container version
@@ -309,28 +311,32 @@ cpl_create_object(const cpl_id_t originator,
  * Look up an object by name. If multiple objects share the same name,
  * get the latest one.
  *
+ * @param originator the object originator
  * @param name the object name
  * @param type the object type
  * @return the object ID, or a negative value on error
  */
 extern "C" cpl_id_t
-cpl_lookup_by_name(const char* name,
-				   const char* type)
+cpl_lookup_object(const char* originator,
+				  const char* name,
+				  const char* type)
 {
 	CPL_ENSURE_INITALIZED;
 
 
 	// Argument check
 
+	CPL_ENSURE_NOT_NULL(originator);
 	CPL_ENSURE_NOT_NULL(name);
 	CPL_ENSURE_NOT_NULL(type);
 
 
 	// Call the backend
 
-	cpl_id_t id = cpl_db_backend->cpl_db_lookup_by_name(cpl_db_backend,
-														name,
-														type);
+	cpl_id_t id = cpl_db_backend->cpl_db_lookup_object(cpl_db_backend,
+													   originator,
+													   name,
+													   type);
 	CPL_RUNTIME_VERIFY(id);
 
 
@@ -341,36 +347,40 @@ cpl_lookup_by_name(const char* name,
 
 
 /**
- * Disclose a data transfer.
+ * Disclose a data flow.
  *
- * @param originator the provenance originator ID
- * @param source the source object
- * @param dest the destination object
+ * @param data_dest the destination object
+ * @param data_source the source object
+ * @param type the data dependency edge type
  * @return the operation return value
  */
-extern "C" cpl_return_t
-cpl_disclose_data_transfer(const cpl_id_t originator,
-						   const cpl_id_t source,
-						   const cpl_id_t dest)
+cpl_return_t
+cpl_data_flow(const cpl_id_t data_dest,
+			  const cpl_id_t data_source,
+			  const int type)
 {
 	CPL_ENSURE_INITALIZED;
 
 
-	// Check arguments
+	// Check the arguments
 
-	CPL_ENSURE_ORIGINATOR(originator);
+	CPL_ENSURE_NOT_NEGATIVE(data_dest);
+	CPL_ENSURE_NOT_NEGATIVE(data_source);
+	
+	if (CPL_GET_DEPENDENCY_CATEGORY(type) != CPL_DEPENDENCY_CATEGORY_DATA)
+		return CPL_E_INVALID_ARGUMENT;
 
 
 	// Get the data source version
 
-	cpl_version_t source_version = cpl_get_version(source);
+	cpl_version_t source_version = cpl_get_version(data_source);
 	CPL_RUNTIME_VERIFY(source_version);
 
 
 	// Get the handle of the destination
 
 	cpl_open_object_t* obj_dest = NULL;
-	CPL_RUNTIME_VERIFY(cpl_get_open_object_handle(dest, &obj_dest));
+	CPL_RUNTIME_VERIFY(cpl_get_open_object_handle(data_dest, &obj_dest));
 
 
 	// TODO Auto-delete the object if !cpl_cache
@@ -397,10 +407,11 @@ cpl_disclose_data_transfer(const cpl_id_t originator,
 	// are oriented opposite to the data flow)
 
 	CPL_RUNTIME_VERIFY(cpl_db_backend->cpl_db_add_ancestry_edge(cpl_db_backend,
-																dest,
+																data_dest,
 																dest_version,
-																source,
-																source_version));
+																data_source,
+																source_version,
+																type));
 
 	return CPL_OK;
 }

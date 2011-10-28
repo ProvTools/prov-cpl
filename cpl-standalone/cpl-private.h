@@ -163,6 +163,14 @@ cpl_get_open_object_handle(const cpl_id_t id, cpl_open_object_t** out);
 	if ((p) == NULL) return CPL_E_INVALID_ARGUMENT; }
 
 /**
+ * Ensure that the argument is nonnegative
+ *
+ * @param n the number to check
+ */
+#define CPL_ENSURE_NOT_NEGATIVE(n) { \
+	if ((n) < 0) return CPL_E_INVALID_ARGUMENT; }
+
+/**
  * Ensure that the originator is valid
  *
  * @param id the originator ID
