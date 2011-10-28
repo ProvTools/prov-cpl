@@ -412,7 +412,7 @@ cpl_data_flow(const cpl_id_t data_dest,
 																data_source,
 																source_version,
 																type));
-
+	
 	return CPL_OK;
 }
 

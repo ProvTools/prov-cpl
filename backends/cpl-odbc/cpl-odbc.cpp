@@ -826,5 +826,6 @@ const cpl_db_backend_t CPL_ODBC_BACKEND = {
 	cpl_odbc_lookup_object,
 	cpl_odbc_get_version,
 	cpl_odbc_add_ancestry_edge,
+	cpl_odbc_has_immediate_ancestor,
 };
 

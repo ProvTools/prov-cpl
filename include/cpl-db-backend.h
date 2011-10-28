@@ -127,6 +127,26 @@ typedef struct _cpl_db_backend_t {
 								const cpl_version_t to_ver,
 								const int type);
 
+	/**
+	 * Determine whether the given object has the given ancestor
+	 *
+	 * @param backend the pointer to the backend structure
+	 * @param object_id the object ID
+	 * @param version_hint the object version (if known), or CPL_VERSION_NONE
+	 *                     otherwise
+	 * @param query_object_id the object that we want to determine whether it
+	 *                        is one of the immediate ancestors
+	 * @param query_object_max_ver the maximum version of the query
+	 *                             object to consider
+	 * @return a positive number if yes, 0 if no, or a negative error code
+	 */
+	cpl_return_t
+	(*cpl_db_has_immediate_ancestor)(struct _cpl_db_backend_t* backend,
+									 const cpl_id_t object_id,
+									 const cpl_version_t version_hint,
+									 const cpl_id_t query_object_id,
+									 const cpl_version_t query_object_max_ver);
+
 } cpl_db_backend_t;
 
 
