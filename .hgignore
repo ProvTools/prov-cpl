@@ -4,6 +4,7 @@ syntax: glob
 *.d
 *.dep
 *.swp
+*.swo
 *.a
 *.so
 cscope.out
@@ -25,7 +26,7 @@ cscope.out
 *.ipch
 *.suo
 *.kate-swp
-^.*/Debug/.*$
+.DS_Store
 syntax: regexp
 ^.*/build/.*/project.mk$
 ^.*/build/.*/.*$
