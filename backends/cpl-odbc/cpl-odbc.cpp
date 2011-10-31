@@ -335,22 +335,22 @@ cpl_create_odbc_backend(const char* connection_string,
 	assert(!CPL_IS_OK(r));
 
 err_stmts:
-	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->create_object_insert_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->create_object_insert_container_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->create_object_get_id_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->create_object_insert_version_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->lookup_object_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->create_version_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->get_version_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->add_ancestry_edge_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->has_immediate_ancestor_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->has_immediate_ancestor_with_ver_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_object_insert_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_object_insert_container_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_object_get_id_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_object_insert_version_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_object_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_version_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_version_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->add_ancestry_edge_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->has_immediate_ancestor_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->has_immediate_ancestor_with_ver_stmt);
 
 	SQLDisconnect(odbc->db_connection);
 
 err_handles:
-	SQLFreeHandle(SQL_HANDLE_DBC, &odbc->db_connection);
-	SQLFreeHandle(SQL_HANDLE_ENV, &odbc->db_environment);
+	SQLFreeHandle(SQL_HANDLE_DBC, odbc->db_connection);
+	SQLFreeHandle(SQL_HANDLE_ENV, odbc->db_environment);
 
 err_sync:
 	mutex_destroy(odbc->create_object_lock);
@@ -376,20 +376,25 @@ extern "C" cpl_return_t
 cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
 {
 	assert(backend != NULL);
+	SQLRETURN ret;
+
 	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
 
-	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->create_object_insert_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->create_object_insert_container_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->create_object_get_id_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->create_object_insert_version_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->lookup_object_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->create_version_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->get_version_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->add_ancestry_edge_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->has_immediate_ancestor_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->has_immediate_ancestor_with_ver_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_object_insert_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_object_insert_container_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_object_get_id_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_object_insert_version_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_object_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_version_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_version_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->add_ancestry_edge_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->has_immediate_ancestor_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->has_immediate_ancestor_with_ver_stmt);
 
-	SQLDisconnect(odbc->db_connection);
+	ret = SQLDisconnect(odbc->db_connection);
+	if (!SQL_SUCCEEDED(ret)) {
+		fprintf(stderr, "Warning: Could not terminate the ODBC connection.\n");
+	}
 	
 	mutex_destroy(odbc->create_object_lock);
 	mutex_destroy(odbc->lookup_object_lock);
@@ -398,8 +403,8 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
 	mutex_destroy(odbc->add_ancestry_edge_lock);
 	mutex_destroy(odbc->has_immediate_ancestor_lock);
 
-	SQLFreeHandle(SQL_HANDLE_DBC, &odbc->db_connection);
-	SQLFreeHandle(SQL_HANDLE_ENV, &odbc->db_environment);
+	SQLFreeHandle(SQL_HANDLE_DBC, odbc->db_connection);
+	SQLFreeHandle(SQL_HANDLE_ENV, odbc->db_environment);
 	
 	delete odbc;
 	
