@@ -68,7 +68,27 @@ static cpl_db_backend_t* cpl_db_backend = NULL;
 
 
 /***************************************************************************/
-/** Private API                                                           **/
+/** Advanced Private API - Function Prototypes                            **/
+/***************************************************************************/
+
+
+/**
+ * Add a dependency
+ *
+ * @param from_id the "from" end of the dependency edge
+ * @param to_id the "to" end of the dependency edge
+ * @param type the data dependency edge type
+ * @return the operation return value
+ */
+cpl_return_t
+cpl_add_dependency(const cpl_id_t from_id,
+			  	   const cpl_id_t to_id,
+				   const int type);
+
+
+
+/***************************************************************************/
+/** Basic Private API                                                     **/
 /***************************************************************************/
 
 
@@ -371,48 +391,200 @@ cpl_data_flow(const cpl_id_t data_dest,
 		return CPL_E_INVALID_ARGUMENT;
 
 
-	// Get the data source version
+	// Add the dependency
 
-	cpl_version_t source_version = cpl_get_version(data_source);
-	CPL_RUNTIME_VERIFY(source_version);
-
-
-	// Get the handle of the destination
-
-	cpl_open_object_t* obj_dest = NULL;
-	CPL_RUNTIME_VERIFY(cpl_get_open_object_handle(data_dest, &obj_dest));
+	return cpl_add_dependency(data_dest, data_source, type);
+}
 
 
-	// TODO Auto-delete the object if !cpl_cache
+/**
+ * Disclose a control flow operation.
+ *
+ * @param object_id the ID of the controlled object
+ * @param controller the object ID of the controller
+ * @param type the control dependency edge type
+ * @return the operation return value
+ */
+cpl_return_t
+cpl_control(const cpl_id_t object_id,
+			const cpl_id_t controller,
+			const int type)
+{
+	CPL_ENSURE_INITALIZED;
+
+
+	// Check the arguments
+
+	CPL_ENSURE_NOT_NEGATIVE(object_id);
+	CPL_ENSURE_NOT_NEGATIVE(controller);
+	
+	if (CPL_GET_DEPENDENCY_CATEGORY(type) != CPL_DEPENDENCY_CATEGORY_CONTROL)
+		return CPL_E_INVALID_ARGUMENT;
+
+
+	// Add the dependency
+
+	return cpl_add_dependency(object_id, controller, type);
+}
+
+
+
+/***************************************************************************/
+/** Advanced Private API                                                  **/
+/***************************************************************************/
+
+
+/**
+ * Add a dependency
+ *
+ * @param from_id the "from" end of the dependency edge
+ * @param to_id the "to" end of the dependency edge
+ * @param type the data dependency edge type
+ * @return the operation return value
+ */
+cpl_return_t
+cpl_add_dependency(const cpl_id_t from_id,
+			  	   const cpl_id_t to_id,
+				   const int type)
+{
+	CPL_ENSURE_INITALIZED;
+
+	// TODO This should also account for different types of dependency edges,
+	// so that edges of different types would not necessarily get eliminated
+
+
+	// Check the arguments
+
+	CPL_ENSURE_NOT_NEGATIVE(from_id);
+	CPL_ENSURE_NOT_NEGATIVE(to_id);
+
+
+	// Get the version of the "to" object
+
+	cpl_version_t to_version = cpl_get_version(to_id);
+	CPL_RUNTIME_VERIFY(to_version);
+
+
+	// Cycle-Avoidance Algorithm
+
+	// Determine whether the dependency, or a dependency that subsumes it,
+	// already exists. Also, determine the version of the "from" object,
+	// but only if the dependency does not already exist, or if this
+	// information is already cached
+
+	bool dependency_exists = false;
+	cpl_version_t from_version = CPL_VERSION_NONE;
+	cpl_open_object_t* obj_from = NULL;
+
+	if (cpl_cache) {
+
+		// Get the handle of the fromination
+
+		CPL_RUNTIME_VERIFY(cpl_get_open_object_handle(from_id, &obj_from));
+
+
+		// Get the version of the fromination object
+
+		from_version = obj_from->version;
+
+
+		// Check the ancestor list
+
+		cpl_hash_map_id_to_version_t::iterator i;
+		i = obj_from->ancestors.find(to_id);
+
+		if (i == obj_from->ancestors.end()) {
+			dependency_exists = false;
+		}
+		else {
+			dependency_exists = i->second <= to_version;
+		}
+	}
+	else {
+
+		// Call the backend to determine the dependency
+
+		cpl_return_t r = cpl_db_backend->cpl_db_has_immediate_ancestor(
+				cpl_db_backend, from_id, CPL_VERSION_NONE,
+				to_id, to_version);
+		CPL_RUNTIME_VERIFY(r);
+
+		dependency_exists = r > 0;
+
+
+		// If the dependency exists, get the object version
+
+		if (!dependency_exists) {
+			from_version = cpl_get_version(from_id);
+		}
+	}
 
 
 	// Automatically unlock the object if it is still locked by the time
-	// we hit return
+	// we hit end this block
 
-	CPL_AutoUnlock __au_dest(&obj_dest->locked); (void) __au_dest;
-
-
-	// Call the analyzer
-
-	// TODO
+	CPL_AutoUnlock __au_from(obj_from != NULL ? &obj_from->locked : NULL);
+	(void) __au_from;
 
 
-	// Get the version of the destination object and unlock
+	// Return if the dependency already exists - there is nothing to do
 
-	cpl_version_t dest_version = obj_dest->version;
-	cpl_unlock(&obj_dest->locked);
+	if (dependency_exists) return CPL_OK;
+
+
+	// Freeze and create a new version
+
+	cpl_return_t r = CPL_E_ALREADY_EXISTS;
+	from_version++;
+
+	do {
+		r = cpl_db_backend->cpl_db_create_version(cpl_db_backend,
+												  from_id,
+												  from_version);
+		if (r == CPL_E_ALREADY_EXISTS) {
+			usleep(20);
+			from_version++;
+		}
+		else {
+			CPL_RUNTIME_VERIFY(r);
+		}
+	}
+	while (!CPL_IS_OK(r));
+
+	if (obj_from != NULL) {
+		obj_from->frozen = false;
+		obj_from->version = from_version;
+	}
 
 
 	// Call the database backend (the provenance "depends on"/"input" edges
 	// are oriented opposite to the data flow)
 
+	assert(from_version != CPL_VERSION_NONE);
+
 	CPL_RUNTIME_VERIFY(cpl_db_backend->cpl_db_add_ancestry_edge(cpl_db_backend,
-																data_dest,
-																dest_version,
-																data_source,
-																source_version,
+																from_id,
+																from_version,
+																to_id,
+																to_version,
 																type));
 	
+
+	// Update the ancestor list
+	
+	if (obj_from != NULL) {
+
+		// Update the hash map
+
+		obj_from->ancestors[to_id] = to_version;
+
+
+		// Finally, unlock (must be last)
+		
+		cpl_unlock(&obj_from->locked);
+		obj_from = NULL;
+	}
+
 	return CPL_OK;
 }
 

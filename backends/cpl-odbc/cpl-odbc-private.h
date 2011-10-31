@@ -198,6 +198,16 @@ typedef struct {
 	SQLHSTMT lookup_object_stmt;
 
 	/**
+	 * Lock for version creation
+	 */
+	mutex_t create_version_lock;
+
+	/**
+	 * The insert statement for version creation
+	 */
+	SQLHSTMT create_version_stmt;
+
+	/**
 	 * The lock for get_version
 	 */
 	mutex_t get_version_lock;

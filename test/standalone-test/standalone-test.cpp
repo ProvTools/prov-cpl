@@ -69,16 +69,28 @@ main(int argc, char** argv)
 
 	cpl_id_t obj; 
 
-	obj = cpl_create_object(ORIGINATOR, "Object", "File", CPL_NONE);
+	obj = cpl_create_object(ORIGINATOR, "Process A", "Proc", CPL_NONE);
 	printf("cpl_create_object --> %lld\n", obj);
 
-	obj = cpl_lookup_object(ORIGINATOR, "Object", "File");
+	obj = cpl_lookup_object(ORIGINATOR, "Process A", "Proc");
 	printf("cpl_lookup_object --> %lld\n", obj);
 
-	cpl_id_t obj2 = cpl_create_object(ORIGINATOR, "Object-Yay", "File", obj);
-	printf("cpl_create_object --> %lld\n", obj2);
+	cpl_id_t obj2 = cpl_create_object(ORIGINATOR, "Object A", "File", obj);
+	printf("cpl_create_object --> %lld\n", obj2)
+
+	cpl_id_t obj3 = cpl_create_object(ORIGINATOR, "Process B", "Proc", obj);
+	printf("cpl_create_object --> %lld\n", obj3);
 
 	ret = cpl_data_flow(obj2, obj, CPL_DATA_INPUT);
+	printf("cpl_data_flow --> %lld\n", ret);
+
+	ret = cpl_data_flow(obj2, obj, CPL_DATA_INPUT);
+	printf("cpl_data_flow --> %lld\n", ret);
+
+	ret = cpl_control(obj3, obj, CPL_CONTROL_START);
+	printf("cpl_control --> %lld\n", ret);
+
+	ret = cpl_data_flow(obj, obj3, CPL_DATA_INPUT);
 	printf("cpl_data_flow --> %lld\n", ret);
 
 	return 0;

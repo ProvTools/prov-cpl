@@ -185,6 +185,7 @@ cpl_create_odbc_backend(const char* connection_string,
 
 	mutex_init(odbc->create_object_lock);
 	mutex_init(odbc->lookup_object_lock);
+	mutex_init(odbc->create_version_lock);
 	mutex_init(odbc->get_version_lock);
 	mutex_init(odbc->add_ancestry_edge_lock);
 	mutex_init(odbc->has_immediate_ancestor_lock);
@@ -242,6 +243,7 @@ cpl_create_odbc_backend(const char* connection_string,
 	ALLOC_STMT(create_object_get_id_stmt);
 	ALLOC_STMT(create_object_insert_version_stmt);
 	ALLOC_STMT(lookup_object_stmt);
+	ALLOC_STMT(create_version_stmt);
 	ALLOC_STMT(get_version_stmt);
 	ALLOC_STMT(add_ancestry_edge_stmt);
 	ALLOC_STMT(has_immediate_ancestor_stmt);
@@ -301,6 +303,9 @@ cpl_create_odbc_backend(const char* connection_string,
 			"SELECT MAX(id) FROM cpl_objects WHERE originator=? "
 			"AND name=? AND type=?;");
 
+	PREPARE(create_version_stmt,
+			"INSERT INTO cpl_versions SET id=?, version=?;");
+
 	PREPARE(get_version_stmt,
 			"SELECT MAX(version) FROM cpl_versions WHERE id=?;");
 
@@ -335,6 +340,7 @@ err_stmts:
 	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->create_object_get_id_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->create_object_insert_version_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->lookup_object_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->create_version_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->get_version_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->add_ancestry_edge_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->has_immediate_ancestor_stmt);
@@ -349,6 +355,7 @@ err_handles:
 err_sync:
 	mutex_destroy(odbc->create_object_lock);
 	mutex_destroy(odbc->lookup_object_lock);
+	mutex_destroy(odbc->create_version_lock);
 	mutex_destroy(odbc->get_version_lock);
 	mutex_destroy(odbc->add_ancestry_edge_lock);
 	mutex_destroy(odbc->has_immediate_ancestor_lock);
@@ -376,6 +383,7 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
 	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->create_object_get_id_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->create_object_insert_version_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->lookup_object_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->create_version_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->get_version_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->add_ancestry_edge_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, &odbc->has_immediate_ancestor_stmt);
@@ -385,6 +393,7 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
 	
 	mutex_destroy(odbc->create_object_lock);
 	mutex_destroy(odbc->lookup_object_lock);
+	mutex_destroy(odbc->create_version_lock);
 	mutex_destroy(odbc->get_version_lock);
 	mutex_destroy(odbc->add_ancestry_edge_lock);
 	mutex_destroy(odbc->has_immediate_ancestor_lock);
@@ -618,6 +627,79 @@ err:
 
 
 /**
+ * Create a new version of the given object
+ *
+ * @param backend the pointer to the backend structure
+ * @param object_id the object ID
+ * @param version the new version of the object
+ * @return the error code
+ */
+cpl_return_t
+cpl_odbc_create_version(struct _cpl_db_backend_t* backend,
+						const cpl_id_t object_id,
+						const cpl_version_t version)
+{
+	assert(backend != NULL);
+	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
+	
+	SQLRETURN ret;
+
+	mutex_lock(odbc->create_version_lock);
+
+
+	// Prepare the statement
+
+	SQLHSTMT stmt = odbc->create_version_stmt;
+	SQL_BIND_INTEGER(stmt, 1, object_id);
+	SQL_BIND_INTEGER(stmt, 2, version);
+
+
+	// Execute
+	
+	ret = SQLExecute(stmt);
+	if (!SQL_SUCCEEDED(ret)) {
+		
+		SQLINTEGER native;
+		SQLCHAR	state[ 7 ];
+		SQLCHAR	text[256];
+		SQLSMALLINT	len;
+
+		ret = SQLGetDiagRec(SQL_HANDLE_STMT, stmt, 1, state, &native,
+							text, sizeof(text), &len);
+		
+		if (SQL_SUCCEEDED(ret)) {
+			if (strcmp((const char*) state, "23000") == 0) {
+				mutex_unlock(odbc->create_version_lock);
+				return CPL_E_ALREADY_EXISTS;
+			}
+			else {
+				print_odbc_error("SQLExecute", stmt, SQL_HANDLE_STMT);
+			}
+		}
+		else if (ret != SQL_NO_DATA) {
+			fprintf(stderr, "  SQLGetDiagRec failed with error code %ld\n",
+					(long) ret);
+		}
+
+		goto err;
+	}
+
+
+	// Cleanup
+
+	mutex_unlock(odbc->create_version_lock);
+	return CPL_OK;
+
+
+	// Error handling
+
+err:
+	mutex_unlock(odbc->create_version_lock);
+	return CPL_E_STATEMENT_ERROR;
+}
+
+
+/**
  * Determine the version of the object
  *
  * @param backend the pointer to the backend structure
@@ -824,6 +906,7 @@ const cpl_db_backend_t CPL_ODBC_BACKEND = {
 	cpl_odbc_destroy,
 	cpl_odbc_create_object,
 	cpl_odbc_lookup_object,
+	cpl_odbc_create_version,
 	cpl_odbc_get_version,
 	cpl_odbc_add_ancestry_edge,
 	cpl_odbc_has_immediate_ancestor,

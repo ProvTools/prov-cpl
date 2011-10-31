@@ -129,9 +129,25 @@ typedef long long cpl_return_t;
 #define CPL_DATA_INPUT					CPL_DATA_DEPENDENCY(0)
 
 /**
+ * Data translation
+ */
+#define CPL_DATA_TRANSLATION			CPL_DATA_DEPENDENCY(1)
+
+/**
+ * Data copy
+ */
+#define CPL_DATA_COPY					CPL_DATA_DEPENDENCY(2)
+
+
+/**
  * Generic control dependency
  */
 #define CPL_CONTROL_OP					CPL_CONTROL_DEPENDENCY(0)
+
+/**
+ * Process start/fork
+ */
+#define CPL_CONTROL_START				CPL_CONTROL_DEPENDENCY(1)
 
 
 /***************************************************************************/
@@ -207,6 +223,11 @@ typedef long long cpl_return_t;
  */
 #define CPL_E_NOT_FOUND					-11
 
+/**
+ * The requested object/version/etc. already exists
+ */
+#define CPL_E_ALREADY_EXISTS			-12
+
 
 
 /***************************************************************************/
@@ -278,6 +299,19 @@ cpl_return_t
 cpl_data_flow(const cpl_id_t data_dest,
 			  const cpl_id_t data_source,
 			  const int type);
+
+/**
+ * Disclose a control flow operation.
+ *
+ * @param object_id the ID of the controlled object
+ * @param controller the object ID of the controller
+ * @param type the control dependency edge type
+ * @return the operation return value
+ */
+cpl_return_t
+cpl_control(const cpl_id_t object_id,
+			const cpl_id_t controller,
+			const int type);
 
 
 /***************************************************************************/

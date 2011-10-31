@@ -98,6 +98,19 @@ typedef struct _cpl_db_backend_t {
 					   		const char* type);
 
 	/**
+	 * Create a new version of the given object
+	 *
+	 * @param backend the pointer to the backend structure
+	 * @param object_id the object ID
+	 * @param version the new version of the object
+	 * @return the error code
+	 */
+	cpl_return_t
+	(*cpl_db_create_version)(struct _cpl_db_backend_t* backend,
+							 const cpl_id_t object_id,
+							 const cpl_version_t version);
+
+	/**
 	 * Determine the version of the object
 	 *
 	 * @param backend the pointer to the backend structure
