@@ -542,7 +542,11 @@ cpl_add_dependency(const cpl_id_t from_id,
 												  from_id,
 												  from_version);
 		if (r == CPL_E_ALREADY_EXISTS) {
-			usleep(20);
+#ifdef _WINDOWS
+			Sleep(2 /* ms */);
+#else
+			usleep(2 * 1000 /* us */);
+#endif
 			from_version++;
 		}
 		else {
