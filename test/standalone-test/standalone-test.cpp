@@ -76,7 +76,7 @@ main(int argc, char** argv)
 	printf("cpl_lookup_object --> %lld\n", obj);
 
 	cpl_id_t obj2 = cpl_create_object(ORIGINATOR, "Object A", "File", obj);
-	printf("cpl_create_object --> %lld\n", obj2)
+	printf("cpl_create_object --> %lld\n", obj2);
 
 	cpl_id_t obj3 = cpl_create_object(ORIGINATOR, "Process B", "Proc", obj);
 	printf("cpl_create_object --> %lld\n", obj3);
