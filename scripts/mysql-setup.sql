@@ -50,7 +50,7 @@ USE cpl;
 
 
 --
--- Create schema
+-- Create the schema
 --
 
 CREATE TABLE IF NOT EXISTS cpl_objects (
@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS cpl_objects (
        originator VARCHAR(255),
        name VARCHAR(255),
        type VARCHAR(100),
-       container_id INT REFERENCES cpl_objects(id),
+       container_id INT,
        container_ver INT);
 
 CREATE TABLE IF NOT EXISTS cpl_versions (
@@ -68,9 +68,14 @@ CREATE TABLE IF NOT EXISTS cpl_versions (
        PRIMARY KEY(id, version));
 
 CREATE TABLE IF NOT EXISTS cpl_ancestry (
-       from_id INT NOT NULL REFERENCES cpl_objects(id),
+       from_id INT NOT NULL,
        from_version INT,
-       to_id INT NOT NULL REFERENCES cpl_objects(id),
+       to_id INT NOT NULL,
        to_version INT,
        type INT,
-       PRIMARY KEY(from_id, from_version, to_id, to_version));
+       PRIMARY KEY(from_id, from_version, to_id, to_version),
+	   FOREIGN KEY(from_id, from_version) REFERENCES cpl_versions(id, version),
+	   FOREIGN KEY(to_id, to_version) REFERENCES cpl_versions(id, version));
+
+ALTER TABLE cpl_objects ADD CONSTRAINT
+	FOREIGN KEY (container_id, container_ver) REFERENCES cpl_versions(id, version);
