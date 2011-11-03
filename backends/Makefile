@@ -11,7 +11,7 @@ ROOT := ..
 # Subprojects
 #
 
-LIBRARIES := cpl-odbc
+LIBRARIES := cpl-odbc cpl-rdf
 
 
 #

@@ -28,7 +28,7 @@ INCLUDE_FLAGS := $(INCLUDE_FLAGS) -I$(ROOT)/include
 CXXFLAGS      := $(CXXFLAGS) -Wno-sign-compare
 INCLUDE_FLAGS := $(INCLUDE_FLAGS)
 LINKER_FLAGS  := $(LINKER_FLAGS)
-LIBRARIES     := $(LIBRARIES) -lodbc
+LIBRARIES     := $(LIBRARIES) -lodbc `pkg-config --libs libcurl`
 
 
 #

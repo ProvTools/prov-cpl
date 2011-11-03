@@ -1,5 +1,5 @@
 /*
- * cpl-odbc-private.h
+ * cpl-rdf-private.h
  * Core Provenance Library
  *
  * Copyright 2011
@@ -32,14 +32,15 @@
  * Contributor(s): Peter Macko
  */
 
-#ifndef __CPL_ODBC_PRIVATE_H__
-#define __CPL_ODBC_PRIVATE_H__
+#ifndef __CPL_RDF_PRIVATE_H__
+#define __CPL_RDF_PRIVATE_H__
 
-#include <backends/cpl-odbc.h>
+#include <backends/cpl-rdf.h>
 #include <private/cpl-platform.h>
+#include <string>
 
-#include <sql.h>
-#include <sqlext.h>
+#include "cpl-connection.h"
+#include "sparql-statement.h"
 
 
 #ifdef __cplusplus
@@ -52,11 +53,11 @@ extern "C" {
 
 
 /***************************************************************************/
-/** ODBC Database Backend                                                 **/
+/** RDF Database Backend                                                 **/
 /***************************************************************************/
 
 /**
- * The ODBC database backend
+ * The RDF database backend
  */
 typedef struct {
 
@@ -66,111 +67,37 @@ typedef struct {
 	cpl_db_backend_t backend;
 
 	/**
-	 * The ODBC environment
-	 */
-	SQLHENV db_environment;
-
-	/**
-	 * The ODBC database connection handle
-	 */
-	SQLHDBC db_connection;
-
-	/**
 	 * The database type
 	 */
 	int db_type;
 
 	/**
-	 * Lock for object creation
+	 * The SPARQL URL endpoint for queries
 	 */
-	mutex_t create_object_lock;
+	std::string url_query;
 
 	/**
-	 * The insert statement for object creation
+	 * The connection handle for queries
 	 */
-	SQLHSTMT create_object_insert_stmt;
+	cpl_rdf_connection_t* connection_query;
 
 	/**
-	 * The insert statement for object creation - with container
+	 * The SPARQL URL endpoint for updates
 	 */
-	SQLHSTMT create_object_insert_container_stmt;
+	std::string url_update;
 
 	/**
-	 * The statement that determines the ID of the object that was just created
+	 * The connection handle for queries
 	 */
-	SQLHSTMT create_object_get_id_stmt;
+	cpl_rdf_connection_t* connection_update;
 
-	/**
-	 * Insert a new 0th version to the versions table (to be used while
-	 * creating a new object)
-	 */
-	SQLHSTMT create_object_insert_version_stmt;
-
-	/**
-	 * The lock for lookup_object
-	 */
-	mutex_t lookup_object_lock;
-
-	/**
-	 * The statement for looking up an object by name (including originator
-	 * and type)
-	 */
-	SQLHSTMT lookup_object_stmt;
-
-	/**
-	 * Lock for version creation
-	 */
-	mutex_t create_version_lock;
-
-	/**
-	 * The insert statement for version creation
-	 */
-	SQLHSTMT create_version_stmt;
-
-	/**
-	 * The lock for get_version
-	 */
-	mutex_t get_version_lock;
-
-	/**
-	 * The statement that determines the version of an object given its ID
-	 */
-	SQLHSTMT get_version_stmt;
-
-	/**
-	 * The lock for add_ancestry_edge
-	 */
-	mutex_t add_ancestry_edge_lock;
-
-	/**
-	 * The statement that adds a new ancestry edge
-	 */
-	SQLHSTMT add_ancestry_edge_stmt;
-
-	/**
-	 * The lock for has_immediate_ancestor
-	 */
-	mutex_t has_immediate_ancestor_lock;
-
-	/**
-	 * The statement that determines whether the given object is present
-	 * in the immediate ancestry
-	 */
-	SQLHSTMT has_immediate_ancestor_stmt;
-
-	/**
-	 * The statement that determines whether the given object is present
-	 * in the immediate ancestry -- also considering the version of the object
-	 */
-	SQLHSTMT has_immediate_ancestor_with_ver_stmt;
-
-} cpl_odbc_t;
+} cpl_rdf_t;
 
 
 /**
- * The ODBC interface
+ * The RDF interface
  */
-extern const cpl_db_backend_t CPL_ODBC_BACKEND;
+extern const cpl_db_backend_t CPL_RDF_BACKEND;
 
 
 #ifdef __cplusplus

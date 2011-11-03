@@ -34,6 +34,7 @@
 
 #include "stdafx.h"
 #include <backends/cpl-odbc.h>
+#include <backends/cpl-rdf.h>
 #include <cpl-standalone.h>
 
 #define ORIGINATOR "standalone-test"
@@ -49,17 +50,36 @@
 int
 main(int argc, char** argv)
 {
+	const char* backend_type = "RDF";
+
+	
 	// Initialize
 
 	cpl_db_backend_t* backend;
 	cpl_return_t ret;
 
-	ret = cpl_create_odbc_backend("DSN=CPL;UID=cpl;PWD=cplcplcpl;",
-								  CPL_ODBC_MYSQL,
-								  &backend);
-	if (!CPL_IS_OK(ret)) {
-		fprintf(stderr, "Could not open the ODBC connection\n");
-		return 1;
+	if (strcmp(backend_type, "RDF") == 0 || strcmp(backend_type, "rdf") == 0) {
+		ret = cpl_create_rdf_backend("http://localhost:8080/sparql/",
+									 "http://localhost:8080/update/",
+									 CPL_RDF_4STORE,
+									 &backend);
+		if (!CPL_IS_OK(ret)) {
+			fprintf(stderr, "Could not open the SPARQL connection\n");
+			return 1;
+		}
+	}
+	else if (strcmp(backend_type, "ODBC") == 0
+			|| strcmp(backend_type, "odbc") == 0) {
+		ret = cpl_create_odbc_backend("DSN=CPL;UID=cpl;PWD=cplcplcpl;",
+									  CPL_ODBC_MYSQL,
+									  &backend);
+		if (!CPL_IS_OK(ret)) {
+			fprintf(stderr, "Could not open the ODBC connection\n");
+			return 1;
+		}
+	}
+	else {
+		fprintf(stderr, "Invalid database backend type: %s\n", backend_type);
 	}
 
 	CPL_InitializationHelper __cpl(backend); (void) __cpl;
