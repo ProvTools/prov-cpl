@@ -11,6 +11,7 @@ ROOT :=..
 # Customize the build
 #
 
+SHARED := yes
 DEPENDENCIES := $(ROOT)/include/*.h
 INCLUDE_FLAGS := $(INCLUDE_FLAGS) -I$(ROOT)/include
 

@@ -144,13 +144,15 @@ Release: release
 # Special targets
 #
 
-.PHONY: lines todo list-subproject-libs list-subproject-lib-files
+.PHONY: lines todo list-subproject-libs list-subproject-shared-lib-files \
+		list-subproject-lib-files
 
 lines:
 	@find . \( -name "*.cpp" -or -name "*.c" -or -name "*.h" -or -name "*.mk" \
 		-or -name "*.py" -or -name "Makefile" \) -exec cat \{} \; | wc -l
 
-list-subproject-libs list-subproject-lib-files:
+list-subproject-libs list-subproject-shared-lib-files \
+		list-subproject-lib-files:
 	@for S in $(SUBPROJECTS); do \
 		$(NMAKE) --no-print-directory --quiet \
 		         __PROGRAM__NO_SUBPROJECT_FILES=yes \

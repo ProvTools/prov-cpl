@@ -228,6 +228,15 @@ endif
 
 
 #
+# Add the build dir suffix
+#
+
+ifdef BUILD_DIR_SUFFIX
+	BUILD_DIR := $(BUILD_DIR)$(BUILD_DIR_SUFFIX)
+endif
+
+
+#
 # Finalize
 #
 

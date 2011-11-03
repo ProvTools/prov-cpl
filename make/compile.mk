@@ -126,7 +126,8 @@ $(BUILD_DIR):
 # Other special-purpose targets
 #
 
-.PHONY: lines gprof todo list-subproject-lib-files list-subproject-libs
+.PHONY: lines gprof todo list-subproject-lib-files \
+		list-subproject-shared-lib-files list-subproject-libs
 
 lines:
 	@echo Total number of lines:
@@ -145,6 +146,8 @@ todo:
 		| sed 's|\(^.\)|$(PWD_REL_SEP)\1|' | sort
 
 list-subproject-lib-files::
+
+list-subproject-shared-lib-files::
 
 list-subproject-libs::
 

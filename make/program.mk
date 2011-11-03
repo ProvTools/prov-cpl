@@ -47,11 +47,17 @@ ifdef SUBPROJECTS
 else
 	ifdef __PROGRAM__NO_SUBPROJECT_FILES
 		SUBPROJECT_FILES :=
+		SUBPROJECT_SO_FILES :=
 	else
 		SUBPROJECT_FILES := $(shell unset MAKEFLAGS MFLAGS && $(MAKE) \
 						--no-print-directory --quiet \
 	                                        -C $(ROOT) list-subproject-lib-files)
 		SUBPROJECT_FILES := $(foreach proj, $(SUBPROJECT_FILES), $(ROOT)/$(proj))
+
+		SUBPROJECT_SO_FILES := $(shell unset MAKEFLAGS MFLAGS && $(MAKE) \
+						--no-print-directory --quiet \
+	                        -C $(ROOT) list-subproject-shared-lib-files)
+		SUBPROJECT_SO_FILES := $(foreach proj, $(SUBPROJECT_SO_FILES), $(ROOT)/$(proj))
 	endif
 endif
 
@@ -67,10 +73,11 @@ include $(ROOT)/make/compile.mk
 
 
 #
-# The executable
+# The real paths
 #
 
 EXECUTABLE := "$(realpath $(BUILD_DIR)/$(TARGET))"
+REAL_BUILD_DIR := "$(realpath $(BUILD_DIR))"
 
 
 #
@@ -82,19 +89,19 @@ EXECUTABLE := "$(realpath $(BUILD_DIR)/$(TARGET))"
 pre-run::
 
 run: all pre-run
-	@cd "$(RUN_DIR)" && \
+	@cd "$(RUN_DIR)" && LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:$(REAL_BUILD_DIR) \
 	$(EXECUTABLE)
 
 run-dev: all pre-run
-	@cd "$(RUN_DIR)" && \
+	@cd "$(RUN_DIR)" && LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:$(REAL_BUILD_DIR) \
 	$(EXECUTABLE) $(RUN_DEV_ARGS)
 
 time: all pre-run
-	@cd "$(RUN_DIR)" && \
+	@cd "$(RUN_DIR)" && LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:$(REAL_BUILD_DIR) \
 	/usr/bin/time -v $(EXECUTABLE)
 
 time-dev: all pre-run
-	@cd "$(RUN_DIR)" && \
+	@cd "$(RUN_DIR)" && LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:$(REAL_BUILD_DIR) \
 	/usr/bin/time -v $(EXECUTABLE) $(RUN_DEV_ARGS)
 
 
@@ -127,27 +134,27 @@ Release: release
 .PHONY: gdb valgrind vg vg-dev vg-all vg-dev-all
 
 gdb: all pre-run
-	@cd "$(RUN_DIR)" && \
+	@cd "$(RUN_DIR)" && LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:$(REAL_BUILD_DIR) \
 	gdb $(EXECUTABLE)
 
 vg valgrind: all pre-run
-	@cd "$(RUN_DIR)" && \
+	@cd "$(RUN_DIR)" && LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:$(REAL_BUILD_DIR) \
 	valgrind --tool=memcheck --leak-check=yes --num-callers=24 \
 	          $(EXECUTABLE)
 
 vg-dev: all pre-run
-	@cd "$(RUN_DIR)" && \
+	@cd "$(RUN_DIR)" && LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:$(REAL_BUILD_DIR) \
 	valgrind --tool=memcheck --leak-check=yes --num-callers=24 \
 	          $(EXECUTABLE) $(RUN_DEV_ARGS)
 
 vg-all: all pre-run
-	@cd "$(RUN_DIR)" && \
+	@cd "$(RUN_DIR)" && LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:$(REAL_BUILD_DIR) \
 	valgrind --tool=memcheck --leak-check=yes --num-callers=24 \
 	          --show-reachable=yes --track-origins=yes \
 	          $(EXECUTABLE) $(RUN_VG_ARGS)
 
 vg-dev-all: all pre-run
-	@cd "$(RUN_DIR)" && \
+	@cd "$(RUN_DIR)" && LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:$(REAL_BUILD_DIR) \
 	valgrind --tool=memcheck --leak-check=yes --num-callers=24 \
 	          --show-reachable=yes --track-origins=yes \
 	          $(EXECUTABLE) $(RUN_VG_ARGS) $(RUN_DEV_ARGS)
@@ -169,8 +176,17 @@ gprof_finish:
 # Linker targets
 #
 
+# TODO Make the hard-coded "../../" to be dynamically computed
+
 $(BUILD_DIR)/$(TARGET): $(BUILD_DIR)/project.mk $(OBJECTS) $(PROG_OBJECTS)
 	@mkdir -p $(BUILD_DIR)
+ifneq ($(SUBPROJECT_SO_FILES),)
+	@cd $(BUILD_DIR); \
+		for i in $(SUBPROJECT_SO_FILES); do \
+			/bin/rm -f `basename $$i` || true; \
+			ln -s ../../$$i .; \
+		done
+endif
 ifeq ($(OUTPUT_TYPE),kernel)
 	@echo '  LD      $(PWD_REL_SEP)$@'
 	@$(LINK) -o $@ $(OBJECTS) $(PROG_OBJECTS) $(LIBRARIES)
