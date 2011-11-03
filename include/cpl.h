@@ -1,5 +1,5 @@
 /*
- * cpl-standalone.h
+ * cpl.h
  * Core Provenance Library
  *
  * Copyright 2011
@@ -32,8 +32,8 @@
  * Contributor(s): Peter Macko
  */
 
-#ifndef __CPL_STANDALONE_H__
-#define __CPL_STANDALONE_H__
+#ifndef __CPL_H__
+#define __CPL_H__
 
 #include <stddef.h>
 

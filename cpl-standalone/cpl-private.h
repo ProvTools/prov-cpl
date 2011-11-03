@@ -35,7 +35,7 @@
 #ifndef __CPL_PRIVATE_H__
 #define __CPL_PRIVATE_H__
 
-#include <cpl-standalone.h>
+#include <cpl.h>
 #include <cpl-db-backend.h>
 #include "cpl-lock.h"
 

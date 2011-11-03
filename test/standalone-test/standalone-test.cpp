@@ -35,7 +35,7 @@
 #include "stdafx.h"
 #include <backends/cpl-odbc.h>
 #include <backends/cpl-rdf.h>
-#include <cpl-standalone.h>
+#include <cpl.h>
 
 #define ORIGINATOR "standalone-test"
 
@@ -50,7 +50,7 @@
 int
 main(int argc, char** argv)
 {
-	const char* backend_type = "RDF";
+	const char* backend_type = "ODBC";
 
 	
 	// Initialize

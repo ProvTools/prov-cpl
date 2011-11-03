@@ -35,7 +35,7 @@
 #ifndef __CPL_DB_BACKEND_H__
 #define __CPL_DB_BACKEND_H__
 
-#include <cpl-standalone.h>
+#include <cpl.h>
 
 #ifdef __cplusplus
 extern "C" {
