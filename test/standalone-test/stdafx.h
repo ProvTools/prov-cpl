@@ -39,7 +39,9 @@
 #include <cstring>
 
 #if defined _WIN64 || defined _WIN32
+#ifndef _WINDOWS
 #define _WINDOWS
+#endif
 #endif
 
 #ifdef _WINDOWS

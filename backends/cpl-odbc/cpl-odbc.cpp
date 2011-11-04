@@ -162,7 +162,7 @@ err_nf:
  * @param out the pointer to the database backend variable
  * @return the error code
  */
-extern "C" cpl_return_t
+extern "C" EXPORT cpl_return_t
 cpl_create_odbc_backend(const char* connection_string,
 						int db_type,
 						cpl_db_backend_t** out)

@@ -27,8 +27,12 @@ cscope.out
 *.suo
 *.kate-swp
 .DS_Store
+*.exp
+*.dll
 syntax: regexp
 ^.*/build/.*/project.mk$
 ^.*/build/.*/.*$
 ^Debug/.*$
 /Debug/
+/Release/
+^Release/.*$

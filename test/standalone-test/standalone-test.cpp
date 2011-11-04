@@ -58,6 +58,7 @@ main(int argc, char** argv)
 	cpl_db_backend_t* backend;
 	cpl_return_t ret;
 
+#ifndef _WINDOWS
 	if (strcmp(backend_type, "RDF") == 0 || strcmp(backend_type, "rdf") == 0) {
 		ret = cpl_create_rdf_backend("http://localhost:8080/sparql/",
 									 "http://localhost:8080/update/",
@@ -68,7 +69,9 @@ main(int argc, char** argv)
 			return 1;
 		}
 	}
-	else if (strcmp(backend_type, "ODBC") == 0
+	else
+#endif
+	if (strcmp(backend_type, "ODBC") == 0
 			|| strcmp(backend_type, "odbc") == 0) {
 		ret = cpl_create_odbc_backend("DSN=CPL;UID=cpl;PWD=cplcplcpl;",
 									  CPL_ODBC_MYSQL,

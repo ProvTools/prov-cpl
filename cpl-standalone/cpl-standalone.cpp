@@ -227,7 +227,7 @@ cpl_get_version(cpl_id_t id)
  * @param backend the database backend
  * @return the error code
  */
-extern "C" cpl_return_t
+extern "C" EXPORT cpl_return_t
 cpl_initialize(struct _cpl_db_backend_t* backend)
 {
 	CPL_ENSURE_NOT_NULL(backend);
@@ -245,7 +245,7 @@ cpl_initialize(struct _cpl_db_backend_t* backend)
  *
  * @return the error code
  */
-extern "C" cpl_return_t
+extern "C" EXPORT cpl_return_t
 cpl_cleanup(void)
 {
 	CPL_ENSURE_INITALIZED;
@@ -275,7 +275,7 @@ cpl_cleanup(void)
  *                  (use CPL_NONE for no container)
  * @return the object ID, or a negative value on error
  */
-extern "C" cpl_id_t
+extern "C" EXPORT cpl_id_t
 cpl_create_object(const char* originator,
 				  const char* name,
 				  const char* type,
@@ -336,7 +336,7 @@ cpl_create_object(const char* originator,
  * @param type the object type
  * @return the object ID, or a negative value on error
  */
-extern "C" cpl_id_t
+extern "C" EXPORT cpl_id_t
 cpl_lookup_object(const char* originator,
 				  const char* name,
 				  const char* type)
@@ -374,7 +374,7 @@ cpl_lookup_object(const char* originator,
  * @param type the data dependency edge type
  * @return the operation return value
  */
-cpl_return_t
+extern "C" EXPORT cpl_return_t
 cpl_data_flow(const cpl_id_t data_dest,
 			  const cpl_id_t data_source,
 			  const int type)
@@ -405,7 +405,7 @@ cpl_data_flow(const cpl_id_t data_dest,
  * @param type the control dependency edge type
  * @return the operation return value
  */
-cpl_return_t
+extern "C" EXPORT cpl_return_t
 cpl_control(const cpl_id_t object_id,
 			const cpl_id_t controller,
 			const int type)

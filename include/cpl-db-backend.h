@@ -44,6 +44,12 @@ extern "C" {
 }	/* Hack for editors that try to be too smart about indentation */
 #endif
 
+#if defined _WIN64 || defined _WIN32
+#define EXPORT __declspec(dllexport)
+#else
+#define EXPORT
+#endif
+
 
 /***************************************************************************/
 /** Database Backend Interface                                            **/
