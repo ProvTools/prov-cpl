@@ -109,12 +109,13 @@ print_odbc_error(const char *fn, SQLHANDLE handle, SQLSMALLINT type)
  * Read a single nonnegative number from the result set and close the cursor
  *
  * @param stmt the statement handle
- * @return the given number, CPL_E_NOT_FOUND if empty or NULL, or an error code
+ * @param out the pointer to the variable to store the output
+ * @return CPL_OK if okay, CPL_E_NOT_FOUND if empty or NULL, or an error code
  */
-static long long
-cpl_sql_fetch_single_llong(SQLHSTMT stmt) {
+static cpl_return_t
+cpl_sql_fetch_single_llong(SQLHSTMT stmt, long long* out) {
 
-	long long r = 0;
+	long long l = 0;
 	SQLLEN cb = 0;
 	SQLRETURN ret = 0;
 
@@ -122,7 +123,7 @@ cpl_sql_fetch_single_llong(SQLHSTMT stmt) {
 	if (ret == SQL_NO_DATA) goto err_nf;
 	SQL_ASSERT_NO_ERROR(SQLFetch, stmt, err);
 	
-	ret = SQLGetData(stmt, 1, SQL_C_SBIGINT, &r, 0, &cb);
+	ret = SQLGetData(stmt, 1, SQL_C_SBIGINT, &l, 0, &cb);
 	if (ret == SQL_NO_DATA) goto err_nf;
 	SQL_ASSERT_NO_ERROR(SQLGetData, stmt, err);
 	if (cb <= 0) goto err_nf;
@@ -130,8 +131,8 @@ cpl_sql_fetch_single_llong(SQLHSTMT stmt) {
 	ret = SQLCloseCursor(stmt);
 	SQL_ASSERT_NO_ERROR(SQLCloseCursor, stmt, err);
 
-	if (!CPL_IS_OK(r)) return CPL_E_BACKEND_INTERNAL_ERROR;
-	return r;
+	if (out != NULL) *out = l;
+	return CPL_OK;
 
 err:
 	ret = SQLCloseCursor(stmt);
@@ -479,7 +480,8 @@ cpl_odbc_create_object(struct _cpl_db_backend_t* backend,
 	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
 	
 	SQLRETURN ret;
-	cpl_id_t r = CPL_NONE;
+	cpl_id_t id = CPL_NONE;
+	cpl_return_t r = CPL_E_INTERNAL_ERROR;
 
 	mutex_lock(odbc->create_object_lock);
 
@@ -537,9 +539,9 @@ cpl_odbc_create_object(struct _cpl_db_backend_t* backend,
 
 	// Get the object ID from the result set
 
-	r = cpl_sql_fetch_single_llong(stmt);
-	if (r == CPL_NONE) r = CPL_E_BACKEND_INTERNAL_ERROR;
+	r = cpl_sql_fetch_single_llong(stmt, &id);
 	if (r == CPL_E_NOT_FOUND) r = CPL_E_BACKEND_INTERNAL_ERROR;
+	if (id == CPL_NONE || id < 0) r = CPL_E_BACKEND_INTERNAL_ERROR;
 	if (!CPL_IS_OK(r)) {
 		mutex_unlock(odbc->create_object_lock);
 		return r;
@@ -549,7 +551,7 @@ cpl_odbc_create_object(struct _cpl_db_backend_t* backend,
 	// Insert the corresponding entry to the versions table
 
 	stmt = odbc->create_object_insert_version_stmt;
-	SQL_BIND_INTEGER(stmt, 1, r);
+	SQL_BIND_INTEGER(stmt, 1, id);
 	ret = SQLExecute(stmt);
 	if (!SQL_SUCCEEDED(ret)) {
 		print_odbc_error("SQLExecute", stmt, SQL_HANDLE_STMT);
@@ -561,7 +563,7 @@ cpl_odbc_create_object(struct _cpl_db_backend_t* backend,
 
 	mutex_unlock(odbc->create_object_lock);
 	
-	if (out_id != NULL) *out_id = r;
+	if (out_id != NULL) *out_id = id;
 	return CPL_OK;
 
 
@@ -595,7 +597,8 @@ cpl_odbc_lookup_object(struct _cpl_db_backend_t* backend,
 	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
 	
 	SQLRETURN ret;
-	long long r;
+	cpl_id_t id = CPL_NONE;
+	cpl_return_t r = CPL_E_INTERNAL_ERROR;
 
 	mutex_lock(odbc->lookup_object_lock);
 
@@ -620,7 +623,7 @@ cpl_odbc_lookup_object(struct _cpl_db_backend_t* backend,
 
 	// Fetch the result
 
-	r = cpl_sql_fetch_single_llong(stmt);
+	r = cpl_sql_fetch_single_llong(stmt, &id);
 	if (!CPL_IS_OK(r)) {
 		mutex_unlock(odbc->lookup_object_lock);
 		return r;
@@ -631,7 +634,7 @@ cpl_odbc_lookup_object(struct _cpl_db_backend_t* backend,
 
 	mutex_unlock(odbc->lookup_object_lock);
 	
-	if (out_id != NULL) *out_id = r;
+	if (out_id != NULL) *out_id = id;
 	return CPL_OK;
 
 
@@ -733,7 +736,8 @@ cpl_odbc_get_version(struct _cpl_db_backend_t* backend,
 	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
 	
 	SQLRETURN ret;
-	long long r;
+	long long l;
+	cpl_return_t r;
 
 	mutex_lock(odbc->get_version_lock);
 
@@ -755,10 +759,10 @@ cpl_odbc_get_version(struct _cpl_db_backend_t* backend,
 
 	// Fetch the result
 
-	r = cpl_sql_fetch_single_llong(stmt);
+	r = cpl_sql_fetch_single_llong(stmt, &l);
 	if (!CPL_IS_OK(r)) {
 		mutex_unlock(odbc->get_version_lock);
-		return (cpl_version_t) r;
+		return r;
 	}
 
 
@@ -766,7 +770,7 @@ cpl_odbc_get_version(struct _cpl_db_backend_t* backend,
 
 	mutex_unlock(odbc->get_version_lock);
 
-	if (out_version != NULL) *out_version = (cpl_version_t) r;
+	if (out_version != NULL) *out_version = (cpl_version_t) l;
 	return CPL_OK;
 
 
@@ -864,7 +868,7 @@ cpl_odbc_has_immediate_ancestor(struct _cpl_db_backend_t* backend,
 	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
 	
 	SQLRETURN ret;
-	long long r;
+	cpl_return_t r = CPL_E_INTERNAL_ERROR;
 	int cr = CPL_E_INTERNAL_ERROR;
 
 	mutex_lock(odbc->has_immediate_ancestor_lock);
@@ -894,8 +898,8 @@ cpl_odbc_has_immediate_ancestor(struct _cpl_db_backend_t* backend,
 
 	// Fetch the data
 
-	r = cpl_sql_fetch_single_llong(stmt);
-	if (r >= 0) cr = 1;
+	r = cpl_sql_fetch_single_llong(stmt, NULL);
+	if (CPL_IS_OK(r)) cr = 1;
 	if (r == CPL_E_NOT_FOUND) { r = CPL_OK; cr = 0; }
 	if (!CPL_IS_OK(r)) {
 		mutex_unlock(odbc->has_immediate_ancestor_lock);
