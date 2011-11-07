@@ -78,7 +78,7 @@ static cpl_db_backend_t* cpl_db_backend = NULL;
  * @param from_id the "from" end of the dependency edge
  * @param to_id the "to" end of the dependency edge
  * @param type the data dependency edge type
- * @return the operation return value
+ * @return CPL_OK or an error code
  */
 cpl_return_t
 cpl_add_dependency(const cpl_id_t from_id,
@@ -153,8 +153,10 @@ cpl_get_open_object_handle(const cpl_id_t id, cpl_open_object_t** out)
 
 	// If not, look up the object in a database
 
-	cpl_version_t v = cpl_db_backend->cpl_db_get_version(cpl_db_backend, id);
-	CPL_RUNTIME_VERIFY(v);
+	cpl_version_t v;
+	cpl_return_t ret;
+	ret = cpl_db_backend->cpl_db_get_version(cpl_db_backend, id, &v);
+	CPL_RUNTIME_VERIFY(ret);
 
 
 	// Create the corresponding in-memory state, but do another check just
@@ -193,25 +195,28 @@ cpl_get_open_object_handle(const cpl_id_t id, cpl_open_object_t** out)
  * Get a version of an object
  *
  * @param id the object ID
- * @return the version or an error code
+ * @param out_version the pointer to store the version of the object
+ * @return CPL_OK or an error code
  */
-cpl_version_t
-cpl_get_version(cpl_id_t id)
+cpl_return_t
+cpl_get_version(cpl_id_t id, cpl_version_t* out_version)
 {
-	cpl_version_t version;
+	assert(out_version != NULL);
 
 	if (cpl_cache) {
 		cpl_open_object_t* obj = NULL;
 		CPL_RUNTIME_VERIFY(cpl_get_open_object_handle(id, &obj));
-		version = obj->version;
+		*out_version = obj->version;
 		cpl_unlock(&obj->locked);
 	}
 	else {
-		version = cpl_db_backend->cpl_db_get_version(cpl_db_backend, id);
-		CPL_RUNTIME_VERIFY(version);
+		cpl_return_t ret;
+		ret = cpl_db_backend->cpl_db_get_version(cpl_db_backend,
+												 id, out_version);
+		CPL_RUNTIME_VERIFY(ret);
 	}
 
-	return version;
+	return CPL_OK;
 }
 
 
@@ -273,13 +278,15 @@ cpl_cleanup(void)
  * @param type the object type
  * @param container the ID of the object that should contain this object
  *                  (use CPL_NONE for no container)
- * @return the object ID, or a negative value on error
+ * @param out_id the pointer to store the ID of the newly created object
+ * @return CPL_OK or an error code
  */
-extern "C" EXPORT cpl_id_t
+extern "C" EXPORT cpl_return_t
 cpl_create_object(const char* originator,
 				  const char* name,
 				  const char* type,
-				  const cpl_id_t container)
+				  const cpl_id_t container,
+				  cpl_id_t* out_id)
 {
 	CPL_ENSURE_INITALIZED;
 
@@ -294,20 +301,25 @@ cpl_create_object(const char* originator,
 
 	// Get the container version
 
-	cpl_version_t container_version
-		= (container != CPL_NONE) ? cpl_get_version(container) : 0;
-	CPL_RUNTIME_VERIFY(container_version);
+	cpl_version_t container_version = 0;
+	if (container != CPL_NONE) {
+		CPL_RUNTIME_VERIFY(cpl_get_version(container, &container_version));
+	}
 
 
 	// Call the backend
 
-	cpl_id_t id = cpl_db_backend->cpl_db_create_object(cpl_db_backend,
-													   originator,
-													   name,
-													   type,
-													   container,
-													   container_version);
-	CPL_RUNTIME_VERIFY(id);
+	cpl_id_t id;
+	cpl_return_t ret;
+	
+	ret = cpl_db_backend->cpl_db_create_object(cpl_db_backend,
+											   originator,
+											   name,
+											   type,
+											   container,
+											   container_version,
+											   &id);
+	CPL_RUNTIME_VERIFY(ret);
 
 
 	// Create an in-memory state
@@ -323,7 +335,11 @@ cpl_create_object(const char* originator,
 		cpl_unlock(&cpl_open_objects_lock);
 	}
 
-	return id;
+
+	// Finish
+
+	if (out_id != NULL) *out_id = id;
+	return CPL_OK;
 }
 
 
@@ -334,12 +350,14 @@ cpl_create_object(const char* originator,
  * @param originator the object originator
  * @param name the object name
  * @param type the object type
- * @return the object ID, or a negative value on error
+ * @param out_id the pointer to store the object ID
+ * @return CPL_OK or an error code
  */
-extern "C" EXPORT cpl_id_t
+extern "C" EXPORT cpl_return_t
 cpl_lookup_object(const char* originator,
 				  const char* name,
-				  const char* type)
+				  const char* type,
+				  cpl_id_t* out_id)
 {
 	CPL_ENSURE_INITALIZED;
 
@@ -353,16 +371,21 @@ cpl_lookup_object(const char* originator,
 
 	// Call the backend
 
-	cpl_id_t id = cpl_db_backend->cpl_db_lookup_object(cpl_db_backend,
-													   originator,
-													   name,
-													   type);
-	CPL_RUNTIME_VERIFY(id);
+	cpl_return_t ret;
+	cpl_id_t id;
+	
+	ret = cpl_db_backend->cpl_db_lookup_object(cpl_db_backend,
+											   originator,
+											   name,
+											   type,
+											   &id);
+	CPL_RUNTIME_VERIFY(ret);
 
 
 	// Do not get the version number yet
 
-	return id;
+	if (out_id != NULL) *out_id = id;
+	return CPL_OK;
 }
 
 
@@ -372,7 +395,7 @@ cpl_lookup_object(const char* originator,
  * @param data_dest the destination object
  * @param data_source the source object
  * @param type the data dependency edge type
- * @return the operation return value
+ * @return CPL_OK or an error code
  */
 extern "C" EXPORT cpl_return_t
 cpl_data_flow(const cpl_id_t data_dest,
@@ -403,7 +426,7 @@ cpl_data_flow(const cpl_id_t data_dest,
  * @param object_id the ID of the controlled object
  * @param controller the object ID of the controller
  * @param type the control dependency edge type
- * @return the operation return value
+ * @return CPL_OK or an error code
  */
 extern "C" EXPORT cpl_return_t
 cpl_control(const cpl_id_t object_id,
@@ -440,7 +463,7 @@ cpl_control(const cpl_id_t object_id,
  * @param from_id the "from" end of the dependency edge
  * @param to_id the "to" end of the dependency edge
  * @param type the data dependency edge type
- * @return the operation return value
+ * @return CPL_OK or an error code
  */
 cpl_return_t
 cpl_add_dependency(const cpl_id_t from_id,
@@ -461,8 +484,8 @@ cpl_add_dependency(const cpl_id_t from_id,
 
 	// Get the version of the "to" object
 
-	cpl_version_t to_version = cpl_get_version(to_id);
-	CPL_RUNTIME_VERIFY(to_version);
+	cpl_version_t to_version;
+	CPL_RUNTIME_VERIFY(cpl_get_version(to_id, &to_version));
 
 
 	// Cycle-Avoidance Algorithm
@@ -504,18 +527,19 @@ cpl_add_dependency(const cpl_id_t from_id,
 
 		// Call the backend to determine the dependency
 
+		int b;
 		cpl_return_t r = cpl_db_backend->cpl_db_has_immediate_ancestor(
 				cpl_db_backend, from_id, CPL_VERSION_NONE,
-				to_id, to_version);
+				to_id, to_version, &b);
 		CPL_RUNTIME_VERIFY(r);
 
-		dependency_exists = r > 0;
+		dependency_exists = b > 0;
 
 
 		// If the dependency exists, get the object version
 
 		if (!dependency_exists) {
-			from_version = cpl_get_version(from_id);
+			CPL_RUNTIME_VERIFY(cpl_get_version(from_id, &from_version));
 		}
 	}
 

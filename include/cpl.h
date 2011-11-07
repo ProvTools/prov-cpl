@@ -72,35 +72,35 @@ typedef int cpl_version_t;
 /**
  * A generic function return type.
  */
-typedef long long cpl_return_t;
+	typedef int cpl_return_t;
 
 
-/***************************************************************************/
-/** Constants                                                             **/
-/***************************************************************************/
+	/***************************************************************************/
+	/** Constants                                                             **/
+	/***************************************************************************/
 
-/**
- * An invalid ID signifying no object
- */
+	/**
+	 * An invalid ID signifying no object
+	 */
 #define CPL_NONE						0
 
-/**
- * An invalid version number
- */
+	/**
+	 * An invalid version number
+	 */
 #define CPL_VERSION_NONE				((cpl_version_t) -1)
 
 
-/***************************************************************************/
-/** Dependency Edge Types                                                 **/
-/***************************************************************************/
+	/***************************************************************************/
+	/** Dependency Edge Types                                                 **/
+	/***************************************************************************/
 
-/**
- * The data dependency category
- */
+	/**
+	 * The data dependency category
+	 */
 #define CPL_DEPENDENCY_CATEGORY_DATA	1
 
-/**
- * The control dependency category
+	/**
+	 * The control dependency category
  */
 #define CPL_DEPENDENCY_CATEGORY_CONTROL	2
 
@@ -271,13 +271,15 @@ cpl_cleanup(void);
  * @param type the object type
  * @param container the ID of the object that should contain this object
  *                  (use CPL_NONE for no container)
- * @return the object ID, or a negative value on error
+ * @param out_id the pointer to store the ID of the newly created object
+ * @return CPL_OK or an error code
  */
-EXPORT cpl_id_t
+EXPORT cpl_return_t
 cpl_create_object(const char* originator,
 				  const char* name,
 				  const char* type,
-				  const cpl_id_t container);
+				  const cpl_id_t container,
+				  cpl_id_t* out_id);
 
 /**
  * Look up an object by name. If multiple objects share the same name,
@@ -286,12 +288,14 @@ cpl_create_object(const char* originator,
  * @param originator the object originator
  * @param name the object name
  * @param type the object type
- * @return the object ID, or a negative value on error
+ * @param out_id the pointer to store the object ID
+ * @return CPL_OK or an error code
  */
-EXPORT cpl_id_t
+EXPORT cpl_return_t
 cpl_lookup_object(const char* originator,
 				  const char* name,
-				  const char* type);
+				  const char* type,
+				  cpl_id_t* out_id);
 
 /**
  * Disclose a data flow.
@@ -299,7 +303,7 @@ cpl_lookup_object(const char* originator,
  * @param data_dest the destination object
  * @param data_source the source object
  * @param type the data dependency edge type
- * @return the operation return value
+ * @return CPL_OK or an error code
  */
 EXPORT cpl_return_t
 cpl_data_flow(const cpl_id_t data_dest,
@@ -312,7 +316,7 @@ cpl_data_flow(const cpl_id_t data_dest,
  * @param object_id the ID of the controlled object
  * @param controller the object ID of the controller
  * @param type the control dependency edge type
- * @return the operation return value
+ * @return CPL_OK or an error code
  */
 EXPORT cpl_return_t
 cpl_control(const cpl_id_t object_id,

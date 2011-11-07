@@ -150,17 +150,20 @@ cpl_rdf_destroy(struct _cpl_db_backend_t* backend)
  * @param container the ID of the object that should contain this object
  *                  (use CPL_NONE for no container)
  * @param container_version the version of the container (if not CPL_NONE)
- * @return the object ID, or a negative value on error
+ * @param out_id the pointer to store the ID of the newly created object
+ * @return CPL_OK or an error code
  */
-extern "C" cpl_id_t
+extern "C" cpl_return_t
 cpl_rdf_create_object(struct _cpl_db_backend_t* backend,
 					  const char* originator,
 					  const char* name,
 					  const char* type,
 					  const cpl_id_t container,
-					  const cpl_version_t container_version)
+					  const cpl_version_t container_version,
+					  cpl_id_t* out_id)
 {
-	assert(backend != NULL && originator != NULL && name != NULL && type != NULL);
+	assert(backend != NULL && originator != NULL
+			&& name != NULL && type != NULL);
 	cpl_rdf_t* rdf = (cpl_rdf_t*) backend;
 
 
@@ -178,13 +181,15 @@ cpl_rdf_create_object(struct _cpl_db_backend_t* backend,
  * @param originator the object originator (namespace)
  * @param name the object name
  * @param type the object type
- * @return the object ID, or a negative value on error
+ * @param out_id the pointer to store the object ID
+ * @return CPL_OK or an error code
  */
-extern "C" cpl_id_t
+extern "C" cpl_return_t
 cpl_rdf_lookup_object(struct _cpl_db_backend_t* backend,
 					  const char* originator,
 					  const char* name,
-					  const char* type)
+					  const char* type,
+					  cpl_id_t* out_id)
 {
 	return CPL_E_NOT_IMPLEMENTED;
 }
@@ -196,9 +201,9 @@ cpl_rdf_lookup_object(struct _cpl_db_backend_t* backend,
  * @param backend the pointer to the backend structure
  * @param object_id the object ID
  * @param version the new version of the object
- * @return the error code
+ * @return CPL_OK or an error code
  */
-cpl_return_t
+extern "C" cpl_return_t
 cpl_rdf_create_version(struct _cpl_db_backend_t* backend,
 					   const cpl_id_t object_id,
 					   const cpl_version_t version)
@@ -212,11 +217,13 @@ cpl_rdf_create_version(struct _cpl_db_backend_t* backend,
  *
  * @param backend the pointer to the backend structure
  * @param id the object ID
- * @return the object version or an error code
+ * @param out_version the pointer to store the version of the object
+ * @return CPL_OK or an error code
  */
-extern "C" cpl_version_t
+extern "C" cpl_return_t
 cpl_rdf_get_version(struct _cpl_db_backend_t* backend,
-					const cpl_id_t id)
+					const cpl_id_t id,
+					cpl_version_t* out_version)
 {
 	return CPL_E_NOT_IMPLEMENTED;
 }
@@ -231,7 +238,7 @@ cpl_rdf_get_version(struct _cpl_db_backend_t* backend,
  * @param to_id the edge destination ID
  * @param to_ver the edge destination version
  * @param type the data or control dependency type
- * @return the error code
+ * @return the object version or an error code
  */
 extern "C" cpl_return_t
 cpl_rdf_add_ancestry_edge(struct _cpl_db_backend_t* backend,
@@ -256,14 +263,16 @@ cpl_rdf_add_ancestry_edge(struct _cpl_db_backend_t* backend,
  *                        is one of the immediate ancestors
  * @param query_object_max_version the maximum version of the query
  *                                 object to consider
- * @return a positive number if yes, 0 if no, or a negative error code
+ * @param out the pointer to store a positive number if yes, or 0 if no
+ * @return CPL_OK or an error code
  */
 extern "C" cpl_return_t
 cpl_rdf_has_immediate_ancestor(struct _cpl_db_backend_t* backend,
 							   const cpl_id_t object_id,
 							   const cpl_version_t version_hint,
 							   const cpl_id_t query_object_id,
-							   const cpl_version_t query_object_max_version)
+							   const cpl_version_t query_object_max_version,
+							   int* out)
 {
 	return CPL_E_NOT_IMPLEMENTED;
 }

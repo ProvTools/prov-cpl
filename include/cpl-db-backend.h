@@ -77,15 +77,17 @@ typedef struct _cpl_db_backend_t {
 	 * @param container the ID of the object that should contain this object
 	 *                  (use CPL_NONE for no container)
 	 * @param container_version the version of the container (if not CPL_NONE)
-	 * @return the object ID, or a negative value on error
+	 * @param out_id the pointer to store the ID of the newly created object
+	 * @return CPL_OK or an error code
 	 */
-	cpl_id_t
+	cpl_return_t
 	(*cpl_db_create_object)(struct _cpl_db_backend_t* backend,
 							const char* originator,
 							const char* name,
 							const char* type,
 							const cpl_id_t container,
-							const cpl_version_t container_version);
+							const cpl_version_t container_version,
+							cpl_id_t* out_id);
 
 	/**
 	 * Look up an object by name. If multiple objects share the same name,
@@ -95,13 +97,15 @@ typedef struct _cpl_db_backend_t {
 	 * @param originator the object originator
 	 * @param name the object name
 	 * @param type the object type
-	 * @return the object ID, or a negative value on error
+	 * @param out_id the pointer to store the object ID
+	 * @return CPL_OK or an error code
 	 */
-	cpl_id_t
+	cpl_return_t
 	(*cpl_db_lookup_object)(struct _cpl_db_backend_t* backend,
 							const char* originator,
 							const char* name,
-					   		const char* type);
+					   		const char* type,
+							cpl_id_t* out_id);
 
 	/**
 	 * Create a new version of the given object
@@ -109,7 +113,7 @@ typedef struct _cpl_db_backend_t {
 	 * @param backend the pointer to the backend structure
 	 * @param object_id the object ID
 	 * @param version the new version of the object
-	 * @return the error code
+	 * @return CPL_OK or an error code
 	 */
 	cpl_return_t
 	(*cpl_db_create_version)(struct _cpl_db_backend_t* backend,
@@ -121,11 +125,13 @@ typedef struct _cpl_db_backend_t {
 	 *
 	 * @param backend the pointer to the backend structure
 	 * @param id the object ID
-	 * @return the object version or an error code
+	 * @param out_version the pointer to store the version of the object
+	 * @return CPL_OK or an error code
 	 */
-	cpl_version_t
+	cpl_return_t
 	(*cpl_db_get_version)(struct _cpl_db_backend_t* backend,
-						  const cpl_id_t id);
+						  const cpl_id_t id,
+						  cpl_version_t* out_version);
 
 	/**
 	 * Add an ancestry edge
@@ -136,7 +142,7 @@ typedef struct _cpl_db_backend_t {
 	 * @param to_id the edge destination ID
 	 * @param to_ver the edge destination version
 	 * @param type the data or the control dependency type
-	 * @return the error code
+	 * @return CPL_OK or an error code
 	 */
 	cpl_return_t
 	(*cpl_db_add_ancestry_edge)(struct _cpl_db_backend_t* backend,
@@ -157,14 +163,16 @@ typedef struct _cpl_db_backend_t {
 	 *                        is one of the immediate ancestors
 	 * @param query_object_max_ver the maximum version of the query
 	 *                             object to consider
-	 * @return a positive number if yes, 0 if no, or a negative error code
+	 * @param out the pointer to store a positive number if yes, or 0 if no
+	 * @return CPL_OK or an error code
 	 */
 	cpl_return_t
 	(*cpl_db_has_immediate_ancestor)(struct _cpl_db_backend_t* backend,
 									 const cpl_id_t object_id,
 									 const cpl_version_t version_hint,
 									 const cpl_id_t query_object_id,
-									 const cpl_version_t query_object_max_ver);
+									 const cpl_version_t query_object_max_ver,
+									 int* out);
 
 } cpl_db_backend_t;
 
