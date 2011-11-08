@@ -1,5 +1,5 @@
 --
--- mysql-setup.sql
+-- postgresql-setup.sql
 -- Core Provenance Library
 --
 -- Copyright 2011
@@ -32,21 +32,25 @@
 -- Contributor(s): Peter Macko
 --
 
+--
+-- Usage on Linux:
+--   sudo -u postgres psql postgres < scripts/postgresql-setup.sql
+--
+
 
 -- ------------------------------------------------------------------------ --
--- MySQL Setup                                                              --
+-- PostgreSQL Setup                                                         --
 -- ------------------------------------------------------------------------ --
 
 --
 -- Create the database and the default user with the default password
 -- 
 
-CREATE DATABASE IF NOT EXISTS cpl;
-GRANT ALL PRIVILEGES ON cpl.* 
-      TO 'cpl'@'localhost' IDENTIFIED BY 'cplcplcpl'
-      WITH GRANT OPTION;
+CREATE DATABASE cpl;
+CREATE USER cpl WITH PASSWORD 'cplcplcpl';
+GRANT ALL PRIVILEGES ON DATABASE cpl TO cpl WITH GRANT OPTION;
 
-USE cpl;
+\connect cpl
 
 
 --
@@ -54,7 +58,7 @@ USE cpl;
 --
 
 CREATE TABLE IF NOT EXISTS cpl_objects (
-       id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+       id SERIAL PRIMARY KEY,
        originator VARCHAR(255),
        name VARCHAR(255),
        type VARCHAR(100),
@@ -62,7 +66,7 @@ CREATE TABLE IF NOT EXISTS cpl_objects (
        container_ver INT);
 
 CREATE TABLE IF NOT EXISTS cpl_sessions (
-       id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+       id SERIAL PRIMARY KEY,
        username VARCHAR(255),
        pid INT,
        program VARCHAR(4096),
@@ -85,6 +89,19 @@ CREATE TABLE IF NOT EXISTS cpl_ancestry (
        FOREIGN KEY(from_id, from_version) REFERENCES cpl_versions(id, version),
        FOREIGN KEY(to_id, to_version) REFERENCES cpl_versions(id, version));
 
-ALTER TABLE cpl_objects ADD CONSTRAINT
+ALTER TABLE cpl_objects ADD CONSTRAINT cpl_objects_fk
       FOREIGN KEY (container_id, container_ver)
       REFERENCES cpl_versions(id, version);
+
+
+--
+-- Grant the appropriate privileges
+--
+
+GRANT ALL PRIVILEGES ON TABLE cpl_objects TO cpl WITH GRANT OPTION;
+GRANT ALL PRIVILEGES ON TABLE cpl_sessions TO cpl WITH GRANT OPTION;
+GRANT ALL PRIVILEGES ON TABLE cpl_versions TO cpl WITH GRANT OPTION;
+GRANT ALL PRIVILEGES ON TABLE cpl_ancestry TO cpl WITH GRANT OPTION;
+
+GRANT ALL PRIVILEGES ON TABLE cpl_objects_id_seq TO cpl WITH GRANT OPTION;
+GRANT ALL PRIVILEGES ON TABLE cpl_sessions_id_seq TO cpl WITH GRANT OPTION;

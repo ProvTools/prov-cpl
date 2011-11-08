@@ -181,6 +181,12 @@ cpl_create_odbc_backend(const char* connection_string,
 	memcpy(&odbc->backend, &CPL_ODBC_BACKEND, sizeof(odbc->backend));
 	odbc->db_type = db_type;
 
+	if (db_type != CPL_ODBC_MYSQL && db_type != CPL_ODBC_POSTGRESQL) {
+		// XXX We need to come up with a reliable generic database backend
+		fprintf(stderr, "CPL ODBC WARNING: Unsupported database type.\n");
+		fprintf(stderr, "  I\'ll try my best, but expect race conditions.\n");
+	}
+
 
 	// Initialize the synchronization primitives
 
@@ -268,14 +274,14 @@ cpl_create_odbc_backend(const char* connection_string,
 	}}
 
 	if (db_type == CPL_ODBC_POSTGRESQL) {
-		// TODO Check whether this works
 		PREPARE(create_session_insert_stmt,
-				"INSERT INTO cpl_sessions SET user=?, pid=?, program=? "
-				"RETURNING id;");
+				"INSERT INTO cpl_sessions (username, pid, program) "
+				"VALUES (?, ?, ?) RETURNING id;");
 	}
 	else {
 		PREPARE(create_session_insert_stmt,
-				"INSERT INTO cpl_sessions SET user=?, pid=?, program=?;");
+				"INSERT INTO cpl_sessions (username, pid, program) "
+				"VALUES (?, ?, ?);");
 	}
 
 	if (db_type == CPL_ODBC_MYSQL) {
@@ -283,7 +289,6 @@ cpl_create_odbc_backend(const char* connection_string,
 				"SELECT LAST_INSERT_ID();");
 	}
 	else if (db_type == CPL_ODBC_POSTGRESQL) {
-		// TODO Check whether this works
 		PREPARE(create_session_get_id_stmt,
 				"SELECT CURRVAL('cpl_sessions_id_seq');");
 	}
@@ -294,20 +299,21 @@ cpl_create_odbc_backend(const char* connection_string,
 	}
 
 	if (db_type == CPL_ODBC_POSTGRESQL) {
-		// TODO Check whether this works
 		PREPARE(create_object_insert_stmt,
-				"INSERT INTO cpl_objects SET originator=?, name=?, type=? "
-				"RETURNING id;");
+				"INSERT INTO cpl_objects (originator, name, type) "
+				"VALUES (?, ?, ?) RETURNING id;");
 		PREPARE(create_object_insert_container_stmt,
-				"INSERT INTO cpl_objects SET originator=?, name=?, type=?, "
-				"container_id=?, container_ver=? RETURNING id;");
+				"INSERT INTO cpl_objects (originator, name, type, "
+				"container_id, container_ver) VALUES (?, ?, ?, ?, ?) "
+				"RETURNING id;");
 	}
 	else {
 		PREPARE(create_object_insert_stmt,
-				"INSERT INTO cpl_objects SET originator=?, name=?, type=?;");
+				"INSERT INTO cpl_objects (originator, name, type) "
+				"VALUES (?, ?, ?);");
 		PREPARE(create_object_insert_container_stmt,
-				"INSERT INTO cpl_objects SET originator=?, name=?, type=?, "
-				"container_id=?, container_ver=?;");
+				"INSERT INTO cpl_objects (originator, name, type, "
+				"container_id, container_ver) VALUES (?, ?, ?, ?, ?);");
 	}
 
 	if (db_type == CPL_ODBC_MYSQL) {
@@ -315,7 +321,6 @@ cpl_create_odbc_backend(const char* connection_string,
 				"SELECT LAST_INSERT_ID();");
 	}
 	else if (db_type == CPL_ODBC_POSTGRESQL) {
-		// TODO Check whether this works
 		PREPARE(create_object_get_id_stmt,
 				"SELECT CURRVAL('cpl_objects_id_seq');");
 	}
@@ -326,21 +331,23 @@ cpl_create_odbc_backend(const char* connection_string,
 	}
 
 	PREPARE(create_object_insert_version_stmt,
-			"INSERT INTO cpl_versions SET id=?, version=0, session=?;");
+			"INSERT INTO cpl_versions (id, version, session) "
+			"VALUES (?, 0, ?);");
 
 	PREPARE(lookup_object_stmt,
 			"SELECT MAX(id) FROM cpl_objects WHERE originator=? "
 			"AND name=? AND type=?;");
 
 	PREPARE(create_version_stmt,
-			"INSERT INTO cpl_versions SET id=?, version=?, session=?;");
+			"INSERT INTO cpl_versions (id, version, session) "
+			"VALUES (?, ?, ?);");
 
 	PREPARE(get_version_stmt,
 			"SELECT MAX(version) FROM cpl_versions WHERE id=?;");
 
 	PREPARE(add_ancestry_edge_stmt,
-			"INSERT INTO cpl_ancestry SET from_id=?, from_version=?, "
-			"to_id=?, to_version=?, type=?;");
+			"INSERT INTO cpl_ancestry (from_id, from_version, "
+			"to_id, to_version, type) VALUES (?, ?, ?, ?, ?);");
 
 	PREPARE(has_immediate_ancestor_stmt,
 			"SELECT to_version FROM cpl_ancestry WHERE to_id=? AND "
@@ -539,6 +546,10 @@ cpl_odbc_create_session(struct _cpl_db_backend_t* backend,
 	}
 	else {
 
+		// XXX This works for MySQL, but the way it is written, we would
+		// need to synchronize across all instances of CPL for the generic
+		// database queries to work
+
 		mutex_lock(odbc->get_insert_id_lock);
 
 
@@ -659,6 +670,10 @@ cpl_odbc_create_object(struct _cpl_db_backend_t* backend,
 		}
 	}
 	else {
+
+		// XXX This works for MySQL, but the way it is written, we would
+		// need to synchronize across all instances of CPL for the generic
+		// database queries to work
 
 		mutex_lock(odbc->get_insert_id_lock);
 

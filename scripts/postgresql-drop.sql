@@ -1,5 +1,5 @@
 --
--- mysql-setup.sql
+-- postgresql-drop.sql
 -- Core Provenance Library
 --
 -- Copyright 2011
@@ -34,57 +34,8 @@
 
 
 -- ------------------------------------------------------------------------ --
--- MySQL Setup                                                              --
+-- Drop PostgreSQL Schema                                                   --
 -- ------------------------------------------------------------------------ --
 
---
--- Create the database and the default user with the default password
--- 
-
-CREATE DATABASE IF NOT EXISTS cpl;
-GRANT ALL PRIVILEGES ON cpl.* 
-      TO 'cpl'@'localhost' IDENTIFIED BY 'cplcplcpl'
-      WITH GRANT OPTION;
-
-USE cpl;
-
-
---
--- Create the schema
---
-
-CREATE TABLE IF NOT EXISTS cpl_objects (
-       id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-       originator VARCHAR(255),
-       name VARCHAR(255),
-       type VARCHAR(100),
-       container_id INT,
-       container_ver INT);
-
-CREATE TABLE IF NOT EXISTS cpl_sessions (
-       id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-       username VARCHAR(255),
-       pid INT,
-       program VARCHAR(4096),
-       initialization_time TIMESTAMP DEFAULT NOW());
-
-CREATE TABLE IF NOT EXISTS cpl_versions (
-       id INT NOT NULL REFERENCES cpl_objects(id),
-       version INT,
-       creation_time TIMESTAMP DEFAULT NOW(),
-       session INT REFERENCES cpl_sessions(id),
-       PRIMARY KEY(id, version));
-
-CREATE TABLE IF NOT EXISTS cpl_ancestry (
-       from_id INT NOT NULL,
-       from_version INT,
-       to_id INT NOT NULL,
-       to_version INT,
-       type INT,
-       PRIMARY KEY(from_id, from_version, to_id, to_version),
-       FOREIGN KEY(from_id, from_version) REFERENCES cpl_versions(id, version),
-       FOREIGN KEY(to_id, to_version) REFERENCES cpl_versions(id, version));
-
-ALTER TABLE cpl_objects ADD CONSTRAINT
-      FOREIGN KEY (container_id, container_ver)
-      REFERENCES cpl_versions(id, version);
+\connect cpl
+DROP TABLE IF EXISTS cpl_objects, cpl_sessions, cpl_versions, cpl_ancestry;

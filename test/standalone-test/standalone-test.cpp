@@ -73,6 +73,9 @@ main(int argc, char** argv)
 #endif
 	if (strcmp(backend_type, "ODBC") == 0
 			|| strcmp(backend_type, "odbc") == 0) {
+		/*ret = cpl_create_odbc_backend("DSN=CPL_PostgreSQL;UID=cpl;PWD=cplcplcpl;",
+									  CPL_ODBC_POSTGRESQL,
+									  &backend);*/
 		ret = cpl_create_odbc_backend("DSN=CPL;UID=cpl;PWD=cplcplcpl;",
 									  CPL_ODBC_MYSQL,
 									  &backend);

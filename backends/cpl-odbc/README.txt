@@ -6,6 +6,7 @@ Contents:
   1. Installing ODBC in Ubuntu
   2. Installing ODBC data sources in Ubuntu
   3. Installing ODBC data sources in Windows
+  4. Configuring PostgreSQL
 
 Copyright 2011 The President and Fellows of Harvard College.
 Contributor(s): Peter Macko
@@ -70,3 +71,24 @@ an Ultimate edition of Microsoft Windows. To add a data source, please use the
 ODBC Data Source Administrator, located in Administrative Tools in the Control
 Panel.
 
+
+  4. Configuring PostgreSQL
+-----------------------------
+
+PostgreSQL might not work out of the box on Ubuntu. If you experience user
+authentication issues for the user cpl, please add the following line to your
+pg_hba.conf file:
+
+local   cpl             cpl                                     md5
+
+Make sure to add it just before the line:
+
+local   all             all                                     peer
+
+
+If you are able to connect to the database using psql (i.e. psql cpl -U cpl),
+but you cannot open an ODBC connection, you might need to change the location
+of the PostgreSQL socket to /tmp by setting the following property in your
+postgresql.conf file and restarting the PostgreSQL service:
+
+unix_socket_directory = '/tmp'
