@@ -693,6 +693,7 @@ cpl_add_dependency(const cpl_id_t from_id,
 
 	if (obj_from != NULL) {
 		obj_from->frozen = false;
+		obj_from->last_session = cpl_session;
 		obj_from->version = from_version;
 	}
 
