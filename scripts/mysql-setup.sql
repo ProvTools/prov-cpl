@@ -88,4 +88,3 @@ CREATE TABLE IF NOT EXISTS cpl_ancestry (
 ALTER TABLE cpl_objects ADD CONSTRAINT
       FOREIGN KEY (container_id, container_ver)
       REFERENCES cpl_versions(id, version);
-

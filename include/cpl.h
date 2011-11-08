@@ -237,6 +237,11 @@ typedef int cpl_return_t;
  * The requested object/version/etc. already exists
  */
 #define CPL_E_ALREADY_EXISTS			-12
+ 
+/**
+ * An error originated by the underlying platform
+ */
+#define CPL_E_PLATFORM_ERROR			-13
 
 
 

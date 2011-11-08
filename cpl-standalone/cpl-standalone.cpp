@@ -258,12 +258,72 @@ cpl_initialize(struct _cpl_db_backend_t* backend)
 	int pid;
 
 #ifdef _WINDOWS
+	DWORD _user_size = 256;
+	DWORD _program_size = 4096;
+	BOOL _ok;
+
+	char* _user = new char[_user_size];
+	if (_user == NULL) {
+		cpl_db_backend = NULL;
+		return CPL_E_INSUFFICIENT_RESOURCES;
+	}
+
+	_ok = GetUserName(_user, &_user_size);
+	if (!_ok) {
+		if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
+			delete[] _user;
+			_user = new char[_user_size];
+			if (_user == NULL) {
+				cpl_db_backend = NULL;
+				return CPL_E_INSUFFICIENT_RESOURCES;
+			}
+			_ok = GetUserName(_user, &_user_size);
+		}
+	}
+	if (!_ok) {
+		cpl_db_backend = NULL;
+		delete[] _user;
+		return CPL_E_PLATFORM_ERROR;
+	}
+
+	char* _program = new char[_program_size];
+	if (_program == NULL) {
+		cpl_db_backend = NULL;
+		delete[] _user;
+		return CPL_E_INSUFFICIENT_RESOURCES;
+	}
+
+	_program_size = GetModuleFileName(0, _program, _program_size);
+	if (_program_size <= 0) {
+		if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
+			delete[] _program;
+			_program = new char[_program_size];
+			if (_program == NULL) {
+				cpl_db_backend = NULL;
+				delete[] _user;
+				return CPL_E_INSUFFICIENT_RESOURCES;
+			}
+			_program_size = GetModuleFileName(0, _program, _program_size);
+		}
+	}
+	if (_program_size <= 0) {
+		cpl_db_backend = NULL;
+		delete[] _user;
+		delete[] _program;
+		return CPL_E_PLATFORM_ERROR;
+	}
+	_program_size++;
+
+	user = _user;
+	program = _program;
+	pid = GetCurrentProcessId();
+
 #else
 	user = getenv("USER");
 	pid = getpid();
 	program = program_invocation_name;
-	if (user == NULL) return CPL_E_INTERNAL_ERROR;
-	if (program == NULL) return CPL_E_INTERNAL_ERROR;
+	if (user == NULL) return CPL_E_PLATFORM_ERROR;
+	if (program == NULL) return CPL_E_PLATFORM_ERROR;
 #endif
 
 	cpl_return_t ret;
@@ -272,6 +332,12 @@ cpl_initialize(struct _cpl_db_backend_t* backend)
 												pid,
 												program,
 												&cpl_session);
+
+#ifdef _WINDOWS
+	delete[] _user;
+	delete[] _program;
+#endif
+
 	CPL_RUNTIME_VERIFY(ret);
 
 

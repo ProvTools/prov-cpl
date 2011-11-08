@@ -37,8 +37,5 @@
 -- Drop MySQL Schema                                                        --
 -- ------------------------------------------------------------------------ --
 
-DROP TABLE IF EXISTS cpl_objects;
-DROP TABLE IF EXISTS cpl_sessions;
-DROP TABLE IF EXISTS cpl_versions;
-DROP TABLE IF EXISTS cpl_ancestry;
-
+USE cpl;
+DROP TABLE IF EXISTS cpl_objects, cpl_sessions, cpl_versions, cpl_ancestry;
