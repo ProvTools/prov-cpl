@@ -236,13 +236,14 @@ cpl_get_version(cpl_id_t id, cpl_version_t* out_version)
 
 
 /**
- * Initialize the library. Please note that this function is not thread-safe.
+ * Initialize the library and attach it to the database backend. Please note
+ * that this function is not thread-safe.
  *
  * @param backend the database backend
  * @return the error code
  */
 extern "C" EXPORT cpl_return_t
-cpl_initialize(struct _cpl_db_backend_t* backend)
+cpl_attach(struct _cpl_db_backend_t* backend)
 {
 	CPL_ENSURE_NOT_NULL(backend);
 	if (cpl_initialized) return CPL_E_ALREADY_INITIALIZED;
@@ -349,12 +350,13 @@ cpl_initialize(struct _cpl_db_backend_t* backend)
 
 
 /**
- * Perform the cleanup. Please note that this function is not thread-safe.
+ * Perform the cleanup and detach the library from the database backend.
+ * Please note that this function is not thread-safe.
  *
  * @return the error code
  */
 extern "C" EXPORT cpl_return_t
-cpl_cleanup(void)
+cpl_detach(void)
 {
 	CPL_ENSURE_INITALIZED;
 	cpl_initialized = false;
