@@ -35,6 +35,10 @@
 #include "stdafx.h"
 #include "cpl-private.h"
 
+#ifndef _WINDOWS
+#include <errno.h>
+#endif
+
 
 /***************************************************************************/
 /** Private state                                                         **/
@@ -64,6 +68,11 @@ static cpl_lock_t cpl_open_objects_lock;
  * The database backend
  */
 static cpl_db_backend_t* cpl_db_backend = NULL;
+
+/**
+ * The current session ID
+ */
+static cpl_session_t cpl_session = CPL_NONE;
 
 
 
@@ -114,7 +123,7 @@ cpl_new_open_object(const cpl_version_t version)
 	obj->locked = 1;
 	obj->version = version;
 	obj->frozen = true;
-	obj->last_originator = CPL_NONE;
+	obj->last_session = CPL_NONE;
 
 	return obj;
 }
@@ -237,10 +246,38 @@ cpl_initialize(struct _cpl_db_backend_t* backend)
 {
 	CPL_ENSURE_NOT_NULL(backend);
 	if (cpl_initialized) return CPL_E_ALREADY_INITIALIZED;
-	cpl_initialized = true;
 
+	if (cpl_db_backend != NULL) return CPL_E_INTERNAL_ERROR; // race condition
 	cpl_db_backend = backend;
 
+
+	// Create the session
+
+	const char* user;
+	const char* program;
+	int pid;
+
+#ifdef _WINDOWS
+#else
+	user = getenv("USER");
+	pid = getpid();
+	program = program_invocation_name;
+	if (user == NULL) return CPL_E_INTERNAL_ERROR;
+	if (program == NULL) return CPL_E_INTERNAL_ERROR;
+#endif
+
+	cpl_return_t ret;
+	ret = cpl_db_backend->cpl_db_create_session(cpl_db_backend,
+												user,
+												pid,
+												program,
+												&cpl_session);
+	CPL_RUNTIME_VERIFY(ret);
+
+
+	// Finish
+
+	cpl_initialized = true;
 	return CPL_OK;
 }
 
@@ -318,6 +355,7 @@ cpl_create_object(const char* originator,
 											   type,
 											   container,
 											   container_version,
+											   cpl_session,
 											   &id);
 	CPL_RUNTIME_VERIFY(ret);
 
@@ -544,6 +582,13 @@ cpl_add_dependency(const cpl_id_t from_id,
 	}
 
 
+	// Note: Due to the virtue of the cycle avoidance algorithm, we add a new
+	// dependency edge only if we first create a new version. Consequently,
+	// we do not need to check whether the provenance object is already froxen
+	// or whether the last_session attribute matches the current session.
+	// Another bizarre consequence is that the FREEZE operation is a no-op.
+
+
 	// Automatically unlock the object if it is still locked by the time
 	// we hit end this block
 
@@ -564,7 +609,8 @@ cpl_add_dependency(const cpl_id_t from_id,
 	do {
 		r = cpl_db_backend->cpl_db_create_version(cpl_db_backend,
 												  from_id,
-												  from_version);
+												  from_version,
+												  cpl_session);
 		if (r == CPL_E_ALREADY_EXISTS) {
 #ifdef _WINDOWS
 			Sleep(2 /* ms */);

@@ -81,6 +81,26 @@ typedef struct {
 	int db_type;
 
 	/**
+	 * Lock for getting insert ID
+	 */
+	mutex_t get_insert_id_lock;
+
+	/**
+	 * Lock for session creation
+	 */
+	mutex_t create_session_lock;
+
+	/**
+	 * The insert statement for session creation
+	 */
+	SQLHSTMT create_session_insert_stmt;
+
+	/**
+	 * The statement that determines the ID of the session that was just created
+	 */
+	SQLHSTMT create_session_get_id_stmt;
+
+	/**
 	 * Lock for object creation
 	 */
 	mutex_t create_object_lock;

@@ -139,6 +139,32 @@ cpl_rdf_destroy(struct _cpl_db_backend_t* backend)
 /** Public API                                                            **/
 /***************************************************************************/
 
+/**
+ * Create a session.
+ *
+ * @param backend the pointer to the backend structure
+ * @param user the user name
+ * @param pid the process ID
+ * @param program the program name
+ * @param out_session the pointer to store the created session
+ * @return CPL_OK or an error code
+ */
+extern "C" cpl_return_t
+cpl_rdf_create_session(struct _cpl_db_backend_t* backend,
+					   const char* user,
+					   const int pid,
+					   const char* program,
+					   cpl_session_t* out_session)
+{
+	assert(backend != NULL && user != NULL && program != NULL);
+	cpl_rdf_t* rdf = (cpl_rdf_t*) backend;
+
+
+	// 
+	
+	return CPL_E_NOT_IMPLEMENTED;
+}
+
 
 /**
  * Create an object.
@@ -150,6 +176,7 @@ cpl_rdf_destroy(struct _cpl_db_backend_t* backend)
  * @param container the ID of the object that should contain this object
  *                  (use CPL_NONE for no container)
  * @param container_version the version of the container (if not CPL_NONE)
+ * @param session the session ID responsible for this provenance record
  * @param out_id the pointer to store the ID of the newly created object
  * @return CPL_OK or an error code
  */
@@ -160,6 +187,7 @@ cpl_rdf_create_object(struct _cpl_db_backend_t* backend,
 					  const char* type,
 					  const cpl_id_t container,
 					  const cpl_version_t container_version,
+					  const cpl_session_t session,
 					  cpl_id_t* out_id)
 {
 	assert(backend != NULL && originator != NULL
@@ -201,12 +229,14 @@ cpl_rdf_lookup_object(struct _cpl_db_backend_t* backend,
  * @param backend the pointer to the backend structure
  * @param object_id the object ID
  * @param version the new version of the object
+ * @param session the session ID responsible for this provenance record
  * @return CPL_OK or an error code
  */
 extern "C" cpl_return_t
 cpl_rdf_create_version(struct _cpl_db_backend_t* backend,
 					   const cpl_id_t object_id,
-					   const cpl_version_t version)
+					   const cpl_version_t version,
+					   const cpl_session_t session)
 {
 	return CPL_E_NOT_IMPLEMENTED;
 }
@@ -288,6 +318,7 @@ cpl_rdf_has_immediate_ancestor(struct _cpl_db_backend_t* backend,
  */
 const cpl_db_backend_t CPL_RDF_BACKEND = {
 	cpl_rdf_destroy,
+	cpl_rdf_create_session,
 	cpl_rdf_create_object,
 	cpl_rdf_lookup_object,
 	cpl_rdf_create_version,

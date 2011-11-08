@@ -184,6 +184,8 @@ cpl_create_odbc_backend(const char* connection_string,
 
 	// Initialize the synchronization primitives
 
+	mutex_init(odbc->get_insert_id_lock);
+	mutex_init(odbc->create_session_lock);
 	mutex_init(odbc->create_object_lock);
 	mutex_init(odbc->lookup_object_lock);
 	mutex_init(odbc->create_version_lock);
@@ -239,6 +241,8 @@ cpl_create_odbc_backend(const char* connection_string,
 #define ALLOC_STMT(handle) \
 	SQLAllocHandle(SQL_HANDLE_STMT, odbc->db_connection, &odbc->handle);
 	
+	ALLOC_STMT(create_session_insert_stmt);
+	ALLOC_STMT(create_session_get_id_stmt);
 	ALLOC_STMT(create_object_insert_stmt);
 	ALLOC_STMT(create_object_insert_container_stmt);
 	ALLOC_STMT(create_object_get_id_stmt);
@@ -265,6 +269,32 @@ cpl_create_odbc_backend(const char* connection_string,
 
 	if (db_type == CPL_ODBC_POSTGRESQL) {
 		// TODO Check whether this works
+		PREPARE(create_session_insert_stmt,
+				"INSERT INTO cpl_sessions SET user=?, pid=?, program=? "
+				"RETURNING id;");
+	}
+	else {
+		PREPARE(create_session_insert_stmt,
+				"INSERT INTO cpl_sessions SET user=?, pid=?, program=?;");
+	}
+
+	if (db_type == CPL_ODBC_MYSQL) {
+		PREPARE(create_session_get_id_stmt,
+				"SELECT LAST_INSERT_ID();");
+	}
+	else if (db_type == CPL_ODBC_POSTGRESQL) {
+		// TODO Check whether this works
+		PREPARE(create_session_get_id_stmt,
+				"SELECT CURRVAL('cpl_sessions_id_seq');");
+	}
+	else {
+		// This is ugly
+		PREPARE(create_session_get_id_stmt,
+				"SELECT MAX(id) FROM cpl_sessions;");
+	}
+
+	if (db_type == CPL_ODBC_POSTGRESQL) {
+		// TODO Check whether this works
 		PREPARE(create_object_insert_stmt,
 				"INSERT INTO cpl_objects SET originator=?, name=?, type=? "
 				"RETURNING id;");
@@ -281,8 +311,6 @@ cpl_create_odbc_backend(const char* connection_string,
 	}
 
 	if (db_type == CPL_ODBC_MYSQL) {
-		// NOTE This does not work so well - and it will need to change
-		// if more than one table in the database uses auto increments
 		PREPARE(create_object_get_id_stmt,
 				"SELECT LAST_INSERT_ID();");
 	}
@@ -298,14 +326,14 @@ cpl_create_odbc_backend(const char* connection_string,
 	}
 
 	PREPARE(create_object_insert_version_stmt,
-			"INSERT INTO cpl_versions SET id=?, version=0;");
+			"INSERT INTO cpl_versions SET id=?, version=0, session=?;");
 
 	PREPARE(lookup_object_stmt,
 			"SELECT MAX(id) FROM cpl_objects WHERE originator=? "
 			"AND name=? AND type=?;");
 
 	PREPARE(create_version_stmt,
-			"INSERT INTO cpl_versions SET id=?, version=?;");
+			"INSERT INTO cpl_versions SET id=?, version=?, session=?;");
 
 	PREPARE(get_version_stmt,
 			"SELECT MAX(version) FROM cpl_versions WHERE id=?;");
@@ -336,6 +364,8 @@ cpl_create_odbc_backend(const char* connection_string,
 	assert(!CPL_IS_OK(r));
 
 err_stmts:
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_session_insert_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_session_get_id_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_object_insert_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_object_insert_container_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_object_get_id_stmt);
@@ -354,6 +384,8 @@ err_handles:
 	SQLFreeHandle(SQL_HANDLE_ENV, odbc->db_environment);
 
 err_sync:
+	mutex_destroy(odbc->get_insert_id_lock);
+	mutex_destroy(odbc->create_session_lock);
 	mutex_destroy(odbc->create_object_lock);
 	mutex_destroy(odbc->lookup_object_lock);
 	mutex_destroy(odbc->create_version_lock);
@@ -381,6 +413,8 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
 
 	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
 
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_session_insert_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_session_get_id_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_object_insert_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_object_insert_container_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_object_get_id_stmt);
@@ -397,6 +431,8 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
 		fprintf(stderr, "Warning: Could not terminate the ODBC connection.\n");
 	}
 	
+	mutex_destroy(odbc->get_insert_id_lock);
+	mutex_destroy(odbc->create_session_lock);
 	mutex_destroy(odbc->create_object_lock);
 	mutex_destroy(odbc->lookup_object_lock);
 	mutex_destroy(odbc->create_version_lock);
@@ -454,6 +490,112 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
 
 
 /**
+ * Create a session.
+ *
+ * @param backend the pointer to the backend structure
+ * @param user the user name
+ * @param pid the process ID
+ * @param program the program name
+ * @param out_session the pointer to store the created session
+ * @return CPL_OK or an error code
+ */
+extern "C" cpl_return_t
+cpl_odbc_create_session(struct _cpl_db_backend_t* backend,
+						const char* user,
+						const int pid,
+						const char* program,
+						cpl_session_t* out_session)
+{
+	assert(backend != NULL && user != NULL && program != NULL);
+	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
+	
+	SQLRETURN ret;
+	cpl_session_t session = CPL_NONE;
+	cpl_return_t r = CPL_E_INTERNAL_ERROR;
+
+	mutex_lock(odbc->create_session_lock);
+
+	
+	// Bind the statement parameters
+
+	SQLHSTMT stmt = odbc->create_session_insert_stmt;
+
+	SQL_BIND_VARCHAR(stmt, 1, 255, user);
+	SQL_BIND_INTEGER(stmt, 2, pid);
+	SQL_BIND_VARCHAR(stmt, 3, 4096, program);
+
+
+	// Insert the new row to the sessions table and get the last insert ID
+
+	if (odbc->db_type == CPL_ODBC_POSTGRESQL) {
+
+		// Execute the insert statement and get the session ID at the same time
+
+		ret = SQLExecute(stmt);
+		if (!SQL_SUCCEEDED(ret)) {
+			print_odbc_error("SQLExecute", stmt, SQL_HANDLE_STMT);
+			goto err;
+		}
+	}
+	else {
+
+		mutex_lock(odbc->get_insert_id_lock);
+
+
+		// Execute the insert statement
+
+		ret = SQLExecute(stmt);
+		if (!SQL_SUCCEEDED(ret)) {
+			print_odbc_error("SQLExecute", stmt, SQL_HANDLE_STMT);
+			mutex_unlock(odbc->get_insert_id_lock);
+			goto err;
+		}
+
+
+		// Determine the session ID
+
+		stmt = odbc->create_session_get_id_stmt;
+		
+		ret = SQLExecute(stmt);
+		if (!SQL_SUCCEEDED(ret)) {
+			print_odbc_error("SQLExecute", stmt, SQL_HANDLE_STMT);
+			mutex_unlock(odbc->get_insert_id_lock);
+			goto err;
+		}
+
+
+		mutex_unlock(odbc->get_insert_id_lock);
+	}
+
+
+	// Get the session ID from the result set
+
+	r = cpl_sql_fetch_single_llong(stmt, &session);
+	if (r == CPL_E_NOT_FOUND) r = CPL_E_BACKEND_INTERNAL_ERROR;
+	if (session == CPL_NONE || session < 0) r = CPL_E_BACKEND_INTERNAL_ERROR;
+	if (!CPL_IS_OK(r)) {
+		mutex_unlock(odbc->create_session_lock);
+		return r;
+	}
+
+	
+	// Finish
+
+	mutex_unlock(odbc->create_session_lock);
+	
+	if (out_session != NULL) *out_session = session;
+	return CPL_OK;
+
+
+	// Error handling
+
+err:
+	mutex_unlock(odbc->create_session_lock);
+	return CPL_E_STATEMENT_ERROR;
+}
+
+
+/**
  * Create an object.
  *
  * @param backend the pointer to the backend structure
@@ -463,6 +605,7 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
  * @param container the ID of the object that should contain this object
  *                  (use CPL_NONE for no container)
  * @param container_version the version of the container (if not CPL_NONE)
+ * @param session the session ID responsible for this provenance record
  * @param out_id the pointer to store the ID of the newly created object
  * @return CPL_OK or an error code
  */
@@ -473,6 +616,7 @@ cpl_odbc_create_object(struct _cpl_db_backend_t* backend,
 					   const char* type,
 					   const cpl_id_t container,
 					   const cpl_version_t container_version,
+					   const cpl_session_t session,
 					   cpl_id_t* out_id)
 {
 	assert(backend != NULL && originator != NULL
@@ -516,11 +660,15 @@ cpl_odbc_create_object(struct _cpl_db_backend_t* backend,
 	}
 	else {
 
+		mutex_lock(odbc->get_insert_id_lock);
+
+
 		// Execute the insert statement
 
 		ret = SQLExecute(stmt);
 		if (!SQL_SUCCEEDED(ret)) {
 			print_odbc_error("SQLExecute", stmt, SQL_HANDLE_STMT);
+			mutex_unlock(odbc->get_insert_id_lock);
 			goto err;
 		}
 
@@ -532,8 +680,12 @@ cpl_odbc_create_object(struct _cpl_db_backend_t* backend,
 		ret = SQLExecute(stmt);
 		if (!SQL_SUCCEEDED(ret)) {
 			print_odbc_error("SQLExecute", stmt, SQL_HANDLE_STMT);
+			mutex_unlock(odbc->get_insert_id_lock);
 			goto err;
 		}
+		
+		
+		mutex_unlock(odbc->get_insert_id_lock);
 	}
 
 
@@ -552,6 +704,7 @@ cpl_odbc_create_object(struct _cpl_db_backend_t* backend,
 
 	stmt = odbc->create_object_insert_version_stmt;
 	SQL_BIND_INTEGER(stmt, 1, id);
+	SQL_BIND_INTEGER(stmt, 2, session);
 	ret = SQLExecute(stmt);
 	if (!SQL_SUCCEEDED(ret)) {
 		print_odbc_error("SQLExecute", stmt, SQL_HANDLE_STMT);
@@ -652,12 +805,14 @@ err:
  * @param backend the pointer to the backend structure
  * @param object_id the object ID
  * @param version the new version of the object
+ * @param session the session ID responsible for this provenance record
  * @return CPL_OK or an error code
  */
 cpl_return_t
 cpl_odbc_create_version(struct _cpl_db_backend_t* backend,
 						const cpl_id_t object_id,
-						const cpl_version_t version)
+						const cpl_version_t version,
+						const cpl_session_t session)
 {
 	assert(backend != NULL);
 	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
@@ -672,6 +827,7 @@ cpl_odbc_create_version(struct _cpl_db_backend_t* backend,
 	SQLHSTMT stmt = odbc->create_version_stmt;
 	SQL_BIND_INTEGER(stmt, 1, object_id);
 	SQL_BIND_INTEGER(stmt, 2, version);
+	SQL_BIND_INTEGER(stmt, 3, session);
 
 
 	// Execute
@@ -933,6 +1089,7 @@ err:
  */
 const cpl_db_backend_t CPL_ODBC_BACKEND = {
 	cpl_odbc_destroy,
+	cpl_odbc_create_session,
 	cpl_odbc_create_object,
 	cpl_odbc_lookup_object,
 	cpl_odbc_create_version,

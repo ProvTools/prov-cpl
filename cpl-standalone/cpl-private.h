@@ -93,9 +93,9 @@ typedef struct {
 	bool frozen;
 
 	/**
-	 * Last originator - might be invalid if frozen
+	 * Last session ID that touched this node - might be invalid if frozen
 	 */
-	cpl_id_t last_originator;
+	cpl_session_t last_session;
 
 	/**
 	 * Cache of immediate ancestors - might be incomplete

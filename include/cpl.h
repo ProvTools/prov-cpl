@@ -59,8 +59,7 @@ struct _cpl_db_backend_t;
 /***************************************************************************/
 
 /**
- * A generic type for an ID. It is being used for object IDs and originator
- * instance IDs.
+ * A generic type for an ID. It is used primarily for object IDs.
  */
 typedef long long cpl_id_t;
 
@@ -70,37 +69,42 @@ typedef long long cpl_id_t;
 typedef int cpl_version_t;
 
 /**
+ * A session ID.
+ */
+typedef long long cpl_session_t;
+
+/**
  * A generic function return type.
  */
-	typedef int cpl_return_t;
+typedef int cpl_return_t;
 
 
-	/***************************************************************************/
-	/** Constants                                                             **/
-	/***************************************************************************/
+/***************************************************************************/
+/** Constants                                                             **/
+/***************************************************************************/
 
-	/**
-	 * An invalid ID signifying no object
-	 */
+/**
+ * An invalid ID signifying no object
+ */
 #define CPL_NONE						0
 
-	/**
-	 * An invalid version number
-	 */
+/**
+ * An invalid version number
+ */
 #define CPL_VERSION_NONE				((cpl_version_t) -1)
 
 
-	/***************************************************************************/
-	/** Dependency Edge Types                                                 **/
-	/***************************************************************************/
+/***************************************************************************/
+/** Dependency Edge Types                                                 **/
+/***************************************************************************/
 
-	/**
-	 * The data dependency category
-	 */
+/**
+ * The data dependency category
+ */
 #define CPL_DEPENDENCY_CATEGORY_DATA	1
 
-	/**
-	 * The control dependency category
+/**
+ * The control dependency category
  */
 #define CPL_DEPENDENCY_CATEGORY_CONTROL	2
 
