@@ -35,6 +35,8 @@
 #ifndef __CPL_LOCK_H__
 #define __CPL_LOCK_H__
 
+#include <cpl.h>
+
 
 /***************************************************************************/
 /** Types                                                                 **/
@@ -47,16 +49,36 @@ typedef long cpl_lock_t;
 
 
 /***************************************************************************/
-/** Functions                                                             **/
+/** Functions - Initialization/Cleanup                                    **/
+/***************************************************************************/
+
+/**
+ * Initialize the locking subsystem
+ * 
+ * @return CPL_OK or an error code
+ */
+cpl_return_t
+cpl_lock_initialize(void);
+
+/**
+ * Cleanup
+ */
+void
+cpl_lock_cleanup(void);
+
+
+/***************************************************************************/
+/** Functions - Locks                                                     **/
 /***************************************************************************/
 
 /**
  * Lock
  *
  * @param lock the pointer to the lock
+ * @param yield whether to yield while waiting
  */
 void
-cpl_lock(cpl_lock_t* lock);
+cpl_lock(cpl_lock_t* lock, bool yield=true);
 
 /**
  * Unlock
@@ -65,6 +87,19 @@ cpl_lock(cpl_lock_t* lock);
  */
 void
 cpl_unlock(cpl_lock_t* lock);
+
+
+/***************************************************************************/
+/** Functions - Host-Unique IDs                                           **/
+/***************************************************************************/
+
+/**
+ * Generate a host-local unique ID
+ *
+ * @return the unique 64-bit ID
+ */
+unsigned long long
+cpl_next_unique_id(void);
 
 
 /***************************************************************************/

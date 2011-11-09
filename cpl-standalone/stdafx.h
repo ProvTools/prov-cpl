@@ -35,6 +35,9 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <iostream>
 
 #if defined _WIN64 || defined _WIN32
 #ifndef _WINDOWS
@@ -48,6 +51,8 @@
 #endif
 
 #ifdef __unix__
+#include <sys/time.h>
+#include <errno.h>
 #include <unistd.h>
 #endif
 

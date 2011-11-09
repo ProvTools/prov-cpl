@@ -35,31 +35,134 @@
 #include "stdafx.h"
 #include "cpl-lock.h"
 
+#ifdef __unix__
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <semaphore.h>
+#endif
+
 #ifdef _WINDOWS
 #pragma intrinsic(_InterlockedCompareExchange, _InterlockedExchange)
 #endif
+
+#define CPL_LOCK_SEM_INIT_BASE	"edu.harvard.pass.cpl.unique_id_generator_init"
+#if defined(__unix__)
+#define CPL_LOCK_SEM_INIT		("/" CPL_LOCK_SEM_INIT_BASE)
+#elif defined(_WINDOWS)
+#define CPL_LOCK_SEM_INIT		("Global\\" CPL_LOCK_SEM_INIT_BASE)
+#else
+#define CPL_LOCK_SEM_INIT		("/" CPL_LOCK_SEM_INIT_BASE)
+#endif
+
+
+/**
+ * The base for the unique ID generator
+ */
+static unsigned long long cpl_unique_base = 0;
+
+/**
+ * The process-local counter for the unique ID generator
+ */
+static unsigned long long cpl_unique_counter = 0;
+
+/**
+ * The lock for the process-local unique ID generator
+ */
+static cpl_lock_t cpl_unique_lock = 0;
+
+
+/**
+ * (Re)Initialize the host-local unique ID generator
+ *
+ * @return CPL_OK or an error code
+ */
+cpl_return_t
+cpl_unique_id_generator_initialize(void)
+{
+#if defined(__unix__)
+
+	mode_t u = umask(0);
+	sem_t* s = sem_open(CPL_LOCK_SEM_INIT, O_CREAT, 0777, 1);
+	if (s == SEM_FAILED) {
+		fprintf(stderr, "Error while creating a semaphore: %s\n",
+				strerror(errno));
+		umask(u);
+		return CPL_E_PLATFORM_ERROR;
+	}
+	umask(u);
+
+	if (sem_wait(s) != 0) std::abort();
+
+	usleep(10 * 1000 /* us */);
+	timeval tv;
+	gettimeofday(&tv, NULL);
+
+	cpl_unique_base = (((unsigned long long) (tv.tv_sec - 1000000000UL)) << 32)
+		| (((unsigned long) (tv.tv_usec / 1000)) << 22);
+	cpl_unique_counter = 0;
+
+	if (sem_post(s) != 0) std::abort();
+	sem_close(s);
+
+#elif defined(_WINDOWS)
+#error "Not implemented"
+
+#else
+#error "Not implemented for this platform"
+#endif
+
+	return CPL_OK;
+}
+
+
+/**
+ * Initialize the locking subsystem
+ * 
+ * @return CPL_OK or an error code
+ */
+cpl_return_t
+cpl_lock_initialize(void)
+{
+	// Initialize the host-local unique ID generator
+
+	cpl_return_t r = cpl_unique_id_generator_initialize();
+	if (!CPL_IS_OK(r)) return r;
+
+	return CPL_OK;
+}
+
+
+/**
+ * Cleanup
+ */
+void
+cpl_lock_cleanup(void)
+{
+	// Nothing to do
+}
 
 
 /**
  * Lock
  *
  * @param lock the pointer to the lock
+ * @param yield whether to yield while waiting
  */
 void
-cpl_lock(cpl_lock_t* lock)
+cpl_lock(cpl_lock_t* lock, bool yield)
 {
 	assert(lock != NULL);
 
 #if defined __GNUC__
 	while (__sync_lock_test_and_set(lock, 1)) {
 		while (*lock) {
-			usleep(100);
+			if (yield) usleep(100);
 		}
 	}
 #elif defined _WINDOWS
 	while (_InterlockedCompareExchange(lock, 1, 0) == 1) {
 		while (*lock) {
-			// TODO Figure out how to yield
+			if (yield) Sleep(1);
 		}
 	}
 #else
@@ -85,5 +188,43 @@ cpl_unlock(cpl_lock_t* lock)
 #else
 #error "Not implemented"
 #endif
+}
+
+
+/**
+ * Generate a host-local unique ID
+ *
+ * @return the unique 64-bit ID
+ */
+unsigned long long
+cpl_next_unique_id(void)
+{
+	cpl_lock(&cpl_unique_lock);
+
+
+	// Check for the counter overflow
+
+	if (cpl_unique_counter >= 1ULL << 22) {
+
+		// Need to reinitialize the counter
+
+		cpl_return_t r = cpl_unique_id_generator_initialize();
+		if (!CPL_IS_OK(r)) {
+			cpl_unlock(&cpl_unique_lock);
+			throw CPLException("Failed to reinitialize the unique ID generator");
+		}
+	}
+
+
+	// Advance the process-local counter and generate the host-local unique ID
+
+	unsigned long long x = (cpl_unique_counter++) | cpl_unique_base;
+
+
+	// Finish
+
+	cpl_unlock(&cpl_unique_lock);
+
+	return x;
 }
 

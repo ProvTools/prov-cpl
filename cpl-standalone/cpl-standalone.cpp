@@ -252,6 +252,15 @@ cpl_attach(struct _cpl_db_backend_t* backend)
 	cpl_db_backend = backend;
 
 
+	// Initialize the locking subsystem
+
+	cpl_return_t ret = cpl_lock_initialize();
+	if (!CPL_IS_OK(ret)) {
+		cpl_db_backend = NULL;
+		return ret;
+	}
+
+
 	// Create the session
 
 	const char* user;
@@ -327,7 +336,6 @@ cpl_attach(struct _cpl_db_backend_t* backend)
 	if (program == NULL) return CPL_E_PLATFORM_ERROR;
 #endif
 
-	cpl_return_t ret;
 	ret = cpl_db_backend->cpl_db_create_session(cpl_db_backend,
 												user,
 												pid,
@@ -339,7 +347,10 @@ cpl_attach(struct _cpl_db_backend_t* backend)
 	delete[] _program;
 #endif
 
-	CPL_RUNTIME_VERIFY(ret);
+	if (!CPL_IS_OK(ret)) {
+		cpl_db_backend = NULL;
+		return ret;
+	}
 
 
 	// Finish
@@ -363,6 +374,8 @@ cpl_detach(void)
 
 	cpl_db_backend->cpl_db_destroy(cpl_db_backend);
 	cpl_db_backend = NULL;
+
+	cpl_lock_cleanup();
 
 	return CPL_OK;
 }
