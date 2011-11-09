@@ -38,7 +38,7 @@
 #include <stddef.h>
 
 #ifdef __cplusplus
-#include <exception>
+#include <cpl-exception.h>
 extern "C" {
 #endif
 #if 0
@@ -452,7 +452,7 @@ struct cpl_traits_id_t
 /**
  * The initialization & cleanup helper
  */
-class CPL_InitializationHelper
+class CPLInitializationHelper
 {
 
 public:
@@ -460,19 +460,22 @@ public:
 	/**
 	 * Create the instance of the class and initialize the library
 	 *
-	 * @param backend the database backend
+	 * @param backend the database backend (or NULL to just handle cleanup)
 	 */
-	CPL_InitializationHelper(struct _cpl_db_backend_t* backend)
+	CPLInitializationHelper(struct _cpl_db_backend_t* backend)
 	{
-		if (!CPL_IS_OK(cpl_attach(backend))) {
-			throw std::exception();
+		if (backend != NULL) {
+			if (!CPL_IS_OK(cpl_attach(backend))) {
+				throw CPLException("Failed to initialize the Core Provenance "
+						"Library");
+			}
 		}
 	}
 
 	/**
 	 * Destroy the instance of this class and deinitialize the library
 	 */
-	~CPL_InitializationHelper(void)
+	~CPLInitializationHelper(void)
 	{
 		cpl_detach();
 	}

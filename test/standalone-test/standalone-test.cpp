@@ -33,11 +33,66 @@
  */
 
 #include "stdafx.h"
+#include <getopt.h>
+
 #include <backends/cpl-odbc.h>
 #include <backends/cpl-rdf.h>
 #include <cpl.h>
 
 #define ORIGINATOR "standalone-test"
+
+
+/**
+ * The program base name
+ */
+const char* program_name = NULL;
+char __program_name[2048];
+
+
+/**
+ * Long command-line options
+ */
+static struct option LONG_OPTIONS[] =
+{
+	{"help",                 no_argument,       0, 'h'},
+	{"odbc",                 required_argument, 0,  0 },
+	{"db-type",              required_argument, 0,  0 },
+	{0, 0, 0, 0}
+};
+
+
+/**
+ * Print the usage information
+ */
+void
+usage(void)
+{
+#define P(...) { fprintf(stderr, __VA_ARGS__); fputc('\n', stderr); }
+	P("Usage: %s [OPTIONS]", program_name);
+	P(" ");
+	P("Options:");
+	P("  -h, --help               Print this message and exit");
+	P("  --db-type DATABASE_TYPE  Specify the database type (MySQL, Jena,...)");
+	P("  --odbc DSN|CONNECT_STR   Use an ODBC connection");
+#undef P
+}
+
+
+/**
+ * Set the program name
+ *
+ * @param name the program name (does not need to be the base-name)
+ */
+void
+set_program_name(const char* name)
+{
+	char* n = strdup(name);
+	strncpy(__program_name, n, sizeof(__program_name) / sizeof(char) - 1);
+	__program_name[sizeof(__program_name) / sizeof(char) - 1] = '\0';
+
+	program_name = basename(__program_name);
+	free(n);
+}
 
 
 /**
@@ -51,48 +106,202 @@ int
 main(int argc, char** argv)
 {
 	const char* backend_type = "ODBC";
+	const char* odbc_connection_string = "CPL";
+	const char* db_type = "";
+
+	set_program_name(argv[0]);
+
+
+	// Parse the command-line arguments
+
+	try {
+		int c, option_index = 0;
+		while ((c = getopt_long(argc, argv, "h",
+								LONG_OPTIONS, &option_index)) >= 0) {
+
+			switch (c) {
+
+			case 0:
+				if (strcmp(LONG_OPTIONS[option_index].name, "odbc") == 0) {
+					backend_type = "ODBC";
+					odbc_connection_string = optarg;
+				}
+				if (strcmp(LONG_OPTIONS[option_index].name, "db-type") == 0) {
+					db_type = optarg;
+				}
+				break;
+
+			case 'h':
+				usage();
+				return 0;
+
+			case '?':
+			case ':':
+				// getopt_long already printed an error message
+				return 1;
+
+			default:
+				abort();
+			}
+		}
+
+
+		// Check the non-option arguments
+
+		if (optind != argc) {
+			throw CPLException("Too many arguments; please use -h for help.");
+		}
+	}
+	catch (std::exception& e) {
+		fprintf(stderr, "%s: %s\n", program_name, e.what());
+		return 1;
+	}
+
 
 	
-	// Initialize
+	// Create the database backend
 
-	cpl_db_backend_t* backend;
-	cpl_return_t ret;
+	cpl_db_backend_t* backend = NULL;
+
+	try {
+		cpl_return_t ret;
+
+
+		// ODBC
+
+		if (strcasecmp(backend_type, "ODBC") == 0) {
+
+			std::string dsn;
+			std::string conn;
+			int type = CPL_ODBC_GENERIC;
+
+
+			// Determine the DB type
+
+#define MATCH_DB_TYPE(x, c) if (strcasecmp(db_type, x) == 0) type = c;
+			
+			MATCH_DB_TYPE("MySQL", CPL_ODBC_MYSQL);
+			MATCH_DB_TYPE("PostgreSQL", CPL_ODBC_POSTGRESQL);
+			MATCH_DB_TYPE("Postgres", CPL_ODBC_POSTGRESQL);
+
+			if (strcmp(db_type, "") != 0 && type == CPL_ODBC_UNKNOWN) {
+				throw CPLException("Unsupported relational database: %s",
+						db_type);
+			}
+			if (type == CPL_ODBC_UNKNOWN) {
+				fprintf(stderr, "%s: Warning: The database type is not set; "
+						"please use the --db-type option\n", program_name);
+			}
+
+
+			// Get the connection string
+
+			if (strchr(odbc_connection_string, '=') == NULL) {
+				if (strchr(odbc_connection_string, ';') != NULL
+						|| strchr(odbc_connection_string, '{') != NULL
+						|| strchr(odbc_connection_string, '}') != NULL) {
+					throw CPLException("Invalid ODBC DSN");
+				}
+
+				dsn = odbc_connection_string;
+				conn = "DSN="; conn += dsn; conn += "";
+			}
+			else {
+				conn = odbc_connection_string;
+				dsn = "";
+			}
+
+
+			// Open the ODBC connection
+
+			ret = cpl_create_odbc_backend(conn.c_str(), type, &backend);
+			if (!CPL_IS_OK(ret)) {
+				throw CPLException("Could not open the ODBC connection");
+			}
+		}
+
+
+		// RDF/SPARQL (currently *nix-only)
 
 #ifndef _WINDOWS
-	if (strcmp(backend_type, "RDF") == 0 || strcmp(backend_type, "rdf") == 0) {
-		ret = cpl_create_rdf_backend("http://localhost:8080/sparql/",
-									 "http://localhost:8080/update/",
-									 CPL_RDF_4STORE,
-									 &backend);
-		if (!CPL_IS_OK(ret)) {
-			fprintf(stderr, "Could not open the SPARQL connection\n");
-			return 1;
+		else if (strcasecmp(backend_type, "RDF") == 0) {
+
+
+			// Determine the database type
+
+			int type = CPL_RDF_UNKNOWN;
+			
+			MATCH_DB_TYPE("4store", CPL_RDF_4STORE);
+			MATCH_DB_TYPE("Jena", CPL_RDF_JENA);
+
+			if (strcmp(db_type, "") != 0 && type == CPL_RDF_UNKNOWN) {
+				throw CPLException("Unsupported RDF database: %s",
+						db_type);
+			}
+			if (type == CPL_RDF_UNKNOWN) {
+				fprintf(stderr, "%s: Warning: The database type is not set; "
+						"please use the --db-type option\n", program_name);
+			}
+
+
+			// Open the database connection
+
+			ret = cpl_create_rdf_backend("http://localhost:8080/sparql/",
+										 "http://localhost:8080/update/",
+										 type,
+										 &backend);
+			if (!CPL_IS_OK(ret)) {
+				throw CPLException("Could not open the SPARQL connection");
+			}
 		}
-	}
-	else
 #endif
-	if (strcmp(backend_type, "ODBC") == 0
-			|| strcmp(backend_type, "odbc") == 0) {
-		/*ret = cpl_create_odbc_backend("DSN=CPL_PostgreSQL;UID=cpl;PWD=cplcplcpl;",
-									  CPL_ODBC_POSTGRESQL,
-									  &backend);*/
-		ret = cpl_create_odbc_backend("DSN=CPL;UID=cpl;PWD=cplcplcpl;",
-									  CPL_ODBC_MYSQL,
-									  &backend);
-		if (!CPL_IS_OK(ret)) {
-			fprintf(stderr, "Could not open the ODBC connection\n");
-			return 1;
+
+		// Handle errors
+
+		else if (strcmp(backend_type, "") == 0) {
+			throw CPLException("No database connection has been specified");
 		}
+
+		else {
+			throw CPLException("Invalid database backend type: %s",
+							   backend_type);
+		}
+
+		
+		assert(backend != NULL);
 	}
-	else {
-		fprintf(stderr, "Invalid database backend type: %s\n", backend_type);
+	catch (std::exception& e) {
+		fprintf(stderr, "%s: %s\n", program_name, e.what());
+		if (backend != NULL) backend->cpl_db_destroy(backend);
+		return 1;
 	}
 
-	CPL_InitializationHelper __cpl(backend); (void) __cpl;
+
+	// Initialize the CPL
+
+	try {
+
+		cpl_return_t ret = cpl_attach(backend);
+		if (!CPL_IS_OK(ret)) {
+			throw CPLException("Failed to initialize the Core Provenance "
+					"Library");
+		}
+	}
+	catch (std::exception& e) {
+		fprintf(stderr, "%s: %s\n", program_name, e.what());
+		if (backend != NULL) backend->cpl_db_destroy(backend);
+		return 1;
+	}
+
+
+	// Automatically close the CPL connection when the program ends
+
+	CPLInitializationHelper __cpl(NULL); (void) __cpl;
 
 
 	// Yay
 
+	cpl_return_t ret;
 	cpl_id_t obj  = CPL_NONE;
 	cpl_id_t obj2 = CPL_NONE;
 	cpl_id_t obj3 = CPL_NONE;

@@ -1,5 +1,5 @@
 /*
- * stdafx.h
+ * cpl-exception.h
  * Core Provenance Library
  *
  * Copyright 2011
@@ -32,26 +32,63 @@
  * Contributor(s): Peter Macko
  */
 
-#include <cassert>
-#include <cstddef>
+#ifndef __CPL_EXCEPTION_H__
+#define __CPL_EXCEPTION_H__
+#ifdef __cplusplus
+
+#include <cstdarg>
 #include <cstdio>
-#include <cstdlib>
-#include <cstring>
+#include <exception>
 
-#include <string>
+#define CPL_EXCEPTION_MAX_MSG_LENGTH 256
 
-#if defined _WIN64 || defined _WIN32
-#ifndef _WINDOWS
-#define _WINDOWS
+
+/**
+ * An exception with a message
+ *
+ * @author Peter Macko
+ */
+class CPLException : public std::exception
+{
+
+public:
+
+	/**
+	 * Constructor of the exception
+	 *
+	 * @param format the format of the exception
+	 * @param ... the arguments of the format
+	 */
+	CPLException(const char* format, ...)
+	{
+		va_list args;
+		va_start(args, format);
+
+		vsnprintf(m_message, CPL_EXCEPTION_MAX_MSG_LENGTH, format, args);
+		m_message[CPL_EXCEPTION_MAX_MSG_LENGTH] = '\0';
+
+		va_end(args);
+	}
+
+	/**
+	 * Destructor of the exception
+	 */
+	virtual ~CPLException(void) throw() {}
+
+	/**
+	 * Return the message of the exception
+	 *
+	 * @return the message
+	 */
+	virtual const char* what() const throw() { return m_message; }
+
+
+private:
+
+	char m_message[CPL_EXCEPTION_MAX_MSG_LENGTH + 4];
+};
+
+
 #endif
-#endif
-
-#ifdef _WINDOWS
-#include <windows.h>
-#include <intrin.h>
-#endif
-
-#ifdef __unix__
-#include <unistd.h>
 #endif
 
