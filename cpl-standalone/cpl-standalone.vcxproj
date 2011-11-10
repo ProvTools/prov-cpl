@@ -71,10 +71,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="cpl-lock.cpp" />
+    <ClCompile Include="cpl-platform.cpp" />
     <ClCompile Include="cpl-standalone.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cpl-lock.h" />
+    <ClInclude Include="cpl-platform.h" />
     <ClInclude Include="cpl-private.h" />
     <ClInclude Include="stdafx.h" />
   </ItemGroup>

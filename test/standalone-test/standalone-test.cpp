@@ -50,6 +50,14 @@ char __program_name[2048];
 
 
 /**
+ * strcasecmp() for Windows
+ */
+#ifdef _WINDOWS
+#define strcasecmp		lstrcmpiA
+#endif
+
+
+/**
  * Long command-line options
  */
 static struct option LONG_OPTIONS[] =
@@ -86,12 +94,18 @@ usage(void)
 void
 set_program_name(const char* name)
 {
+#ifdef _WINDOWS
+	_splitpath_s(name, NULL, 0, NULL, 0, __program_name,
+		sizeof(__program_name) / sizeof(char) - 1, NULL, 0);
+	program_name = __program_name;
+#else
 	char* n = strdup(name);
 	strncpy(__program_name, n, sizeof(__program_name) / sizeof(char) - 1);
 	__program_name[sizeof(__program_name) / sizeof(char) - 1] = '\0';
 
 	program_name = basename(__program_name);
 	free(n);
+#endif
 }
 
 

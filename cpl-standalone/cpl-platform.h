@@ -1,5 +1,5 @@
 /*
- * cpl-exception.h
+ * cpl-platform.h
  * Core Provenance Library
  *
  * Copyright 2011
@@ -32,67 +32,23 @@
  * Contributor(s): Peter Macko
  */
 
-#ifndef __CPL_EXCEPTION_H__
-#define __CPL_EXCEPTION_H__
-#ifdef __cplusplus
+#ifndef __CPL_PLATFORM_H__
+#define __CPL_PLATFORM_H__
 
-#include <cstdarg>
-#include <cstdio>
-#include <exception>
+#ifdef _WINDOWS
 
-#define CPL_EXCEPTION_MAX_MSG_LENGTH 256
-
-
-/**
- * An exception with a message
- *
- * @author Peter Macko
- */
-class CPLException : public std::exception
+// From: http://suacommunity.com/dictionary/gettimeofday-entry.php
+struct timezone
 {
-
-public:
-
-	/**
-	 * Constructor of the exception
-	 *
-	 * @param format the format of the exception
-	 * @param ... the arguments of the format
-	 */
-	CPLException(const char* format, ...)
-	{
-		va_list args;
-		va_start(args, format);
-
-#if defined _WIN64 || defined _WIN32
-		vsnprintf_s(m_message, CPL_EXCEPTION_MAX_MSG_LENGTH, _TRUNCATE, format, args);
-#else
-		vsnprintf(m_message, CPL_EXCEPTION_MAX_MSG_LENGTH, format, args);
-#endif
-		m_message[CPL_EXCEPTION_MAX_MSG_LENGTH] = '\0';
-
-		va_end(args);
-	}
-
-	/**
-	 * Destructor of the exception
-	 */
-	virtual ~CPLException(void) throw() {}
-
-	/**
-	 * Return the message of the exception
-	 *
-	 * @return the message
-	 */
-	virtual const char* what() const throw() { return m_message; }
-
-
-private:
-
-	char m_message[CPL_EXCEPTION_MAX_MSG_LENGTH + 4];
+	int  tz_minuteswest; /* minutes W of Greenwich */
+	int  tz_dsttime;     /* type of dst correction */
 };
 
+/**
+ * Definition of a gettimeofday function
+ */
+int gettimeofday(struct timeval *tv, struct timezone *tz);
 
 #endif
-#endif
 
+#endif

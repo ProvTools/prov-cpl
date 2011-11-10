@@ -11,6 +11,7 @@ ROOT := ..
 # Subprojects
 #
 
+LIBRARIES := platform-compat
 PROGRAMS := standalone-test
 
 

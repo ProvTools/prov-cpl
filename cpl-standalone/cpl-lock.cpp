@@ -34,11 +34,17 @@
 
 #include "stdafx.h"
 #include "cpl-lock.h"
+#include "cpl-platform.h"
 
 #ifdef __unix__
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <semaphore.h>
+#endif
+
+#ifdef _WINDOWS
+#include <aclapi.h>
+#include <tchar.h>
 #endif
 
 #ifdef _WINDOWS
@@ -79,6 +85,8 @@ static cpl_lock_t cpl_unique_lock = 0;
 cpl_return_t
 cpl_unique_id_generator_initialize(void)
 {
+	cpl_return_t ret = CPL_OK;
+
 #if defined(__unix__)
 
 	mode_t u = umask(0);
@@ -105,13 +113,119 @@ cpl_unique_id_generator_initialize(void)
 	sem_close(s);
 
 #elif defined(_WINDOWS)
-#error "Not implemented"
+
+	// Portions of the following code are from:
+	//   http://msdn.microsoft.com/en-us/library/windows/desktop/aa446595%28v=vs.85%29.aspx
+
+	DWORD dwRes;
+	PSID pEveryoneSID = NULL;
+	PACL pACL = NULL;
+	PSECURITY_DESCRIPTOR pSD = NULL;
+	EXPLICIT_ACCESS ea[1];
+	SID_IDENTIFIER_AUTHORITY SIDAuthWorld =
+		SECURITY_WORLD_SID_AUTHORITY;
+	SID_IDENTIFIER_AUTHORITY SIDAuthNT = SECURITY_NT_AUTHORITY;
+	SECURITY_ATTRIBUTES sa;
+	HANDLE hSemaphore = NULL;
+
+	ret = CPL_E_PLATFORM_ERROR;
+
+	// Create a well-known SID for the Everyone group.
+	if (!AllocateAndInitializeSid(&SIDAuthWorld, 1,
+		SECURITY_WORLD_RID,
+		0, 0, 0, 0, 0, 0, 0,
+		&pEveryoneSID)) {
+			fprintf(stderr, "AllocateAndInitializeSid Error %u\n", GetLastError());
+			goto cleanup;
+	}
+
+	// Initialize an EXPLICIT_ACCESS structure for an ACE.
+	// The ACE will allow Everyone full access to the mutex.
+	ZeroMemory(&ea, sizeof(EXPLICIT_ACCESS));
+	ea[0].grfAccessPermissions = MUTEX_ALL_ACCESS;
+	ea[0].grfAccessMode = SET_ACCESS;
+	ea[0].grfInheritance= NO_INHERITANCE;
+	ea[0].Trustee.TrusteeForm = TRUSTEE_IS_SID;
+	ea[0].Trustee.TrusteeType = TRUSTEE_IS_WELL_KNOWN_GROUP;
+	ea[0].Trustee.ptstrName  = (LPTSTR) pEveryoneSID;
+
+	// Create a new ACL that contains the new ACEs.
+	dwRes = SetEntriesInAcl(1, ea, NULL, &pACL);
+	if (ERROR_SUCCESS != dwRes) {
+		fprintf(stderr, "SetEntriesInAcl Error %u\n", GetLastError());
+		goto cleanup;
+	}
+
+	// Initialize a security descriptor.  
+	pSD = (PSECURITY_DESCRIPTOR) LocalAlloc(LPTR, 
+		SECURITY_DESCRIPTOR_MIN_LENGTH); 
+	if (NULL == pSD) { 
+		fprintf(stderr, "LocalAlloc Error %u\n", GetLastError());
+		goto cleanup; 
+	} 
+
+	if (!InitializeSecurityDescriptor(pSD,
+		SECURITY_DESCRIPTOR_REVISION)) {  
+			fprintf(stderr, "InitializeSecurityDescriptor Error %u\n",
+				GetLastError());
+			goto cleanup; 
+	} 
+
+	// Add the ACL to the security descriptor. 
+	if (!SetSecurityDescriptorDacl(pSD, 
+		TRUE,     // bDaclPresent flag   
+		pACL, 
+		FALSE))   // not a default DACL 
+	{  
+		fprintf(stderr, "SetSecurityDescriptorDacl Error %u\n",
+			GetLastError());
+		goto cleanup; 
+	} 
+
+	// Initialize a security attributes structure.
+	sa.nLength = sizeof (SECURITY_ATTRIBUTES);
+	sa.lpSecurityDescriptor = pSD;
+	sa.bInheritHandle = FALSE;
+
+	// Create the semaphore
+	hSemaphore = CreateSemaphore(&sa, 1, 1, CPL_LOCK_SEM_INIT);
+	if (NULL == hSemaphore)	{  
+		fprintf(stderr, "CreateSemaphore Error %u\n",
+			GetLastError());
+		goto cleanup; 
+	}
+
+
+	// Initialize the unique ID generator
+
+	WaitForSingleObject(hSemaphore, INFINITE);
+
+	Sleep(10 /* ms */);
+	timeval tv;
+	gettimeofday(&tv, NULL);
+
+	cpl_unique_base = (((unsigned long long) (tv.tv_sec - 1000000000UL)) << 32)
+		| (((unsigned long) (tv.tv_usec / 1000)) << 22);
+	cpl_unique_counter = 0;
+
+	if (!ReleaseSemaphore(hSemaphore, 1, NULL)) std::abort();
+
+
+	// Finish
+
+	ret = CPL_OK;
+
+cleanup:
+	if (pEveryoneSID) FreeSid(pEveryoneSID);
+	if (pACL) LocalFree(pACL);
+	if (pSD) LocalFree(pSD);
+	if (hSemaphore) CloseHandle(hSemaphore);
 
 #else
 #error "Not implemented for this platform"
 #endif
 
-	return CPL_OK;
+	return ret;
 }
 
 
