@@ -50,7 +50,7 @@
 #include <intrin.h>
 #endif
 
-#ifdef __unix__
+#if defined(__unix__) || defined(__APPLE__)
 #include <sys/time.h>
 #include <errno.h>
 #include <unistd.h>

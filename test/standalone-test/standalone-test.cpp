@@ -40,6 +40,10 @@
 
 #include <getopt_compat.h>
 
+#ifdef __APPLE__
+#include <libgen.h>
+#endif
+
 #define ORIGINATOR "standalone-test"
 
 

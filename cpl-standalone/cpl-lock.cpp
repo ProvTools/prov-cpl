@@ -36,7 +36,7 @@
 #include "cpl-lock.h"
 #include "cpl-platform.h"
 
-#ifdef __unix__
+#if defined(__unix__) || defined(__APPLE__)
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <semaphore.h>
@@ -87,7 +87,7 @@ cpl_unique_id_generator_initialize(void)
 {
 	cpl_return_t ret = CPL_OK;
 
-#if defined(__unix__)
+#if defined(__unix__) || defined(__APPLE__)
 
 	mode_t u = umask(0);
 	sem_t* s = sem_open(CPL_LOCK_SEM_INIT, O_CREAT, 0777, 1);

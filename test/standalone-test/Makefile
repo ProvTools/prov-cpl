@@ -23,13 +23,24 @@ INCLUDE_FLAGS := $(INCLUDE_FLAGS) -I$(ROOT)/include \
 
 
 #
+# Curl
+#
+
+ifeq ($(UNAME),Darwin)
+	LIBRARIES_CURL := -lcurl
+else
+	LIBRARIES_CURL := `pkg-config --libs libcurl`
+endif
+
+
+#
 # Flags and libraries
 #
 
 CXXFLAGS      := $(CXXFLAGS) -Wno-sign-compare
 INCLUDE_FLAGS := $(INCLUDE_FLAGS)
 LINKER_FLAGS  := $(LINKER_FLAGS)
-LIBRARIES     := $(LIBRARIES) -lodbc `pkg-config --libs libcurl`
+LIBRARIES     := $(LIBRARIES) -lodbc $(LIBRARIES_CURL)
 
 
 #

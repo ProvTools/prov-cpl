@@ -58,6 +58,19 @@ endif
 
 
 #
+# Platform-specific settings
+#
+
+ifeq ($(UNAME),Darwin)
+	SONAME_OPTION := -WL,-soname,
+	SHARED_OPTION := -dynamiclib
+else
+	SONAME_OPTION := -Wl,-soname,
+	SHARED_OPTION := -shared
+endif
+
+
+#
 # Include the compile script
 #
 
@@ -76,13 +89,13 @@ ifdef SHARED
 	@rm -f $(BUILD_DIR)/$(TARGET_WITH_VER) 2> /dev/null || true
 ifeq ($(OUTPUT_TYPE),kernel)
 	@echo '  LD      $(PWD_REL_SEP)$@'
-	@gcc -shared -Wl,-soname,$(TARGET).$(SO_MAJOR_VERSION) \
-		-o $(BUILD_DIR)/$(TARGET_WITH_VER) $(OBJECTS)
+	@$(LINK) $(SHARED_OPTION) $(SONAME_OPTION)$(TARGET).$(SO_MAJOR_VERSION) \
+		-o $(BUILD_DIR)/$(TARGET_WITH_VER) $(OBJECTS) $(LIBRARIES)
 	@cd $(BUILD_DIR) && ln -s $(TARGET_WITH_VER) $(TARGET).$(SO_MAJOR_VERSION)
 	@cd $(BUILD_DIR) && ln -s $(TARGET_WITH_VER) $(TARGET)
 else
-	gcc -shared -Wl,-soname,$(TARGET).$(SO_MAJOR_VERSION) \
-		-o $(BUILD_DIR)/$(TARGET_WITH_VER) $(OBJECTS)
+	$(LINK) $(SHARED_OPTION) $(SONAME_OPTION)$(TARGET).$(SO_MAJOR_VERSION) \
+		-o $(BUILD_DIR)/$(TARGET_WITH_VER) $(OBJECTS) $(LIBRARIES)
 	cd $(BUILD_DIR) && ln -s $(TARGET_WITH_VER) $(TARGET).$(SO_MAJOR_VERSION)
 	cd $(BUILD_DIR) && ln -s $(TARGET_WITH_VER) $(TARGET)
 endif

@@ -39,6 +39,10 @@
 #include <errno.h>
 #endif
 
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
+#endif
+
 
 /***************************************************************************/
 /** Private state                                                         **/
@@ -328,6 +332,25 @@ cpl_attach(struct _cpl_db_backend_t* backend)
 	program = _program;
 	pid = GetCurrentProcessId();
 
+#elif defined(__APPLE__)
+
+	user = getenv("USER");
+	if (user == NULL) return CPL_E_PLATFORM_ERROR;
+
+	uint32_t _program_size = 8192;
+	char* _program_exe_path = new char[_program_size + 1];
+
+	if (_NSGetExecutablePath(_program_exe_path, &_program_size) != 0) {
+		delete[] _program_exe_path;
+		return CPL_E_PLATFORM_ERROR;
+	}
+
+	char* _program = realpath(_program_exe_path, NULL);
+	delete[] _program_exe_path;
+
+	if (_program == NULL) return CPL_E_PLATFORM_ERROR;
+	program = _program;
+
 #else
 	user = getenv("USER");
 	pid = getpid();
@@ -344,6 +367,10 @@ cpl_attach(struct _cpl_db_backend_t* backend)
 
 #ifdef _WINDOWS
 	delete[] _user;
+	delete[] _program;
+#endif
+
+#ifdef __APPLE__
 	delete[] _program;
 #endif
 
