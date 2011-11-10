@@ -33,11 +33,12 @@
  */
 
 #include "stdafx.h"
-#include <getopt.h>
 
 #include <backends/cpl-odbc.h>
 #include <backends/cpl-rdf.h>
 #include <cpl.h>
+
+#include <getopt_compat.h>
 
 #define ORIGINATOR "standalone-test"
 

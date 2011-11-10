@@ -40,7 +40,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "getopt.h"
+#include "getopt_compat.h"
 
 extern "C" {
 extern int	  opterr;	/* if error message should be printed */

@@ -12,7 +12,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\getopt.h">
+    <ClInclude Include="include\getopt_compat.h">
       <Filter>Public Header Files</Filter>
     </ClInclude>
     <ClInclude Include="stdafx.h">

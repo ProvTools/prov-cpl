@@ -11,14 +11,15 @@ ROOT := ../..
 # Source files
 #
 
-DEPENDENCIES := $(ROOT)/include/*.h
+DEPENDENCIES := $(ROOT)/include/*.h ../platform-compat/include/*.h
 
 
 #
 # Customize the build
 #
 
-INCLUDE_FLAGS := $(INCLUDE_FLAGS) -I$(ROOT)/include
+INCLUDE_FLAGS := $(INCLUDE_FLAGS) -I$(ROOT)/include \
+	-I../platform-compat/include
 
 
 #

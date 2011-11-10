@@ -48,7 +48,7 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="include\getopt.h" />
+    <ClInclude Include="include\getopt_compat.h" />
     <ClInclude Include="stdafx.h" />
   </ItemGroup>
   <ItemGroup>

@@ -33,7 +33,9 @@
 
 #ifndef __CPL_PLATFORM_COMPAT__GETOPT_H__
 #define __CPL_PLATFORM_COMPAT__GETOPT_H__
-#if defined _WIN64 || defined _WIN32
+#if !(defined _WIN64 || defined _WIN32)
+#include <getopt.h>
+#else
 
 #ifdef __cplusplus
 extern "C" {
