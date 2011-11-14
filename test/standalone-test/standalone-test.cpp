@@ -207,10 +207,10 @@ main(int argc, char** argv)
 				throw CPLException("Unsupported relational database: %s",
 						db_type);
 			}
-			if (type == CPL_ODBC_UNKNOWN) {
+			/*if (type == CPL_ODBC_UNKNOWN) {
 				fprintf(stderr, "%s: Warning: The database type is not set; "
 						"please use the --db-type option\n", program_name);
-			}
+			}*/
 
 
 			// Get the connection string
@@ -256,10 +256,6 @@ main(int argc, char** argv)
 			if (strcmp(db_type, "") != 0 && type == CPL_RDF_UNKNOWN) {
 				throw CPLException("Unsupported RDF database: %s",
 						db_type);
-			}
-			if (type == CPL_RDF_UNKNOWN) {
-				fprintf(stderr, "%s: Warning: The database type is not set; "
-						"please use the --db-type option\n", program_name);
 			}
 
 
@@ -326,16 +322,16 @@ main(int argc, char** argv)
 	cpl_id_t obj3 = CPL_NONE;
 
 	ret = cpl_create_object(ORIGINATOR, "Process A", "Proc", CPL_NONE, &obj);
-	printf("cpl_create_object --> %lld [%d]\n", obj, ret);
+	printf("cpl_create_object --> %llx:%llx [%d]\n", obj.hi, obj.lo, ret);
 
 	ret = cpl_lookup_object(ORIGINATOR, "Process A", "Proc", &obj);
-	printf("cpl_lookup_object --> %lld [%d]\n", obj, ret);
+	printf("cpl_lookup_object --> %llx:%llx [%d]\n", obj.hi, obj.lo, ret);
 
 	ret = cpl_create_object(ORIGINATOR, "Object A", "File", obj, &obj2);
-	printf("cpl_create_object --> %lld [%d]\n", obj2, ret);
+	printf("cpl_create_object --> %llx:%llx [%d]\n", obj2.hi, obj2.lo, ret);
 
 	ret = cpl_create_object(ORIGINATOR, "Process B", "Proc", obj, &obj3);
-	printf("cpl_create_object --> %lld [%d]\n", obj3, ret);
+	printf("cpl_create_object --> %llx:%llx [%d]\n", obj3.hi, obj3.lo, ret);
 
 	ret = cpl_data_flow(obj2, obj, CPL_DATA_INPUT);
 	printf("cpl_data_flow --> %d\n", ret);

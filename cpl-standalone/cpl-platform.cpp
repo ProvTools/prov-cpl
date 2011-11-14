@@ -35,9 +35,23 @@
 #include "stdafx.h"
 #include "cpl-platform.h"
 
+#if defined(__unix__) || defined(__APPLE__)
+#include <net/if.h> 
+#include <netinet/in.h>
+#include <sys/ioctl.h>
+#endif
+
 #ifdef _WINDOWS
 #include <time.h>
 #endif
+
+
+
+/***************************************************************************/
+/** Windows Implementations of UNIX Functions                             **/
+/***************************************************************************/
+
+#ifdef _WINDOWS
 
 #if defined(_MSC_VER) || defined(_MSC_EXTENSIONS)
 #define DELTA_EPOCH_IN_MICROSECS  11644473600000000Ui64
@@ -46,12 +60,15 @@
 #endif
 
 
-#ifdef _WINDOWS
-
 /**
- * Definition of a gettimeofday function
+ * Get the current UNIX time
+ *
+ * @param tv the output timeval structure (or NULL)
+ * @param tz the output timezone structure (or NULL)
+ * @return 0 on success or -1 on error
  */
-int gettimeofday(struct timeval *tv, struct timezone *tz)
+int
+gettimeofday(struct timeval *tv, struct timezone *tz)
 {
 	// From: http://suacommunity.com/dictionary/gettimeofday-entry.php
 
@@ -103,3 +120,67 @@ int gettimeofday(struct timeval *tv, struct timezone *tz)
 }
 
 #endif
+
+
+
+/***************************************************************************/
+/** Multi-Platform Functions                                              **/
+/***************************************************************************/
+
+/**
+ * Get the MAC address of the first logical IP-enabled network interface
+ *
+ * @param out the output character array
+ * @return CPL_OK on success or an error code
+ */
+cpl_return_t
+cpl_platform_get_mac_address(cpl_mac_address_t* out)
+{
+
+#if defined(__unix__) || defined(__APPLE__)
+
+	// From: http://stackoverflow.com/questions/1779715/how-to-get-mac-address-of-your-machine-using-a-c-program
+
+	ifreq ifr;
+	ifconf ifc;
+	char buf[1024];
+	int success = 0;
+
+	int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
+	if (sock == -1) return CPL_E_PLATFORM_ERROR;
+
+	ifc.ifc_len = sizeof(buf);
+	ifc.ifc_buf = buf;
+	if (ioctl(sock, SIOCGIFCONF, &ifc) == -1) return CPL_E_PLATFORM_ERROR;
+
+	ifreq* it = ifc.ifc_req;
+	const ifreq* const end = it + (ifc.ifc_len / sizeof(ifreq));
+
+	for (; it != end; ++it) {
+		strcpy(ifr.ifr_name, it->ifr_name);
+		if (ioctl(sock, SIOCGIFFLAGS, &ifr) == 0) {
+			if (! (ifr.ifr_flags & IFF_LOOPBACK)) { // don't count loopback
+				if (ioctl(sock, SIOCGIFHWADDR, &ifr) == 0) {
+					success = 1;
+					break;
+				}
+			}
+		}
+		else { /* ignore error */ }
+	}
+
+	if (success && out) {
+		memcpy(out, ifr.ifr_hwaddr.sa_data, 6);
+	}
+
+	if (!success) return CPL_E_NOT_FOUND;
+
+#elif defined(_WINDOWS)
+#error "Not implemented for this platform"
+#else
+#error "Not implemented for this platform"
+#endif
+
+	return CPL_OK;
+}
+

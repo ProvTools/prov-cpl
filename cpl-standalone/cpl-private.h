@@ -67,7 +67,7 @@ using namespace stdext;
 typedef hash_map<cpl_id_t, cpl_version_t, cpl_traits_id_t>
 	cpl_hash_map_id_to_version_t;
 #else
-typedef hash_map<cpl_id_t, cpl_version_t, cpl_hash_id_t, cpl_equals_id_t>
+typedef hash_map<cpl_id_t, cpl_version_t, cpl_traits_id_t, cpl_traits_id_t>
 	cpl_hash_map_id_to_version_t;
 #endif
 
@@ -112,7 +112,7 @@ typedef struct {
 typedef hash_map<cpl_id_t, cpl_open_object_t*, cpl_traits_id_t>
 	cpl_hash_map_id_to_open_object_t;
 #else
-typedef hash_map<cpl_id_t, cpl_open_object_t*, cpl_hash_id_t, cpl_equals_id_t>
+typedef hash_map<cpl_id_t, cpl_open_object_t*, cpl_traits_id_t, cpl_traits_id_t>
 	cpl_hash_map_id_to_open_object_t;
 #endif
 
@@ -169,6 +169,14 @@ cpl_get_open_object_handle(const cpl_id_t id, cpl_open_object_t** out);
  */
 #define CPL_ENSURE_NOT_NEGATIVE(n) { \
 	if ((n) < 0) return CPL_E_INVALID_ARGUMENT; }
+
+/**
+ * Ensure that the argument is not CPL_NONE
+ *
+ * @param n the ID to check
+ */
+#define CPL_ENSURE_NOT_NONE(n) { \
+	if ((n) == CPL_NONE) return CPL_E_INVALID_ARGUMENT; }
 
 /**
  * Ensure that the originator is valid

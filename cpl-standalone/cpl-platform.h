@@ -35,6 +35,13 @@
 #ifndef __CPL_PLATFORM_H__
 #define __CPL_PLATFORM_H__
 
+#include <cpl.h>
+
+
+/***************************************************************************/
+/** Windows Implementations of UNIX Functions                             **/
+/***************************************************************************/
+
 #ifdef _WINDOWS
 
 // From: http://suacommunity.com/dictionary/gettimeofday-entry.php
@@ -45,10 +52,42 @@ struct timezone
 };
 
 /**
- * Definition of a gettimeofday function
+ * Get the current UNIX time
+ *
+ * @param tv the output timeval structure (or NULL)
+ * @param tz the output timezone structure (or NULL)
+ * @return 0 on success or -1 on error
  */
-int gettimeofday(struct timeval *tv, struct timezone *tz);
+int
+gettimeofday(struct timeval *tv, struct timezone *tz);
 
 #endif
 
+
+
+/***************************************************************************/
+/** Multi-Platform Type Definitions                                       **/
+/***************************************************************************/
+
+/**
+ * MAC address
+ */
+typedef unsigned char cpl_mac_address_t[6];
+
+
+/***************************************************************************/
+/** Multi-Platform Functions                                              **/
+/***************************************************************************/
+
+/**
+ * Get the MAC address of the first logical IP-enabled network interface
+ *
+ * @param out the output character array
+ * @return CPL_OK on success or an error code
+ */
+cpl_return_t
+cpl_platform_get_mac_address(cpl_mac_address_t* out);
+
+
 #endif
+

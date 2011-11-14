@@ -54,37 +54,54 @@ USE cpl;
 --
 
 CREATE TABLE IF NOT EXISTS cpl_objects (
-       id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+       id_hi BIGINT,
+       id_lo BIGINT,
        originator VARCHAR(255),
        name VARCHAR(255),
        type VARCHAR(100),
-       container_id INT,
-       container_ver INT);
+       creation_time TIMESTAMP DEFAULT NOW(),
+       container_id_hi BIGINT,
+       container_id_lo BIGINT,
+       container_ver INT,
+       PRIMARY KEY (id_hi, id_lo));
 
 CREATE TABLE IF NOT EXISTS cpl_sessions (
-       id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+       id_hi BIGINT,
+       id_lo BIGINT,
+       mac_address VARCHAR(18),
        username VARCHAR(255),
        pid INT,
        program VARCHAR(4096),
-       initialization_time TIMESTAMP DEFAULT NOW());
+       initialization_time TIMESTAMP DEFAULT NOW(),
+       PRIMARY KEY (id_hi, id_lo));
 
 CREATE TABLE IF NOT EXISTS cpl_versions (
-       id INT NOT NULL REFERENCES cpl_objects(id),
+       id_hi BIGINT,
+       id_lo BIGINT,
        version INT,
        creation_time TIMESTAMP DEFAULT NOW(),
-       session INT REFERENCES cpl_sessions(id),
-       PRIMARY KEY(id, version));
+       session_id_hi BIGINT,
+       session_id_lo BIGINT,
+       PRIMARY KEY(id_hi, id_lo, version),
+       FOREIGN KEY(id_hi, id_lo) REFERENCES cpl_objects(id_hi, id_lo),
+       FOREIGN KEY(session_id_hi, session_id_lo)
+                   REFERENCES cpl_sessions(id_hi, id_lo));
 
 CREATE TABLE IF NOT EXISTS cpl_ancestry (
-       from_id INT NOT NULL,
-       from_version INT,
-       to_id INT NOT NULL,
-       to_version INT,
+       from_id_hi BIGINT NOT NULL,
+       from_id_lo BIGINT NOT NULL,
+       from_version INT NOT NULL,
+       to_id_hi BIGINT NOT NULL,
+       to_id_lo BIGINT NOT NULL,
+       to_version INT NOT NULL,
        type INT,
-       PRIMARY KEY(from_id, from_version, to_id, to_version),
-       FOREIGN KEY(from_id, from_version) REFERENCES cpl_versions(id, version),
-       FOREIGN KEY(to_id, to_version) REFERENCES cpl_versions(id, version));
+       PRIMARY KEY(from_id_hi, from_id_lo, from_version,
+                   to_id_hi, to_id_lo, to_version),
+       FOREIGN KEY(from_id_hi, from_id_lo, from_version)
+                   REFERENCES cpl_versions(id_hi, id_lo, version),
+       FOREIGN KEY(to_id_hi, to_id_lo, to_version)
+                   REFERENCES cpl_versions(id_hi, id_lo, version));
 
-ALTER TABLE cpl_objects ADD CONSTRAINT
-      FOREIGN KEY (container_id, container_ver)
-      REFERENCES cpl_versions(id, version);
+ALTER TABLE cpl_objects ADD CONSTRAINT cpl_objects_fk
+      FOREIGN KEY (container_id_hi, container_id_lo, container_ver)
+      REFERENCES cpl_versions(id_hi, id_lo, version);

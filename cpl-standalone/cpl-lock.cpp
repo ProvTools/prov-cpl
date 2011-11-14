@@ -76,6 +76,11 @@ static unsigned long long cpl_unique_counter = 0;
  */
 static cpl_lock_t cpl_unique_lock = 0;
 
+/**
+ * The unique machine identifier
+ */
+static unsigned long long cpl_unique_machine_id = 0;
+
 
 /**
  * (Re)Initialize the host-local unique ID generator
@@ -83,7 +88,7 @@ static cpl_lock_t cpl_unique_lock = 0;
  * @return CPL_OK or an error code
  */
 cpl_return_t
-cpl_unique_id_generator_initialize(void)
+cpl_host_unique_id_generator_initialize(void)
 {
 	cpl_return_t ret = CPL_OK;
 
@@ -135,8 +140,8 @@ cpl_unique_id_generator_initialize(void)
 		SECURITY_WORLD_RID,
 		0, 0, 0, 0, 0, 0, 0,
 		&pEveryoneSID)) {
-			fprintf(stderr, "AllocateAndInitializeSid Error %u\n", GetLastError());
-			goto cleanup;
+		fprintf(stderr, "AllocateAndInitializeSid Error %u\n", GetLastError());
+		goto cleanup;
 	}
 
 	// Initialize an EXPLICIT_ACCESS structure for an ACE.
@@ -166,9 +171,9 @@ cpl_unique_id_generator_initialize(void)
 
 	if (!InitializeSecurityDescriptor(pSD,
 		SECURITY_DESCRIPTOR_REVISION)) {  
-			fprintf(stderr, "InitializeSecurityDescriptor Error %u\n",
+		fprintf(stderr, "InitializeSecurityDescriptor Error %u\n",
 				GetLastError());
-			goto cleanup; 
+		goto cleanup; 
 	} 
 
 	// Add the ACL to the security descriptor. 
@@ -239,8 +244,20 @@ cpl_lock_initialize(void)
 {
 	// Initialize the host-local unique ID generator
 
-	cpl_return_t r = cpl_unique_id_generator_initialize();
+	cpl_return_t r = cpl_host_unique_id_generator_initialize();
 	if (!CPL_IS_OK(r)) return r;
+
+
+	// Get the machine's MAC address
+
+	assert(sizeof(cpl_unique_machine_id) >= sizeof(cpl_mac_address_t));
+	cpl_unique_machine_id = 0;
+	r = cpl_platform_get_mac_address((cpl_mac_address_t*) &cpl_unique_machine_id);
+	if (!CPL_IS_OK(r)) {
+		// If we can't get the unique machine ID, get a random number
+		cpl_unique_machine_id = rand();
+	}
+
 
 	return CPL_OK;
 }
@@ -311,7 +328,7 @@ cpl_unlock(cpl_lock_t* lock)
  * @return the unique 64-bit ID
  */
 unsigned long long
-cpl_next_unique_id(void)
+cpl_next_host_unique_id(void)
 {
 	cpl_lock(&cpl_unique_lock);
 
@@ -322,7 +339,7 @@ cpl_next_unique_id(void)
 
 		// Need to reinitialize the counter
 
-		cpl_return_t r = cpl_unique_id_generator_initialize();
+		cpl_return_t r = cpl_host_unique_id_generator_initialize();
 		if (!CPL_IS_OK(r)) {
 			cpl_unlock(&cpl_unique_lock);
 			throw CPLException("Failed to reinitialize the unique ID generator");
@@ -340,5 +357,22 @@ cpl_next_unique_id(void)
 	cpl_unlock(&cpl_unique_lock);
 
 	return x;
+}
+
+
+/**
+ * Generate a globally unique ID
+ *
+ * @param out the place to store the globally unique ID
+ */
+void
+cpl_next_unique_id(cpl_id_t* out)
+{
+	// TODO Add an option to replace globally unique ID's with real GUIDs / UUIDs
+
+	assert(out != NULL);
+
+	out->hi = cpl_unique_machine_id;
+	out->lo = cpl_next_host_unique_id();
 }
 

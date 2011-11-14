@@ -143,18 +143,20 @@ cpl_rdf_destroy(struct _cpl_db_backend_t* backend)
  * Create a session.
  *
  * @param backend the pointer to the backend structure
+ * @param session the session ID to use
+ * @param mac_address human-readable MAC address (NULL if not available)
  * @param user the user name
  * @param pid the process ID
  * @param program the program name
- * @param out_session the pointer to store the created session
  * @return CPL_OK or an error code
  */
 extern "C" cpl_return_t
 cpl_rdf_create_session(struct _cpl_db_backend_t* backend,
+					   const cpl_session_t session,
+					   const char* mac_address,
 					   const char* user,
 					   const int pid,
-					   const char* program,
-					   cpl_session_t* out_session)
+					   const char* program)
 {
 	assert(backend != NULL && user != NULL && program != NULL);
 	cpl_rdf_t* rdf = (cpl_rdf_t*) backend;
@@ -170,6 +172,7 @@ cpl_rdf_create_session(struct _cpl_db_backend_t* backend,
  * Create an object.
  *
  * @param backend the pointer to the backend structure
+ * @param id the ID of the new object
  * @param originator the originator
  * @param name the object name
  * @param type the object type
@@ -177,18 +180,17 @@ cpl_rdf_create_session(struct _cpl_db_backend_t* backend,
  *                  (use CPL_NONE for no container)
  * @param container_version the version of the container (if not CPL_NONE)
  * @param session the session ID responsible for this provenance record
- * @param out_id the pointer to store the ID of the newly created object
  * @return CPL_OK or an error code
  */
 extern "C" cpl_return_t
 cpl_rdf_create_object(struct _cpl_db_backend_t* backend,
+					  const cpl_id_t id,
 					  const char* originator,
 					  const char* name,
 					  const char* type,
 					  const cpl_id_t container,
 					  const cpl_version_t container_version,
-					  const cpl_session_t session,
-					  cpl_id_t* out_id)
+					  const cpl_session_t session)
 {
 	assert(backend != NULL && originator != NULL
 			&& name != NULL && type != NULL);

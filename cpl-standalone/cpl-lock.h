@@ -90,7 +90,7 @@ cpl_unlock(cpl_lock_t* lock);
 
 
 /***************************************************************************/
-/** Functions - Host-Unique IDs                                           **/
+/** Functions - Unique IDs                                                **/
 /***************************************************************************/
 
 /**
@@ -99,7 +99,15 @@ cpl_unlock(cpl_lock_t* lock);
  * @return the unique 64-bit ID
  */
 unsigned long long
-cpl_next_unique_id(void);
+cpl_next_host_unique_id(void);
+
+/**
+ * Generate a globally unique ID
+ *
+ * @param out the place to store the globally unique ID
+ */
+void
+cpl_next_unique_id(cpl_id_t* out);
 
 
 /***************************************************************************/

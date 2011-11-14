@@ -34,6 +34,7 @@
 
 #include "stdafx.h"
 #include "cpl-private.h"
+#include "cpl-platform.h"
 
 #ifndef _WINDOWS
 #include <errno.h>
@@ -42,6 +43,13 @@
 #ifdef __APPLE__
 #include <mach-o/dyld.h>
 #endif
+
+
+/**
+ * An invalid ID signifying no object
+ */
+const cpl_id_t CPL_NONE = { { { 0, 0 } } };
+
 
 
 /***************************************************************************/
@@ -359,11 +367,34 @@ cpl_attach(struct _cpl_db_backend_t* backend)
 	if (program == NULL) return CPL_E_PLATFORM_ERROR;
 #endif
 
+	cpl_mac_address_t mac;
+	char mac_string[32];
+	char* mac_string_ptr = mac_string;
+
+	int r = cpl_platform_get_mac_address(&mac);
+	if (r == 0) {
+#ifdef _WINDOWS
+		snprintf_s(mac_string, 32, _TRUNCATE,
+#else
+		snprintf(mac_string, 32,
+#endif
+#if 0
+			) /* Hack to deal with smart but not too smart editors */
+#endif
+				"%02x:%02x:%02x:%02x:%02x:%02x",
+				mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+	}
+	else {
+		mac_string_ptr = NULL;
+	}
+
+	cpl_next_unique_id(&cpl_session);
 	ret = cpl_db_backend->cpl_db_create_session(cpl_db_backend,
+												cpl_session,
+												mac_string_ptr,
 												user,
 												pid,
-												program,
-												&cpl_session);
+												program);
 
 #ifdef _WINDOWS
 	delete[] _user;
@@ -441,7 +472,6 @@ cpl_create_object(const char* originator,
 	CPL_ENSURE_NOT_NULL(originator);
 	CPL_ENSURE_NOT_NULL(name);
 	CPL_ENSURE_NOT_NULL(type);
-	CPL_ENSURE_NOT_NEGATIVE(container);
 
 
 	// Get the container version
@@ -457,14 +487,15 @@ cpl_create_object(const char* originator,
 	cpl_id_t id;
 	cpl_return_t ret;
 	
+	cpl_next_unique_id(&id);
 	ret = cpl_db_backend->cpl_db_create_object(cpl_db_backend,
+											   id,
 											   originator,
 											   name,
 											   type,
 											   container,
 											   container_version,
-											   cpl_session,
-											   &id);
+											   cpl_session);
 	CPL_RUNTIME_VERIFY(ret);
 
 
@@ -553,8 +584,8 @@ cpl_data_flow(const cpl_id_t data_dest,
 
 	// Check the arguments
 
-	CPL_ENSURE_NOT_NEGATIVE(data_dest);
-	CPL_ENSURE_NOT_NEGATIVE(data_source);
+	CPL_ENSURE_NOT_NONE(data_dest);
+	CPL_ENSURE_NOT_NONE(data_source);
 	
 	if (CPL_GET_DEPENDENCY_CATEGORY(type) != CPL_DEPENDENCY_CATEGORY_DATA)
 		return CPL_E_INVALID_ARGUMENT;
@@ -584,8 +615,8 @@ cpl_control(const cpl_id_t object_id,
 
 	// Check the arguments
 
-	CPL_ENSURE_NOT_NEGATIVE(object_id);
-	CPL_ENSURE_NOT_NEGATIVE(controller);
+	CPL_ENSURE_NOT_NONE(object_id);
+	CPL_ENSURE_NOT_NONE(controller);
 	
 	if (CPL_GET_DEPENDENCY_CATEGORY(type) != CPL_DEPENDENCY_CATEGORY_CONTROL)
 		return CPL_E_INVALID_ARGUMENT;
@@ -624,8 +655,8 @@ cpl_add_dependency(const cpl_id_t from_id,
 
 	// Check the arguments
 
-	CPL_ENSURE_NOT_NEGATIVE(from_id);
-	CPL_ENSURE_NOT_NEGATIVE(to_id);
+	CPL_ENSURE_NOT_NONE(from_id);
+	CPL_ENSURE_NOT_NONE(to_id);
 
 
 	// Get the version of the "to" object

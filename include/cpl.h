@@ -61,7 +61,15 @@ struct _cpl_db_backend_t;
 /**
  * A generic type for an ID. It is used primarily for object IDs.
  */
-typedef long long cpl_id_t;
+typedef struct cpl_id {
+	union {
+		struct {
+			unsigned long long hi;
+			unsigned long long lo;
+		};
+		char bytes[16];
+	};
+} cpl_id_t;
 
 /**
  * A version number.
@@ -71,12 +79,135 @@ typedef int cpl_version_t;
 /**
  * A session ID.
  */
-typedef long long cpl_session_t;
+typedef cpl_id_t cpl_session_t;
 
 /**
  * A generic function return type.
  */
 typedef int cpl_return_t;
+
+/*
+ * Static assertions
+ */
+extern int __cpl_assert__cpl_id_size[sizeof(cpl_id_t) == 16 ? 0 : -1];
+
+
+
+/***************************************************************************/
+/** ID Manipulation                                                       **/
+/***************************************************************************/
+
+/**
+ * Copy an ID
+ *
+ * @param dest the destination ID
+ * @param src the source ID
+ */
+inline void
+cpl_id_copy(cpl_id_t* dest, const cpl_id_t* src)
+{
+	dest->hi = src->hi;
+	dest->lo = src->lo;
+}
+
+/**
+ * Compare ID's
+ *
+ * @param a the first ID
+ * @param b the second ID
+ * @return negative if a < b, 0 if a == b, or positive if b > a
+ */
+inline int
+cpl_id_cmp(const cpl_id_t* a, const cpl_id_t* b)
+{
+	if (a->hi != b->hi) return a->hi < b->hi ? -1 : 1;
+	if (a->lo != b->lo) return a->lo < b->lo ? -1 : 1;
+	return 0;
+}
+
+
+#ifdef __cplusplus
+
+/**
+ * Compare ID's
+ *
+ * @param a the first ID
+ * @param b the second ID
+ * @return true if a < b
+ */
+inline bool
+operator<(const cpl_id_t& a, const cpl_id_t& b)
+{
+	return cpl_id_cmp(&a, &b) < 0;
+}
+
+/**
+ * Compare ID's
+ *
+ * @param a the first ID
+ * @param b the second ID
+ * @return true if a <= b
+ */
+inline bool
+operator<=(const cpl_id_t& a, const cpl_id_t& b)
+{
+	return cpl_id_cmp(&a, &b) <= 0;
+}
+
+/**
+ * Compare ID's
+ *
+ * @param a the first ID
+ * @param b the second ID
+ * @return true if a > b
+ */
+inline bool
+operator>(const cpl_id_t& a, const cpl_id_t& b)
+{
+	return cpl_id_cmp(&a, &b) > 0;
+}
+
+/**
+ * Compare ID's
+ *
+ * @param a the first ID
+ * @param b the second ID
+ * @return true if a >= b
+ */
+inline bool
+operator>=(const cpl_id_t& a, const cpl_id_t& b)
+{
+	return cpl_id_cmp(&a, &b) >= 0;
+}
+
+/**
+ * Compare ID's
+ *
+ * @param a the first ID
+ * @param b the second ID
+ * @return true if a == b
+ */
+inline bool
+operator==(const cpl_id_t& a, const cpl_id_t& b)
+{
+	return a.hi == b.hi && a.lo == b.lo;
+}
+
+/**
+ * Compare ID's
+ *
+ * @param a the first ID
+ * @param b the second ID
+ * @return true if a != b
+ */
+inline bool
+operator!=(const cpl_id_t& a, const cpl_id_t& b)
+{
+	return a.hi != b.hi || a.lo != b.lo;
+}
+
+#endif
+
 
 
 /***************************************************************************/
@@ -86,12 +217,13 @@ typedef int cpl_return_t;
 /**
  * An invalid ID signifying no object
  */
-#define CPL_NONE						0
+extern const cpl_id_t CPL_NONE;
 
 /**
  * An invalid version number
  */
 #define CPL_VERSION_NONE				((cpl_version_t) -1)
+
 
 
 /***************************************************************************/
@@ -340,13 +472,13 @@ cpl_control(const cpl_id_t object_id,
 /***************************************************************************/
 
 /**
- * A 64-bit mix hash function for ID's
+ * A 64-bit mix hash function
  *
  * @param key the key
  * @return the hash value
  */
 inline size_t
-cpl_hash_id(const cpl_id_t key)
+cpl_hash_int64(const long long key)
 {
 	// From: http://www.concentric.net/~ttwang/tech/inthash.htm
 
@@ -363,6 +495,18 @@ cpl_hash_id(const cpl_id_t key)
 	return (size_t) k;
 }
 
+/**
+ * A 64-bit mix hash function for ID's
+ *
+ * @param key the key
+ * @return the hash value
+ */
+inline size_t
+cpl_hash_id(const cpl_id_t key)
+{
+	return cpl_hash_int64(key.lo) ^ ~cpl_hash_int64(key.hi);
+}
+
 
 #ifdef __cplusplus
 }
@@ -374,41 +518,6 @@ cpl_hash_id(const cpl_id_t key)
 /***************************************************************************/
 
 #ifdef __cplusplus
-
-/**
- * Compatison function for the hash map
- */
-struct cpl_equals_id_t
-{
-	/**
-	 * Determine whether the two parameters are equal
-	 *
-	 * @param a the first argument
-	 * @param b the second argument
-	 * @return true if they are equal
-	 */
-	inline bool operator() (const cpl_id_t a, const cpl_id_t b) const
-	{
-		return a == b;
-	}
-};
-
-/**
- * A 64-bit hash function for ID's
- */
-struct cpl_hash_id_t
-{
-	/**
-	 * Compute the hash value for the given argument
-	 *
-	 * @param key the argument
-	 * @return the hash value
-	 */
-	inline size_t operator() (const cpl_id_t key) const
-	{
-		return cpl_hash_id(key);
-	}
-};
 
 /**
  * Traits
@@ -431,7 +540,7 @@ struct cpl_traits_id_t
 	 * @param key the argument
 	 * @return the hash value
 	 */
-	inline size_t operator() (const cpl_id_t key) const
+	inline size_t operator() (const cpl_id_t& key) const
 	{
 		return cpl_hash_id(key);
 	}
@@ -443,7 +552,7 @@ struct cpl_traits_id_t
 	 * @param b the second argument
 	 * @return true if they are equal
 	 */
-	inline bool operator() (const cpl_id_t a, const cpl_id_t b) const
+	inline bool operator() (const cpl_id_t& a, const cpl_id_t& b) const
 	{
 		return a == b;
 	}
