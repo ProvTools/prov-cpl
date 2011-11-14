@@ -388,7 +388,7 @@ cpl_attach(struct _cpl_db_backend_t* backend)
 		mac_string_ptr = NULL;
 	}
 
-	cpl_next_unique_id(&cpl_session);
+	cpl_generate_unique_id(&cpl_session);
 	ret = cpl_db_backend->cpl_db_create_session(cpl_db_backend,
 												cpl_session,
 												mac_string_ptr,
@@ -487,7 +487,7 @@ cpl_create_object(const char* originator,
 	cpl_id_t id;
 	cpl_return_t ret;
 	
-	cpl_next_unique_id(&id);
+	cpl_generate_unique_id(&id);
 	ret = cpl_db_backend->cpl_db_create_object(cpl_db_backend,
 											   id,
 											   originator,

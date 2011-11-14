@@ -51,6 +51,9 @@
 #pragma intrinsic(_InterlockedCompareExchange, _InterlockedExchange)
 #endif
 
+
+#ifdef _CPL_CUSTOM_GLOBALLY_UNIQUE_IDS
+
 #define CPL_LOCK_SEM_INIT_BASE	"edu.harvard.pass.cpl.unique_id_generator_init"
 #if defined(__unix__)
 #define CPL_LOCK_SEM_INIT		("/" CPL_LOCK_SEM_INIT_BASE)
@@ -59,7 +62,6 @@
 #else
 #define CPL_LOCK_SEM_INIT		("/" CPL_LOCK_SEM_INIT_BASE)
 #endif
-
 
 /**
  * The base for the unique ID generator
@@ -233,6 +235,8 @@ cleanup:
 	return ret;
 }
 
+#endif
+
 
 /**
  * Initialize the locking subsystem
@@ -242,9 +246,14 @@ cleanup:
 cpl_return_t
 cpl_lock_initialize(void)
 {
+	cpl_return_t r;
+	(void) r;
+
+#ifdef _CPL_CUSTOM_GLOBALLY_UNIQUE_IDS
+
 	// Initialize the host-local unique ID generator
 
-	cpl_return_t r = cpl_host_unique_id_generator_initialize();
+	r = cpl_host_unique_id_generator_initialize();
 	if (!CPL_IS_OK(r)) return r;
 
 
@@ -258,6 +267,7 @@ cpl_lock_initialize(void)
 		cpl_unique_machine_id = rand();
 	}
 
+#endif
 
 	return CPL_OK;
 }
@@ -322,6 +332,8 @@ cpl_unlock(cpl_lock_t* lock)
 }
 
 
+#ifdef _CPL_CUSTOM_GLOBALLY_UNIQUE_IDS
+
 /**
  * Generate a host-local unique ID
  *
@@ -359,6 +371,8 @@ cpl_next_host_unique_id(void)
 	return x;
 }
 
+#endif
+
 
 /**
  * Generate a globally unique ID
@@ -366,13 +380,21 @@ cpl_next_host_unique_id(void)
  * @param out the place to store the globally unique ID
  */
 void
-cpl_next_unique_id(cpl_id_t* out)
+cpl_generate_unique_id(cpl_id_t* out)
 {
-	// TODO Add an option to replace globally unique ID's with real GUIDs / UUIDs
+	// Static assertion
+	int __a[sizeof(cpl_uuid_t) == sizeof(cpl_id_t) ? 1 : -1]; (void) __a;
 
 	assert(out != NULL);
 
+#ifdef _CPL_CUSTOM_GLOBALLY_UNIQUE_IDS
+
 	out->hi = cpl_unique_machine_id;
 	out->lo = cpl_next_host_unique_id();
-}
 
+#else
+
+	cpl_platform_generate_uuid((cpl_uuid_t*) out);
+
+#endif
+}

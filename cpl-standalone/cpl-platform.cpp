@@ -39,12 +39,15 @@
 #include <net/if.h> 
 #include <netinet/in.h>
 #include <sys/ioctl.h>
+#include <uuid/uuid.h>
 #endif
 
 #ifdef _WINDOWS
-#include <time.h>
 #include <iphlpapi.h>
+#include <rpc.h>
+#include <time.h>
 #pragma comment(lib, "IPHLPAPI.lib")
+#pragma comment(lib, "rpcrt4.lib")
 #endif
 
 
@@ -221,3 +224,37 @@ cpl_platform_get_mac_address(cpl_mac_address_t* out)
 	return CPL_OK;
 }
 
+
+/**
+ * Generate a UUID
+ *
+ * @param out the output character array
+ * @return CPL_OK on success or an error code
+ */
+cpl_return_t
+cpl_platform_generate_uuid(cpl_uuid_t* out)
+{
+#if defined(__unix__) || defined(__APPLE__)
+	
+	// Static assertion
+	int __a[sizeof(uuid_t) == sizeof(cpl_id_t) ? 1 : -1]; (void) __a;
+
+	uuid_t uuid;
+	uuid_generate_random(uuid);
+	memcpy(out, uuid, sizeof(cpl_id_t));
+
+#elif defined(_WINDOWS)
+	
+	// Static assertion
+	int __a[sizeof(UUID) == sizeof(cpl_id_t) ? 1 : -1]; (void) __a;
+
+	UUID uuid;
+	UuidCreate(&uuid);
+	memcpy(out, &uuid, sizeof(cpl_id_t));
+
+#else
+#error "Not implemented for this platform"
+#endif
+
+	return CPL_OK;
+}

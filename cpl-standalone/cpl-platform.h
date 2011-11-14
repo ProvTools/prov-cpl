@@ -74,6 +74,11 @@ gettimeofday(struct timeval *tv, struct timezone *tz);
  */
 typedef unsigned char cpl_mac_address_t[6];
 
+/**
+ * UUID
+ */
+typedef unsigned char cpl_uuid_t[16];
+
 
 /***************************************************************************/
 /** Multi-Platform Functions                                              **/
@@ -88,6 +93,14 @@ typedef unsigned char cpl_mac_address_t[6];
 cpl_return_t
 cpl_platform_get_mac_address(cpl_mac_address_t* out);
 
+/**
+ * Generate a UUID
+ *
+ * @param out the output character array
+ * @return CPL_OK on success or an error code
+ */
+cpl_return_t
+cpl_platform_generate_uuid(cpl_uuid_t* out);
+
 
 #endif
-
