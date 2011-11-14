@@ -48,7 +48,7 @@
 /**
  * An invalid ID signifying no object
  */
-const cpl_id_t CPL_NONE = { { { 0, 0 } } };
+EXPORT const cpl_id_t CPL_NONE = { { { 0, 0 } } };
 
 
 
@@ -374,7 +374,7 @@ cpl_attach(struct _cpl_db_backend_t* backend)
 	int r = cpl_platform_get_mac_address(&mac);
 	if (r == 0) {
 #ifdef _WINDOWS
-		snprintf_s(mac_string, 32, _TRUNCATE,
+		sprintf_s(mac_string, 32,
 #else
 		snprintf(mac_string, 32,
 #endif

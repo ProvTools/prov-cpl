@@ -43,6 +43,8 @@
 
 #ifdef _WINDOWS
 #include <time.h>
+#include <iphlpapi.h>
+#pragma comment(lib, "IPHLPAPI.lib")
 #endif
 
 
@@ -112,8 +114,11 @@ gettimeofday(struct timeval *tv, struct timezone *tz)
 		}
 
 		// Adjust for the timezone west of Greenwich
-		tz->tz_minuteswest = _timezone / 60;
-		tz->tz_dsttime = _daylight;
+		long t = 0; int d = 0;
+		_get_timezone(&t);
+		_get_daylight(&d);
+		tz->tz_minuteswest = t / 60;
+		tz->tz_dsttime = d;
 	}
 
 	return 0;
@@ -176,7 +181,39 @@ cpl_platform_get_mac_address(cpl_mac_address_t* out)
 	if (!success) return CPL_E_NOT_FOUND;
 
 #elif defined(_WINDOWS)
-#error "Not implemented for this platform"
+
+	PIP_ADAPTER_ADDRESSES AdapterAddresses;
+	ULONG family = AF_UNSPEC;
+	ULONG flags = 0;
+	ULONG outBufLen = 0;
+	bool success = false;
+
+	DWORD dwRetVal = GetAdaptersAddresses(family, flags, NULL, NULL, &outBufLen);
+	if (dwRetVal == ERROR_NO_DATA) return CPL_E_NOT_FOUND;
+	if (dwRetVal == 0 && outBufLen == 0) return CPL_E_NOT_FOUND;
+	if (dwRetVal != ERROR_BUFFER_OVERFLOW) return CPL_E_PLATFORM_ERROR;
+
+	AdapterAddresses = (IP_ADAPTER_ADDRESSES*)
+		malloc(sizeof(IP_ADAPTER_ADDRESSES) * outBufLen);
+	if (AdapterAddresses == NULL) return CPL_E_INSUFFICIENT_RESOURCES;
+
+	dwRetVal = GetAdaptersAddresses(family, flags, NULL, AdapterAddresses,
+		&outBufLen);
+	if (dwRetVal != 0) { free(AdapterAddresses); return CPL_E_PLATFORM_ERROR; }
+
+	for (PIP_ADAPTER_ADDRESSES p = AdapterAddresses; p != NULL; p = p->Next) {
+		if (p->IfType == IF_TYPE_SOFTWARE_LOOPBACK) continue;
+		if (p->PhysicalAddressLength != 6 /* Ethernet */) continue;
+
+		success = true;
+		if (out) memcpy(out, p->PhysicalAddress, 6);
+		break;
+	}
+
+	free(AdapterAddresses);
+
+	if (!success) return CPL_E_NOT_FOUND;
+
 #else
 #error "Not implemented for this platform"
 #endif

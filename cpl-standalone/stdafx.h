@@ -46,8 +46,10 @@
 #endif
 
 #ifdef _WINDOWS
+#define _WINSOCKAPI_
 #include <windows.h>
 #include <intrin.h>
+#include <winsock2.h>
 #endif
 
 #if defined(__unix__) || defined(__APPLE__)

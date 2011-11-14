@@ -34,7 +34,7 @@
 #include "stdafx.h"
 
 /// A dummy symbol, so that the linker does not complain
-int __dummy_function_that_returns_0(void) { return 0; }
+int __dummy_function_that_returns_1(void) { return 1; }
 
 #ifdef _WINDOWS
 

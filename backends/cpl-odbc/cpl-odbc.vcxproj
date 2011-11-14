@@ -76,6 +76,11 @@
     <ClInclude Include="cpl-odbc-private.h" />
     <ClInclude Include="stdafx.h" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\cpl-standalone\cpl-standalone.vcxproj">
+      <Project>{c7c1c6ee-1aff-d618-4387-7965dec52bd6}</Project>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

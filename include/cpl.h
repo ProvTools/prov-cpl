@@ -35,6 +35,10 @@
 #ifndef __CPL_H__
 #define __CPL_H__
 
+#if defined _WIN64 || defined _WIN32
+#pragma once
+#endif
+
 #include <stddef.h>
 
 #ifdef __cplusplus
@@ -48,9 +52,17 @@ extern "C" {
 struct _cpl_db_backend_t;
 
 #if defined _WIN64 || defined _WIN32
-#define EXPORT __declspec(dllexport)
+	#define EXPORT __declspec(dllexport)
+	// Use the /D "_CPL_DLL" compiler option in VC++ to distinguish
+	// the CPL library that defines the given symbols from its users
+	#if defined(_CPL_DLL)
+	#define WINDLL_API __declspec(dllexport)
+	#else
+	#define WINDLL_API __declspec(dllimport)
+	#endif
 #else
-#define EXPORT
+	#define EXPORT
+	#define WINDLL_API
 #endif
 
 
@@ -89,7 +101,7 @@ typedef int cpl_return_t;
 /*
  * Static assertions
  */
-extern int __cpl_assert__cpl_id_size[sizeof(cpl_id_t) == 16 ? 0 : -1];
+extern int __cpl_assert__cpl_id_size[sizeof(cpl_id_t) == 16 ? 1 : -1];
 
 
 
@@ -126,89 +138,6 @@ cpl_id_cmp(const cpl_id_t* a, const cpl_id_t* b)
 }
 
 
-#ifdef __cplusplus
-
-/**
- * Compare ID's
- *
- * @param a the first ID
- * @param b the second ID
- * @return true if a < b
- */
-inline bool
-operator<(const cpl_id_t& a, const cpl_id_t& b)
-{
-	return cpl_id_cmp(&a, &b) < 0;
-}
-
-/**
- * Compare ID's
- *
- * @param a the first ID
- * @param b the second ID
- * @return true if a <= b
- */
-inline bool
-operator<=(const cpl_id_t& a, const cpl_id_t& b)
-{
-	return cpl_id_cmp(&a, &b) <= 0;
-}
-
-/**
- * Compare ID's
- *
- * @param a the first ID
- * @param b the second ID
- * @return true if a > b
- */
-inline bool
-operator>(const cpl_id_t& a, const cpl_id_t& b)
-{
-	return cpl_id_cmp(&a, &b) > 0;
-}
-
-/**
- * Compare ID's
- *
- * @param a the first ID
- * @param b the second ID
- * @return true if a >= b
- */
-inline bool
-operator>=(const cpl_id_t& a, const cpl_id_t& b)
-{
-	return cpl_id_cmp(&a, &b) >= 0;
-}
-
-/**
- * Compare ID's
- *
- * @param a the first ID
- * @param b the second ID
- * @return true if a == b
- */
-inline bool
-operator==(const cpl_id_t& a, const cpl_id_t& b)
-{
-	return a.hi == b.hi && a.lo == b.lo;
-}
-
-/**
- * Compare ID's
- *
- * @param a the first ID
- * @param b the second ID
- * @return true if a != b
- */
-inline bool
-operator!=(const cpl_id_t& a, const cpl_id_t& b)
-{
-	return a.hi != b.hi || a.lo != b.lo;
-}
-
-#endif
-
-
 
 /***************************************************************************/
 /** Constants                                                             **/
@@ -217,7 +146,7 @@ operator!=(const cpl_id_t& a, const cpl_id_t& b)
 /**
  * An invalid ID signifying no object
  */
-extern const cpl_id_t CPL_NONE;
+WINDLL_API extern const cpl_id_t CPL_NONE;
 
 /**
  * An invalid version number
@@ -513,6 +442,94 @@ cpl_hash_id(const cpl_id_t key)
 #endif
 
 
+
+/***************************************************************************/
+/** ID Manipulation in C++                                                **/
+/***************************************************************************/
+
+#ifdef __cplusplus
+
+/**
+ * Compare ID's
+ *
+ * @param a the first ID
+ * @param b the second ID
+ * @return true if a < b
+ */
+inline bool
+operator<(const cpl_id_t& a, const cpl_id_t& b)
+{
+	return cpl_id_cmp(&a, &b) < 0;
+}
+
+/**
+ * Compare ID's
+ *
+ * @param a the first ID
+ * @param b the second ID
+ * @return true if a <= b
+ */
+inline bool
+operator<=(const cpl_id_t& a, const cpl_id_t& b)
+{
+	return cpl_id_cmp(&a, &b) <= 0;
+}
+
+/**
+ * Compare ID's
+ *
+ * @param a the first ID
+ * @param b the second ID
+ * @return true if a > b
+ */
+inline bool
+operator>(const cpl_id_t& a, const cpl_id_t& b)
+{
+	return cpl_id_cmp(&a, &b) > 0;
+}
+
+/**
+ * Compare ID's
+ *
+ * @param a the first ID
+ * @param b the second ID
+ * @return true if a >= b
+ */
+inline bool
+operator>=(const cpl_id_t& a, const cpl_id_t& b)
+{
+	return cpl_id_cmp(&a, &b) >= 0;
+}
+
+/**
+ * Compare ID's
+ *
+ * @param a the first ID
+ * @param b the second ID
+ * @return true if a == b
+ */
+inline bool
+operator==(const cpl_id_t& a, const cpl_id_t& b)
+{
+	return a.hi == b.hi && a.lo == b.lo;
+}
+
+/**
+ * Compare ID's
+ *
+ * @param a the first ID
+ * @param b the second ID
+ * @return true if a != b
+ */
+inline bool
+operator!=(const cpl_id_t& a, const cpl_id_t& b)
+{
+	return a.hi != b.hi || a.lo != b.lo;
+}
+
+#endif /* __cplusplus */
+
+
 /***************************************************************************/
 /** Enhanced C++ Functionality                                            **/
 /***************************************************************************/
@@ -591,6 +608,7 @@ public:
 };
 
 #endif /* __cplusplus */
+
 
 #endif /* __CPL_STANDALONE_H__ */
 
