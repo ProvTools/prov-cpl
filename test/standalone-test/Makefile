@@ -40,7 +40,7 @@ endif
 CXXFLAGS      := $(CXXFLAGS) -Wno-sign-compare
 INCLUDE_FLAGS := $(INCLUDE_FLAGS)
 LINKER_FLAGS  := $(LINKER_FLAGS)
-LIBRARIES     := $(LIBRARIES) -lodbc $(LIBRARIES_CURL)
+LIBRARIES     := $(LIBRARIES) -lodbc -luuid $(LIBRARIES_CURL)
 
 
 #
