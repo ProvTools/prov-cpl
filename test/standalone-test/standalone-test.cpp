@@ -44,7 +44,7 @@
 #include <libgen.h>
 #endif
 
-#define ORIGINATOR "standalone-test"
+#define ORIGINATOR "edu.harvard.pass.cpl.standalone-test"
 
 
 /**
