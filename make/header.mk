@@ -228,6 +228,15 @@ endif
 
 
 #
+# Install
+#
+
+ifndef INSTALL_PREFIX
+INSTALL_PREFIX := /usr/local
+endif
+
+
+#
 # Add the build dir suffix
 #
 

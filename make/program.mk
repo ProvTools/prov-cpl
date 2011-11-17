@@ -201,3 +201,43 @@ endif
 
 $(SUBPROJECT_FILES):
 	make -C $(ROOT)/$(word 1,$(subst /$(BUILD_DIR)/lib, ,$(patsubst $(ROOT)/%,%,$@)))
+
+
+#
+# Install & unistall
+#
+
+.PHONY: install uninstall
+
+ifdef INSTALL
+	INSTALL_DEPENDENCIES := $(INSTALL_DEPENDENCIES) $(BUILD_DIR)/$(TARGET)
+	INSTALL_DIR := $(INSTALL_PREFIX)/bin
+else
+	INSTALL_DEPENDENCIES :=
+endif
+
+install:: $(INSTALL_DEPENDENCIES)
+ifdef INSTALL
+	@mkdir -p $(INSTALL_DIR)
+ifeq ($(OUTPUT_TYPE),kernel)
+	@echo '  INSTALL $(PWD_REL_SEP)$(BUILD_DIR)/$(TARGET)'
+	@install -D -m 755 -t $(INSTALL_DIR) $(BUILD_DIR)/$(TARGET)
+else
+	install -D -m 755 -t $(INSTALL_DIR) $(BUILD_DIR)/$(TARGET)
+endif
+else
+	@true
+endif
+
+uninstall::
+ifdef INSTALL
+ifeq ($(OUTPUT_TYPE),kernel)
+	@echo '  DELETE  $(INSTALL_DIR)/$(TARGET)'
+	@/bin/rm -f $(INSTALL_DIR)/$(TARGET)
+else
+	/bin/rm -f $(INSTALL_DIR)/$(TARGET)
+endif
+else
+	@true
+endif
+

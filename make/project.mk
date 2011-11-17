@@ -25,8 +25,8 @@ include $(ROOT)/make/header.mk
 # Subprojects
 #
 
-SUBPROJECTS := $(LIBRARIES) $(PROGRAMS)
-SUBPROJECTS_SORTED := $(sort $(LIBRARIES)) $(sort $(PROGRAMS))
+SUBPROJECTS := $(LIBRARIES) $(PROGRAMS) $(HEADERS)
+SUBPROJECTS_SORTED := $(sort $(LIBRARIES)) $(sort $(HEADERS)) $(sort $(PROGRAMS))
 
 
 #
@@ -44,12 +44,13 @@ endif
 
 TARGETS_BUILD := all relink
 TARGETS_CLEAN := clean distclean messclean
+TARGETS_INSTALL := install uninstall
 
-TARGETS := $(TARGETS_BUILD) $(TARGETS_CLEAN)
+TARGETS := $(TARGETS_BUILD) $(TARGETS_CLEAN) $(TARGETS_INSTALL)
 
 .PHONY: $(TARGETS) $(SUBPROJECTS)
 
-$(TARGETS_BUILD)::
+$(TARGETS_BUILD) $(TARGETS_INSTALL)::
 ifeq ($(OUTPUT_TYPE),kernel)
 	@for S in $(SUBPROJECTS_SORTED); do \
 		($(NMAKE) --no-print-directory -C "$$S" $@ 2>&1) \

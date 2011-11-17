@@ -12,6 +12,7 @@ ROOT := .
 #
 
 LIBRARIES := cpl-standalone backends
+HEADERS := include
 PROGRAMS := test
 
 

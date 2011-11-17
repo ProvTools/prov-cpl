@@ -12,6 +12,8 @@ ROOT :=../..
 #
 
 SHARED := yes
+INSTALL := yes
+
 DEPENDENCIES := $(ROOT)/include/*.h
 INCLUDE_FLAGS := $(INCLUDE_FLAGS) -I$(ROOT)/include
 LIBRARIES := -lodbc

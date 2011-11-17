@@ -85,6 +85,7 @@ $(BUILD_DIR)/$(TARGET): $(BUILD_DIR)/project.mk $(OBJECTS)
 	@mkdir -p $(BUILD_DIR)
 	@rm -f $@ 2> /dev/null || true
 ifdef SHARED
+	@rm -f $(BUILD_DIR)/$(TARGET) 2> /dev/null || true
 	@rm -f $(BUILD_DIR)/$(TARGET).$(SO_MAJOR_VERSION) 2> /dev/null || true
 	@rm -f $(BUILD_DIR)/$(TARGET_WITH_VER) 2> /dev/null || true
 ifeq ($(OUTPUT_TYPE),kernel)
@@ -132,4 +133,80 @@ endif
 
 list-subproject-lib-build-dirs::
 	@echo $(BUILD_DIR)
+
+
+#
+# Install & unistall
+#
+
+.PHONY: install uninstall
+
+ifdef SHARED
+INSTALL_PERM := 755
+else
+INSTALL_PERM := 644
+endif
+
+ifdef INSTALL
+	INSTALL_DEPENDENCIES := $(INSTALL_DEPENDENCIES) $(BUILD_DIR)/$(TARGET)
+	INSTALL_DIR := $(INSTALL_PREFIX)/lib
+else
+	INSTALL_DEPENDENCIES :=
+endif
+
+install:: $(INSTALL_DEPENDENCIES)
+ifdef INSTALL
+	@mkdir -p $(INSTALL_DIR)
+ifdef SHARED
+	@rm -f $(INSTALL_DIR)/$(TARGET_WITH_VER) 2> /dev/null || true
+ifeq ($(OUTPUT_TYPE),kernel)
+	@echo '  INSTALL $(PWD_REL_SEP)$(BUILD_DIR)/$(TARGET_WITH_VER)'
+	@install -D -m $(INSTALL_PERM) -t $(INSTALL_DIR) $(BUILD_DIR)/$(TARGET_WITH_VER)
+else
+	install -D -m $(INSTALL_PERM) -t $(INSTALL_DIR) $(BUILD_DIR)/$(TARGET_WITH_VER)
+endif
+	@rm -f $(INSTALL_DIR)/$(TARGET) 2> /dev/null || true
+	@rm -f $(INSTALL_DIR)/$(TARGET).$(SO_MAJOR_VERSION) 2> /dev/null || true
+ifeq ($(OUTPUT_TYPE),kernel)
+	@echo '  INSTALL $(PWD_REL_SEP)$(BUILD_DIR)/$(TARGET).$(SO_MAJOR_VERSION)'
+	@echo '  INSTALL $(PWD_REL_SEP)$(BUILD_DIR)/$(TARGET)'
+	@cd $(INSTALL_DIR) && ln -s $(TARGET_WITH_VER) $(TARGET).$(SO_MAJOR_VERSION)
+	@cd $(INSTALL_DIR) && ln -s $(TARGET_WITH_VER) $(TARGET)
+else
+	cd $(INSTALL_DIR) && ln -s $(TARGET_WITH_VER) $(TARGET).$(SO_MAJOR_VERSION)
+	cd $(INSTALL_DIR) && ln -s $(TARGET_WITH_VER) $(TARGET)
+endif
+else
+ifeq ($(OUTPUT_TYPE),kernel)
+	@echo '  INSTALL $(PWD_REL_SEP)$(BUILD_DIR)/$(TARGET)'
+	@install -D -m $(INSTALL_PERM) -t $(INSTALL_DIR) $(BUILD_DIR)/$(TARGET)
+else
+	install -D -m $(INSTALL_PERM) -t $(INSTALL_DIR) $(BUILD_DIR)/$(TARGET)
+endif
+endif
+else
+	@true
+endif
+
+uninstall::
+ifdef INSTALL
+ifeq ($(OUTPUT_TYPE),kernel)
+	@echo '  DELETE  $(INSTALL_DIR)/$(TARGET)'
+	@/bin/rm -f $(INSTALL_DIR)/$(TARGET)
+else
+	/bin/rm -f $(INSTALL_DIR)/$(TARGET)
+endif
+ifdef SHARED
+ifeq ($(OUTPUT_TYPE),kernel)
+	@echo '  DELETE  $(INSTALL_DIR)/$(TARGET).$(SO_MAJOR_VERSION)'
+	@/bin/rm -f $(INSTALL_DIR)/$(TARGET).$(SO_MAJOR_VERSION)
+	@echo '  DELETE  $(INSTALL_DIR)/$(TARGET_WITH_VER)'
+	@/bin/rm -f $(INSTALL_DIR)/$(TARGET_WITH_VER)
+else
+	/bin/rm -f $(INSTALL_DIR)/$(TARGET_WITH_VER)
+endif
+endif
+else
+	@true
+endif
 
