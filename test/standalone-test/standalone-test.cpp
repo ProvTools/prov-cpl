@@ -33,18 +33,17 @@
  */
 
 #include "stdafx.h"
+#include "standalone-test.h"
 
 #include <backends/cpl-odbc.h>
 #include <backends/cpl-rdf.h>
-#include <cpl.h>
-
 #include <getopt_compat.h>
+
+#include <vector>
 
 #ifdef __APPLE__
 #include <libgen.h>
 #endif
-
-#define ORIGINATOR "edu.harvard.pass.cpl.standalone-test"
 
 
 /**
@@ -60,6 +59,16 @@ char __program_name[2048];
 #ifdef _WINDOWS
 #define strcasecmp		lstrcmpiA
 #endif
+
+
+/**
+ * Tests
+ */
+static struct test_info TESTS[] =
+{
+	{"Simple",     "The Simplest Test",                    test_simple    },
+	{0, 0, 0}
+};
 
 
 /**
@@ -81,12 +90,17 @@ void
 usage(void)
 {
 #define P(...) { fprintf(stderr, __VA_ARGS__); fputc('\n', stderr); }
-	P("Usage: %s [OPTIONS]", program_name);
+	P("Usage: %s [OPTIONS] [TEST]", program_name);
 	P(" ");
 	P("Options:");
 	P("  -h, --help               Print this message and exit");
 	P("  --db-type DATABASE_TYPE  Specify the database type (MySQL, Jena,...)");
 	P("  --odbc DSN|CONNECT_STR   Use an ODBC connection");
+	P(" ");
+	P("Tests:");
+	for (const struct test_info* t = TESTS; t->name != NULL; t++) {
+		P("  %-24s %s", t->name, t->description);
+	}
 #undef P
 }
 
@@ -128,6 +142,8 @@ main(int argc, char** argv)
 	const char* odbc_connection_string = "CPL";
 	const char* db_type = "";
 
+	std::vector<const struct test_info*> tests;
+
 	set_program_name(argv[0]);
 
 
@@ -165,10 +181,27 @@ main(int argc, char** argv)
 		}
 
 
-		// Check the non-option arguments
+		// Parse the tests
 
-		if (optind != argc) {
-			throw CPLException("Too many arguments; please use -h for help.");
+		for (size_t u = optind; u < argc; u++) {
+			const char* s = argv[u];
+			bool ok = false;
+			for (const struct test_info* t = TESTS; t->name != NULL; t++) {
+				if (strcasecmp(s, t->name) == 0) {
+					tests.push_back(t);
+					ok = true;
+					break;
+				}
+			}
+			if (!ok) {
+				throw CPLException("Invalid test: \"%s\"", s);
+			}
+		}
+
+		if (tests.empty()) {
+			for (const struct test_info* t = TESTS; t->name != NULL; t++) {
+				tests.push_back(t);
+			}
 		}
 	}
 	catch (std::exception& e) {
@@ -314,36 +347,37 @@ main(int argc, char** argv)
 	CPLInitializationHelper __cpl(NULL); (void) __cpl;
 
 
-	// Yay
+	// Run the tests
 
-	cpl_return_t ret;
-	cpl_id_t obj  = CPL_NONE;
-	cpl_id_t obj2 = CPL_NONE;
-	cpl_id_t obj3 = CPL_NONE;
+	for (unsigned test_i = 0; test_i < tests.size(); test_i++) {
+		const struct test_info* test = tests[test_i];
 
-	ret = cpl_create_object(ORIGINATOR, "Process A", "Proc", CPL_NONE, &obj);
-	printf("cpl_create_object --> %llx:%llx [%d]\n", obj.hi, obj.lo, ret);
+		try {
 
-	ret = cpl_lookup_object(ORIGINATOR, "Process A", "Proc", &obj);
-	printf("cpl_lookup_object --> %llx:%llx [%d]\n", obj.hi, obj.lo, ret);
+			// Print the test header
 
-	ret = cpl_create_object(ORIGINATOR, "Object A", "File", obj, &obj2);
-	printf("cpl_create_object --> %llx:%llx [%d]\n", obj2.hi, obj2.lo, ret);
+			char header[80];
+			size_t name_len = strlen(test->name);
+			size_t name_start = 11;
+			if (name_len > 32) name_len = 32;
+			for (unsigned u = 0; u < 78; u++) header[u] = '-';
+			memcpy(header + 4, " Test: ", 7);
+			memcpy(header + name_start, test->name, name_len);
+			header[name_start + name_len] = ' ';
+			header[78] = '\0';
+			fprintf(stderr, "\n%s\n", header);
 
-	ret = cpl_create_object(ORIGINATOR, "Process B", "Proc", obj, &obj3);
-	printf("cpl_create_object --> %llx:%llx [%d]\n", obj3.hi, obj3.lo, ret);
 
-	ret = cpl_data_flow(obj2, obj, CPL_DATA_INPUT);
-	printf("cpl_data_flow --> %d\n", ret);
+			// Run the test
 
-	ret = cpl_data_flow(obj2, obj, CPL_DATA_INPUT);
-	printf("cpl_data_flow --> %d\n", ret);
-
-	ret = cpl_control(obj3, obj, CPL_CONTROL_START);
-	printf("cpl_control --> %d\n", ret);
-
-	ret = cpl_data_flow(obj, obj3, CPL_DATA_INPUT);
-	printf("cpl_data_flow --> %d\n", ret);
+			test->func();
+		}
+		catch (std::exception& e) {
+			fprintf(stderr, "%s :: %s: %s\n",
+					program_name, test->name, e.what());
+			return 1;
+		}
+	}
 
 	return 0;
 }
