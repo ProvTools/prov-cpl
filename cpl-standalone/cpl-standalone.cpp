@@ -45,10 +45,40 @@
 #endif
 
 
+
+/***************************************************************************/
+/** Constants                                                             **/
+/***************************************************************************/
+
 /**
  * An invalid ID signifying no object
  */
 EXPORT const cpl_id_t CPL_NONE = { { { 0, 0 } } };
+
+/**
+ * The last error code number
+ */
+#define __CPL_E_LAST_ERROR				-13
+
+/**
+ * An invalid ID signifying no object
+ */
+EXPORT const char* CPL_E_STR[] = {
+	__CPL_E_STR__0,
+	__CPL_E_STR__1,
+	__CPL_E_STR__2,
+	__CPL_E_STR__3,
+	__CPL_E_STR__4,
+	__CPL_E_STR__5,
+	__CPL_E_STR__6,
+	__CPL_E_STR__7,
+	__CPL_E_STR__8,
+	__CPL_E_STR__9,
+	__CPL_E_STR__10,
+	__CPL_E_STR__11,
+	__CPL_E_STR__12,
+	__CPL_E_STR__13,
+};
 
 
 
@@ -441,7 +471,28 @@ cpl_detach(void)
 
 
 /***************************************************************************/
-/** Public API                                                            **/
+/** Public API: Helpers                                                   **/
+/***************************************************************************/
+
+
+/**
+ * Return the string version of the given error code
+ *
+ * @param error the error code
+ * @return the error string (the function always succeeds)
+ */
+extern "C" EXPORT const char*
+cpl_error_string(cpl_return_t error)
+{
+	if (CPL_IS_OK(error)) return __CPL_E_STR__0;
+	if (error <= 0 && error >= __CPL_E_LAST_ERROR) return CPL_E_STR[-error];
+	return "Unknown error";
+}
+
+
+
+/***************************************************************************/
+/** Public API: Disclosed Provenance API                                  **/
 /***************************************************************************/
 
 

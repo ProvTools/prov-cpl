@@ -78,6 +78,7 @@ static struct option LONG_OPTIONS[] =
 {
 	{"help",                 no_argument,       0, 'h'},
 	{"odbc",                 required_argument, 0,  0 },
+	{"rdf",                  no_argument,       0,  0 },
 	{"db-type",              required_argument, 0,  0 },
 	{0, 0, 0, 0}
 };
@@ -160,6 +161,9 @@ main(int argc, char** argv)
 				if (strcmp(LONG_OPTIONS[option_index].name, "odbc") == 0) {
 					backend_type = "ODBC";
 					odbc_connection_string = optarg;
+				}
+				if (strcmp(LONG_OPTIONS[option_index].name, "rdf") == 0) {
+					backend_type = "RDF";
 				}
 				if (strcmp(LONG_OPTIONS[option_index].name, "db-type") == 0) {
 					db_type = optarg;
@@ -373,12 +377,12 @@ main(int argc, char** argv)
 			test->func();
 		}
 		catch (std::exception& e) {
-			fprintf(stderr, "%s :: %s: %s\n",
-					program_name, test->name, e.what());
+			fprintf(stderr, "[FAILED] %s\n\n", e.what());
 			return 1;
 		}
 	}
 
+	fprintf(stderr, "[SUCCESS]\n\n");
 	return 0;
 }
 

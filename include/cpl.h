@@ -238,72 +238,85 @@ WINDLL_API extern const cpl_id_t CPL_NONE;
  */
 #define CPL_SUCCESS						0
 #define CPL_OK							CPL_SUCCESS
+#define __CPL_E_STR__0					"Success"
 
 /**
  * Invalid argument
  */
 #define CPL_E_INVALID_ARGUMENT			-1
+#define __CPL_E_STR__1					"Invalid argument"
 
 /**
  * Out of resources
  */
 #define CPL_E_INSUFFICIENT_RESOURCES	-2
+#define __CPL_E_STR__2					"Insufficient resources"
 
 /**
  * Database backend connection error
  */
 #define CPL_E_DB_CONNECTION_ERROR		-3
+#define __CPL_E_STR__3					"Database connection error"
 
 /**
  * The requested feature is not (yet) implemented
  */
 #define CPL_E_NOT_IMPLEMENTED			-4
+#define __CPL_E_STR__4					"Not implemented"
 
 /**
  * The CPL library is already initialized
  */
 #define CPL_E_ALREADY_INITIALIZED		-5
+#define __CPL_E_STR__5					"CPL has already been initialized"
 
 /**
  * The CPL library was not yet initialized
  */
 #define CPL_E_NOT_INITIALIZED			-6
+#define __CPL_E_STR__6					"CPL has not yet been initialized"
 
 /**
  * The database backend failed to compile a query / prepare a statement
  */
 #define CPL_E_PREPARE_STATEMENT_ERROR	-7
+#define __CPL_E_STR__7	"The database failed to compile a prepared statement"
 
 /**
  * The database backend failed to execute a statement (or bind a parameter)
  */
 #define CPL_E_STATEMENT_ERROR			-8
+#define __CPL_E_STR__8	"The database failed to execute a statement (a query)"
 
 /**
  * The internal error
  */
 #define CPL_E_INTERNAL_ERROR			-9
+#define __CPL_E_STR__9					"Internal error"
 
 /**
  * The backend internal error
  */
 #define CPL_E_BACKEND_INTERNAL_ERROR	-10
+#define __CPL_E_STR__10	"Database or the database driver internal error"
 
 /**
  * The requested object/version/etc. was not found
  */
 #define CPL_E_NOT_FOUND					-11
+#define __CPL_E_STR__11					"Not found"
 
 /**
  * The requested object/version/etc. already exists
  */
 #define CPL_E_ALREADY_EXISTS			-12
+#define __CPL_E_STR__12					"Already exits"
  
 /**
  * An error originated by the underlying platform
  */
 #define CPL_E_PLATFORM_ERROR			-13
-
+#define __CPL_E_STR__13	"Could not handle an error returned by the native API"
 
 
 /***************************************************************************/
@@ -331,7 +344,21 @@ cpl_detach(void);
 
 
 /***************************************************************************/
-/** Provenance functions                                                  **/
+/** Helpers                                                               **/
+/***************************************************************************/
+
+/**
+ * Return the string version of the given error code
+ *
+ * @param error the error code
+ * @return the error string (the function always succeeds)
+ */
+EXPORT const char*
+cpl_error_string(cpl_return_t error);
+
+
+/***************************************************************************/
+/** Disclosed Provenance API                                              **/
 /***************************************************************************/
 
 /**

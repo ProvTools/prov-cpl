@@ -36,6 +36,7 @@
 #define __STANDALONE_TEST_H__
 
 #include <cpl.h>
+#include <cpl-exception.h>
 
 #define ORIGINATOR "edu.harvard.pass.cpl.standalone-test"
 
@@ -50,6 +51,25 @@ struct test_info
 	const char* description;
 	void (*func)(void);
 };
+
+
+/***************************************************************************/
+/** Helpers                                                               **/
+/***************************************************************************/
+
+/**
+ * Throw an exception on error
+ *
+ * @param f the CPL function
+ * @param r the return value
+ */
+#define CPL_VERIFY(f, r) { \
+	if (!CPL_IS_OK(r)) { \
+		throw CPLException("Function %s() in file %s on or before line %d " \
+				"failed -- %s (%d)", \
+				#f, __FILE__, __LINE__, cpl_error_string(r), (r)); \
+	} \
+}
 
 
 /***************************************************************************/
