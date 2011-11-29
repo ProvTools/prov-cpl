@@ -72,8 +72,8 @@ static bool verbose = false;
  */
 static struct test_info TESTS[] =
 {
-	{"Simple",     "The Simplest Test",                    test_simple    },
-	{"Stress",     "The Stress Test",                      test_stress    },
+	{"Simple",       "The Simplest Test",                test_simple       },
+	{"Mini-Stress",  "The Mini Stress Test",             test_mini_stress  },
 	{0, 0, 0}
 };
 
@@ -181,7 +181,7 @@ main(int argc, char** argv)
 	std::vector<const struct test_info*> tests;
 
 	set_program_name(argv[0]);
-	srand(time(NULL));
+	srand((unsigned int) time(NULL));
 
 
 	// Parse the command-line arguments
@@ -227,8 +227,8 @@ main(int argc, char** argv)
 
 		// Parse the tests
 
-		for (size_t u = optind; u < argc; u++) {
-			const char* s = argv[u];
+		for (int i = optind; i < argc; i++) {
+			const char* s = argv[i];
 			bool ok = false;
 			for (const struct test_info* t = TESTS; t->name != NULL; t++) {
 				if (strcasecmp(s, t->name) == 0) {

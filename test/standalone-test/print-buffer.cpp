@@ -160,7 +160,11 @@ print(int level, const char* format, ...)
 	size_t index = buffer_to;
 	buffer[index].level = level;
 	buffer[index].seq_number = ++buffer_num_lines;
+#ifdef _WINDOWS
+	strcpy_s(buffer[index].str, sizeof(buffer[index].str), str);
+#else
 	strcpy(buffer[index].str, str);
+#endif
 
 	buffer_to++;
 	if (buffer_to >= MAX_LINES) buffer_to = 0;

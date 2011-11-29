@@ -85,10 +85,10 @@ void
 test_simple(void);
 
 /**
- * The stress test
+ * The mini stress test
  */
 void
-test_stress(void);
+test_mini_stress(void);
 
 
 #endif

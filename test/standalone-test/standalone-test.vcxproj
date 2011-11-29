@@ -76,9 +76,14 @@
     </ProjectReference>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="print-buffer.cpp" />
     <ClCompile Include="standalone-test.cpp" />
+    <ClCompile Include="test-simple.cpp" />
+    <ClCompile Include="test-stress.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="print-buffer.h" />
+    <ClInclude Include="standalone-test.h" />
     <ClInclude Include="stdafx.h" />
   </ItemGroup>
   <ItemGroup>

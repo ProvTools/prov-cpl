@@ -73,7 +73,11 @@ typedef struct object {
 	cpl_version_t last_known_version;
 	int type_id;
 	size_t logical_id;
+#ifdef _WINDOWS
+	SSIZE_T container_logical_id;
+#else
 	ssize_t container_logical_id;
+#endif
 } object_t;
 
 
@@ -120,7 +124,12 @@ create_random_object(double p_container)
 									? -1 : rand() % objects.size();
 	
 	char name[64];
-	sprintf(name, "Object %lu", obj.logical_id);
+#ifdef _WINDOWS
+	sprintf_s(name, 64,
+#else
+	snprintf(name, 64,
+#endif
+		"Object %lu", obj.logical_id);
 
 	cpl_return_t ret = cpl_create_object(ORIGINATOR, name, TYPES[obj.type_id],
 		obj.container_logical_id < 0 ? CPL_NONE
@@ -195,7 +204,12 @@ parameterized_test_stress(size_t num_precreate, size_t num_operations,
 			cpl_id_t id;
 
 			size_t obj = rand() % objects.size();
-			sprintf(name, "Object %lu", obj);
+#ifdef _WINDOWS
+			sprintf_s(name, 64,
+#else
+			snprintf(name, 64,
+#endif
+				"Object %lu", obj);
 
 			ret = cpl_lookup_object(ORIGINATOR, name,
 					TYPES[objects[obj].type_id], &id);
@@ -270,10 +284,10 @@ parameterized_test_stress(size_t num_precreate, size_t num_operations,
 
 
 /**
- * The stress test
+ * The mini stress test
  */
 void
-test_stress(void)
+test_mini_stress(void)
 {
 	parameterized_test_stress(10, 1000, 0.1, 0.2, 0.2, 0.25);
 }
