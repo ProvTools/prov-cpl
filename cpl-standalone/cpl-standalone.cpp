@@ -58,7 +58,7 @@ EXPORT const cpl_id_t CPL_NONE = { { { 0, 0 } } };
 /**
  * The last error code number
  */
-#define __CPL_E_LAST_ERROR				-13
+#define __CPL_E_LAST_ERROR				-14
 
 /**
  * An invalid ID signifying no object
@@ -78,6 +78,7 @@ EXPORT const char* CPL_E_STR[] = {
 	__CPL_E_STR__11,
 	__CPL_E_STR__12,
 	__CPL_E_STR__13,
+	__CPL_E_STR__14,
 };
 
 
@@ -128,12 +129,14 @@ static cpl_session_t cpl_session = CPL_NONE;
  *
  * @param from_id the "from" end of the dependency edge
  * @param to_id the "to" end of the dependency edge
+ * @param to_ver the version of the "to" end of the dependency edge
  * @param type the data dependency edge type
  * @return CPL_OK or an error code
  */
 cpl_return_t
 cpl_add_dependency(const cpl_id_t from_id,
 			  	   const cpl_id_t to_id,
+				   const cpl_version_t to_ver,
 				   const int type);
 
 
@@ -630,6 +633,26 @@ cpl_data_flow(const cpl_id_t data_dest,
 			  const cpl_id_t data_source,
 			  const int type)
 {
+	return cpl_data_flow_ext(data_dest, data_source, CPL_VERSION_NONE, type);
+}
+
+
+/**
+ * Disclose a data flow from a specific version of the data source.
+ *
+ * @param data_dest the destination object
+ * @param data_source the source object
+ * @param data_source_ver the version of the source object (where
+ *                        CPL_VERSION_NONE = current)
+ * @param type the data dependency edge type
+ * @return CPL_OK or an error code
+ */
+extern "C" EXPORT cpl_return_t
+cpl_data_flow_ext(const cpl_id_t data_dest,
+				  const cpl_id_t data_source,
+				  const cpl_version_t data_source_ver,
+				  const int type)
+{
 	CPL_ENSURE_INITALIZED;
 
 
@@ -644,7 +667,7 @@ cpl_data_flow(const cpl_id_t data_dest,
 
 	// Add the dependency
 
-	return cpl_add_dependency(data_dest, data_source, type);
+	return cpl_add_dependency(data_dest, data_source, data_source_ver, type);
 }
 
 
@@ -661,6 +684,26 @@ cpl_control(const cpl_id_t object_id,
 			const cpl_id_t controller,
 			const int type)
 {
+	return cpl_control_ext(object_id, controller, CPL_VERSION_NONE, type);
+}
+
+
+/**
+ * Disclose a control flow operation using a specific version of the controller.
+ *
+ * @param object_id the ID of the controlled object
+ * @param controller the object ID of the controller
+ * @param controller_ver the version of the controller object (where
+ *                       CPL_VERSION_NONE = current version)
+ * @param type the control dependency edge type
+ * @return CPL_OK or an error code
+ */
+EXPORT cpl_return_t
+cpl_control_ext(const cpl_id_t object_id,
+				const cpl_id_t controller,
+				const cpl_version_t controller_ver,
+				const int type)
+{
 	CPL_ENSURE_INITALIZED;
 
 
@@ -675,7 +718,7 @@ cpl_control(const cpl_id_t object_id,
 
 	// Add the dependency
 
-	return cpl_add_dependency(object_id, controller, type);
+	return cpl_add_dependency(object_id, controller, controller_ver, type);
 }
 
 
@@ -690,12 +733,14 @@ cpl_control(const cpl_id_t object_id,
  *
  * @param from_id the "from" end of the dependency edge
  * @param to_id the "to" end of the dependency edge
+ * @param to_ver the version of the "to" end of the dependency edge
  * @param type the data dependency edge type
  * @return CPL_OK or an error code
  */
 cpl_return_t
 cpl_add_dependency(const cpl_id_t from_id,
 			  	   const cpl_id_t to_id,
+				   const cpl_version_t to_ver,
 				   const int type)
 {
 	CPL_ENSURE_INITALIZED;
@@ -710,10 +755,23 @@ cpl_add_dependency(const cpl_id_t from_id,
 	CPL_ENSURE_NOT_NONE(to_id);
 
 
-	// Get the version of the "to" object
+	// Get the current version of the "to" object
 
-	cpl_version_t to_version;
-	CPL_RUNTIME_VERIFY(cpl_get_version(to_id, &to_version));
+	cpl_version_t to_current_version;
+	CPL_RUNTIME_VERIFY(cpl_get_version(to_id, &to_current_version));
+
+
+	// Set the version of the "to" object to which we would be pointing
+
+	cpl_version_t to_version = to_ver;
+	if (to_version == CPL_VERSION_NONE) {
+		to_version = to_current_version;
+	}
+	else {
+		if (to_version > to_current_version) {
+			return CPL_E_INVALID_VERSION;
+		}
+	}
 
 
 	// Cycle-Avoidance Algorithm

@@ -195,19 +195,30 @@ WINDLL_API extern const cpl_id_t CPL_NONE;
 
 
 /**
+ * An unspecified dependency type
+ */
+#define CPL_DEPENDENCY_NONE				0
+
+
+/**
  * Generic data dependency
  */
 #define CPL_DATA_INPUT					CPL_DATA_DEPENDENCY(0)
 
 /**
+ * Potential data dependency via an observed IPC
+ */
+#define CPL_DATA_IPC					CPL_DATA_DEPENDENCY(1)
+
+/**
  * Data translation
  */
-#define CPL_DATA_TRANSLATION			CPL_DATA_DEPENDENCY(1)
+#define CPL_DATA_TRANSLATION			CPL_DATA_DEPENDENCY(2)
 
 /**
  * Data copy
  */
-#define CPL_DATA_COPY					CPL_DATA_DEPENDENCY(2)
+#define CPL_DATA_COPY					CPL_DATA_DEPENDENCY(3)
 
 
 /**
@@ -318,6 +329,12 @@ WINDLL_API extern const cpl_id_t CPL_NONE;
 #define CPL_E_PLATFORM_ERROR			-13
 #define __CPL_E_STR__13	"Could not handle an error returned by the native API"
 
+/**
+ * An error originated by the underlying platform
+ */
+#define CPL_E_INVALID_VERSION			-14
+#define __CPL_E_STR__14					"Invalid version"
+
 
 /***************************************************************************/
 /** Initialization and Cleanup                                            **/
@@ -410,6 +427,22 @@ cpl_data_flow(const cpl_id_t data_dest,
 			  const int type);
 
 /**
+ * Disclose a data flow from a specific version of the data source.
+ *
+ * @param data_dest the destination object
+ * @param data_source the source object
+ * @param data_source_ver the version of the source object (where
+ *                        CPL_VERSION_NONE = current)
+ * @param type the data dependency edge type
+ * @return CPL_OK or an error code
+ */
+EXPORT cpl_return_t
+cpl_data_flow_ext(const cpl_id_t data_dest,
+				  const cpl_id_t data_source,
+				  const cpl_version_t data_source_ver,
+				  const int type);
+
+/**
  * Disclose a control flow operation.
  *
  * @param object_id the ID of the controlled object
@@ -421,6 +454,22 @@ EXPORT cpl_return_t
 cpl_control(const cpl_id_t object_id,
 			const cpl_id_t controller,
 			const int type);
+
+/**
+ * Disclose a control flow operation using a specific version of the controller.
+ *
+ * @param object_id the ID of the controlled object
+ * @param controller the object ID of the controller
+ * @param controller_ver the version of the controller object (where
+ *                       CPL_VERSION_NONE = current version)
+ * @param type the control dependency edge type
+ * @return CPL_OK or an error code
+ */
+EXPORT cpl_return_t
+cpl_control_ext(const cpl_id_t object_id,
+				const cpl_id_t controller,
+				const cpl_version_t controller_ver,
+				const int type);
 
 
 /***************************************************************************/
