@@ -62,11 +62,18 @@ char __program_name[2048];
 
 
 /**
+ * Verbose mode
+ */
+static bool verbose = false;
+
+
+/**
  * Tests
  */
 static struct test_info TESTS[] =
 {
 	{"Simple",     "The Simplest Test",                    test_simple    },
+	{"Stress",     "The Stress Test",                      test_stress    },
 	{0, 0, 0}
 };
 
@@ -77,6 +84,7 @@ static struct test_info TESTS[] =
 static struct option LONG_OPTIONS[] =
 {
 	{"help",                 no_argument,       0, 'h'},
+	{"verbose",              no_argument,       0, 'v'},
 	{"odbc",                 required_argument, 0,  0 },
 	{"rdf",                  no_argument,       0,  0 },
 	{"db-type",              required_argument, 0,  0 },
@@ -91,10 +99,11 @@ void
 usage(void)
 {
 #define P(...) { fprintf(stderr, __VA_ARGS__); fputc('\n', stderr); }
-	P("Usage: %s [OPTIONS] [TEST]", program_name);
+	P("Usage: %s [OPTIONS] [TEST [TEST...]]", program_name);
 	P(" ");
 	P("Options:");
 	P("  -h, --help               Print this message and exit");
+	P("  -v, --verbose            Enable the verbose mode");
 	P("  --db-type DATABASE_TYPE  Specify the database type (MySQL, Jena,...)");
 	P("  --odbc DSN|CONNECT_STR   Use an ODBC connection");
 	P(" ");
@@ -130,6 +139,32 @@ set_program_name(const char* name)
 
 
 /**
+ * Print the verbose version of the test header
+ *
+ * @param out the output file
+ * @param test the test struct
+ */
+void
+print_verbose_test_header(FILE* out, const struct test_info* test)
+{
+	char header[80];
+	size_t name_start = 11;
+
+	size_t name_len = strlen(test->name);
+	if (name_len > 32) name_len = 32;
+	
+	for (unsigned u = 0; u < 78; u++) header[u] = '-';
+	
+	memcpy(header + 4, " Test: ", 7);
+	memcpy(header + name_start, test->name, name_len);
+	header[name_start + name_len] = ' ';
+	header[78] = '\0';
+
+	fprintf(out, "\n%s\n", header);
+}
+
+
+/**
  * The main function
  *
  * @param argc the number of command-line arguments
@@ -146,13 +181,14 @@ main(int argc, char** argv)
 	std::vector<const struct test_info*> tests;
 
 	set_program_name(argv[0]);
+	srand(time(NULL));
 
 
 	// Parse the command-line arguments
 
 	try {
 		int c, option_index = 0;
-		while ((c = getopt_long(argc, argv, "h",
+		while ((c = getopt_long(argc, argv, "hv",
 								LONG_OPTIONS, &option_index)) >= 0) {
 
 			switch (c) {
@@ -173,6 +209,10 @@ main(int argc, char** argv)
 			case 'h':
 				usage();
 				return 0;
+
+			case 'v':
+				verbose = true;
+				break;
 
 			case '?':
 			case ':':
@@ -213,6 +253,10 @@ main(int argc, char** argv)
 		return 1;
 	}
 
+
+	// Set the output level
+
+	set_output_level(verbose ? L_MAX : 0);
 
 	
 	// Create the database backend
@@ -358,31 +402,49 @@ main(int argc, char** argv)
 
 		try {
 
+			clear_buffer();
+
+
 			// Print the test header
 
-			char header[80];
-			size_t name_len = strlen(test->name);
-			size_t name_start = 11;
-			if (name_len > 32) name_len = 32;
-			for (unsigned u = 0; u < 78; u++) header[u] = '-';
-			memcpy(header + 4, " Test: ", 7);
-			memcpy(header + name_start, test->name, name_len);
-			header[name_start + name_len] = ' ';
-			header[78] = '\0';
-			fprintf(stderr, "\n%s\n", header);
+			if (verbose) {
+				print_verbose_test_header(stdout, test);
+			}
+			else {
+				fprintf(stdout, "Test: %s -- ", test->name);
+				fflush(stdout);
+			}
 
 
 			// Run the test
 
 			test->func();
+
+
+			// Print the success message
+
+			if (verbose) {
+				fprintf(stdout, "[SUCCESS]\n");
+			}
+			else {
+				fprintf(stdout, "Success\n");
+				fflush(stdout);
+			}
 		}
 		catch (std::exception& e) {
-			fprintf(stderr, "[FAILED] %s\n\n", e.what());
+			if (!verbose) {
+				fprintf(stdout, "Failed\n");
+				fflush(stdout);
+				print_verbose_test_header(stdout, test);
+				print_buffer(stdout);
+			}
+			fprintf(stdout, "[FAILED] %s\n\n", e.what());
 			return 1;
 		}
 	}
 
-	fprintf(stderr, "[SUCCESS]\n\n");
+	if (verbose) fputc('\n', stdout);
+
 	return 0;
 }
 

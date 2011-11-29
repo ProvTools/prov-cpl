@@ -48,35 +48,35 @@ test_simple(void)
 	cpl_id_t obj3 = CPL_NONE;
 
 	ret = cpl_create_object(ORIGINATOR, "Process A", "Proc", CPL_NONE, &obj);
-	printf("cpl_create_object --> %llx:%llx [%d]\n", obj.hi, obj.lo, ret);
+	print(L_DEBUG, "cpl_create_object --> %llx:%llx [%d]", obj.hi, obj.lo, ret);
 	CPL_VERIFY(cpl_create_object, ret);
 
 	ret = cpl_lookup_object(ORIGINATOR, "Process A", "Proc", &obj);
-	printf("cpl_lookup_object --> %llx:%llx [%d]\n", obj.hi, obj.lo, ret);
+	print(L_DEBUG, "cpl_lookup_object --> %llx:%llx [%d]", obj.hi, obj.lo, ret);
 	CPL_VERIFY(cpl_lookup_object, ret);
 
 	ret = cpl_create_object(ORIGINATOR, "Object A", "File", obj, &obj2);
-	printf("cpl_create_object --> %llx:%llx [%d]\n", obj2.hi, obj2.lo, ret);
+	print(L_DEBUG, "cpl_create_object --> %llx:%llx [%d]", obj2.hi,obj2.lo,ret);
 	CPL_VERIFY(cpl_create_object, ret);
 
 	ret = cpl_create_object(ORIGINATOR, "Process B", "Proc", obj, &obj3);
-	printf("cpl_create_object --> %llx:%llx [%d]\n", obj3.hi, obj3.lo, ret);
+	print(L_DEBUG, "cpl_create_object --> %llx:%llx [%d]", obj3.hi,obj3.lo,ret);
 	CPL_VERIFY(cpl_create_object, ret);
 
 	ret = cpl_data_flow(obj2, obj, CPL_DATA_INPUT);
-	printf("cpl_data_flow --> %d\n", ret);
+	print(L_DEBUG, "cpl_data_flow --> %d", ret);
 	CPL_VERIFY(cpl_data_flow, ret);
 
 	ret = cpl_data_flow(obj2, obj, CPL_DATA_INPUT);
-	printf("cpl_data_flow --> %d\n", ret);
+	print(L_DEBUG, "cpl_data_flow --> %d", ret);
 	CPL_VERIFY(cpl_data_flow, ret);
 
 	ret = cpl_control(obj3, obj, CPL_CONTROL_START);
-	printf("cpl_control --> %d\n", ret);
+	print(L_DEBUG, "cpl_control --> %d", ret);
 	CPL_VERIFY(cpl_control, ret);
 
 	ret = cpl_data_flow(obj, obj3, CPL_DATA_INPUT);
-	printf("cpl_data_flow --> %d\n", ret);
+	print(L_DEBUG, "cpl_data_flow --> %d", ret);
 	CPL_VERIFY(cpl_data_flow, ret);
 }
 

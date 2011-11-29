@@ -38,6 +38,8 @@
 #include <cpl.h>
 #include <cpl-exception.h>
 
+#include "print-buffer.h"
+
 #define ORIGINATOR "edu.harvard.pass.cpl.standalone-test"
 
 
@@ -81,6 +83,12 @@ struct test_info
  */
 void
 test_simple(void);
+
+/**
+ * The stress test
+ */
+void
+test_stress(void);
 
 
 #endif

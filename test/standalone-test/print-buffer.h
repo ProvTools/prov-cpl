@@ -1,5 +1,5 @@
 /*
- * cpl-platform.h
+ * print-buffer.h
  * Core Provenance Library
  *
  * Copyright 2011
@@ -32,127 +32,63 @@
  * Contributor(s): Peter Macko
  */
 
-#ifndef __CPL_PRIVATE_PLATFORM_H__
-#define __CPL_PRIVATE_PLATFORM_H__
+#ifndef __STANDALONE_TEST__PRINT_BUFFER_H__
+#define __STANDALONE_TEST__PRINT_BUFFER_H__
 
-#if !(defined _WIN32 || defined _WIN64)
-#include <pthread.h>
-#endif
-
+#include <cstdio>
 
 
 /***************************************************************************/
-/** Cross-Platform Compatibility: Mutex                                   **/
+/** Constants                                                             **/
 /***************************************************************************/
 
-#if defined _WIN32 || defined _WIN64
-
-/**
- * Mutex
- */
-typedef CRITICAL_SECTION mutex_t;
-
-/**
- * Initialize a mutex
- *
- * @param m the mutex
- */
-#define mutex_init(m) InitializeCriticalSection(&(m));
-
-/**
- * Destroy a mutex
- *
- * @param m the mutex
- */
-#define mutex_destroy(m) DeleteCriticalSection(&(m));
-
-/**
- * Lock a mutex
- *
- * @param m the mutex
- */
-#define mutex_lock(m) EnterCriticalSection(&(m));
-
-/**
- * Unlock a mutex
- *
- * @param m the mutex
- */
-#define mutex_unlock(m) LeaveCriticalSection(&(m));
-
-#else
-
-/**
- * Mutex
- */
-typedef pthread_mutex_t mutex_t;
-
-/**
- * Initialize a mutex
- *
- * @param m the mutex
- */
-#define mutex_init(m) pthread_mutex_init(&(m), NULL);
-
-/**
- * Destroy a mutex
- *
- * @param m the mutex
- */
-#define mutex_destroy(m) pthread_mutex_destroy(&(m));
-
-/**
- * Lock a mutex
- *
- * @param m the mutex
- */
-#define mutex_lock(m) pthread_mutex_lock(&(m));
-
-/**
- * Unlock a mutex
- *
- * @param m the mutex
- */
-#define mutex_unlock(m) pthread_mutex_unlock(&(m));
-
-#endif
-
+#define L_ERROR			1000
+#define L_WARNING		2000
+#define L_DEBUG			4000
+#define L_MAX			10000
 
 
 /***************************************************************************/
-/** Helpers: Mutex                                                        **/
+/** Buffer output                                                         **/
 /***************************************************************************/
 
 /**
- * Mutex
+ * Set the buffer output level
+ *
+ * @param l the new output level (L_MAX = silent)
+ * @return the old output level
  */
-class Mutex {
+int
+set_output_level(int l);
 
-	mutex_t m_mutex;
+/**
+ * Clear the buffer
+ */
+void
+clear_buffer(void);
+
+/**
+ * Print a line to the buffer, and depending on the level, also to stdout
+ *
+ * @param level the output level (between 0 and L_MAX-1)
+ * @param format the format string
+ * @param ... the arguments of the format
+ */
+void
+print(int level, const char* format, ...);
 
 
-public:
+/***************************************************************************/
+/** Buffer access                                                         **/
+/***************************************************************************/
 
-	/**
-	 * Initialize the mutex
-	 */
-	inline Mutex(void) { mutex_init(m_mutex); }
-
-	/**
-	 * Destroy the mutex
-	 */
-	inline ~Mutex(void) { mutex_destroy(m_mutex); }
-
-	/**
-	 * Lock
-	 */
-	inline void Lock(void) { mutex_lock(m_mutex); }
-
-	/**
-	 * Unlock
-	 */
-	inline void Unlock(void) { mutex_unlock(m_mutex); }
-};
+/**
+ * Print the entire buffer
+ *
+ * @param out the output file
+ */
+void
+print_buffer(std::FILE* out);
 
 #endif
 

@@ -245,35 +245,6 @@ cpl_get_open_object_handle(const cpl_id_t id, cpl_open_object_t** out)
 }
 
 
-/**
- * Get a version of an object
- *
- * @param id the object ID
- * @param out_version the pointer to store the version of the object
- * @return CPL_OK or an error code
- */
-cpl_return_t
-cpl_get_version(cpl_id_t id, cpl_version_t* out_version)
-{
-	assert(out_version != NULL);
-
-	if (cpl_cache) {
-		cpl_open_object_t* obj = NULL;
-		CPL_RUNTIME_VERIFY(cpl_get_open_object_handle(id, &obj));
-		*out_version = obj->version;
-		cpl_unlock(&obj->locked);
-	}
-	else {
-		cpl_return_t ret;
-		ret = cpl_db_backend->cpl_db_get_version(cpl_db_backend,
-												 id, out_version);
-		CPL_RUNTIME_VERIFY(ret);
-	}
-
-	return CPL_OK;
-}
-
-
 
 /***************************************************************************/
 /** Initialization and Cleanup                                            **/
@@ -698,7 +669,7 @@ cpl_control(const cpl_id_t object_id,
  * @param type the control dependency edge type
  * @return CPL_OK or an error code
  */
-EXPORT cpl_return_t
+extern "C" EXPORT cpl_return_t
 cpl_control_ext(const cpl_id_t object_id,
 				const cpl_id_t controller,
 				const cpl_version_t controller_ver,
@@ -719,6 +690,41 @@ cpl_control_ext(const cpl_id_t object_id,
 	// Add the dependency
 
 	return cpl_add_dependency(object_id, controller, controller_ver, type);
+}
+
+
+
+/***************************************************************************/
+/** Public API: Provenance Access API                                     **/
+/***************************************************************************/
+
+
+/**
+ * Get a version of a provenance object
+ *
+ * @param id the object ID
+ * @param out_version the pointer to store the version of the object
+ * @return CPL_OK or an error code
+ */
+extern "C" EXPORT cpl_return_t
+cpl_get_version(cpl_id_t id, cpl_version_t* out_version)
+{
+	assert(out_version != NULL);
+
+	if (cpl_cache) {
+		cpl_open_object_t* obj = NULL;
+		CPL_RUNTIME_VERIFY(cpl_get_open_object_handle(id, &obj));
+		*out_version = obj->version;
+		cpl_unlock(&obj->locked);
+	}
+	else {
+		cpl_return_t ret;
+		ret = cpl_db_backend->cpl_db_get_version(cpl_db_backend,
+												 id, out_version);
+		CPL_RUNTIME_VERIFY(ret);
+	}
+
+	return CPL_OK;
 }
 
 

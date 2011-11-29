@@ -473,6 +473,21 @@ cpl_control_ext(const cpl_id_t object_id,
 
 
 /***************************************************************************/
+/** Provenance Access API                                                 **/
+/***************************************************************************/
+
+/**
+ * Get a version of a provenance object
+ *
+ * @param id the object ID
+ * @param out_version the pointer to store the version of the object
+ * @return CPL_OK or an error code
+ */
+EXPORT cpl_return_t
+cpl_get_version(cpl_id_t id, cpl_version_t* out_version);
+
+
+/***************************************************************************/
 /** Utility functions                                                     **/
 /***************************************************************************/
 
