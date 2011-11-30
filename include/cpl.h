@@ -98,6 +98,61 @@ typedef cpl_id_t cpl_session_t;
  */
 typedef int cpl_return_t;
 
+/**
+ * Information about a provenance object.
+ */
+typedef struct cpl_object_info {
+	
+	/// The object ID.
+	cpl_id_t id;
+	
+	/// The object version.
+	cpl_version_t version;
+
+	/// The session ID of the process that created the object (not necessarily
+	/// the latest version).
+	cpl_session_t creation_session;
+
+	/// The object creation time expressed as UNIX time.
+	unsigned long creation_time;
+
+	/// The string that uniquely identifies the application that created
+	/// the object in the first place (this string also acts as a namespace).
+	char* originator;
+
+	/// The object name.
+	char* name;
+
+	/// The object type.
+	char* type;
+
+	/// The object ID of the container, or CPL_NONE if none.
+	cpl_id_t container_id;
+
+	/// The version number of the container, or CPL_VERSION_NONE if none.
+	cpl_version_t container_version;
+
+} cpl_object_info_t;
+
+/**
+ * Information about a specific version of a provenance object.
+ */
+typedef struct cpl_version_info {
+
+	/// The object ID.
+	cpl_id_t id;
+
+	/// The object version.
+	cpl_version_t version;
+
+	/// The session ID od the process that created this version.
+	cpl_session_t session;
+
+	/// The version creation time expressed as UNIX time.
+	unsigned long creation_time;
+
+} cpl_version_info_t;
+
 /*
  * Static assertions
  */
@@ -484,7 +539,50 @@ cpl_control_ext(const cpl_id_t object_id,
  * @return CPL_OK or an error code
  */
 EXPORT cpl_return_t
-cpl_get_version(cpl_id_t id, cpl_version_t* out_version);
+cpl_get_version(const cpl_id_t id,
+				cpl_version_t* out_version);
+
+/**
+ * Get information about the given provenance object
+ *
+ * @param id the object ID
+ * @param out_info the pointer to store the object info structure
+ * @return CPL_OK or an error code
+ */
+EXPORT cpl_return_t
+cpl_get_object_info(const cpl_id_t id,
+					cpl_object_info_t** out_info);
+
+/**
+ * Free cpl_object_info_t
+ *
+ * @param info the pointer to the object info structure
+ * @return CPL_OK or an error code
+ */
+EXPORT cpl_return_t
+cpl_free_object_info(cpl_object_info_t* info);
+
+/**
+ * Get information about the specific version of a provenance object
+ *
+ * @param id the object ID
+ * @param version the version of the given provenance object
+ * @param out_info the pointer to store the version info structure
+ * @return CPL_OK or an error code
+ */
+EXPORT cpl_return_t
+cpl_get_version_info(const cpl_id_t id,
+					 const cpl_version_t version,
+					 cpl_version_info_t** out_info);
+
+/**
+ * Free cpl_version_info_t
+ *
+ * @param info the pointer to the version info structure
+ * @return CPL_OK or an error code
+ */
+EXPORT cpl_return_t
+cpl_free_version_info(cpl_version_info_t* info);
 
 
 /***************************************************************************/

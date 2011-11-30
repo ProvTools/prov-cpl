@@ -201,6 +201,8 @@ cpl_create_odbc_backend(const char* connection_string,
 	mutex_init(odbc->get_version_lock);
 	mutex_init(odbc->add_ancestry_edge_lock);
 	mutex_init(odbc->has_immediate_ancestor_lock);
+	mutex_init(odbc->get_object_info_lock);
+	mutex_init(odbc->get_version_info_lock);
 
 
 	// Open the ODBC connection
@@ -260,6 +262,9 @@ cpl_create_odbc_backend(const char* connection_string,
 	ALLOC_STMT(add_ancestry_edge_stmt);
 	ALLOC_STMT(has_immediate_ancestor_stmt);
 	ALLOC_STMT(has_immediate_ancestor_with_ver_stmt);
+	ALLOC_STMT(get_object_info_stmt);
+	ALLOC_STMT(get_object_info_with_ver_stmt);
+	ALLOC_STMT(get_version_info_stmt);
 
 #undef ALLOC_STMT
 
@@ -275,47 +280,91 @@ cpl_create_odbc_backend(const char* connection_string,
 	}}
 
 	PREPARE(create_session_insert_stmt,
-			"INSERT INTO cpl_sessions (id_hi, id_lo, mac_address, username, "
-			"pid, program) VALUES (?, ?, ?, ?, ?, ?);");
+			"INSERT INTO cpl_sessions"
+			"            (id_hi, id_lo, mac_address, username, pid, program)"
+			"     VALUES (?, ?, ?, ?, ?, ?);");
 
 	PREPARE(create_object_insert_stmt,
-			"INSERT INTO cpl_objects (id_hi, id_lo, originator, name, type) "
-			"VALUES (?, ?, ?, ?, ?);");
+			"INSERT INTO cpl_objects"
+			"            (id_hi, id_lo, originator, name, type) "
+			"     VALUES (?, ?, ?, ?, ?);");
 
 	PREPARE(create_object_insert_container_stmt,
-			"INSERT INTO cpl_objects (id_hi, id_lo, originator, name, type, "
-			"container_id_hi, container_id_lo, container_ver) "
-			"VALUES (?, ?, ?, ?, ?, ?, ?, ?);");
+			"INSERT INTO cpl_objects"
+			"            (id_hi, id_lo, originator, name, type,"
+			"             container_id_hi, container_id_lo, container_ver)"
+			"     VALUES (?, ?, ?, ?, ?, ?, ?, ?);");
 
 	PREPARE(create_object_insert_version_stmt,
-			"INSERT INTO cpl_versions (id_hi, id_lo, version, session_id_hi, "
-			"session_id_lo) VALUES (?, ?, 0, ?, ?);");
+			"INSERT INTO cpl_versions"
+			"            (id_hi, id_lo, version, session_id_hi, session_id_lo)"
+			"     VALUES (?, ?, 0, ?, ?);");
 
 	PREPARE(lookup_object_stmt,
-			"SELECT id_hi, id_lo FROM cpl_objects WHERE originator=? "
-			"AND name=? AND type=? ORDER BY creation_time DESC LIMIT 1;");
+			"SELECT id_hi, id_lo"
+			"  FROM cpl_objects"
+			" WHERE originator = ? AND name = ? AND type = ?"
+			" ORDER BY creation_time DESC"
+			" LIMIT 1;");
 
 	PREPARE(create_version_stmt,
-			"INSERT INTO cpl_versions (id_hi, id_lo, version, session_id_hi, "
-			"session_id_lo) VALUES (?, ?, ?, ?, ?);");
+			"INSERT INTO cpl_versions"
+			"            (id_hi, id_lo, version, session_id_hi, session_id_lo)"
+			"     VALUES (?, ?, ?, ?, ?);");
 
 	PREPARE(get_version_stmt,
-			"SELECT MAX(version) FROM cpl_versions WHERE id_hi=? AND id_lo=?;");
+			"SELECT MAX(version)"
+			"  FROM cpl_versions"
+			" WHERE id_hi = ? AND id_lo = ?;");
 
 	PREPARE(add_ancestry_edge_stmt,
-			"INSERT INTO cpl_ancestry (from_id_hi, from_id_lo, from_version, "
-			"to_id_hi, to_id_lo, to_version, type) "
-			"VALUES (?, ?, ?, ?, ?, ?, ?);");
+			"INSERT INTO cpl_ancestry"
+			"            (from_id_hi, from_id_lo, from_version,"
+			"             to_id_hi, to_id_lo, to_version, type)"
+			"     VALUES (?, ?, ?, ?, ?, ?, ?);");
 
 	PREPARE(has_immediate_ancestor_stmt,
-			"SELECT to_version FROM cpl_ancestry WHERE to_id_hi=? AND "
-			"to_id_lo=? AND to_version<=? AND from_id_hi=? AND from_id_lo=? "
-			"LIMIT 1;");
+			"SELECT to_version"
+			"  FROM cpl_ancestry"
+			" WHERE to_id_hi = ? AND to_id_lo = ? AND to_version <= ?"
+			"   AND from_id_hi = ? AND from_id_lo = ?"
+			" LIMIT 1;");
 
 	PREPARE(has_immediate_ancestor_with_ver_stmt,
-			"SELECT to_version FROM cpl_ancestry WHERE to_id_hi=? AND "
-			"to_id_lo=? AND to_version<=? AND from_id_hi=? AND from_id_lo=? "
-			"AND from_version<=? LIMIT 1;");
+			"SELECT to_version"
+			"  FROM cpl_ancestry"
+			" WHERE to_id_hi = ? AND to_id_lo = ? AND to_version <= ?"
+			"   AND from_id_hi = ? AND from_id_lo = ? AND from_version <= ?"
+			" LIMIT 1;");
+
+	PREPARE(get_object_info_stmt,
+			"SELECT version, session_id_hi, session_id_lo,"
+			"       cpl_objects.creation_time, originator, name, type,"
+			"       container_id_hi, container_id_lo, container_ver"
+			"  FROM cpl_objects, cpl_versions"
+			" WHERE cpl_objects.id_hi = ? AND cpl_objects.id_lo = ?"
+			"   AND cpl_objects.id_hi = cpl_versions.id_hi"
+			"   AND cpl_objects.id_lo = cpl_versions.id_lo"
+			" ORDER BY version DESC"
+			" LIMIT 1;");
+
+	PREPARE(get_object_info_with_ver_stmt,
+			"SELECT version, session_id_hi, session_id_lo,"
+			"       cpl_objects.creation_time, originator, name, type,"
+			"       container_id_hi, container_id_lo, container_ver"
+			"  FROM cpl_objects, cpl_versions"
+			" WHERE cpl_objects.id_hi = ? AND cpl_objects.id_lo = ?"
+			"   AND cpl_objects.id_hi = cpl_versions.id_hi"
+			"   AND cpl_objects.id_lo = cpl_versions.id_lo"
+			"   AND version = ?"
+			" LIMIT 1;");
+
+	PREPARE(get_version_info_stmt,
+			"SELECT session_id_hi, session_id_lo, creation_time"
+			"  FROM cpl_versions"
+			" WHERE id_hi = ? AND id_lo = ? AND version = ?"
+			" LIMIT 1;");
+
 
 #undef PREPARE
 
@@ -341,6 +390,9 @@ err_stmts:
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->add_ancestry_edge_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->has_immediate_ancestor_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->has_immediate_ancestor_with_ver_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_info_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_info_with_ver_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_version_info_stmt);
 
 	SQLDisconnect(odbc->db_connection);
 
@@ -356,6 +408,8 @@ err_sync:
 	mutex_destroy(odbc->get_version_lock);
 	mutex_destroy(odbc->add_ancestry_edge_lock);
 	mutex_destroy(odbc->has_immediate_ancestor_lock);
+	mutex_destroy(odbc->get_object_info_lock);
+	mutex_destroy(odbc->get_version_info_lock);
 
 	delete odbc;
 	return r;
@@ -387,6 +441,9 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->add_ancestry_edge_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->has_immediate_ancestor_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->has_immediate_ancestor_with_ver_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_info_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_info_with_ver_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_version_info_stmt);
 
 	ret = SQLDisconnect(odbc->db_connection);
 	if (!SQL_SUCCEEDED(ret)) {
@@ -400,6 +457,8 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
 	mutex_destroy(odbc->get_version_lock);
 	mutex_destroy(odbc->add_ancestry_edge_lock);
 	mutex_destroy(odbc->has_immediate_ancestor_lock);
+	mutex_destroy(odbc->get_object_info_lock);
+	mutex_destroy(odbc->get_version_info_lock);
 
 	SQLFreeHandle(SQL_HANDLE_DBC, odbc->db_connection);
 	SQLFreeHandle(SQL_HANDLE_ENV, odbc->db_environment);
@@ -965,6 +1024,43 @@ err:
 }
 
 
+/**
+ * Get information about the given provenance object
+ *
+ * @param id the object ID
+ * @param version_hint the version of the given provenance object if known,
+ *                     or CPL_VERSION_NONE if not
+ * @param out_info the pointer to store the object info structure
+ * @return CPL_OK or an error code
+ */
+cpl_return_t
+cpl_odbc_get_object_info(struct _cpl_db_backend_t* backend,
+						 const cpl_id_t id,
+						 const cpl_version_t version_hint,
+						 cpl_object_info_t** out_info)
+{
+	return CPL_E_NOT_IMPLEMENTED;
+}
+
+
+/**
+ * Get information about the specific version of a provenance object
+ *
+ * @param id the object ID
+ * @param version the version of the given provenance object
+ * @param out_info the pointer to store the version info structure
+ * @return CPL_OK or an error code
+ */
+cpl_return_t
+cpl_odbc_get_version_info(struct _cpl_db_backend_t* backend,
+						  const cpl_id_t id,
+						  const cpl_version_t version,
+						  cpl_version_info_t** out_info)
+{
+	return CPL_E_NOT_IMPLEMENTED;
+}
+
+
 
 /***************************************************************************/
 /** The export / interface struct                                         **/
@@ -982,5 +1078,7 @@ const cpl_db_backend_t CPL_ODBC_BACKEND = {
 	cpl_odbc_get_version,
 	cpl_odbc_add_ancestry_edge,
 	cpl_odbc_has_immediate_ancestor,
+	cpl_odbc_get_object_info,
+	cpl_odbc_get_version_info,
 };
 

@@ -197,6 +197,35 @@ typedef struct _cpl_db_backend_t {
 									 const cpl_version_t query_object_max_ver,
 									 int* out);
 
+	/**
+	 * Get information about the given provenance object
+	 *
+	 * @param id the object ID
+	 * @param version_hint the version of the given provenance object if known,
+	 *                     or CPL_VERSION_NONE if not
+	 * @param out_info the pointer to store the object info structure
+	 * @return CPL_OK or an error code
+	 */
+	cpl_return_t
+	(*cpl_db_get_object_info)(struct _cpl_db_backend_t* backend,
+							  const cpl_id_t id,
+							  const cpl_version_t version_hint,
+							  cpl_object_info_t** out_info);
+
+	/**
+	 * Get information about the specific version of a provenance object
+	 *
+	 * @param id the object ID
+	 * @param version the version of the given provenance object
+	 * @param out_info the pointer to store the version info structure
+	 * @return CPL_OK or an error code
+	 */
+	cpl_return_t
+	(*cpl_db_get_version_info)(struct _cpl_db_backend_t* backend,
+							   const cpl_id_t id,
+							   const cpl_version_t version,
+							   cpl_version_info_t** out_info);
+
 } cpl_db_backend_t;
 
 

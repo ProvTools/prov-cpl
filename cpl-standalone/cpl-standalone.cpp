@@ -707,7 +707,8 @@ cpl_control_ext(const cpl_id_t object_id,
  * @return CPL_OK or an error code
  */
 extern "C" EXPORT cpl_return_t
-cpl_get_version(cpl_id_t id, cpl_version_t* out_version)
+cpl_get_version(const cpl_id_t id,
+				cpl_version_t* out_version)
 {
 	assert(out_version != NULL);
 
@@ -724,6 +725,96 @@ cpl_get_version(cpl_id_t id, cpl_version_t* out_version)
 		CPL_RUNTIME_VERIFY(ret);
 	}
 
+	return CPL_OK;
+}
+
+
+/**
+ * Get information about the given provenance object
+ *
+ * @param id the object ID
+ * @param out_info the pointer to store the object info structure
+ * @return CPL_OK or an error code
+ */
+extern "C" EXPORT cpl_return_t
+cpl_get_object_info(const cpl_id_t id,
+					cpl_object_info_t** out_info)
+{
+	CPL_ENSURE_NOT_NONE(id);
+	CPL_ENSURE_NOT_NULL(out_info);
+
+
+	// Get the latest version of the object, if available
+
+	cpl_version_t version_hint = CPL_VERSION_NONE;
+	if (cpl_cache) {
+		cpl_open_object_t* obj = NULL;
+		CPL_RUNTIME_VERIFY(cpl_get_open_object_handle(id, &obj));
+		version_hint = obj->version;
+		cpl_unlock(&obj->locked);
+	}
+
+
+	// Call the database backend
+
+	return cpl_db_backend->cpl_db_get_object_info(cpl_db_backend, id,
+												  version_hint, out_info);
+}
+
+
+/**
+ * Free cpl_object_info_t
+ *
+ * @param info the pointer to the object info structure
+ * @return CPL_OK or an error code
+ */
+extern "C" EXPORT cpl_return_t
+cpl_free_object_info(cpl_object_info_t* info)
+{
+	CPL_ENSURE_NOT_NULL(info);
+
+	if (info->originator != NULL) free(info->originator);
+	if (info->name != NULL) free(info->name);
+	if (info->type != NULL) free(info->type);
+
+	free(info);
+	return CPL_OK;
+}
+
+
+/**
+ * Get information about the specific version of a provenance object
+ *
+ * @param id the object ID
+ * @param version the version of the given provenance object
+ * @param out_info the pointer to store the version info structure
+ * @return CPL_OK or an error code
+ */
+extern "C" EXPORT cpl_return_t
+cpl_get_version_info(const cpl_id_t id,
+					 const cpl_version_t version,
+					 cpl_version_info_t** out_info)
+{
+	CPL_ENSURE_NOT_NONE(id);
+	CPL_ENSURE_NOT_NULL(out_info);
+
+	return cpl_db_backend->cpl_db_get_version_info(cpl_db_backend, id,
+												   version, out_info);
+}
+
+
+/**
+ * Free cpl_version_info_t
+ *
+ * @param info the pointer to the version info structure
+ * @return CPL_OK or an error code
+ */
+extern "C" EXPORT cpl_return_t
+cpl_free_version_info(cpl_version_info_t* info)
+{
+	CPL_ENSURE_NOT_NULL(info);
+
+	free(info);
 	return CPL_OK;
 }
 
