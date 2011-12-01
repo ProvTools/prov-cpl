@@ -1304,7 +1304,70 @@ cpl_odbc_get_version_info(struct _cpl_db_backend_t* backend,
 						  const cpl_version_t version,
 						  cpl_version_info_t** out_info)
 {
-	return CPL_E_NOT_IMPLEMENTED;
+	assert(backend != NULL);
+	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
+	
+	SQLRETURN ret;
+	cpl_return_t r = CPL_E_INTERNAL_ERROR;
+
+	cpl_version_info_t* p = (cpl_version_info_t*) malloc(sizeof(*p));
+	if (p == NULL) return CPL_E_INSUFFICIENT_RESOURCES;
+	memset(p, 0, sizeof(*p));
+	p->id = id;
+	p->version = version;
+
+	mutex_lock(odbc->get_version_info_lock);
+
+
+	// Prepare the statement
+
+	SQLHSTMT stmt = odbc->get_version_info_stmt;
+
+	SQL_BIND_INTEGER(stmt, 1, id.hi);
+	SQL_BIND_INTEGER(stmt, 2, id.lo);
+	SQL_BIND_INTEGER(stmt, 3, version);
+
+
+	// Execute
+	
+	ret = SQLExecute(stmt);
+	if (!SQL_SUCCEEDED(ret)) {
+		print_odbc_error("SQLExecute", stmt, SQL_HANDLE_STMT);
+		goto err;
+	}
+
+
+	// Fetch the result
+
+	CPL_SQL_SIMPLE_FETCH(llong, 1, (long long*) &p->session.hi);
+	CPL_SQL_SIMPLE_FETCH(llong, 2, (long long*) &p->session.lo);
+	CPL_SQL_SIMPLE_FETCH(timestamp_as_unix_time, 3, &p->creation_time);
+
+	ret = SQLCloseCursor(stmt);
+	if (!SQL_SUCCEEDED(ret)) {
+		print_odbc_error("SQLCloseCursor", stmt, SQL_HANDLE_STMT);
+		goto err;
+	}
+
+
+	// Cleanup
+
+	mutex_unlock(odbc->get_version_info_lock);
+	
+	*out_info = p;
+	return CPL_OK;
+
+
+	// Error handling
+
+err:
+	r = CPL_E_STATEMENT_ERROR;
+
+err_r:
+	mutex_unlock(odbc->get_version_info_lock);
+
+	free(p);
+	return r;
 }
 
 

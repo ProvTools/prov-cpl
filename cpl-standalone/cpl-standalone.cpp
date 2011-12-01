@@ -711,21 +711,39 @@ extern "C" EXPORT cpl_return_t
 cpl_get_version(const cpl_id_t id,
 				cpl_version_t* out_version)
 {
-	assert(out_version != NULL);
+	CPL_ENSURE_INITALIZED;
+	cpl_version_t version;
 
 	if (cpl_cache) {
 		cpl_open_object_t* obj = NULL;
 		CPL_RUNTIME_VERIFY(cpl_get_open_object_handle(id, &obj));
-		*out_version = obj->version;
+		version = obj->version;
 		cpl_unlock(&obj->locked);
 	}
 	else {
 		cpl_return_t ret;
 		ret = cpl_db_backend->cpl_db_get_version(cpl_db_backend,
-												 id, out_version);
+												 id, &version);
 		CPL_RUNTIME_VERIFY(ret);
 	}
 
+	if (out_version != NULL) *out_version = version;
+	return CPL_OK;
+}
+
+
+/**
+ * Get the ID of the current session
+ *
+ * @param out_session the pointer to store the ID of the current session
+ * @return CPL_OK or an error code
+ */
+extern "C" EXPORT cpl_return_t
+cpl_get_current_session(cpl_session_t* out_session)
+{
+	CPL_ENSURE_INITALIZED;
+
+	if (out_session != NULL) *out_session = cpl_session;
 	return CPL_OK;
 }
 

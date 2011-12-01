@@ -549,6 +549,15 @@ cpl_get_version(const cpl_id_t id,
 				cpl_version_t* out_version);
 
 /**
+ * Get the ID of the current session
+ *
+ * @param out_session the pointer to store the ID of the current session
+ * @return CPL_OK or an error code
+ */
+EXPORT cpl_return_t
+cpl_get_current_session(cpl_session_t* out_session);
+
+/**
  * Get information about the given provenance object
  *
  * @param id the object ID

@@ -65,16 +65,49 @@ print_object_info(cpl_object_info_t* info)
 
 
 /**
+ * Print the cpl_version_info_t structure
+ *
+ * @param info the info structure
+ */
+static void
+print_version_info(cpl_version_info_t* info)
+{
+	time_t creation_time = (time_t) info->creation_time;
+	char* s_creation_time = ctime(&creation_time);
+	if (s_creation_time[strlen(s_creation_time)-1] == '\n') {
+		s_creation_time[strlen(s_creation_time)-1] = '\0';
+	}
+
+	print(L_DEBUG, "  ID               : %llx:%llx", info->id.hi, info->id.lo);
+	print(L_DEBUG, "  Version          : %d", info->version);
+	print(L_DEBUG, "  Session          : %llx:%llx", info->session.hi,
+			                                         info->session.lo);
+	print(L_DEBUG, "  Creation Time    : %s", s_creation_time);
+}
+
+
+/**
  * The simplest possible test
  */
 void
 test_simple(void)
 {
 	cpl_return_t ret;
+	cpl_session_t session;
+
 	cpl_id_t obj  = CPL_NONE;
 	cpl_id_t obj2 = CPL_NONE;
 	cpl_id_t obj3 = CPL_NONE;
-	cpl_id_t objx;
+
+
+	// Get the current session
+
+	ret = cpl_get_current_session(&session);
+	print(L_DEBUG, "cpl_get_current_session --> %llx:%llx [%d]",
+		  session.hi, session.lo, ret);
+	CPL_VERIFY(cpl_get_current_session, ret);
+
+	print(L_DEBUG, " ");
 
 
 	// Object creation
@@ -95,6 +128,8 @@ test_simple(void)
 
 
 	// Object lookup
+
+	cpl_id_t objx;
 
 	ret = cpl_lookup_object(ORIGINATOR, "Process A", "Proc", &objx);
 	print(L_DEBUG, "cpl_lookup_object --> %llx:%llx [%d]", objx.hi,objx.lo,ret);
@@ -143,6 +178,7 @@ test_simple(void)
 	ret = cpl_get_version(obj, &version);
 	print(L_DEBUG, "cpl_get_version --> %d [%d]", version, ret);
 	CPL_VERIFY(cpl_get_version, ret);
+	cpl_version_t version1 = version;
 
 	ret = cpl_get_object_info(obj, &info);
 	print(L_DEBUG, "cpl_get_object_info --> %d", ret);
@@ -150,6 +186,7 @@ test_simple(void)
 
 	print_object_info(info);
 	if (info->id != obj || info->version != version
+			|| info->creation_session != session
 			|| info->creation_time > time(NULL)
 			|| info->creation_time + 10 < time(NULL)
 			|| strcmp(info->originator, ORIGINATOR) != 0
@@ -168,6 +205,7 @@ test_simple(void)
 	ret = cpl_get_version(obj2, &version);
 	print(L_DEBUG, "cpl_get_version --> %d [%d]", version, ret);
 	CPL_VERIFY(cpl_get_version, ret);
+	cpl_version_t version2 = version;
 
 	ret = cpl_get_object_info(obj2, &info);
 	print(L_DEBUG, "cpl_get_object_info --> %d", ret);
@@ -175,17 +213,61 @@ test_simple(void)
 
 	print_object_info(info);
 	if (info->id != obj2 || info->version != version
+			|| info->creation_session != session
 			|| info->creation_time > time(NULL)
 			|| info->creation_time + 10 < time(NULL)
 			|| strcmp(info->originator, ORIGINATOR) != 0
 			|| strcmp(info->name, "Object A") != 0
 			|| strcmp(info->type, "File") != 0
 			|| info->container_id != obj
-			|| info->container_version == CPL_VERSION_NONE) {
+			|| info->container_version != 0) {
 		throw CPLException("The returned object information is incorrect");
 	}
 
 	ret = cpl_free_object_info(info);
 	CPL_VERIFY(cpl_free_object_info, ret);
+
+	print(L_DEBUG, " ");
+
+
+	// Version info
+
+	cpl_version_info_t* vinfo = NULL;
+
+	version = version1;
+	ret = cpl_get_version_info(obj, version, &vinfo);
+	print(L_DEBUG, "cpl_get_version_info --> %d", ret);
+	CPL_VERIFY(cpl_get_version_info, ret);
+
+	print_version_info(vinfo);
+	if (vinfo->id != obj || vinfo->version != version
+			|| vinfo->session != session
+			|| vinfo->creation_time > time(NULL)
+			|| vinfo->creation_time + 10 < time(NULL)) {
+		throw CPLException("The returned version information is incorrect");
+	}
+
+	ret = cpl_free_version_info(vinfo);
+	CPL_VERIFY(cpl_free_version_info, ret);
+
+	print(L_DEBUG, " ");
+
+	version = version2;
+	ret = cpl_get_version_info(obj2, version, &vinfo);
+	print(L_DEBUG, "cpl_get_version_info --> %d", ret);
+	CPL_VERIFY(cpl_get_version_info, ret);
+
+	print_version_info(vinfo);
+	if (vinfo->id != obj2 || vinfo->version != version
+			|| vinfo->session != session
+			|| vinfo->creation_time > time(NULL)
+			|| vinfo->creation_time + 10 < time(NULL)) {
+		throw CPLException("The returned version information is incorrect");
+	}
+
+	ret = cpl_free_version_info(vinfo);
+	CPL_VERIFY(cpl_free_version_info, ret);
+
+	print(L_DEBUG, " ");
 }
 
