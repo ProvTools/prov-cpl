@@ -106,24 +106,29 @@ print_odbc_error(const char *fn, SQLHANDLE handle, SQLSMALLINT type)
 
 
 /**
- * Read a single number from the result set. Close the cursor on error,
+ * Read a single value from the result set. Close the cursor on error,
  * or if configured to do so (which is the default), also on success
  *
  * @param stmt the statement handle
+ * @param type the target variable type
  * @param out the pointer to the variable to store the output
+ * @param buffer_length the buffer length, or 0 for fixed-size C types
  * @param column the column number
  * @param fetch whether to fetch the new row
  * @param close_if_ok whether to close the cursor on no error
- * @return CPL_OK if okay, CPL_E_NOT_FOUND if empty or NULL, or an error code
+ * @param handle_nulls whether to handle null values specially
+ * @return CPL_OK if okay, depending on handle_nulls CPL_E_DB_NULL (if true)
+ *         or CPL_E_NOT_FOUND (if false) if empty or NULL, or an error code
  */
 static cpl_return_t
-cpl_sql_fetch_single_llong(SQLHSTMT stmt, long long* out, int column=1,
-		                   bool fetch=true, bool close_if_ok=true)
+cpl_sql_fetch_single_value(SQLHSTMT stmt, SQLSMALLINT type, void* out,
+						   size_t buffer_length, int column=1,
+		                   bool fetch=true, bool close_if_ok=true,
+						   bool handle_nulls=false)
 {
-
-	long long l = 0;
 	SQLLEN cb = 0;
 	SQLRETURN ret = 0;
+	assert(out != NULL);
 
 	if (fetch) {
 		ret = SQLFetch(stmt);
@@ -131,18 +136,20 @@ cpl_sql_fetch_single_llong(SQLHSTMT stmt, long long* out, int column=1,
 		SQL_ASSERT_NO_ERROR(SQLFetch, stmt, err);
 	}
 	
-	ret = SQLGetData(stmt, column, SQL_C_SBIGINT, &l, 0, &cb);
-	if (ret == SQL_NO_DATA) goto err_nf;
+	ret = SQLGetData(stmt, column, type, out, buffer_length, &cb);
+	if (ret == SQL_NO_DATA) goto err_null;
 	SQL_ASSERT_NO_ERROR(SQLGetData, stmt, err);
-	if (cb <= 0) goto err_nf;
+	if (cb <= 0) goto err_null;
 
 	if (close_if_ok) {
 		ret = SQLCloseCursor(stmt);
 		SQL_ASSERT_NO_ERROR(SQLCloseCursor, stmt, err);
 	}
 
-	if (out != NULL) *out = l;
 	return CPL_OK;
+
+
+	// Error handling
 
 err:
 	ret = SQLCloseCursor(stmt);
@@ -157,7 +164,163 @@ err_nf:
 		print_odbc_error("SQLCloseCursor", stmt, SQL_HANDLE_STMT);
 	}
 	return CPL_E_NOT_FOUND;
+
+err_null:
+	if (!handle_nulls) {
+		ret = SQLCloseCursor(stmt);
+		if (!SQL_SUCCEEDED(ret)) {
+			print_odbc_error("SQLCloseCursor", stmt, SQL_HANDLE_STMT);
+		}
+	}
+	return handle_nulls ? CPL_E_DB_NULL : CPL_E_NOT_FOUND;
 }
+
+
+/**
+ * Read a single number from the result set. Close the cursor on error,
+ * or if configured to do so (which is the default), also on success
+ *
+ * @param stmt the statement handle
+ * @param out the pointer to the variable to store the output
+ * @param column the column number
+ * @param fetch whether to fetch the new row
+ * @param close_if_ok whether to close the cursor on no error
+ * @param handle_nulls whether to handle null values specially
+ * @return CPL_OK if okay, depending on handle_nulls CPL_E_DB_NULL (if true)
+ *         or CPL_E_NOT_FOUND (if false) if empty or NULL, or an error code
+ */
+static cpl_return_t
+cpl_sql_fetch_single_llong(SQLHSTMT stmt, long long* out, int column=1,
+		                   bool fetch=true, bool close_if_ok=true,
+						   bool handle_nulls=false)
+{
+	long long l = 0;
+
+	cpl_return_t r = cpl_sql_fetch_single_value(stmt, SQL_C_SBIGINT,
+			&l, 0, column, fetch, close_if_ok, handle_nulls);
+	if (!CPL_IS_OK(r)) return r;
+
+	if (out != NULL) *out = l;
+	return CPL_OK;
+}
+
+
+/**
+ * Read a timestamp from the result set and return it as UNIX time. Close
+ * the cursor on error, or if configured to do so (which is the default),
+ * also on success
+ *
+ * @param stmt the statement handle
+ * @param out the pointer to the variable to store the output
+ * @param column the column number
+ * @param fetch whether to fetch the new row
+ * @param close_if_ok whether to close the cursor on no error
+ * @param handle_nulls whether to handle null values specially
+ * @return CPL_OK if okay, depending on handle_nulls CPL_E_DB_NULL (if true)
+ *         or CPL_E_NOT_FOUND (if false) if empty or NULL, or an error code
+ */
+static cpl_return_t
+cpl_sql_fetch_single_timestamp_as_unix_time(SQLHSTMT stmt, unsigned long* out,
+						int column=1, bool fetch=true, bool close_if_ok=true,
+						bool handle_nulls=false)
+{
+	SQL_TIMESTAMP_STRUCT t;
+
+	cpl_return_t r = cpl_sql_fetch_single_value(stmt, SQL_C_TYPE_TIMESTAMP,
+			&t, 0, column, fetch, close_if_ok, handle_nulls);
+	if (!CPL_IS_OK(r)) return r;
+
+	if (out != NULL) {
+		struct tm m;
+		m.tm_year = t.year - 1900;
+		m.tm_mon = t.month - 1;
+		m.tm_mday = t.day;
+		m.tm_hour = t.hour;
+		m.tm_min = t.minute;
+		m.tm_sec = t.second;
+		m.tm_wday = 0;
+		m.tm_yday = 0;
+		m.tm_isdst = 0;
+		*out = (unsigned long) mktime(&m);
+	}
+	return CPL_OK;
+}
+
+
+/**
+ * Read a single string from the result set. Close the cursor on error,
+ * or if configured to do so (which is the default), also on success. The
+ * returned string would need to be freed using free().
+ *
+ * @param stmt the statement handle
+ * @param out the pointer to the variable to store the output
+ * @param column the column number
+ * @param fetch whether to fetch the new row
+ * @param close_if_ok whether to close the cursor on no error
+ * @param handle_nulls whether to handle null values specially
+ * @param max_length the maximum string length (not including the string
+ *                   termination character)
+ * @return CPL_OK if okay, depending on handle_nulls CPL_E_DB_NULL (if true)
+ *         or CPL_E_NOT_FOUND (if false) if empty or NULL, or an error code
+ */
+static cpl_return_t
+cpl_sql_fetch_single_dynamically_allocated_string(SQLHSTMT stmt, char** out,
+						   int column=1, bool fetch=true, bool close_if_ok=true,
+						   bool handle_nulls=false, size_t max_length=255)
+{
+	char* str = (char*) malloc(max_length + 1);
+	if (str == NULL) return CPL_E_INSUFFICIENT_RESOURCES;
+
+	cpl_return_t r = cpl_sql_fetch_single_value(stmt, SQL_C_CHAR,
+			str, max_length + 1, column, fetch, close_if_ok, handle_nulls);
+	if (!CPL_IS_OK(r)) {
+		free(str);
+		if (out != NULL && handle_nulls && r == CPL_E_DB_NULL) *out = NULL;
+		return r;
+	}
+
+	if (out != NULL) {
+		*out = str;
+	}
+	else {
+		free(str);
+	}
+	return CPL_OK;
+}
+
+
+/**
+ * Read a single value from the result set of the statement stmt. If the column
+ * number is 1, do fetch. Store the return code in variable cpl_return_t r.
+ * Close the result set on error and jump to err_r.
+ *
+ * @param type the output variable / fetch operation type
+ * @param column the column number
+ * @param out the outputpointer
+ * @param handle_nulls whether to handle nulls specially; if true and the value
+ *                     is null, r would be CPL_E_DB_NULL, and the macro would
+ *                     succeed
+ */
+#define CPL_SQL_SIMPLE_FETCH_EXT(type, column, out, handle_nulls) { \
+	int __c = (column); \
+	r = cpl_sql_fetch_single_ ## type(stmt, (out), __c, __c == 1, false, \
+									  handle_nulls); \
+	if (r != CPL_E_DB_NULL /* possible only if handle_nulls is true */ \
+			&& !CPL_IS_OK(r)) goto err_r; \
+}
+
+
+/**
+ * Read a single value from the result set of the statement stmt. If the column
+ * number is 1, do fetch. Store the return code in variable cpl_return_t r.
+ * Close the result set on error and jump to err_r.
+ *
+ * @param type the output variable / fetch operation type
+ * @param column the column number
+ * @param out the outputpointer
+ */
+#define CPL_SQL_SIMPLE_FETCH(type, column, out) \
+	CPL_SQL_SIMPLE_FETCH_EXT(type, column, out, false);
 
 
 
@@ -1039,7 +1202,91 @@ cpl_odbc_get_object_info(struct _cpl_db_backend_t* backend,
 						 const cpl_version_t version_hint,
 						 cpl_object_info_t** out_info)
 {
-	return CPL_E_NOT_IMPLEMENTED;
+	assert(backend != NULL);
+	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
+	
+	SQLRETURN ret;
+	cpl_return_t r = CPL_E_INTERNAL_ERROR;
+	long long l;
+
+	cpl_object_info_t* p = (cpl_object_info_t*) malloc(sizeof(*p));
+	if (p == NULL) return CPL_E_INSUFFICIENT_RESOURCES;
+	memset(p, 0, sizeof(*p));
+	p->id = id;
+
+	mutex_lock(odbc->get_object_info_lock);
+
+
+	// Prepare the statement
+
+	SQLHSTMT stmt = version_hint == CPL_VERSION_NONE
+		? odbc->get_object_info_stmt : odbc->get_object_info_with_ver_stmt;
+
+	SQL_BIND_INTEGER(stmt, 1, id.hi);
+	SQL_BIND_INTEGER(stmt, 2, id.lo);
+
+	if (version_hint != CPL_VERSION_NONE) {
+		SQL_BIND_INTEGER(stmt, 3, version_hint);
+	}
+
+
+	// Execute
+	
+	ret = SQLExecute(stmt);
+	if (!SQL_SUCCEEDED(ret)) {
+		print_odbc_error("SQLExecute", stmt, SQL_HANDLE_STMT);
+		goto err;
+	}
+
+
+	// Fetch the result
+
+	CPL_SQL_SIMPLE_FETCH(llong, 1, &l); p->version = (cpl_version_t) l;
+	CPL_SQL_SIMPLE_FETCH(llong, 2, (long long*) &p->creation_session.hi);
+	CPL_SQL_SIMPLE_FETCH(llong, 3, (long long*) &p->creation_session.lo);
+	CPL_SQL_SIMPLE_FETCH(timestamp_as_unix_time, 4, &p->creation_time);
+
+	CPL_SQL_SIMPLE_FETCH(dynamically_allocated_string, 5, &p->originator);
+	CPL_SQL_SIMPLE_FETCH(dynamically_allocated_string, 6, &p->name);
+	CPL_SQL_SIMPLE_FETCH(dynamically_allocated_string, 7, &p->type);
+
+	CPL_SQL_SIMPLE_FETCH_EXT(llong, 8, (long long*) &p->container_id.hi, true);
+	if (r == CPL_E_DB_NULL) p->container_id = CPL_NONE;
+	CPL_SQL_SIMPLE_FETCH_EXT(llong, 9, (long long*) &p->container_id.lo, true);
+	if (r == CPL_E_DB_NULL) p->container_id = CPL_NONE;
+	CPL_SQL_SIMPLE_FETCH_EXT(llong, 10, &l, true);
+	if (r == CPL_E_DB_NULL) l = CPL_VERSION_NONE;
+	p->container_version = (cpl_version_t) l;
+	
+	ret = SQLCloseCursor(stmt);
+	if (!SQL_SUCCEEDED(ret)) {
+		print_odbc_error("SQLCloseCursor", stmt, SQL_HANDLE_STMT);
+		goto err;
+	}
+
+
+	// Cleanup
+
+	mutex_unlock(odbc->get_object_info_lock);
+	
+	*out_info = p;
+	return CPL_OK;
+
+
+	// Error handling
+
+err:
+	r = CPL_E_STATEMENT_ERROR;
+
+err_r:
+	mutex_unlock(odbc->get_object_info_lock);
+
+	if (p->originator != NULL) free(p->originator);
+	if (p->name != NULL) free(p->name);
+	if (p->type != NULL) free(p->type);
+	free(p);
+
+	return r;
 }
 
 

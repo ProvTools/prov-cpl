@@ -390,6 +390,12 @@ WINDLL_API extern const cpl_id_t CPL_NONE;
 #define CPL_E_INVALID_VERSION			-14
 #define __CPL_E_STR__14					"Invalid version"
 
+/**
+ * An error originated by the underlying platform
+ */
+#define CPL_E_DB_NULL					-15
+#define __CPL_E_STR__15	"The database returned an unexpected NULL value"
+
 
 /***************************************************************************/
 /** Initialization and Cleanup                                            **/

@@ -58,7 +58,7 @@ EXPORT const cpl_id_t CPL_NONE = { { { 0, 0 } } };
 /**
  * The last error code number
  */
-#define __CPL_E_LAST_ERROR				-14
+#define __CPL_E_LAST_ERROR				-15
 
 /**
  * An invalid ID signifying no object
@@ -79,6 +79,7 @@ EXPORT const char* CPL_E_STR[] = {
 	__CPL_E_STR__12,
 	__CPL_E_STR__13,
 	__CPL_E_STR__14,
+	__CPL_E_STR__15,
 };
 
 

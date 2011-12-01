@@ -37,6 +37,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <ctime>
 
 #if defined _WIN64 || defined _WIN32
 #ifndef _WINDOWS
