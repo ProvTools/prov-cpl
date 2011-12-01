@@ -45,7 +45,12 @@ static void
 print_object_info(cpl_object_info_t* info)
 {
 	time_t creation_time = (time_t) info->creation_time;
+#ifdef _WINDOWS
+	char s_creation_time[64];
+	ctime_s(s_creation_time, sizeof(s_creation_time), &creation_time);
+#else
 	char* s_creation_time = ctime(&creation_time);
+#endif
 	if (s_creation_time[strlen(s_creation_time)-1] == '\n') {
 		s_creation_time[strlen(s_creation_time)-1] = '\0';
 	}
@@ -73,7 +78,12 @@ static void
 print_version_info(cpl_version_info_t* info)
 {
 	time_t creation_time = (time_t) info->creation_time;
+#ifdef _WINDOWS
+	char s_creation_time[64];
+	ctime_s(s_creation_time, sizeof(s_creation_time), &creation_time);
+#else
 	char* s_creation_time = ctime(&creation_time);
+#endif
 	if (s_creation_time[strlen(s_creation_time)-1] == '\n') {
 		s_creation_time[strlen(s_creation_time)-1] = '\0';
 	}
