@@ -254,7 +254,8 @@ cpl_rdf_connection_init(const char* url)
 
 	c->curl = curl_easy_init();
 	if (c->curl == NULL) goto err_free;
-	
+
+	c->headers = NULL;
     c->headers = curl_slist_append(c->headers,
 			"Accept: text/plain, application/sparql-results+xml");
     curl_easy_setopt(c->curl, CURLOPT_HTTPHEADER, c->headers);
