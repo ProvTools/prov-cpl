@@ -56,12 +56,25 @@
 EXPORT const cpl_id_t CPL_NONE = { { { 0, 0 } } };
 
 /**
+ * The last success code number
+ */
+#define __CPL_S_LAST_SUCCESS			1
+
+/**
+ * Success code strings
+ */
+EXPORT const char* CPL_S_STR[] = {
+	__CPL_S_STR__0,
+	__CPL_S_STR__1,
+};
+
+/**
  * The last error code number
  */
 #define __CPL_E_LAST_ERROR				-15
 
 /**
- * An invalid ID signifying no object
+ * Error code strings
  */
 EXPORT const char* CPL_E_STR[] = {
 	__CPL_E_STR__0,
@@ -451,17 +464,22 @@ cpl_detach(void)
 
 
 /**
- * Return the string version of the given error code
+ * Return the string version of the given error (or success) code
  *
- * @param error the error code
- * @return the error string (the function always succeeds)
+ * @param code the return (success or error) code
+ * @return the error or success string (the function always succeeds)
  */
 extern "C" EXPORT const char*
-cpl_error_string(cpl_return_t error)
+cpl_error_string(cpl_return_t code)
 {
-	if (CPL_IS_OK(error)) return __CPL_E_STR__0;
-	if (error <= 0 && error >= __CPL_E_LAST_ERROR) return CPL_E_STR[-error];
-	return "Unknown error";
+	if (CPL_IS_OK(code)) {
+		if (code >= 0 && code <= __CPL_S_LAST_SUCCESS) return CPL_S_STR[code];
+		return "Success (unknown success code)";
+	}
+	else {
+		if (code <= 0 && code >= __CPL_E_LAST_ERROR) return CPL_E_STR[-code];
+		return "Unknown error";
+	}
 }
 
 
@@ -962,7 +980,7 @@ cpl_add_dependency(const cpl_id_t from_id,
 
 	// Return if the dependency already exists - there is nothing to do
 
-	if (dependency_exists) return CPL_OK;
+	if (dependency_exists) return CPL_S_DUPLICATE_IGNORED;
 
 
 	// Freeze and create a new version

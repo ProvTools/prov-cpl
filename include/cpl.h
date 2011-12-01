@@ -288,7 +288,7 @@ WINDLL_API extern const cpl_id_t CPL_NONE;
 
 
 /***************************************************************************/
-/** Error Codes                                                           **/
+/** Return Codes                                                          **/
 /***************************************************************************/
 
 /**
@@ -302,9 +302,21 @@ WINDLL_API extern const cpl_id_t CPL_NONE;
 /**
  * No error
  */
-#define CPL_SUCCESS						0
-#define CPL_OK							CPL_SUCCESS
-#define __CPL_E_STR__0					"Success"
+#define CPL_S_OK						0
+#define __CPL_S_STR__0					"Success"
+
+/**
+ * No error (aliases)
+ */
+#define CPL_OK							CPL_S_OK
+#define __CPL_E_STR__0					__CPL_S_STR__0
+
+/**
+ * Success, but the given dependency edge (or object, version, etc.) was not
+ * added due to duplicate elimination
+ */
+#define CPL_S_DUPLICATE_IGNORED			1
+#define __CPL_S_STR__1					"Success (duplicate ignored)"
 
 /**
  * Invalid argument
