@@ -58,7 +58,7 @@ EXPORT const cpl_id_t CPL_NONE = { { { 0, 0 } } };
 /**
  * The last success code number
  */
-#define __CPL_S_LAST_SUCCESS			1
+#define __CPL_S_LAST_SUCCESS			2
 
 /**
  * Success code strings
@@ -66,6 +66,7 @@ EXPORT const cpl_id_t CPL_NONE = { { { 0, 0 } } };
 EXPORT const char* CPL_S_STR[] = {
 	__CPL_S_STR__0,
 	__CPL_S_STR__1,
+	__CPL_S_STR__2,
 };
 
 /**
@@ -145,7 +146,7 @@ static cpl_session_t cpl_session = CPL_NONE;
  * @param to_id the "to" end of the dependency edge
  * @param to_ver the version of the "to" end of the dependency edge
  * @param type the data dependency edge type
- * @return CPL_OK or an error code
+ * @return CPL_OK, CPL_S_DUPLICATE_IGNORED, or an error code
  */
 cpl_return_t
 cpl_add_dependency(const cpl_id_t from_id,
@@ -616,7 +617,7 @@ cpl_lookup_object(const char* originator,
  * @param data_dest the destination object
  * @param data_source the source object
  * @param type the data dependency edge type
- * @return CPL_OK or an error code
+ * @return CPL_OK, CPL_S_DUPLICATE_IGNORED, or an error code
  */
 extern "C" EXPORT cpl_return_t
 cpl_data_flow(const cpl_id_t data_dest,
@@ -635,7 +636,7 @@ cpl_data_flow(const cpl_id_t data_dest,
  * @param data_source_ver the version of the source object (where
  *                        CPL_VERSION_NONE = current)
  * @param type the data dependency edge type
- * @return CPL_OK or an error code
+ * @return CPL_OK, CPL_S_DUPLICATE_IGNORED, or an error code
  */
 extern "C" EXPORT cpl_return_t
 cpl_data_flow_ext(const cpl_id_t data_dest,
@@ -667,7 +668,7 @@ cpl_data_flow_ext(const cpl_id_t data_dest,
  * @param object_id the ID of the controlled object
  * @param controller the object ID of the controller
  * @param type the control dependency edge type
- * @return CPL_OK or an error code
+ * @return CPL_OK, CPL_S_DUPLICATE_IGNORED, or an error code
  */
 extern "C" EXPORT cpl_return_t
 cpl_control(const cpl_id_t object_id,
@@ -686,7 +687,7 @@ cpl_control(const cpl_id_t object_id,
  * @param controller_ver the version of the controller object (where
  *                       CPL_VERSION_NONE = current version)
  * @param type the control dependency edge type
- * @return CPL_OK or an error code
+ * @return CPL_OK, CPL_S_DUPLICATE_IGNORED, or an error code
  */
 extern "C" EXPORT cpl_return_t
 cpl_control_ext(const cpl_id_t object_id,
@@ -714,151 +715,7 @@ cpl_control_ext(const cpl_id_t object_id,
 
 
 /***************************************************************************/
-/** Public API: Provenance Access API                                     **/
-/***************************************************************************/
-
-
-/**
- * Get a version of a provenance object
- *
- * @param id the object ID
- * @param out_version the pointer to store the version of the object
- * @return CPL_OK or an error code
- */
-extern "C" EXPORT cpl_return_t
-cpl_get_version(const cpl_id_t id,
-				cpl_version_t* out_version)
-{
-	CPL_ENSURE_INITALIZED;
-	cpl_version_t version;
-
-	if (cpl_cache) {
-		cpl_open_object_t* obj = NULL;
-		CPL_RUNTIME_VERIFY(cpl_get_open_object_handle(id, &obj));
-		version = obj->version;
-		cpl_unlock(&obj->locked);
-	}
-	else {
-		cpl_return_t ret;
-		ret = cpl_db_backend->cpl_db_get_version(cpl_db_backend,
-												 id, &version);
-		CPL_RUNTIME_VERIFY(ret);
-	}
-
-	if (out_version != NULL) *out_version = version;
-	return CPL_OK;
-}
-
-
-/**
- * Get the ID of the current session
- *
- * @param out_session the pointer to store the ID of the current session
- * @return CPL_OK or an error code
- */
-extern "C" EXPORT cpl_return_t
-cpl_get_current_session(cpl_session_t* out_session)
-{
-	CPL_ENSURE_INITALIZED;
-
-	if (out_session != NULL) *out_session = cpl_session;
-	return CPL_OK;
-}
-
-
-/**
- * Get information about the given provenance object
- *
- * @param id the object ID
- * @param out_info the pointer to store the object info structure
- * @return CPL_OK or an error code
- */
-extern "C" EXPORT cpl_return_t
-cpl_get_object_info(const cpl_id_t id,
-					cpl_object_info_t** out_info)
-{
-	CPL_ENSURE_NOT_NONE(id);
-	CPL_ENSURE_NOT_NULL(out_info);
-
-
-	// Get the latest version of the object, if available
-
-	cpl_version_t version_hint = CPL_VERSION_NONE;
-	if (cpl_cache) {
-		cpl_open_object_t* obj = NULL;
-		CPL_RUNTIME_VERIFY(cpl_get_open_object_handle(id, &obj));
-		version_hint = obj->version;
-		cpl_unlock(&obj->locked);
-	}
-
-
-	// Call the database backend
-
-	return cpl_db_backend->cpl_db_get_object_info(cpl_db_backend, id,
-												  version_hint, out_info);
-}
-
-
-/**
- * Free cpl_object_info_t
- *
- * @param info the pointer to the object info structure
- * @return CPL_OK or an error code
- */
-extern "C" EXPORT cpl_return_t
-cpl_free_object_info(cpl_object_info_t* info)
-{
-	CPL_ENSURE_NOT_NULL(info);
-
-	if (info->originator != NULL) free(info->originator);
-	if (info->name != NULL) free(info->name);
-	if (info->type != NULL) free(info->type);
-
-	free(info);
-	return CPL_OK;
-}
-
-
-/**
- * Get information about the specific version of a provenance object
- *
- * @param id the object ID
- * @param version the version of the given provenance object
- * @param out_info the pointer to store the version info structure
- * @return CPL_OK or an error code
- */
-extern "C" EXPORT cpl_return_t
-cpl_get_version_info(const cpl_id_t id,
-					 const cpl_version_t version,
-					 cpl_version_info_t** out_info)
-{
-	CPL_ENSURE_NOT_NONE(id);
-	CPL_ENSURE_NOT_NULL(out_info);
-
-	return cpl_db_backend->cpl_db_get_version_info(cpl_db_backend, id,
-												   version, out_info);
-}
-
-
-/**
- * Free cpl_version_info_t
- *
- * @param info the pointer to the version info structure
- * @return CPL_OK or an error code
- */
-extern "C" EXPORT cpl_return_t
-cpl_free_version_info(cpl_version_info_t* info)
-{
-	CPL_ENSURE_NOT_NULL(info);
-
-	free(info);
-	return CPL_OK;
-}
-
-
-
-/***************************************************************************/
-/** Advanced Private API                                                  **/
+/** Advanced Private API: Helpers for the Disclosed Provenance API        **/
 /***************************************************************************/
 
 
@@ -869,7 +726,7 @@ cpl_free_version_info(cpl_version_info_t* info)
  * @param to_id the "to" end of the dependency edge
  * @param to_ver the version of the "to" end of the dependency edge
  * @param type the data dependency edge type
- * @return CPL_OK or an error code
+ * @return CPL_OK, CPL_S_DUPLICATE_IGNORED, or an error code
  */
 cpl_return_t
 cpl_add_dependency(const cpl_id_t from_id,
@@ -1043,5 +900,204 @@ cpl_add_dependency(const cpl_id_t from_id,
 	}
 
 	return CPL_OK;
+}
+
+
+
+/***************************************************************************/
+/** Public API: Provenance Access API                                     **/
+/***************************************************************************/
+
+
+/**
+ * Get a version of a provenance object
+ *
+ * @param id the object ID
+ * @param out_version the pointer to store the version of the object
+ * @return CPL_OK or an error code
+ */
+extern "C" EXPORT cpl_return_t
+cpl_get_version(const cpl_id_t id,
+				cpl_version_t* out_version)
+{
+	CPL_ENSURE_INITALIZED;
+	cpl_version_t version;
+
+	if (cpl_cache) {
+		cpl_open_object_t* obj = NULL;
+		CPL_RUNTIME_VERIFY(cpl_get_open_object_handle(id, &obj));
+		version = obj->version;
+		cpl_unlock(&obj->locked);
+	}
+	else {
+		cpl_return_t ret;
+		ret = cpl_db_backend->cpl_db_get_version(cpl_db_backend,
+												 id, &version);
+		CPL_RUNTIME_VERIFY(ret);
+	}
+
+	if (out_version != NULL) *out_version = version;
+	return CPL_OK;
+}
+
+
+/**
+ * Get the ID of the current session
+ *
+ * @param out_session the pointer to store the ID of the current session
+ * @return CPL_OK or an error code
+ */
+extern "C" EXPORT cpl_return_t
+cpl_get_current_session(cpl_session_t* out_session)
+{
+	CPL_ENSURE_INITALIZED;
+
+	if (out_session != NULL) *out_session = cpl_session;
+	return CPL_OK;
+}
+
+
+/**
+ * Get information about the given provenance object
+ *
+ * @param id the object ID
+ * @param out_info the pointer to store the object info structure
+ * @return CPL_OK or an error code
+ */
+extern "C" EXPORT cpl_return_t
+cpl_get_object_info(const cpl_id_t id,
+					cpl_object_info_t** out_info)
+{
+	CPL_ENSURE_NOT_NONE(id);
+	CPL_ENSURE_NOT_NULL(out_info);
+
+
+	// Get the latest version of the object, if available
+
+	cpl_version_t version_hint = CPL_VERSION_NONE;
+	if (cpl_cache) {
+		cpl_open_object_t* obj = NULL;
+		CPL_RUNTIME_VERIFY(cpl_get_open_object_handle(id, &obj));
+		version_hint = obj->version;
+		cpl_unlock(&obj->locked);
+	}
+
+
+	// Call the database backend
+
+	return cpl_db_backend->cpl_db_get_object_info(cpl_db_backend, id,
+												  version_hint, out_info);
+}
+
+
+/**
+ * Free cpl_object_info_t
+ *
+ * @param info the pointer to the object info structure
+ * @return CPL_OK or an error code
+ */
+extern "C" EXPORT cpl_return_t
+cpl_free_object_info(cpl_object_info_t* info)
+{
+	CPL_ENSURE_NOT_NULL(info);
+
+	if (info->originator != NULL) free(info->originator);
+	if (info->name != NULL) free(info->name);
+	if (info->type != NULL) free(info->type);
+
+	free(info);
+	return CPL_OK;
+}
+
+
+/**
+ * Get information about the specific version of a provenance object
+ *
+ * @param id the object ID
+ * @param version the version of the given provenance object
+ * @param out_info the pointer to store the version info structure
+ * @return CPL_OK or an error code
+ */
+extern "C" EXPORT cpl_return_t
+cpl_get_version_info(const cpl_id_t id,
+					 const cpl_version_t version,
+					 cpl_version_info_t** out_info)
+{
+	CPL_ENSURE_NOT_NONE(id);
+	CPL_ENSURE_NOT_NULL(out_info);
+
+	return cpl_db_backend->cpl_db_get_version_info(cpl_db_backend, id,
+												   version, out_info);
+}
+
+
+/**
+ * Free cpl_version_info_t
+ *
+ * @param info the pointer to the version info structure
+ * @return CPL_OK or an error code
+ */
+extern "C" EXPORT cpl_return_t
+cpl_free_version_info(cpl_version_info_t* info)
+{
+	CPL_ENSURE_NOT_NULL(info);
+
+	free(info);
+	return CPL_OK;
+}
+
+
+/**
+ * Iterate over the ancestors or the descendants of a provenance object.
+ *
+ * @param id the object ID
+ * @param version the object version, or CPL_VERSION_NONE to access all
+ *                version nodes associated with the given object
+ * @param direction the direction of the graph traversal (CPL_D_ANCESTORS
+ *                  or CPL_D_DESCENDANTS)
+ * @param flags the bitwise combination of flags describing how should
+ *              the graph be traversed (a logical combination of the
+ *              CPL_A_* flags)
+ * @param iterator the iterator callback function
+ * @param context the user context to be passed to the iterator function
+ * @return CPL_OK, CPL_S_NO_DATA, or an error code
+ */
+extern "C" EXPORT cpl_return_t
+cpl_get_object_ancestry(const cpl_id_t id,
+						const cpl_version_t version,
+						const int direction,
+						const int flags,
+						cpl_ancestry_iterator_t iterator,
+						void* context)
+{
+	CPL_ENSURE_INITALIZED;
+	CPL_ENSURE_NOT_NONE(id);
+	CPL_ENSURE_NOT_NULL(iterator);
+
+	if (direction != CPL_D_ANCESTORS && direction != CPL_D_DESCENDANTS) {
+		return CPL_E_INVALID_ARGUMENT;
+	}
+
+
+	// Validate the object version
+
+	if (version != CPL_VERSION_NONE) {
+		CPL_ENSURE_NOT_NEGATIVE(version);
+
+		cpl_version_t current_version;
+		CPL_RUNTIME_VERIFY(cpl_get_version(id, &current_version));
+
+		if (version < 0 || version > current_version) {
+			return CPL_E_INVALID_VERSION;
+		}
+	}
+
+
+	// Call the database backend
+
+	return cpl_db_backend->cpl_db_get_object_ancestry(cpl_db_backend,
+													  id, version, direction,
+													  flags, iterator,
+													  context);
 }
 

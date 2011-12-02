@@ -35,6 +35,10 @@
 #include "stdafx.h"
 #include "standalone-test.h"
 
+#include <vector>
+
+using namespace std;
+
 
 /**
  * Print the cpl_object_info_t structure
@@ -93,6 +97,65 @@ print_version_info(cpl_version_info_t* info)
 	print(L_DEBUG, "  Session          : %llx:%llx", info->session.hi,
 			                                         info->session.lo);
 	print(L_DEBUG, "  Creation Time    : %s", s_creation_time);
+}
+
+
+/**
+ * A side of a dependecy edge + the dependency type
+ */
+typedef struct cpl_id_ver_type {
+	cpl_id_t id;
+	cpl_version_t version;
+	int type;
+} cpl_id_ver_type_t;
+
+
+/**
+ * The context type for cb_object_ancestry()
+ */
+typedef struct cb_object_ancestry_context {
+	int direction;
+	vector<cpl_id_ver_type_t> results;
+} cb_object_ancestry_context_t;
+
+
+/**
+ * The iterator callback function used by cpl_get_object_ancestry().
+ *
+ * @param query_object_id the ID of the object on which we are querying
+ * @param query_object_verson the version of the queried object
+ * @param other_object_id the ID of the object on the other end of the
+ *                        dependency/ancestry edge
+ * @param other_object_version the version of the other object
+ * @param type the type of the data or the control dependency
+ * @param context the application-provided context
+ * @return CPL_OK or an error code (the caller should fail on this error)
+ */
+static cpl_return_t
+cb_object_ancestry(const cpl_id_t query_object_id,
+				   const cpl_version_t query_object_version,
+				   const cpl_id_t other_object_id,
+				   const cpl_version_t other_object_version,
+				   const int type,
+				   void* context)
+{
+	cb_object_ancestry_context_t* ctx = (cb_object_ancestry_context_t*) context; 
+	int direction = ctx->direction;
+
+	cpl_id_ver_type_t x;
+	x.id = other_object_id;
+	x.version = other_object_version;
+	x.type = type;
+	ctx->results.push_back(x);
+
+	print(L_DEBUG, "  %llx:%llx-%d %c--%c %llx:%llx-%d  Type: %d:%02d",
+			query_object_id.hi, query_object_id.lo, query_object_version,
+			direction == CPL_D_ANCESTORS ? '-' : '<',
+			direction == CPL_D_ANCESTORS ? '>' : '-',
+			other_object_id.hi, other_object_id.lo, other_object_version,
+			CPL_GET_DEPENDENCY_CATEGORY(type), type & 255);
+
+	return CPL_OK;
 }
 
 
@@ -277,6 +340,66 @@ test_simple(void)
 
 	ret = cpl_free_version_info(vinfo);
 	CPL_VERIFY(cpl_free_version_info, ret);
+
+	print(L_DEBUG, " ");
+
+
+	// Ancestry (all checks assume the cycle avoidance algorithm)
+
+	cb_object_ancestry_context_t actx;
+
+	actx.direction = CPL_D_ANCESTORS;
+	actx.results.clear();
+	print(L_DEBUG, "Ancestors:");
+	ret = cpl_get_object_ancestry(obj, CPL_VERSION_NONE, actx.direction, 0,
+								  cb_object_ancestry, &actx);
+	print(L_DEBUG, "cpl_get_object_ancestry --> %d", ret);
+	CPL_VERIFY(cpl_get_object_ancestry, ret);
+
+	if (actx.results.size() != 1) throw CPLException("Invalid ancestry");
+	if (actx.results[0].id != obj3) throw CPLException("Invalid ancestry");
+
+	print(L_DEBUG, " ");
+
+	actx.direction = CPL_D_DESCENDANTS;
+	actx.results.clear();
+	print(L_DEBUG, "Descendants:");
+	ret = cpl_get_object_ancestry(obj, CPL_VERSION_NONE, actx.direction, 0,
+								  cb_object_ancestry, &actx);
+	print(L_DEBUG, "cpl_get_object_ancestry --> %d", ret);
+	CPL_VERIFY(cpl_get_object_ancestry, ret);
+
+	if (actx.results.size() != 2) throw CPLException("Invalid ancestry");
+	if ((actx.results[0].id != obj3 || actx.results[1].id != obj2)
+			&& (actx.results[1].id != obj3 || actx.results[0].id != obj2))
+		throw CPLException("Invalid ancestry");
+
+	print(L_DEBUG, " ");
+
+	actx.direction = CPL_D_ANCESTORS;
+	actx.results.clear();
+	print(L_DEBUG, "Ancestors of version 0:");
+	ret = cpl_get_object_ancestry(obj, 0, actx.direction, 0,
+								  cb_object_ancestry, &actx);
+	print(L_DEBUG, "cpl_get_object_ancestry --> %d", ret);
+	CPL_VERIFY(cpl_get_object_ancestry, ret);
+
+	if (actx.results.size() != 0) throw CPLException("Invalid ancestry");
+
+	print(L_DEBUG, " ");
+
+	actx.direction = CPL_D_DESCENDANTS;
+	actx.results.clear();
+	print(L_DEBUG, "Descendants of version 0:");
+	ret = cpl_get_object_ancestry(obj, 0, actx.direction, 0,
+								  cb_object_ancestry, &actx);
+	print(L_DEBUG, "cpl_get_object_ancestry --> %d", ret);
+	CPL_VERIFY(cpl_get_object_ancestry, ret);
+
+	if (actx.results.size() != 2) throw CPLException("Invalid ancestry");
+	if ((actx.results[0].id != obj3 || actx.results[1].id != obj2)
+			&& (actx.results[1].id != obj3 || actx.results[0].id != obj2))
+		throw CPLException("Invalid ancestry");
 
 	print(L_DEBUG, " ");
 }

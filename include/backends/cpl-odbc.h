@@ -69,6 +69,18 @@ extern "C" {
 
 
 /***************************************************************************/
+/** Constants                                                             **/
+/***************************************************************************/
+
+/**
+ * The combination of CPL_A_* flags that are currently supported by the driver.
+ */
+#define CPL_ODBC_A_SUPPORTED_FLAGS \
+	(CPL_A_NO_CONTROL_DEPENDENCIES | CPL_A_NO_DATA_DEPENDENCIES)
+
+
+
+/***************************************************************************/
 /** Constructor                                                           **/
 /***************************************************************************/
 

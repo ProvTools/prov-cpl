@@ -196,6 +196,31 @@ typedef struct {
 	 */
 	SQLHSTMT get_version_info_stmt;
 
+	/**
+	 * The mutex for get_object_ancestry
+	 */
+	mutex_t get_object_ancestry_lock;
+
+	/**
+	 * The statement for listing ancestors
+	 */
+	SQLHSTMT get_object_ancestors;
+
+	/**
+	 * The statement for listing ancestors of a specific version of the object
+	 */
+	SQLHSTMT get_object_ancestors_with_ver;
+
+	/**
+	 * The statement for listing descendants
+	 */
+	SQLHSTMT get_object_descendants;
+
+	/**
+	 * The statement for listing descendants of a specific version of the object
+	 */
+	SQLHSTMT get_object_descendants_with_ver;
+
 } cpl_odbc_t;
 
 

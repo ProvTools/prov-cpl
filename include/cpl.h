@@ -153,6 +153,26 @@ typedef struct cpl_version_info {
 
 } cpl_version_info_t;
 
+/**
+ * The iterator callback function used by cpl_get_object_ancestry().
+ *
+ * @param query_object_id the ID of the object on which we are querying
+ * @param query_object_verson the version of the queried object
+ * @param other_object_id the ID of the object on the other end of the
+ *                        dependency/ancestry edge
+ * @param other_object_version the version of the other object
+ * @param type the type of the data or the control dependency
+ * @param context the application-provided context
+ * @return CPL_OK or an error code (the caller should fail on this error)
+ */
+typedef cpl_return_t (*cpl_ancestry_iterator_t)
+						(const cpl_id_t query_object_id,
+						 const cpl_version_t query_object_version,
+						 const cpl_id_t other_object_id,
+						 const cpl_version_t other_object_version,
+						 const int type,
+						 void* context);
+
 /*
  * Static assertions
  */
@@ -195,7 +215,7 @@ cpl_id_cmp(const cpl_id_t* a, const cpl_id_t* b)
 
 
 /***************************************************************************/
-/** Constants                                                             **/
+/** Basic Constants                                                       **/
 /***************************************************************************/
 
 /**
@@ -287,6 +307,7 @@ WINDLL_API extern const cpl_id_t CPL_NONE;
 #define CPL_CONTROL_START				CPL_CONTROL_DEPENDENCY(1)
 
 
+
 /***************************************************************************/
 /** Return Codes                                                          **/
 /***************************************************************************/
@@ -297,7 +318,9 @@ WINDLL_API extern const cpl_id_t CPL_NONE;
  * @param r the return value
  * @return true if it is OK
  */
-#define CPL_IS_OK(r) ((r) >= 0)
+#define CPL_IS_OK(r)					((r) >= 0)
+#define CPL_IS_SUCCESS					CPL_IS_OK
+#define CPL_SUCCEEDED					CPL_IS_OK
 
 /**
  * No error
@@ -317,6 +340,12 @@ WINDLL_API extern const cpl_id_t CPL_NONE;
  */
 #define CPL_S_DUPLICATE_IGNORED			1
 #define __CPL_S_STR__1					"Success (duplicate ignored)"
+
+/**
+ * Success, but the function did not return any data
+ */
+#define CPL_S_NO_DATA					2
+#define __CPL_S_STR__2					"Success (no data)"
 
 /**
  * Invalid argument
@@ -409,6 +438,33 @@ WINDLL_API extern const cpl_id_t CPL_NONE;
 #define __CPL_E_STR__15	"The database returned an unexpected NULL value"
 
 
+
+/***************************************************************************/
+/** Graph Traversal & Query Flags                                         **/
+/***************************************************************************/
+
+/**
+ * Get ancestors
+ */
+#define CPL_D_ANCESTORS					0
+
+/**
+ * Get descendants
+ */
+#define CPL_D_DESCENDANTS				1
+
+/**
+ * Ignore data dependencies
+ */
+#define CPL_A_NO_DATA_DEPENDENCIES		(1 << 1)
+
+/**
+ * Ignore control dependencies
+ */
+#define CPL_A_NO_CONTROL_DEPENDENCIES	(1 << 2)
+
+
+
 /***************************************************************************/
 /** Initialization and Cleanup                                            **/
 /***************************************************************************/
@@ -492,7 +548,7 @@ cpl_lookup_object(const char* originator,
  * @param data_dest the destination object
  * @param data_source the source object
  * @param type the data dependency edge type
- * @return CPL_OK or an error code
+ * @return CPL_OK, CPL_S_DUPLICATE_IGNORED, or an error code
  */
 EXPORT cpl_return_t
 cpl_data_flow(const cpl_id_t data_dest,
@@ -507,7 +563,7 @@ cpl_data_flow(const cpl_id_t data_dest,
  * @param data_source_ver the version of the source object (where
  *                        CPL_VERSION_NONE = current)
  * @param type the data dependency edge type
- * @return CPL_OK or an error code
+ * @return CPL_OK, CPL_S_DUPLICATE_IGNORED, or an error code
  */
 EXPORT cpl_return_t
 cpl_data_flow_ext(const cpl_id_t data_dest,
@@ -521,7 +577,7 @@ cpl_data_flow_ext(const cpl_id_t data_dest,
  * @param object_id the ID of the controlled object
  * @param controller the object ID of the controller
  * @param type the control dependency edge type
- * @return CPL_OK or an error code
+ * @return CPL_OK, CPL_S_DUPLICATE_IGNORED, or an error code
  */
 EXPORT cpl_return_t
 cpl_control(const cpl_id_t object_id,
@@ -536,7 +592,7 @@ cpl_control(const cpl_id_t object_id,
  * @param controller_ver the version of the controller object (where
  *                       CPL_VERSION_NONE = current version)
  * @param type the control dependency edge type
- * @return CPL_OK or an error code
+ * @return CPL_OK, CPL_S_DUPLICATE_IGNORED, or an error code
  */
 EXPORT cpl_return_t
 cpl_control_ext(const cpl_id_t object_id,
@@ -610,6 +666,29 @@ cpl_get_version_info(const cpl_id_t id,
  */
 EXPORT cpl_return_t
 cpl_free_version_info(cpl_version_info_t* info);
+
+/**
+ * Iterate over the ancestors or the descendants of a provenance object.
+ *
+ * @param id the object ID
+ * @param version the object version, or CPL_VERSION_NONE to access all
+ *                version nodes associated with the given object
+ * @param direction the direction of the graph traversal (CPL_D_ANCESTORS
+ *                  or CPL_D_DESCENDANTS)
+ * @param flags the bitwise combination of flags describing how should
+ *              the graph be traversed (a logical combination of the
+ *              CPL_A_* flags)
+ * @param iterator the iterator callback function
+ * @param context the user context to be passed to the iterator function
+ * @return CPL_OK, CPL_S_NO_DATA, or an error code
+ */
+EXPORT cpl_return_t
+cpl_get_object_ancestry(const cpl_id_t id,
+						const cpl_version_t version,
+						const int direction,
+						const int flags,
+						cpl_ancestry_iterator_t iterator,
+						void* context);
 
 
 /***************************************************************************/

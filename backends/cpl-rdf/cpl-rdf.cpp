@@ -347,6 +347,35 @@ cpl_rdf_get_version_info(struct _cpl_db_backend_t* backend,
 }
 
 
+/**
+ * Iterate over the ancestors or the descendants of a provenance object.
+ *
+ * @param backend the pointer to the backend structure
+ * @param id the object ID
+ * @param version the object version, or CPL_VERSION_NONE to access all
+ *                version nodes associated with the given object
+ * @param direction the direction of the graph traversal (CPL_D_ANCESTORS
+ *                  or CPL_D_DESCENDANTS)
+ * @param flags the bitwise combination of flags describing how should
+ *              the graph be traversed (a logical combination of the
+ *              CPL_A_* flags)
+ * @param iterator the iterator callback function
+ * @param context the user context to be passed to the iterator function
+ * @return CPL_OK, CPL_S_NO_DATA, or an error code
+ */
+cpl_return_t
+cpl_rdf_get_object_ancestry(struct _cpl_db_backend_t* backend,
+							const cpl_id_t id,
+							const cpl_version_t version,
+							const int direction,
+							const int flags,
+							cpl_ancestry_iterator_t iterator,
+							void* context)
+{
+	return CPL_E_NOT_IMPLEMENTED;
+}
+
+
 
 /***************************************************************************/
 /** The export / interface struct                                         **/
@@ -366,5 +395,6 @@ const cpl_db_backend_t CPL_RDF_BACKEND = {
 	cpl_rdf_has_immediate_ancestor,
 	cpl_rdf_get_object_info,
 	cpl_rdf_get_version_info,
+	cpl_rdf_get_object_ancestry,
 };
 

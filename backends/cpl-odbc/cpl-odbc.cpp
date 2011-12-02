@@ -35,6 +35,9 @@
 #include "stdafx.h"
 #include "cpl-odbc-private.h"
 
+#include <list>
+#include <vector>
+
 
 // NOTE: The locking is currently too conservative -- we should improve this.
 // The reason is that we want to lock a prepare statement while we are using
@@ -366,6 +369,7 @@ cpl_create_odbc_backend(const char* connection_string,
 	mutex_init(odbc->has_immediate_ancestor_lock);
 	mutex_init(odbc->get_object_info_lock);
 	mutex_init(odbc->get_version_info_lock);
+	mutex_init(odbc->get_object_ancestry_lock);
 
 
 	// Open the ODBC connection
@@ -428,6 +432,10 @@ cpl_create_odbc_backend(const char* connection_string,
 	ALLOC_STMT(get_object_info_stmt);
 	ALLOC_STMT(get_object_info_with_ver_stmt);
 	ALLOC_STMT(get_version_info_stmt);
+	ALLOC_STMT(get_object_ancestors);
+	ALLOC_STMT(get_object_ancestors_with_ver);
+	ALLOC_STMT(get_object_descendants);
+	ALLOC_STMT(get_object_descendants_with_ver);
 
 #undef ALLOC_STMT
 
@@ -528,6 +536,26 @@ cpl_create_odbc_backend(const char* connection_string,
 			" WHERE id_hi = ? AND id_lo = ? AND version = ?"
 			" LIMIT 1;");
 
+	PREPARE(get_object_ancestors,
+			"SELECT to_id_hi, to_id_lo, to_version, from_version, type"
+			"  FROM cpl_ancestry"
+			" WHERE from_id_hi = ? AND from_id_lo = ?");
+
+	PREPARE(get_object_ancestors_with_ver,
+			"SELECT to_id_hi, to_id_lo, to_version, from_version, type"
+			"  FROM cpl_ancestry"
+			" WHERE from_id_hi = ? AND from_id_lo = ? AND from_version = ?");
+
+	PREPARE(get_object_descendants,
+			"SELECT from_id_hi, from_id_lo, from_version, to_version, type"
+			"  FROM cpl_ancestry"
+			" WHERE to_id_hi = ? AND to_id_lo = ?");
+
+	PREPARE(get_object_descendants_with_ver,
+			"SELECT from_id_hi, from_id_lo, from_version, to_version, type"
+			"  FROM cpl_ancestry"
+			" WHERE to_id_hi = ? AND to_id_lo = ? AND to_version = ?");
+
 
 #undef PREPARE
 
@@ -556,6 +584,10 @@ err_stmts:
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_info_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_info_with_ver_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_version_info_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_ancestors);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_ancestors_with_ver);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_descendants);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_descendants_with_ver);
 
 	SQLDisconnect(odbc->db_connection);
 
@@ -573,6 +605,7 @@ err_sync:
 	mutex_destroy(odbc->has_immediate_ancestor_lock);
 	mutex_destroy(odbc->get_object_info_lock);
 	mutex_destroy(odbc->get_version_info_lock);
+	mutex_destroy(odbc->get_object_ancestry_lock);
 
 	delete odbc;
 	return r;
@@ -607,6 +640,10 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_info_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_info_with_ver_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_version_info_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_ancestors);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_ancestors_with_ver);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_descendants);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_descendants_with_ver);
 
 	ret = SQLDisconnect(odbc->db_connection);
 	if (!SQL_SUCCEEDED(ret)) {
@@ -622,6 +659,7 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
 	mutex_destroy(odbc->has_immediate_ancestor_lock);
 	mutex_destroy(odbc->get_object_info_lock);
 	mutex_destroy(odbc->get_version_info_lock);
+	mutex_destroy(odbc->get_object_ancestry_lock);
 
 	SQLFreeHandle(SQL_HANDLE_DBC, odbc->db_connection);
 	SQLFreeHandle(SQL_HANDLE_ENV, odbc->db_environment);
@@ -1371,6 +1409,197 @@ err_r:
 }
 
 
+/**
+ * An entry in the result set of the queries issued by
+ * cpl_odbc_get_object_ancestry().
+ */
+typedef struct __get_object_ancestry__entry {
+	cpl_id_t id;
+	long version;
+	long query_version;
+	long type;
+} __get_object_ancestry__entry_t;
+
+
+/**
+ * Iterate over the ancestors or the descendants of a provenance object.
+ *
+ * @param backend the pointer to the backend structure
+ * @param id the object ID
+ * @param version the object version, or CPL_VERSION_NONE to access all
+ *                version nodes associated with the given object
+ * @param direction the direction of the graph traversal (CPL_D_ANCESTORS
+ *                  or CPL_D_DESCENDANTS)
+ * @param flags the bitwise combination of flags describing how should
+ *              the graph be traversed (a logical combination of the
+ *              CPL_A_* flags)
+ * @param iterator the iterator callback function
+ * @param context the user context to be passed to the iterator function
+ * @return CPL_OK, CPL_S_NO_DATA, or an error code
+ */
+cpl_return_t
+cpl_odbc_get_object_ancestry(struct _cpl_db_backend_t* backend,
+							 const cpl_id_t id,
+							 const cpl_version_t version,
+							 const int direction,
+							 const int flags,
+							 cpl_ancestry_iterator_t iterator,
+							 void* context)
+{
+	assert(backend != NULL);
+	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
+
+	if ((flags & ~CPL_ODBC_A_SUPPORTED_FLAGS) != 0) {
+		return CPL_E_NOT_IMPLEMENTED;
+	}
+	
+	SQLRETURN ret;
+	cpl_return_t r = CPL_E_INTERNAL_ERROR;
+
+	std::list<__get_object_ancestry__entry_t> entries;
+	__get_object_ancestry__entry_t entry;
+	SQLLEN ind_type;
+	bool found = false;
+
+	mutex_lock(odbc->get_object_ancestry_lock);
+
+
+	// Prepare the statement
+
+	SQLHSTMT stmt;
+	if (direction == CPL_D_ANCESTORS) {
+		stmt = version == CPL_VERSION_NONE
+			? odbc->get_object_ancestors
+			: odbc->get_object_ancestors_with_ver;
+	}
+	else {
+		stmt = version == CPL_VERSION_NONE
+			? odbc->get_object_descendants
+			: odbc->get_object_descendants_with_ver;
+	}
+
+	SQL_BIND_INTEGER(stmt, 1, id.hi);
+	SQL_BIND_INTEGER(stmt, 2, id.lo);
+
+	if (version != CPL_VERSION_NONE) {
+		SQL_BIND_INTEGER(stmt, 3, version);
+	}
+
+
+	// Execute
+	
+	ret = SQLExecute(stmt);
+	if (!SQL_SUCCEEDED(ret)) {
+		print_odbc_error("SQLExecute", stmt, SQL_HANDLE_STMT);
+		goto err;
+	}
+
+
+	// Bind the columns
+
+	ret = SQLBindCol(stmt, 1, SQL_C_UBIGINT, &entry.id.hi, 0, NULL);
+	if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+	ret = SQLBindCol(stmt, 2, SQL_C_UBIGINT, &entry.id.lo, 0, NULL);
+	if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+	ret = SQLBindCol(stmt, 3, SQL_C_SLONG, &entry.version, 0, NULL);
+	if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+	ret = SQLBindCol(stmt, 4, SQL_C_SLONG, &entry.query_version, 0, NULL);
+	if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+	ret = SQLBindCol(stmt, 5, SQL_C_SLONG, &entry.type, 0, &ind_type);
+	if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+
+	// Fetch the result
+
+	while (true) {
+
+		ret = SQLFetch(stmt);
+		if (!SQL_SUCCEEDED(ret)) {
+			if (ret != SQL_NO_DATA) {
+				print_odbc_error("SQLFetch", stmt, SQL_HANDLE_STMT);
+				goto err_close;
+			}
+			break;
+		}
+
+		found = true;
+
+		if (ind_type == SQL_NULL_DATA) {
+			// Should we handle NULL dependency types? They should never occur.
+			// entry.type = CPL_DEPENDENCY_NONE;
+			continue;
+		}
+
+		int type_category = CPL_GET_DEPENDENCY_CATEGORY((int) entry.type);
+		if (type_category == CPL_DEPENDENCY_CATEGORY_DATA
+				&& (flags & CPL_A_NO_DATA_DEPENDENCIES) != 0) continue;
+		if (type_category == CPL_DEPENDENCY_CATEGORY_CONTROL
+				&& (flags & CPL_A_NO_CONTROL_DEPENDENCIES) != 0) continue;
+
+		entries.push_back(entry);
+	}
+	
+	ret = SQLCloseCursor(stmt);
+	if (!SQL_SUCCEEDED(ret)) {
+		print_odbc_error("SQLCloseCursor", stmt, SQL_HANDLE_STMT);
+		goto err;
+	}
+
+
+	// Unlock
+
+	mutex_unlock(odbc->get_object_ancestry_lock);
+
+
+	// If we did not get any data back, check for whether the object exists.
+	// If the version is set, the library already verified that the object
+	// actually exists.
+
+	if (!found && version != CPL_VERSION_NONE) {
+		// XXX This is ugly and potentially quite slow
+		r = cpl_odbc_get_version(backend, id, NULL);
+		if (!CPL_IS_SUCCESS(r)) return r;
+	}
+
+
+	// If we did not get any data back, terminate
+
+	if (entries.empty()) return CPL_S_NO_DATA;
+
+
+	// Call the user-provided callback function
+
+	if (iterator != NULL) {
+		std::list<__get_object_ancestry__entry_t>::iterator i;
+		for (i = entries.begin(); i != entries.end(); i++) {
+			r = iterator(id, (cpl_version_t) i->query_version,
+						 i->id, (cpl_version_t) i->version,
+						 (int) i->type, context);
+			if (!CPL_IS_OK(r)) return r;
+		}
+	}
+
+	return CPL_OK;
+
+
+	// Error handling
+
+err_close:
+	ret = SQLCloseCursor(stmt);
+	if (!SQL_SUCCEEDED(ret)) {
+		print_odbc_error("SQLCloseCursor", stmt, SQL_HANDLE_STMT);
+	}
+
+err:
+	mutex_unlock(odbc->get_object_ancestry_lock);
+	return CPL_E_STATEMENT_ERROR;
+}
+
+
 
 /***************************************************************************/
 /** The export / interface struct                                         **/
@@ -1390,5 +1619,6 @@ const cpl_db_backend_t CPL_ODBC_BACKEND = {
 	cpl_odbc_has_immediate_ancestor,
 	cpl_odbc_get_object_info,
 	cpl_odbc_get_version_info,
+	cpl_odbc_get_object_ancestry,
 };
 
