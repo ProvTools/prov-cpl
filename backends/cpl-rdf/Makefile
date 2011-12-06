@@ -16,6 +16,7 @@ INSTALL := yes
 
 DEPENDENCIES := $(ROOT)/include/*.h
 INCLUDE_FLAGS := $(INCLUDE_FLAGS) -I$(ROOT)/include
+INCLUDE_FLAGS := $(INCLUDE_FLAGS) $(shell xml2-config --cflags)
 LIBRARIES := -lcurl
 
 

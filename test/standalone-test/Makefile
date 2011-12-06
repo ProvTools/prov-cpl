@@ -34,13 +34,20 @@ endif
 
 
 #
+# libxml2
+#
+
+LIBRARIES_XML2 := $(shell xml2-config --libs)
+
+
+#
 # Flags and libraries
 #
 
 CXXFLAGS      := $(CXXFLAGS) -Wno-sign-compare
 INCLUDE_FLAGS := $(INCLUDE_FLAGS)
 LINKER_FLAGS  := $(LINKER_FLAGS)
-LIBRARIES     := $(LIBRARIES) -lodbc -luuid $(LIBRARIES_CURL)
+LIBRARIES     := $(LIBRARIES) -lodbc -luuid $(LIBRARIES_CURL) $(LIBRARIES_XML2)
 
 
 #
