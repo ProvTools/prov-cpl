@@ -3,16 +3,17 @@
 ===========================
 
 Contents:
-  1. Installing ODBC in Ubuntu
-  2. Installing ODBC data sources in Ubuntu
-  3. Installing ODBC data sources in Windows
-  4. Configuring PostgreSQL
+  1. Installing ODBC on Ubuntu
+  2. Installing ODBC data sources on Ubuntu
+  3. Installing ODBC data sources on Windows
+  4. Installing ODBC on Mac OS X
+  5. Configuring PostgreSQL
 
 Copyright 2011 The President and Fellows of Harvard College.
 Contributor(s): Peter Macko
 
 
-  1. Installing ODBC in Ubuntu
+  1. Installing ODBC on Ubuntu
 --------------------------------
 
 Please make sure that the following packages are installed:
@@ -41,7 +42,7 @@ update for you.
 To verify that the drivers are installed, please execute: odbcinst -q -d
 
 
-  2. Installing ODBC data sources in Ubuntu
+  2. Installing ODBC data sources on Ubuntu
 ---------------------------------------------
 
 The easiest way to add a data source is to use ODBCConfig available from
@@ -63,7 +64,7 @@ Stmt            =
 You can verify that the data source is installed by running: odbcinst -q -s
 
 
-  3. Installing ODBC data sources in Windows
+  3. Installing ODBC data sources on Windows
 ----------------------------------------------
 
 ODBC should be already installed if you are using a Server, a Professional, or
@@ -72,7 +73,14 @@ ODBC Data Source Administrator, located in Administrative Tools in the Control
 Panel.
 
 
-  4. Configuring PostgreSQL
+  4. Installing ODBC on Mac OS X
+----------------------------------
+
+Please download and install the ODBC Administrator Tool for Mac OS X from:
+  http://support.apple.com/kb/dl895
+
+
+  5. Configuring PostgreSQL
 -----------------------------
 
 PostgreSQL might not work out of the box on Ubuntu. If you experience user

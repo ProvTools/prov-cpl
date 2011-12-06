@@ -52,9 +52,10 @@
 #endif
 
 
+//#define _CPL_CUSTOM_GLOBALLY_UNIQUE_IDS
 #ifdef _CPL_CUSTOM_GLOBALLY_UNIQUE_IDS
 
-#define CPL_LOCK_SEM_INIT_BASE	"edu.harvard.pass.cpl.unique_id_generator_init"
+#define CPL_LOCK_SEM_INIT_BASE	"edu.harvard.pass.cpl.uid_gen"
 #if defined(__unix__)
 #define CPL_LOCK_SEM_INIT		("/" CPL_LOCK_SEM_INIT_BASE)
 #elif defined(_WINDOWS)

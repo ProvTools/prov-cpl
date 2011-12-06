@@ -31,6 +31,18 @@ endif
 
 
 #
+# Linker dependencies
+#
+
+ifdef LINKER_SUBPROJECT_DEPENDENCIES
+	LINKER_FLAGS := $(LINKER_FLAGS) \
+					$(addprefix -L$(ROOT)/, \
+						$(addsuffix /$(BUILD_DIR), \
+							$(LINKER_SUBPROJECT_DEPENDENCIES)))
+endif
+
+
+#
 # Commands
 #
 

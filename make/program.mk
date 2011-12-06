@@ -81,6 +81,17 @@ REAL_BUILD_DIR := "$(realpath $(BUILD_DIR))"
 
 
 #
+# The shell variable that contains paths to the shared libraries
+#
+
+ifeq ($(UNAME),Darwin)
+	LD_PATH_VAR := DYLD_LIBRARY_PATH
+else
+	LD_PATH_VAR := LD_LIBRARY_PATH
+endif
+
+
+#
 # Phony targets
 #
 
@@ -89,19 +100,19 @@ REAL_BUILD_DIR := "$(realpath $(BUILD_DIR))"
 pre-run::
 
 run: all pre-run
-	@cd "$(RUN_DIR)" && LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:$(REAL_BUILD_DIR) \
+	@cd "$(RUN_DIR)" && $(LD_PATH_VAR)=$$$(LD_PATH_VAR):$(REAL_BUILD_DIR) \
 	$(EXECUTABLE)
 
 run-dev: all pre-run
-	@cd "$(RUN_DIR)" && LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:$(REAL_BUILD_DIR) \
+	@cd "$(RUN_DIR)" && $(LD_PATH_VAR)=$$$(LD_PATH_VAR):$(REAL_BUILD_DIR) \
 	$(EXECUTABLE) $(RUN_DEV_ARGS)
 
 time: all pre-run
-	@cd "$(RUN_DIR)" && LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:$(REAL_BUILD_DIR) \
+	@cd "$(RUN_DIR)" && $(LD_PATH_VAR)=$$$(LD_PATH_VAR):$(REAL_BUILD_DIR) \
 	/usr/bin/time -v $(EXECUTABLE)
 
 time-dev: all pre-run
-	@cd "$(RUN_DIR)" && LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:$(REAL_BUILD_DIR) \
+	@cd "$(RUN_DIR)" && $(LD_PATH_VAR)=$$$(LD_PATH_VAR):$(REAL_BUILD_DIR) \
 	/usr/bin/time -v $(EXECUTABLE) $(RUN_DEV_ARGS)
 
 
@@ -134,27 +145,27 @@ Release: release
 .PHONY: gdb valgrind vg vg-dev vg-all vg-dev-all
 
 gdb: all pre-run
-	@cd "$(RUN_DIR)" && LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:$(REAL_BUILD_DIR) \
+	@cd "$(RUN_DIR)" && $(LD_PATH_VAR)=$$$(LD_PATH_VAR):$(REAL_BUILD_DIR) \
 	gdb $(EXECUTABLE)
 
 vg valgrind: all pre-run
-	@cd "$(RUN_DIR)" && LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:$(REAL_BUILD_DIR) \
+	@cd "$(RUN_DIR)" && $(LD_PATH_VAR)=$$$(LD_PATH_VAR):$(REAL_BUILD_DIR) \
 	valgrind --tool=memcheck --leak-check=yes --num-callers=24 \
 	          $(EXECUTABLE)
 
 vg-dev: all pre-run
-	@cd "$(RUN_DIR)" && LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:$(REAL_BUILD_DIR) \
+	@cd "$(RUN_DIR)" && $(LD_PATH_VAR)=$$$(LD_PATH_VAR):$(REAL_BUILD_DIR) \
 	valgrind --tool=memcheck --leak-check=yes --num-callers=24 \
 	          $(EXECUTABLE) $(RUN_DEV_ARGS)
 
 vg-all: all pre-run
-	@cd "$(RUN_DIR)" && LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:$(REAL_BUILD_DIR) \
+	@cd "$(RUN_DIR)" && $(LD_PATH_VAR)=$$$(LD_PATH_VAR):$(REAL_BUILD_DIR) \
 	valgrind --tool=memcheck --leak-check=yes --num-callers=24 \
 	          --show-reachable=yes --track-origins=yes \
 	          $(EXECUTABLE) $(RUN_VG_ARGS)
 
 vg-dev-all: all pre-run
-	@cd "$(RUN_DIR)" && LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:$(REAL_BUILD_DIR) \
+	@cd "$(RUN_DIR)" && $(LD_PATH_VAR)=$$$(LD_PATH_VAR):$(REAL_BUILD_DIR) \
 	valgrind --tool=memcheck --leak-check=yes --num-callers=24 \
 	          --show-reachable=yes --track-origins=yes \
 	          $(EXECUTABLE) $(RUN_VG_ARGS) $(RUN_DEV_ARGS)

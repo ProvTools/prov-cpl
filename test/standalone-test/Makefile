@@ -41,13 +41,23 @@ LIBRARIES_XML2 := $(shell xml2-config --libs)
 
 
 #
+# uuid
+#
+
+ifneq ($(UNAME),Darwin)
+LIBRARIES_UUID := -luuid
+endif
+
+
+#
 # Flags and libraries
 #
 
 CXXFLAGS      := $(CXXFLAGS) -Wno-sign-compare
 INCLUDE_FLAGS := $(INCLUDE_FLAGS)
 LINKER_FLAGS  := $(LINKER_FLAGS)
-LIBRARIES     := $(LIBRARIES) -lodbc -luuid $(LIBRARIES_CURL) $(LIBRARIES_XML2)
+LIBRARIES     := $(LIBRARIES) -lodbc \
+						$(LIBRARIES_UUID) $(LIBRARIES_CURL) $(LIBRARIES_XML2)
 
 
 #

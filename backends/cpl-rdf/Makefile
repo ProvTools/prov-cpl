@@ -17,7 +17,12 @@ INSTALL := yes
 DEPENDENCIES := $(ROOT)/include/*.h
 INCLUDE_FLAGS := $(INCLUDE_FLAGS) -I$(ROOT)/include
 INCLUDE_FLAGS := $(INCLUDE_FLAGS) $(shell xml2-config --cflags)
-LIBRARIES := -lcurl
+LIBRARIES := -lcurl $(shell xml2-config --libs)
+
+ifeq ($(UNAME),Darwin)
+LINKER_SUBPROJECT_DEPENDENCIES := cpl-standalone
+LIBRARIES := $(LIBRARIES) -lcpl-standalone
+endif
 
 
 #

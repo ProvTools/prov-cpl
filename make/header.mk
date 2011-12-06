@@ -206,6 +206,10 @@ endif
 # Color
 #
 
+ifeq ($(UNAME),Darwin)
+	NO_COLOR := yes
+endif
+
 ifndef NO_COLOR
 	COLOR_UNDERLINE :='\E[4m'
 	COLOR_NORMAL :='\E[0;0m'

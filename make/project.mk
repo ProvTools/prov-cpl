@@ -28,6 +28,10 @@ include $(ROOT)/make/header.mk
 SUBPROJECTS := $(LIBRARIES) $(PROGRAMS) $(HEADERS)
 SUBPROJECTS_SORTED := $(sort $(LIBRARIES)) $(sort $(HEADERS)) $(sort $(PROGRAMS))
 
+ifdef SORT_SUBPROJECTS
+	SUBPROJECTS := $(SUBPROJECTS_SORTED)
+endif
+
 
 #
 # Program to execute
@@ -52,7 +56,7 @@ TARGETS := $(TARGETS_BUILD) $(TARGETS_CLEAN) $(TARGETS_INSTALL)
 
 $(TARGETS_BUILD) $(TARGETS_INSTALL)::
 ifeq ($(OUTPUT_TYPE),kernel)
-	@for S in $(SUBPROJECTS_SORTED); do \
+	@for S in $(SUBPROJECTS); do \
 		($(NMAKE) --no-print-directory -C "$$S" $@ 2>&1) \
 			| grep --line-buffered -v 'is up to date' \
 			| grep --line-buffered -v 'Nothing to be done for' \
@@ -62,7 +66,7 @@ ifeq ($(OUTPUT_TYPE),kernel)
 		if [[ $${PIPESTATUS[0]} -ne 0 ]]; then exit 1; fi; \
 	done
 else
-	@for S in $(SUBPROJECTS_SORTED); do \
+	@for S in $(SUBPROJECTS); do \
 		echo -e $(COLOR_MAKE)make[$(MAKELEVEL)]: \
 			Entering $(COLOR_MAKE_PATH)$(PWD_REL_SEP)$$S \
 			$(COLOR_NORMAL); \
@@ -76,7 +80,7 @@ endif
 
 $(TARGETS_CLEAN)::
 ifeq ($(OUTPUT_TYPE),kernel)
-	@for S in $(SUBPROJECTS_SORTED); do \
+	@for S in $(SUBPROJECTS); do \
 		echo "  CLEAN   $(PWD_REL_SEP)$$S"; \
 		($(NMAKE) --no-print-directory -C "$$S" $@ 2>&1) \
 			| grep --line-buffered -v 'Clock skew detected' \
@@ -85,7 +89,7 @@ ifeq ($(OUTPUT_TYPE),kernel)
 		if [[ $${PIPESTATUS[0]} -ne 0 ]]; then exit 1; fi; \
 	done
 else
-	@for S in $(SUBPROJECTS_SORTED); do \
+	@for S in $(SUBPROJECTS); do \
 		echo -e $(COLOR_MAKE)make[$(MAKELEVEL)]: \
 			Entering $(COLOR_MAKE_PATH)$(PWD_REL_SEP)$$S \
 			$(COLOR_NORMAL); \
@@ -166,7 +170,7 @@ list-subproject-libs list-subproject-shared-lib-files \
 	done
 
 todo:
-	@for S in $(SUBPROJECTS_SORTED); do \
+	@for S in $(SUBPROJECTS); do \
 		(cd "$$S" && $(COLORMAKE) --no-print-directory $@) || exit 1; \
 	done
 
