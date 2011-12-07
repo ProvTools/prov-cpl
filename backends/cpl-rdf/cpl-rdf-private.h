@@ -40,7 +40,6 @@
 #include <string>
 
 #include "cpl-connection.h"
-#include "sparql-statement.h"
 
 
 #ifdef __cplusplus

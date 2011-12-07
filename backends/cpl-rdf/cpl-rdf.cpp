@@ -35,6 +35,8 @@
 #include "stdafx.h"
 #include "cpl-rdf-private.h"
 
+#include <sstream>
+#include <string>
 
 
 /***************************************************************************/
@@ -161,10 +163,28 @@ cpl_rdf_create_session(struct _cpl_db_backend_t* backend,
 	assert(backend != NULL && user != NULL && program != NULL);
 	cpl_rdf_t* rdf = (cpl_rdf_t*) backend;
 
+	char session_str[64];
+	sprintf(session_str, "session:%llx-%llx", session.hi, session.lo);
 
-	// 
+	std::ostringstream ss;
+
+	// XXX Only for debugging
+	//cpl_rdf_connection_execute_update(rdf->connection_update,
+	//		"DELETE { ?s ?p ?o } WHERE { ?s ?p ?o }");
+
+	ss << "PREFIX session: <session:>\n";
+	ss << "PREFIX prop: <prop:>\n";
+	ss << "INSERT DATA { " << session_str;
+	ss << " prop:mac_address \"" << cpl_rdf_escape_string(mac_address) << "\";";
+	ss << " prop:username \"" << cpl_rdf_escape_string(user) << "\";";
+	ss << " prop:pid " << pid << ";";
+	ss << " prop:program \"" << cpl_rdf_escape_string(program) << "\";";
+	ss << " prop:initialization_time " << time(NULL) << " }\n";
+
+	cpl_return_t ret = cpl_rdf_connection_execute_update(rdf->connection_update,
+			ss.str().c_str());
 	
-	return CPL_E_NOT_IMPLEMENTED;
+	return ret;
 }
 
 
@@ -196,10 +216,45 @@ cpl_rdf_create_object(struct _cpl_db_backend_t* backend,
 			&& name != NULL && type != NULL);
 	cpl_rdf_t* rdf = (cpl_rdf_t*) backend;
 
+	char session_str[64];
+	sprintf(session_str, "session:%llx-%llx", session.hi, session.lo);
 
-	// 
+	char id_str[64];
+	sprintf(id_str, "object:%llx-%llx", id.hi, id.lo);
+
+	char node_str[64];
+	sprintf(node_str, "node:%llx-%llx-0", id.hi, id.lo);
+
+	time_t creation_time = time(NULL);
+
+	std::ostringstream ss;
+
+	ss << "PREFIX session: <session:>\n";
+	ss << "PREFIX object: <object:>\n";
+	ss << "PREFIX node: <node:>\n";
+	ss << "PREFIX prop: <prop:>\n";
+	ss << "PREFIX rel: <rel:>\n";
+	ss << "INSERT DATA { " << id_str;
+	ss << " prop:originator \"" << cpl_rdf_escape_string(originator) << "\";";
+	ss << " prop:name \"" << cpl_rdf_escape_string(name) << "\";";
+	ss << " prop:type \"" << cpl_rdf_escape_string(type) << "\";";
+	if (container != CPL_NONE) {
+		char container_str[64];
+		sprintf(container_str, "node:%llx-%llx-%x", container.hi,
+				container.lo, container_version);
+		ss << " rel:container " << container_str << ";";
+	}
+	ss << " prop:creation_time " << creation_time << ";";
+	ss << " rel:version " << node_str << " .";
+	ss << " " << node_str << " prop:session " << session_str << ";";
+	ss << " prop:version 0;";
+	ss << " prop:creation_time " << creation_time << ";";
+	ss << "}\n";
+
+	cpl_return_t ret = cpl_rdf_connection_execute_update(rdf->connection_update,
+			ss.str().c_str());
 	
-	return CPL_E_NOT_IMPLEMENTED;
+	return ret;
 }
 
 
@@ -257,7 +312,37 @@ cpl_rdf_get_version(struct _cpl_db_backend_t* backend,
 					const cpl_id_t id,
 					cpl_version_t* out_version)
 {
-	return CPL_E_NOT_IMPLEMENTED;
+	assert(backend != NULL);
+	cpl_rdf_t* rdf = (cpl_rdf_t*) backend;
+
+	char id_str[64];
+	sprintf(id_str, "object:%llx-%llx", id.hi, id.lo);
+
+	std::ostringstream ss;
+
+	ss << "PREFIX object: <object:>\n";
+	ss << "PREFIX prop: <prop:>\n";
+	ss << "PREFIX rel: <rel:>\n";
+	ss << "SELECT ?v WHERE { ";
+	ss << " " << id_str << " rel:version ?node . ?node prop:version ?v .";
+	ss << " OPTIONAL {";
+	ss << "  " << id_str <<" rel:version ?o_node . ?o_node prop:version ?o_v .";
+	ss << "  FILTER ( ?o_v > ?v ) . } . FILTER ( !bound(?o_v) ) . }";
+
+	RDFResultSet rs;
+	cpl_return_t ret = cpl_rdf_connection_execute_query(rdf->connection_query,
+			ss.str().c_str(), &rs);
+
+	if (ret == CPL_S_NO_DATA) return CPL_E_NOT_FOUND;
+	if (!CPL_IS_OK(ret)) return ret;
+
+	if (out_version != NULL) {
+		if (rs.size() == 0) return CPL_E_BACKEND_INTERNAL_ERROR;
+		if (rs.size() >  1) return CPL_E_BACKEND_INTERNAL_ERROR;
+		//*out_version = rs[0]["v"]->v_int;
+	}
+	
+	return CPL_OK;
 }
 
 

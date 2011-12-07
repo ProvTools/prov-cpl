@@ -117,6 +117,111 @@ cpl_rdf_connection_close(cpl_rdf_connection_t* connection)
 
 
 /***************************************************************************/
+/** Public API: Helpers                                                   **/
+/***************************************************************************/
+
+
+/**
+ * Escape a string
+ *
+ * @param str the string
+ * @return the escaped string
+ */
+std::string
+cpl_rdf_escape_string(const char* str)
+{
+	if (str == NULL) return NULL;
+
+
+	// Count characters that would need to be escaped
+
+	size_t to_escape = 0;
+	size_t str_len = strlen(str);
+
+	for (size_t i = 0; i < str_len; i++) {
+		char c = str[i];
+
+		if (c == '\t' || c == '\b' || c == '\n' || c == '\r' || c == '\f'
+				|| c == '\\' || c == '\"' || c == '\'') to_escape++;
+	}
+
+
+	// The simplest case
+
+	if (to_escape == 0) return std::string(str);
+
+
+	// Escape
+
+	char* escaped = (char*) malloc(str_len + to_escape + 4);
+	if (escaped == NULL) {
+		fprintf(stderr, "CPL RDF ERROR: Out of memory.\n");
+		abort();
+	}
+	size_t u = 0;
+
+	for (size_t i = 0; i < str_len; i++) {
+		char c = str[i];
+
+		if (u >= str_len + to_escape) {
+			// This should never happen unless we have a race condition
+			free(escaped);
+			fprintf(stderr, "CPL RDF ERROR: Race condition.\n");
+			abort();
+		}
+
+		switch (c) {
+			case '\t':
+				escaped[u++] = '\\';
+				escaped[u++] = 't';
+				break;
+			case '\b':
+				escaped[u++] = '\\';
+				escaped[u++] = 'b';
+				break;
+			case '\n':
+				escaped[u++] = '\\';
+				escaped[u++] = 'n';
+				break;
+			case '\r':
+				escaped[u++] = '\\';
+				escaped[u++] = 'r';
+				break;
+			case '\f':
+				escaped[u++] = '\\';
+				escaped[u++] = 'f';
+				break;
+			case '\\':
+			case '\"':
+			case '\'':
+				escaped[u++] = '\\';
+				escaped[u++] = c;
+				break;
+			default:
+				escaped[u++] = c;
+		}
+	}
+
+	if (u != str_len + to_escape) {
+		// This should never happen unless we have a race condition
+		free(escaped);
+		fprintf(stderr, "CPL RDF ERROR: Race condition.\n");
+		abort();
+	}
+
+
+	// Finish
+
+	escaped[u] = '\0';
+	std::string r = escaped;
+	free(escaped);
+
+	return r;
+}
+
+
+
+/***************************************************************************/
 /** Public API: Result Set                                                **/
 /***************************************************************************/
 

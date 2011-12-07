@@ -107,6 +107,15 @@ void
 cpl_rdf_connection_close(cpl_rdf_connection_t* connection);
 
 /**
+ * Escape a string
+ *
+ * @param str the string
+ * @return the escaped string
+ */
+std::string
+cpl_rdf_escape_string(const char* str);
+
+/**
  * Execute a query
  *
  * @param connection the connection handle
