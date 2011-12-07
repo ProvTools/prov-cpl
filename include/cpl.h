@@ -432,10 +432,22 @@ WINDLL_API extern const cpl_id_t CPL_NONE;
 #define __CPL_E_STR__14					"Invalid version"
 
 /**
- * An error originated by the underlying platform
+ * The database returned an unexpected NULL value
  */
 #define CPL_E_DB_NULL					-15
 #define __CPL_E_STR__15	"The database returned an unexpected NULL value"
+
+/**
+ * The key was not found
+ */
+#define CPL_E_DB_KEY_NOT_FOUND			-16
+#define __CPL_E_STR__16	"The database did not find the specified key"
+
+/**
+ * The value has a wrong type
+ */
+#define CPL_E_DB_INVALID_TYPE			-17
+#define __CPL_E_STR__17	"The value in a database has an unexpected type"
 
 
 

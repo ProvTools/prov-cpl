@@ -61,7 +61,6 @@ cpl_rdf_connection_init(const char* url)
 	if (c == NULL) return NULL;
 
 	c->url = url;
-	RDFResultSet rs; //XXX
 
 
 	// Initialize lock
@@ -81,7 +80,6 @@ cpl_rdf_connection_init(const char* url)
 
 
 	// Finalize
-	cpl_rdf_connection_execute_query(c, "SELECT * WHERE { ?s ?p ?o }", &rs);
 
 	return c;
 
@@ -227,6 +225,76 @@ cpl_rdf_escape_string(const char* str)
 
 
 /**
+ * Create an empty result
+ */
+RDFResult::RDFResult(void)
+{
+}
+
+
+/**
+ * Destroy the result
+ */
+RDFResult::~RDFResult(void)
+{
+	for (RDFResultMap::iterator i = m_results.begin();
+			i != m_results.end(); i++) {
+		delete i->second;
+	}
+}
+
+
+/**
+ * Put a key/value pair to the result
+ *
+ * @param key the key
+ * @param value the value (will be destroyed together with this object)
+ */
+void
+RDFResult::put(const std::string& key, RDFValue* value)
+{
+	RDFResultMap::iterator i = m_results.find(key);
+	if (i != m_results.end()) delete i->second;
+	m_results[key] = value;
+}
+
+
+/**
+ * Retrieve a value based on the key
+ *
+ * @param key the key
+ * @return a reference to the value
+ * @throws CPLException if the key does not exist
+ */
+RDFValue&
+RDFResult::operator[] (const char* key)
+{
+	RDFResultMap::iterator i = m_results.find(key);
+	if (i == m_results.end()) throw CPLException("Key not found: %s", key);
+	return *(i->second);
+}
+
+
+/**
+ * Safely retrieve a value based on the key
+ *
+ * @param key the key
+ * @param type the expected type
+ * @param out the place to write the retrieved value
+ * @return CPL_OK or an error code
+ */
+cpl_return_t
+RDFResult::get_s(const char* key, int type, RDFValue** out)
+{
+	RDFResultMap::iterator i = m_results.find(key);
+	if (i == m_results.end()) return CPL_E_DB_KEY_NOT_FOUND;
+	if (i->second->type != type) return CPL_E_DB_INVALID_TYPE;
+	if (out != NULL) *out = i->second;
+	return CPL_OK;
+}
+
+
+/**
  * Create an empty result set
  */
 RDFResultSet::RDFResultSet(void)
@@ -240,11 +308,7 @@ RDFResultSet::RDFResultSet(void)
 RDFResultSet::~RDFResultSet(void)
 {
 	for (unsigned u = 0; u < m_results.size(); u++) {
-		RDFResult* r = m_results[u];
-		for (RDFResult::iterator i = r->begin(); i != r->end(); i++) {
-			delete i->second;
-		}
-		delete r;
+		delete m_results[u];
 	}
 }
 
@@ -309,10 +373,56 @@ cpl_rdf_parse_xml_value(xmlNodePtr cur,
 		// URI
 
 		if (strcmp((char*) cur_value->name, "uri") == 0) {
-			out->type = RDF_T_URI;
+			out->type = RDF_XSD_URI;
 			if (cur_value->children==NULL) return CPL_E_BACKEND_INTERNAL_ERROR;
 			out->raw = (char*) XML_GET_CONTENT(cur_value->children);
 			out->v_uri = out->raw.c_str();
+			found = true;
+			continue;
+		}
+
+
+		// Literal
+
+		if (strcmp((char*) cur_value->name, "literal") == 0) {
+			const char* type;
+			type =(const char*)xmlGetProp(cur_value,(const xmlChar*)"datatype");
+			if (cur_value->children==NULL) return CPL_E_BACKEND_INTERNAL_ERROR;
+			out->raw = (char*) XML_GET_CONTENT(cur_value->children);
+
+			// String
+			
+			if (type == NULL) {
+				out->type = RDF_XSD_STRING;
+				out->v_string = out->raw.c_str();
+			}
+			
+			// Integer
+
+			else if (strstr(type, "#integer") != NULL) {
+				out->type = RDF_XSD_INTEGER;
+				char* e = NULL;
+				out->v_integer = strtoll(out->raw.c_str(), &e, 10);
+				assert(e != NULL);
+				if (*e != '\0') {
+					if (result_set != NULL) {
+						result_set->append_error_message("Could not parse "
+								"an integer literal \"%s\"", out->raw.c_str());
+					}
+					return CPL_E_BACKEND_INTERNAL_ERROR;
+				}
+			}
+
+			// Other
+
+			else {
+				if (result_set != NULL) {
+					result_set->append_error_message("Unrecognized datatype "
+							"\"%s\"", type);
+				}
+				return CPL_E_BACKEND_INTERNAL_ERROR;
+			}
+
 			found = true;
 			continue;
 		}
@@ -413,7 +523,7 @@ cpl_rdf_parse_xml_result(xmlNodePtr cur,
 
 			// Add it to the variable binding
 
-			(*out)[name] = v;
+			out->put(name, v);
 
 			continue;
 		}

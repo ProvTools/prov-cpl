@@ -72,7 +72,7 @@ EXPORT const char* CPL_S_STR[] = {
 /**
  * The last error code number
  */
-#define __CPL_E_LAST_ERROR				-15
+#define __CPL_E_LAST_ERROR				-17
 
 /**
  * Error code strings
@@ -94,6 +94,8 @@ EXPORT const char* CPL_E_STR[] = {
 	__CPL_E_STR__13,
 	__CPL_E_STR__14,
 	__CPL_E_STR__15,
+	__CPL_E_STR__16,
+	__CPL_E_STR__17,
 };
 
 

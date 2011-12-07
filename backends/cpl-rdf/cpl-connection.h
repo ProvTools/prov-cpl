@@ -148,12 +148,14 @@ cpl_rdf_connection_execute_update(cpl_rdf_connection_t* connection,
 /** Result Set                                                            **/
 /***************************************************************************/
 
+
 /**
  * A value type
  */
 typedef enum {
-	RDF_T_STRING,
-	RDF_T_URI,
+	RDF_XSD_URI,
+	RDF_XSD_STRING,
+	RDF_XSD_INTEGER,
 } RDFValueType;
 
 /**
@@ -165,13 +167,72 @@ typedef struct {
 	union {
 		const char* v_string;
 		const char* v_uri;
+		long long v_integer;
 	};
 } RDFValue;
 
 /**
  * A single result in the result set
  */
-typedef std::map<std::string, RDFValue*> RDFResult;
+class RDFResult
+{
+	friend class RDFResultSet;
+
+public:
+
+	/**
+	 * Create an empty result
+	 */
+	RDFResult(void);
+
+	/**
+	 * Destroy the result
+	 */
+	~RDFResult(void);
+
+	/**
+	 * Put a key/value pair to the result
+	 *
+	 * @param key the key
+	 * @param value the value (will be destroyed together with this object)
+	 */
+	void
+	put(const std::string& key, RDFValue* value);
+
+	/**
+	 * Retrieve a value based on the key
+	 *
+	 * @param key the key
+	 * @return a reference to the value
+	 * @throws CPLException if the key does not exist
+	 */
+	RDFValue&
+	operator[] (const char* key);
+
+	/**
+	 * Safely retrieve a value based on the key
+	 *
+	 * @param key the key
+	 * @param type the expected type
+	 * @param out the place to write the retrieved value
+	 * @return CPL_OK or an error code
+	 */
+	cpl_return_t
+	get_s(const char* key, int type, RDFValue** out);
+
+
+protected:
+
+	/**
+	 * The result map type
+	 */
+	typedef std::map<std::string, RDFValue*> RDFResultMap;
+
+	/**
+	 * The result map
+	 */
+	RDFResultMap m_results;
+};
 
 /**
  * The result set
