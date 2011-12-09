@@ -40,12 +40,6 @@
 #include <string>
 
 
-/***************************************************************************/
-/** Private API                                                           **/
-/***************************************************************************/
-
-
-
 
 /***************************************************************************/
 /** Constructor and Destructor                                            **/
@@ -373,7 +367,7 @@ cpl_rdf_create_version(struct _cpl_db_backend_t* backend,
 	ss_create << "PREFIX r: <rel:>\n";
 	ss_create << "INSERT DATA { ";
 	ss_create << " " << id_str << " r:version " << node_str << " .";
-	ss_create << " " << node_str << " p:session " << session_str << ";";
+	ss_create << " " << node_str << " r:session " << session_str << ";";
 	ss_create << " p:version " << version << ";";
 	ss_create << " p:creation_time " << time(NULL) << ";";
 	ss_create << "}";
@@ -589,6 +583,7 @@ cpl_rdf_get_object_info(struct _cpl_db_backend_t* backend,
 	cpl_rdf_t* rdf = (cpl_rdf_t*) backend;
 	cpl_return_t ret;
 
+
 	// Get the version
 
 	cpl_version_t version;
@@ -660,7 +655,7 @@ cpl_rdf_get_object_info(struct _cpl_db_backend_t* backend,
 	if (!CPL_IS_OK(ret)) goto err;
 	r = sscanf(v->v_uri, "session:%llx-%llx",
 			&p->creation_session.hi, &p->creation_session.lo);
-	if (r != 2) { ret = -CPL_E_BACKEND_INTERNAL_ERROR; goto err; }
+	if (r != 2) { ret = CPL_E_BACKEND_INTERNAL_ERROR; goto err; }
 
 	ret = rs[0].get_s("time", RDF_XSD_INTEGER, &v);
 	if (!CPL_IS_OK(ret)) goto err;
@@ -717,7 +712,69 @@ cpl_rdf_get_version_info(struct _cpl_db_backend_t* backend,
 						 const cpl_version_t version,
 						 cpl_version_info_t** out_info)
 {
-	return CPL_E_NOT_IMPLEMENTED;
+	assert(backend != NULL);
+	cpl_rdf_t* rdf = (cpl_rdf_t*) backend;
+	cpl_return_t ret;
+
+
+	// Prepare the query
+
+	char node_str[64];
+	sprintf(node_str, "n:%llx-%llx-%x", id.hi, id.lo, version);
+
+	std::ostringstream ss;
+
+	ss << "PREFIX p: <prop:>\n";
+	ss << "PREFIX r: <rel:>\n";
+	ss << "PREFIX n: <node:>\n";
+	ss << "SELECT ?session, ?time WHERE {";
+	ss << " " << node_str << " r:session ?session ;";
+	ss << " p:creation_time ?time }";
+
+
+	// Execute query
+
+	RDFResultSet rs;
+	ret = cpl_rdf_connection_execute_query(rdf->connection_query,
+			ss.str().c_str(), &rs);
+
+	if (ret == CPL_S_NO_DATA) return CPL_E_NOT_FOUND;
+	if (!CPL_IS_OK(ret)) {
+		//rs.print_error_messages(std::cerr);
+		return ret;
+	}
+
+
+	// Process the result
+
+	if (out_info == NULL) return CPL_OK;
+	if (rs.size() == 0) return CPL_E_BACKEND_INTERNAL_ERROR;
+	//if (rs.size() >  1) return CPL_E_BACKEND_INTERNAL_ERROR;
+
+	cpl_version_info_t* p = (cpl_version_info_t*) malloc(sizeof(*p));
+	if (p == NULL) return CPL_E_INSUFFICIENT_RESOURCES;
+	memset(p, 0, sizeof(*p));
+	p->id = id;
+	p->version = version;
+
+	RDFValue* v;
+	int r;
+
+	ret = rs[0].get_s("session", RDF_XSD_URI, &v);
+	if (!CPL_IS_OK(ret)) goto err;
+	r = sscanf(v->v_uri, "session:%llx-%llx", &p->session.hi, &p->session.lo);
+	if (r != 2) { ret = CPL_E_BACKEND_INTERNAL_ERROR; goto err; }
+
+	ret = rs[0].get_s("time", RDF_XSD_INTEGER, &v);
+	if (!CPL_IS_OK(ret)) goto err;
+	p->creation_time = v->v_integer;
+
+	*out_info = p;
+	return CPL_OK;
+
+err:
+	free(p);
+	return ret;
 }
 
 
@@ -746,7 +803,147 @@ cpl_rdf_get_object_ancestry(struct _cpl_db_backend_t* backend,
 							cpl_ancestry_iterator_t iterator,
 							void* context)
 {
-	return CPL_E_NOT_IMPLEMENTED;
+	assert(backend != NULL);
+	cpl_rdf_t* rdf = (cpl_rdf_t*) backend;
+	cpl_return_t ret;
+
+
+	// Prepare the query
+
+	char str[64];
+	if (version == CPL_VERSION_NONE) {
+		sprintf(str, "o:%llx-%llx", id.hi, id.lo);
+	}
+	else {
+		sprintf(str, "n:%llx-%llx-%x", id.hi, id.lo, version);
+	}
+
+	std::ostringstream ss;
+
+	ss << "PREFIX p: <prop:>\n";
+	ss << "PREFIX r: <rel:>\n";
+	if (version == CPL_VERSION_NONE) {
+		ss << "PREFIX o: <object:>\n";
+	}
+	else {
+		ss << "PREFIX n: <node:>\n";
+	}
+	ss << "SELECT ?edge, ?other";
+	if (version == CPL_VERSION_NONE) {
+		ss << ", ?node";
+	}
+	ss << " WHERE {";
+	if (direction == CPL_D_ANCESTORS) {
+		if (version == CPL_VERSION_NONE) {
+			ss << " " << str << " r:version ?node . ?node";
+		}
+		else {
+			ss << " " << str;
+		}
+		ss << " ?edge ?other .";
+	}
+	else {
+		if (version == CPL_VERSION_NONE) {
+			ss << " " << str << " r:version ?node .";
+			ss << " ?other ?edge ?node .";
+		}
+		else {
+			ss << " ?other ?edge " << str << " .";
+		}
+	}
+	ss << " FILTER( isURI(?other) ) }";
+
+
+	// Execute query
+
+	RDFResultSet rs;
+	ret = cpl_rdf_connection_execute_query(rdf->connection_query,
+			ss.str().c_str(), &rs);
+
+	if (ret == CPL_S_NO_DATA) {
+		// We do not need to check here whether the object exists, because
+		// the query would at least return the session object in one case
+		// or the actual object in the other case if the given object
+		// exits (we do not fully filter the results in the query itself).
+		return CPL_E_NOT_FOUND;
+	}
+	if (!CPL_IS_OK(ret)) {
+		//rs.print_error_messages(std::cerr);
+		return ret;
+	}
+
+
+	// Process the result
+
+	if (rs.size() == 0) return CPL_E_BACKEND_INTERNAL_ERROR;
+
+	RDFValue* v;
+	int r;
+	bool found_matching_edges = false;
+
+	for (unsigned u = 0; u < rs.size(); u++) {
+
+		// Parse the edge and filter out non-ancestry edges
+
+		ret = rs[u].get_s("edge", RDF_XSD_URI, &v);
+		if (!CPL_IS_OK(ret)) return ret;
+		if (strncmp(v->v_uri, "input:", 6) != 0) continue;
+
+		int type;
+		r = sscanf(v->v_uri, "input:%x", &type);
+		if (r != 1) return CPL_E_BACKEND_INTERNAL_ERROR;
+
+
+		// Filter by type
+
+		int type_category = CPL_GET_DEPENDENCY_CATEGORY((int) type);
+		if (type_category == CPL_DEPENDENCY_CATEGORY_DATA
+				&& (flags & CPL_A_NO_DATA_DEPENDENCIES) != 0) continue;
+		if (type_category == CPL_DEPENDENCY_CATEGORY_CONTROL
+				&& (flags & CPL_A_NO_CONTROL_DEPENDENCIES) != 0) continue;
+
+
+		// Get the query node
+
+		cpl_version_t query_version;
+
+		if (version == CPL_VERSION_NONE) {
+			ret = rs[u].get_s("node", RDF_XSD_URI, &v);
+			if (!CPL_IS_OK(ret)) return ret;
+
+			cpl_id_t query_id;
+			r = sscanf(v->v_uri, "node:%llx-%llx-%x",
+					&query_id.hi, &query_id.lo, &query_version);
+			if (r != 3) return CPL_E_BACKEND_INTERNAL_ERROR;
+		}
+		else {
+			query_version = version;
+		}
+
+
+		// Get the other node
+
+		ret = rs[u].get_s("other", RDF_XSD_URI, &v);
+		if (!CPL_IS_OK(ret)) return ret;
+
+		cpl_id_t other_id;
+		cpl_version_t other_version;
+		r = sscanf(v->v_uri, "node:%llx-%llx-%x",
+				&other_id.hi, &other_id.lo, &other_version);
+		if (r != 3) return CPL_E_BACKEND_INTERNAL_ERROR;
+
+
+		// Call the callback function (if available)
+
+		found_matching_edges = true;
+		if (iterator != NULL) {
+			ret = iterator(id, query_version, other_id, other_version,
+						   type, context);
+			if (!CPL_IS_OK(ret)) return ret;
+		}
+	}
+
+	return found_matching_edges ? CPL_OK : CPL_S_NO_DATA;
 }
 
 
