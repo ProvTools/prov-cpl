@@ -35,6 +35,7 @@
 #include "stdafx.h"
 #include "cpl-rdf-private.h"
 
+#include <iostream>
 #include <sstream>
 #include <string>
 
@@ -98,11 +99,23 @@ cpl_create_rdf_backend(const char* url_query,
 	}
 
 
+	// Initialize the shared semaphore for version creation
+
+	rdf->sem_create_version = cpl_shared_semaphore_open(CPL_RDF_SEM_INIT);
+	if (rdf->sem_create_version == NULL) {
+		r = CPL_E_PLATFORM_ERROR;
+		goto err_close_all;
+	}
+
+
 	// Return
 
 	*out = (cpl_db_backend_t*) rdf;
 	return CPL_OK;
 
+
+err_close_all:
+	cpl_rdf_connection_close(rdf->connection_update);
 
 err_close_query:
 	cpl_rdf_connection_close(rdf->connection_query);
@@ -128,6 +141,7 @@ cpl_rdf_destroy(struct _cpl_db_backend_t* backend)
 	assert(backend != NULL);
 	cpl_rdf_t* rdf = (cpl_rdf_t*) backend;
 
+	cpl_shared_semaphore_close(rdf->sem_create_version);
 	cpl_rdf_connection_close(rdf->connection_query);
 	cpl_rdf_connection_close(rdf->connection_update);
 
@@ -169,8 +183,8 @@ cpl_rdf_create_session(struct _cpl_db_backend_t* backend,
 	std::ostringstream ss;
 
 	// XXX Only for debugging
-	//cpl_rdf_connection_execute_update(rdf->connection_update,
-	//		"DELETE { ?s ?p ?o } WHERE { ?s ?p ?o }");
+	cpl_rdf_connection_execute_update(rdf->connection_update,
+			"DELETE { ?s ?p ?o } WHERE { ?s ?p ?o }");
 
 	ss << "PREFIX s: <session:>\n";
 	ss << "PREFIX p: <prop:>\n";
@@ -246,7 +260,7 @@ cpl_rdf_create_object(struct _cpl_db_backend_t* backend,
 	}
 	ss << " p:creation_time " << creation_time << ";";
 	ss << " r:version " << node_str << " .";
-	ss << " " << node_str << " p:session " << session_str << ";";
+	ss << " " << node_str << " r:session " << session_str << ";";
 	ss << " p:version 0;";
 	ss << " p:creation_time " << creation_time << ";";
 	ss << "}\n";
@@ -332,7 +346,62 @@ cpl_rdf_create_version(struct _cpl_db_backend_t* backend,
 					   const cpl_version_t version,
 					   const cpl_session_t session)
 {
-	return CPL_E_NOT_IMPLEMENTED;
+	assert(backend != NULL);
+	assert(version > 0);
+	cpl_rdf_t* rdf = (cpl_rdf_t*) backend;
+
+	char session_str[64];
+	sprintf(session_str, "s:%llx-%llx", session.hi, session.lo);
+
+	char id_str[64];
+	sprintf(id_str, "o:%llx-%llx", object_id.hi, object_id.lo);
+
+	char node_str[64];
+	sprintf(node_str, "n:%llx-%llx-%x", object_id.hi, object_id.lo, version);
+
+	std::ostringstream ss_check;
+	std::ostringstream ss_create;
+
+	ss_check << "PREFIX n: <node:>\n";
+	ss_check << "PREFIX p: <prop:>\n";
+	ss_check << "SELECT ?v WHERE { " << node_str << " p:version ?v }";
+
+	ss_create << "PREFIX s: <session:>\n";
+	ss_create << "PREFIX o: <object:>\n";
+	ss_create << "PREFIX n: <node:>\n";
+	ss_create << "PREFIX p: <prop:>\n";
+	ss_create << "PREFIX r: <rel:>\n";
+	ss_create << "INSERT DATA { ";
+	ss_create << " " << id_str << " r:version " << node_str << " .";
+	ss_create << " " << node_str << " p:session " << session_str << ";";
+	ss_create << " p:version " << version << ";";
+	ss_create << " p:creation_time " << time(NULL) << ";";
+	ss_create << "}";
+
+	cpl_shared_semaphore_wait(rdf->sem_create_version);
+
+	RDFResultSet rs;
+	cpl_return_t ret = cpl_rdf_connection_execute_query(rdf->connection_query,
+			ss_check.str().c_str(), &rs);
+
+	if (!CPL_IS_OK(ret)) {
+		cpl_shared_semaphore_post(rdf->sem_create_version);
+		return ret;
+	}
+	if (ret != CPL_S_NO_DATA || rs.size() != 0) {
+		cpl_shared_semaphore_post(rdf->sem_create_version);
+		return CPL_E_ALREADY_EXISTS;
+	}
+
+	ret = cpl_rdf_connection_execute_update(rdf->connection_update,
+			ss_create.str().c_str());
+	if (!CPL_IS_OK(ret)) {
+		cpl_shared_semaphore_post(rdf->sem_create_version);
+		return ret;
+	}
+
+	cpl_shared_semaphore_post(rdf->sem_create_version);
+	return CPL_OK;
 }
 
 
@@ -406,7 +475,29 @@ cpl_rdf_add_ancestry_edge(struct _cpl_db_backend_t* backend,
 						  const cpl_version_t to_ver,
 						  const int type)
 {
-	return CPL_E_NOT_IMPLEMENTED;
+	assert(backend != NULL);
+	cpl_rdf_t* rdf = (cpl_rdf_t*) backend;
+
+	char node_from_str[64];
+	sprintf(node_from_str, "n:%llx-%llx-%x", from_id.hi, from_id.lo, from_ver);
+
+	char node_to_str[64];
+	sprintf(node_to_str, "n:%llx-%llx-%x", to_id.hi, to_id.lo, to_ver);
+
+	char edge[32];
+	sprintf(edge, "i:%x", type);
+
+	std::ostringstream ss;
+
+	ss << "PREFIX n: <node:>\n";
+	ss << "PREFIX i: <input:>\n";
+	ss << "INSERT DATA {";
+	ss << " " << node_from_str << " " << edge << " " << node_to_str << " }";
+
+	cpl_return_t ret = cpl_rdf_connection_execute_update(rdf->connection_update,
+			ss.str().c_str());
+	
+	return ret;
 }
 
 
@@ -432,7 +523,50 @@ cpl_rdf_has_immediate_ancestor(struct _cpl_db_backend_t* backend,
 							   const cpl_version_t query_object_max_version,
 							   int* out)
 {
-	return CPL_E_NOT_IMPLEMENTED;
+	assert(backend != NULL);
+	cpl_rdf_t* rdf = (cpl_rdf_t*) backend;
+
+	char q_id_str[64];
+	sprintf(q_id_str, "o:%llx-%llx", query_object_id.hi, query_object_id.lo);
+
+	std::ostringstream ss;
+
+	char id_str[64];
+	sprintf(id_str, "o:%llx-%llx", object_id.hi, object_id.lo);
+
+	char node_str[64];
+	if (version_hint != CPL_VERSION_NONE) {
+		sprintf(node_str, "n:%llx-%llx-%x",
+				object_id.hi, object_id.lo, version_hint);
+	}
+
+	ss << "PREFIX o: <object:>\n";
+	ss << "PREFIX p: <prop:>\n";
+	ss << "PREFIX r: <rel:>\n";
+	if (version_hint != CPL_VERSION_NONE) {
+		ss << "PREFIX n: <node:>\n";
+	}
+	ss << "SELECT ?v WHERE { ";
+	if (version_hint != CPL_VERSION_NONE) {
+		ss << " " << node_str << " ?edge ?q_node .";
+	}
+	else {
+		ss << " " << id_str << " r:version ?node .";
+		ss << " ?node ?edge ?q_node .";
+	}
+	ss << " " << q_id_str << " r:version ?q_node . ?q_node p:version ?q_v .";
+	ss << " FILTER ( ?q_v <= " << query_object_max_version << " ) }";
+
+	RDFResultSet rs;
+	cpl_return_t ret = cpl_rdf_connection_execute_query(rdf->connection_query,
+			ss.str().c_str(), &rs);
+
+	if (!CPL_IS_OK(ret)) {
+		//rs.print_error_messages(std::cerr);
+		return ret;
+	}
+	if (out != NULL) *out = (ret == CPL_S_NO_DATA) ? 0 : 1;
+	return CPL_OK;
 }
 
 
@@ -451,7 +585,121 @@ cpl_rdf_get_object_info(struct _cpl_db_backend_t* backend,
 						const cpl_version_t version_hint,
 						cpl_object_info_t** out_info)
 {
-	return CPL_E_NOT_IMPLEMENTED;
+	assert(backend != NULL);
+	cpl_rdf_t* rdf = (cpl_rdf_t*) backend;
+	cpl_return_t ret;
+
+	// Get the version
+
+	cpl_version_t version;
+
+	if (version_hint == CPL_VERSION_NONE) {
+		ret = cpl_rdf_get_version(backend, id, &version);
+		if (!CPL_IS_OK(ret)) return ret;
+	}
+	else {
+		version = version_hint;
+	}
+
+
+	// Prepare the query
+
+	char id_str[64];
+	sprintf(id_str, "o:%llx-%llx", id.hi, id.lo);
+
+	char node_str[64];
+	sprintf(node_str, "n:%llx-%llx-0", id.hi, id.lo);
+
+	std::ostringstream ss;
+
+	ss << "PREFIX o: <object:>\n";
+	ss << "PREFIX p: <prop:>\n";
+	ss << "PREFIX r: <rel:>\n";
+	ss << "PREFIX n: <node:>\n";
+	ss << "SELECT ?session, ?time, ?orig, ?name, ?type, ?container WHERE {";
+	ss << " " << node_str << " r:session ?session .";
+	ss << " " << id_str << " p:creation_time ?time ;";
+	ss << " p:originator ?orig ;";
+	ss << " p:name ?name ;";
+	ss << " p:type ?type .";
+	ss << " OPTIONAL {";
+	ss << "  " << id_str << " r:container ?container .";
+	ss << " } ";
+	ss << "}";
+
+
+	// Execute query
+
+	RDFResultSet rs;
+	ret = cpl_rdf_connection_execute_query(rdf->connection_query,
+			ss.str().c_str(), &rs);
+
+	if (ret == CPL_S_NO_DATA) return CPL_E_NOT_FOUND;
+	if (!CPL_IS_OK(ret)) {
+		//rs.print_error_messages(std::cerr);
+		return ret;
+	}
+
+
+	// Process the result
+
+	if (out_info == NULL) return CPL_OK;
+	if (rs.size() == 0) return CPL_E_BACKEND_INTERNAL_ERROR;
+	//if (rs.size() >  1) return CPL_E_BACKEND_INTERNAL_ERROR;
+
+	cpl_object_info_t* p = (cpl_object_info_t*) malloc(sizeof(*p));
+	if (p == NULL) return CPL_E_INSUFFICIENT_RESOURCES;
+	memset(p, 0, sizeof(*p));
+	p->id = id;
+	p->version = version;
+
+	RDFValue* v;
+	int r;
+
+	ret = rs[0].get_s("session", RDF_XSD_URI, &v);
+	if (!CPL_IS_OK(ret)) goto err;
+	r = sscanf(v->v_uri, "session:%llx-%llx",
+			&p->creation_session.hi, &p->creation_session.lo);
+	if (r != 2) { ret = -CPL_E_BACKEND_INTERNAL_ERROR; goto err; }
+
+	ret = rs[0].get_s("time", RDF_XSD_INTEGER, &v);
+	if (!CPL_IS_OK(ret)) goto err;
+	p->creation_time = v->v_integer;
+
+	ret = rs[0].get_s("orig", RDF_XSD_STRING, &v);
+	if (!CPL_IS_OK(ret)) goto err;
+	p->originator = strdup(v->v_string);
+
+	ret = rs[0].get_s("name", RDF_XSD_STRING, &v);
+	if (!CPL_IS_OK(ret)) goto err;
+	p->name = strdup(v->v_string);
+
+	ret = rs[0].get_s("type", RDF_XSD_STRING, &v);
+	if (!CPL_IS_OK(ret)) goto err;
+	p->type = strdup(v->v_string);
+
+	ret = rs[0].get_s("container", RDF_XSD_URI, &v);
+	if (ret == CPL_E_DB_KEY_NOT_FOUND) {
+		p->container_id = CPL_NONE;
+		p->container_version = CPL_VERSION_NONE;
+	}
+	else if (CPL_IS_OK(ret)) {
+		r = sscanf(v->v_uri, "node:%llx-%llx-%x",
+				&p->container_id.hi,&p->container_id.lo,&p->container_version);
+		if (r != 3) { ret = CPL_E_BACKEND_INTERNAL_ERROR; goto err; }
+	}
+	else goto err;
+
+	*out_info = p;
+	return CPL_OK;
+
+err:
+	if (p->originator != NULL) free(p->originator);
+	if (p->name != NULL) free(p->name);
+	if (p->type != NULL) free(p->type);
+	free(p);
+
+	return ret;
 }
 
 

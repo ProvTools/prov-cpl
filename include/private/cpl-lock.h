@@ -47,6 +47,11 @@
  */
 typedef long cpl_lock_t;
 
+/**
+ * A shared semaphore
+ */
+typedef void* cpl_shared_semaphore_t;
+
 
 /***************************************************************************/
 /** Functions - Initialization/Cleanup                                    **/
@@ -87,6 +92,44 @@ cpl_lock(cpl_lock_t* lock, bool yield=true);
  */
 void
 cpl_unlock(cpl_lock_t* lock);
+
+
+/***************************************************************************/
+/** Functions - Shared Semaphores                                         **/
+/***************************************************************************/
+
+/**
+ * Open (initialize) a shared semaphore
+ *
+ * @param name the semaphore name without a prefix or a '/'
+ * @return the shared semaphore, or NULL on error
+ */
+cpl_shared_semaphore_t
+cpl_shared_semaphore_open(const char* name);
+
+/**
+ * Close a shared semaphore
+ *
+ * @param sem the shared semaphore
+ */
+void
+cpl_shared_semaphore_close(cpl_shared_semaphore_t sem);
+
+/**
+ * Wait on a shared semaphore
+ *
+ * @param sem the shared semaphore
+ */
+void
+cpl_shared_semaphore_wait(cpl_shared_semaphore_t sem);
+
+/**
+ * Release (post) a shared semaphore
+ *
+ * @param sem the shared semaphore
+ */
+void
+cpl_shared_semaphore_post(cpl_shared_semaphore_t sem);
 
 
 /***************************************************************************/

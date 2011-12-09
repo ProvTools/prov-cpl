@@ -36,6 +36,7 @@
 #define __CPL_RDF_PRIVATE_H__
 
 #include <backends/cpl-rdf.h>
+#include <private/cpl-lock.h>
 #include <private/cpl-platform.h>
 #include <string>
 
@@ -49,6 +50,7 @@ extern "C" {
 }	/* Hack for editors that try to be too smart about indentation */
 #endif
 
+#define CPL_RDF_SEM_INIT		"edu.harvard.pass.cpl.rdf.newver"
 
 
 /***************************************************************************/
@@ -89,6 +91,11 @@ typedef struct {
 	 * The connection handle for queries
 	 */
 	cpl_rdf_connection_t* connection_update;
+
+	/**
+	 * The shared semaphore for creating new versions
+	 */
+	cpl_shared_semaphore_t sem_create_version;
 
 } cpl_rdf_t;
 

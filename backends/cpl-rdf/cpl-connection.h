@@ -39,6 +39,7 @@
 #include <cpl.h>
 
 #include <curl/curl.h>
+#include <iostream>
 #include <map>
 #include <string>
 #include <vector>
@@ -172,11 +173,30 @@ typedef struct {
 } RDFValue;
 
 /**
+ * Write a human-readable version of the value to the output stream
+ * 
+ * @param out the output stream
+ * @param value the value
+ * @return the output stream
+ */
+std::ostream&
+operator<< (std::ostream& out, const RDFValue& value);
+
+/**
  * A single result in the result set
  */
 class RDFResult
 {
 	friend class RDFResultSet;
+
+
+public:
+
+	/**
+	 * The result map type
+	 */
+	typedef std::map<std::string, RDFValue*> RDFResultMap;
+
 
 public:
 
@@ -218,21 +238,42 @@ public:
 	 * @return CPL_OK or an error code
 	 */
 	cpl_return_t
-	get_s(const char* key, int type, RDFValue** out);
+	get_s(const char* key, int type, RDFValue** out) const;
+
+	/**
+	 * Get a const_iterator over the results
+	 *
+	 * @return the const_iterator
+	 */
+	inline RDFResultMap::const_iterator
+	begin(void) const { return m_results.begin(); }
+
+	/**
+	 * Get the end of the const_iterator over the results
+	 *
+	 * @return the const_iterator
+	 */
+	inline RDFResultMap::const_iterator
+	end(void) const { return m_results.end(); }
 
 
 protected:
-
-	/**
-	 * The result map type
-	 */
-	typedef std::map<std::string, RDFValue*> RDFResultMap;
 
 	/**
 	 * The result map
 	 */
 	RDFResultMap m_results;
 };
+
+/**
+ * Write a human-readable version of the result to the output stream
+ * 
+ * @param out the output stream
+ * @param result the result
+ * @return the output stream
+ */
+std::ostream&
+operator<< (std::ostream& out, const RDFResult& result);
 
 /**
  * The result set
@@ -258,7 +299,7 @@ public:
 	 * @return the number of results
 	 */
 	inline size_t
-	size(void) { return m_results.size(); }
+	size(void) const { return m_results.size(); }
 
 	/**
 	 * Return the given result from the result set
@@ -266,8 +307,8 @@ public:
 	 * @param index the index between 0 and size()-1
 	 * @return a reference to the result
 	 */
-	inline RDFResult&
-	operator[] (size_t index) { return *(m_results[index]); }
+	inline const RDFResult&
+	operator[] (size_t index) const { return *(m_results[index]); }
 
 	/**
 	 * Return the vector of error messages
@@ -275,7 +316,7 @@ public:
 	 * @return a reference to the vector of error messages
 	 */
 	inline const std::vector<std::string>&
-	error_messages(void) { return m_errors; }
+	error_messages(void) const { return m_errors; }
 
 	/**
 	 * Append a result to the result set
@@ -294,6 +335,24 @@ public:
 	void
 	append_error_message(const char* format, ...);
 
+	/**
+	 * Print the error messages
+	 *
+	 * @param out the output stream
+	 * @param prefix the line prefix
+	 */
+	void
+	print_error_messages(std::ostream& out, const char* prefix = NULL) const;
+
+	/**
+	 * Print the error messages
+	 *
+	 * @param file the output file
+	 * @param prefix the line prefix
+	 */
+	void
+	print_error_messages(FILE* file, const char* prefix = NULL) const;
+
 
 protected:
 
@@ -307,6 +366,16 @@ protected:
 	 */
 	std::vector<std::string> m_errors;
 };
+
+/**
+ * Write a human-readable version of the result set to the output stream
+ * 
+ * @param out the output stream
+ * @param rs the result set
+ * @return the output stream
+ */
+std::ostream&
+operator<< (std::ostream& out, const RDFResultSet& rs);
 
 
 #endif

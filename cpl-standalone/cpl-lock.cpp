@@ -33,7 +33,7 @@
  */
 
 #include "stdafx.h"
-#include "cpl-lock.h"
+#include <private/cpl-lock.h>
 #include "cpl-platform.h"
 
 #if defined(__unix__) || defined(__APPLE__)
@@ -51,18 +51,14 @@
 #pragma intrinsic(_InterlockedCompareExchange, _InterlockedExchange)
 #endif
 
-
+/*
+ * Configuration
+ */
+//#define _CPL_DEBUG_UNIX_SEM
 //#define _CPL_CUSTOM_GLOBALLY_UNIQUE_IDS
-#ifdef _CPL_CUSTOM_GLOBALLY_UNIQUE_IDS
 
-#define CPL_LOCK_SEM_INIT_BASE	"edu.harvard.pass.cpl.uid_gen"
-#if defined(__unix__)
-#define CPL_LOCK_SEM_INIT		("/" CPL_LOCK_SEM_INIT_BASE)
-#elif defined(_WINDOWS)
-#define CPL_LOCK_SEM_INIT		("Global\\" CPL_LOCK_SEM_INIT_BASE)
-#else
-#define CPL_LOCK_SEM_INIT		("/" CPL_LOCK_SEM_INIT_BASE)
-#endif
+#ifdef _CPL_CUSTOM_GLOBALLY_UNIQUE_IDS
+#define CPL_LOCK_SEM_INIT		"edu.harvard.pass.cpl.uid_gen"
 
 /**
  * The base for the unique ID generator
@@ -93,147 +89,27 @@ static unsigned long long cpl_unique_machine_id = 0;
 cpl_return_t
 cpl_host_unique_id_generator_initialize(void)
 {
-	cpl_return_t ret = CPL_OK;
+	cpl_shared_semaphore_t s = cpl_shared_semaphore_open(CPL_LOCK_SEM_INIT);
+	if (s == NULL) return CPL_E_PLATFORM_ERROR;
+	cpl_shared_semaphore_wait(s);
 
-#if defined(__unix__) || defined(__APPLE__)
-
-	mode_t u = umask(0);
-	sem_t* s = sem_open(CPL_LOCK_SEM_INIT, O_CREAT, 0777, 1);
-	if (s == SEM_FAILED) {
-		fprintf(stderr, "Error while creating a semaphore: %s\n",
-				strerror(errno));
-		umask(u);
-		return CPL_E_PLATFORM_ERROR;
-	}
-	umask(u);
-
-	if (sem_wait(s) != 0) std::abort();
-
-	usleep(10 * 1000 /* us */);
-	timeval tv;
-	gettimeofday(&tv, NULL);
-
-	cpl_unique_base = (((unsigned long long) (tv.tv_sec - 1000000000UL)) << 32)
-		| (((unsigned long) (tv.tv_usec / 1000)) << 22);
-	cpl_unique_counter = 0;
-
-	if (sem_post(s) != 0) std::abort();
-	sem_close(s);
-
-#elif defined(_WINDOWS)
-
-	// Portions of the following code are from:
-	//   http://msdn.microsoft.com/en-us/library/windows/desktop/aa446595%28v=vs.85%29.aspx
-
-	DWORD dwRes;
-	PSID pEveryoneSID = NULL;
-	PACL pACL = NULL;
-	PSECURITY_DESCRIPTOR pSD = NULL;
-	EXPLICIT_ACCESS ea[1];
-	SID_IDENTIFIER_AUTHORITY SIDAuthWorld =
-		SECURITY_WORLD_SID_AUTHORITY;
-	SID_IDENTIFIER_AUTHORITY SIDAuthNT = SECURITY_NT_AUTHORITY;
-	SECURITY_ATTRIBUTES sa;
-	HANDLE hSemaphore = NULL;
-
-	ret = CPL_E_PLATFORM_ERROR;
-
-	// Create a well-known SID for the Everyone group.
-	if (!AllocateAndInitializeSid(&SIDAuthWorld, 1,
-		SECURITY_WORLD_RID,
-		0, 0, 0, 0, 0, 0, 0,
-		&pEveryoneSID)) {
-		fprintf(stderr, "AllocateAndInitializeSid Error %u\n", GetLastError());
-		goto cleanup;
-	}
-
-	// Initialize an EXPLICIT_ACCESS structure for an ACE.
-	// The ACE will allow Everyone full access to the mutex.
-	ZeroMemory(&ea, sizeof(EXPLICIT_ACCESS));
-	ea[0].grfAccessPermissions = MUTEX_ALL_ACCESS;
-	ea[0].grfAccessMode = SET_ACCESS;
-	ea[0].grfInheritance= NO_INHERITANCE;
-	ea[0].Trustee.TrusteeForm = TRUSTEE_IS_SID;
-	ea[0].Trustee.TrusteeType = TRUSTEE_IS_WELL_KNOWN_GROUP;
-	ea[0].Trustee.ptstrName  = (LPTSTR) pEveryoneSID;
-
-	// Create a new ACL that contains the new ACEs.
-	dwRes = SetEntriesInAcl(1, ea, NULL, &pACL);
-	if (ERROR_SUCCESS != dwRes) {
-		fprintf(stderr, "SetEntriesInAcl Error %u\n", GetLastError());
-		goto cleanup;
-	}
-
-	// Initialize a security descriptor.  
-	pSD = (PSECURITY_DESCRIPTOR) LocalAlloc(LPTR, 
-		SECURITY_DESCRIPTOR_MIN_LENGTH); 
-	if (NULL == pSD) { 
-		fprintf(stderr, "LocalAlloc Error %u\n", GetLastError());
-		goto cleanup; 
-	} 
-
-	if (!InitializeSecurityDescriptor(pSD,
-		SECURITY_DESCRIPTOR_REVISION)) {  
-		fprintf(stderr, "InitializeSecurityDescriptor Error %u\n",
-				GetLastError());
-		goto cleanup; 
-	} 
-
-	// Add the ACL to the security descriptor. 
-	if (!SetSecurityDescriptorDacl(pSD, 
-		TRUE,     // bDaclPresent flag   
-		pACL, 
-		FALSE))   // not a default DACL 
-	{  
-		fprintf(stderr, "SetSecurityDescriptorDacl Error %u\n",
-			GetLastError());
-		goto cleanup; 
-	} 
-
-	// Initialize a security attributes structure.
-	sa.nLength = sizeof (SECURITY_ATTRIBUTES);
-	sa.lpSecurityDescriptor = pSD;
-	sa.bInheritHandle = FALSE;
-
-	// Create the semaphore
-	hSemaphore = CreateSemaphore(&sa, 1, 1, CPL_LOCK_SEM_INIT);
-	if (NULL == hSemaphore)	{  
-		fprintf(stderr, "CreateSemaphore Error %u\n",
-			GetLastError());
-		goto cleanup; 
-	}
-
-
-	// Initialize the unique ID generator
-
-	WaitForSingleObject(hSemaphore, INFINITE);
-
+#if defined(_WINDOWS)
 	Sleep(10 /* ms */);
-	timeval tv;
-	gettimeofday(&tv, NULL);
-
-	cpl_unique_base = (((unsigned long long) (tv.tv_sec - 1000000000UL)) << 32)
-		| (((unsigned long) (tv.tv_usec / 1000)) << 22);
-	cpl_unique_counter = 0;
-
-	if (!ReleaseSemaphore(hSemaphore, 1, NULL)) std::abort();
-
-
-	// Finish
-
-	ret = CPL_OK;
-
-cleanup:
-	if (pEveryoneSID) FreeSid(pEveryoneSID);
-	if (pACL) LocalFree(pACL);
-	if (pSD) LocalFree(pSD);
-	if (hSemaphore) CloseHandle(hSemaphore);
-
 #else
-#error "Not implemented for this platform"
+	usleep(10 * 1000 /* us */);
 #endif
 
-	return ret;
+	timeval tv;
+	gettimeofday(&tv, NULL);
+
+	cpl_unique_base = (((unsigned long long) (tv.tv_sec - 1000000000UL)) << 32)
+		| (((unsigned long) (tv.tv_usec / 1000)) << 22);
+	cpl_unique_counter = 0;
+
+	cpl_shared_semaphore_post(s);
+	cpl_shared_semaphore_close(s);
+
+	return CPL_OK;
 }
 
 #endif
@@ -329,6 +205,224 @@ cpl_unlock(cpl_lock_t* lock)
 	_InterlockedExchange(lock, 0);
 #else
 #error "Not implemented"
+#endif
+}
+
+
+/**
+ * Open (initialize) a shared semaphore
+ *
+ * @param name the semaphore name without a prefix or a '/'
+ * @return the shared semaphore, or NULL on error
+ */
+cpl_shared_semaphore_t
+cpl_shared_semaphore_open(const char* name)
+{
+#if defined(__unix__) || defined(__APPLE__)
+
+	char* n = (char*) alloca(strlen(name) + 4);
+	sprintf(n, "/%s", name);
+
+	mode_t u = umask(0);
+	sem_t* s = sem_open(n, O_CREAT, 0777, 1);
+	if (s == SEM_FAILED) {
+		fprintf(stderr, "Error while creating a semaphore: %s\n",
+				strerror(errno));
+		umask(u);
+		return NULL;
+	}
+
+#ifdef _CPL_DEBUG_UNIX_SEM
+	int v = -7777;
+	sem_getvalue(s, &v);
+	fprintf(stderr, "[Semaphore %p] Open: name=%s, value=%d\n", s, n, v);
+#endif
+
+	umask(u);
+
+	return s;
+
+#elif defined(_WINDOWS)
+
+	char* n = (char*) alloca(strlen(name) + 12);
+	sprintf(n, "Global\\%s", name);
+
+	// Portions of the following code are from:
+	//   http://msdn.microsoft.com/en-us/library/windows/desktop/aa446595%28v=vs.85%29.aspx
+
+	DWORD dwRes;
+	PSID pEveryoneSID = NULL;
+	PACL pACL = NULL;
+	PSECURITY_DESCRIPTOR pSD = NULL;
+	EXPLICIT_ACCESS ea[1];
+	SID_IDENTIFIER_AUTHORITY SIDAuthWorld =
+		SECURITY_WORLD_SID_AUTHORITY;
+	SID_IDENTIFIER_AUTHORITY SIDAuthNT = SECURITY_NT_AUTHORITY;
+	SECURITY_ATTRIBUTES sa;
+	HANDLE hSemaphore = NULL;
+
+	// Create a well-known SID for the Everyone group.
+	if (!AllocateAndInitializeSid(&SIDAuthWorld, 1,
+		SECURITY_WORLD_RID,
+		0, 0, 0, 0, 0, 0, 0,
+		&pEveryoneSID)) {
+		fprintf(stderr, "AllocateAndInitializeSid Error %u\n", GetLastError());
+		goto cleanup;
+	}
+
+	// Initialize an EXPLICIT_ACCESS structure for an ACE.
+	// The ACE will allow Everyone full access to the mutex.
+	ZeroMemory(&ea, sizeof(EXPLICIT_ACCESS));
+	ea[0].grfAccessPermissions = MUTEX_ALL_ACCESS;
+	ea[0].grfAccessMode = SET_ACCESS;
+	ea[0].grfInheritance= NO_INHERITANCE;
+	ea[0].Trustee.TrusteeForm = TRUSTEE_IS_SID;
+	ea[0].Trustee.TrusteeType = TRUSTEE_IS_WELL_KNOWN_GROUP;
+	ea[0].Trustee.ptstrName  = (LPTSTR) pEveryoneSID;
+
+	// Create a new ACL that contains the new ACEs.
+	dwRes = SetEntriesInAcl(1, ea, NULL, &pACL);
+	if (ERROR_SUCCESS != dwRes) {
+		fprintf(stderr, "SetEntriesInAcl Error %u\n", GetLastError());
+		goto cleanup;
+	}
+
+	// Initialize a security descriptor.  
+	pSD = (PSECURITY_DESCRIPTOR) LocalAlloc(LPTR, 
+		SECURITY_DESCRIPTOR_MIN_LENGTH); 
+	if (NULL == pSD) { 
+		fprintf(stderr, "LocalAlloc Error %u\n", GetLastError());
+		goto cleanup; 
+	} 
+
+	if (!InitializeSecurityDescriptor(pSD,
+		SECURITY_DESCRIPTOR_REVISION)) {  
+		fprintf(stderr, "InitializeSecurityDescriptor Error %u\n",
+				GetLastError());
+		goto cleanup; 
+	} 
+
+	// Add the ACL to the security descriptor. 
+	if (!SetSecurityDescriptorDacl(pSD, 
+		TRUE,     // bDaclPresent flag   
+		pACL, 
+		FALSE))   // not a default DACL 
+	{  
+		fprintf(stderr, "SetSecurityDescriptorDacl Error %u\n",
+			GetLastError());
+		goto cleanup; 
+	} 
+
+	// Initialize a security attributes structure.
+	sa.nLength = sizeof (SECURITY_ATTRIBUTES);
+	sa.lpSecurityDescriptor = pSD;
+	sa.bInheritHandle = FALSE;
+
+	// Create the semaphore
+	hSemaphore = CreateSemaphore(&sa, 1, 1, n);
+	if (NULL == hSemaphore)	{  
+		fprintf(stderr, "CreateSemaphore Error %u\n",
+			GetLastError());
+		goto cleanup; 
+	}
+
+cleanup:
+	if (pEveryoneSID) FreeSid(pEveryoneSID);
+	if (pACL) LocalFree(pACL);
+	if (pSD) LocalFree(pSD);
+
+	return hSemaphore;
+
+#else
+#error "Not implemented for this platform."
+#endif
+}
+
+
+/**
+ * Close a shared semaphore
+ *
+ * @param sem the shared semaphore
+ */
+void
+cpl_shared_semaphore_close(cpl_shared_semaphore_t sem)
+{
+#if defined(__unix__) || defined(__APPLE__)
+#ifdef _CPL_DEBUG_UNIX_SEM
+	int v = -7777;
+	sem_getvalue((sem_t*) sem, &v);
+	fprintf(stderr, "[Semaphore %p] Close: value=%d\n", (sem_t*) sem, v);
+#endif
+	sem_close((sem_t*) sem);
+#elif defined(_WINDOWS)
+	CloseHandle((HANDLE) sem);
+#else
+#error "Not implemented for this platform."
+#endif
+}
+
+
+/**
+ * Wait on a shared semaphore
+ *
+ * @param sem the shared semaphore
+ */
+void
+cpl_shared_semaphore_wait(cpl_shared_semaphore_t sem)
+{
+#if defined(__unix__) || defined(__APPLE__)
+#ifdef _CPL_DEBUG_UNIX_SEM
+	int v = -7777;
+	sem_getvalue((sem_t*) sem, &v);
+	fprintf(stderr, "[Semaphore %p] Wait: value=%d\n", (sem_t*) sem, v);
+#endif
+	if (sem_wait((sem_t*) sem) != 0) {
+		fprintf(stderr, "sem_wait() failed.\n");
+		std::abort();
+	}
+#ifdef _CPL_DEBUG_UNIX_SEM
+	v = -7777;
+	sem_getvalue((sem_t*) sem, &v);
+	fprintf(stderr, "[Semaphore %p] Wait - after: value=%d\n", (sem_t*) sem, v);
+#endif
+#elif defined(_WINDOWS)
+	WaitForSingleObject((HANDLE) sem, INFINITE);
+#else
+#error "Not implemented for this platform."
+#endif
+}
+
+
+/**
+ * Release (post) a shared semaphore
+ *
+ * @param sem the shared semaphore
+ */
+void
+cpl_shared_semaphore_post(cpl_shared_semaphore_t sem)
+{
+#if defined(__unix__) || defined(__APPLE__)
+#ifdef _CPL_DEBUG_UNIX_SEM
+	int v = -7777;
+	sem_getvalue((sem_t*) sem, &v);
+	fprintf(stderr, "[Semaphore %p] Post: value=%d\n", (sem_t*) sem, v);
+#endif
+	if (sem_post((sem_t*) sem) != 0) {
+		fprintf(stderr, "sem_post() failed.\n");
+		std::abort();
+	}
+#ifdef _CPL_DEBUG_UNIX_SEM
+	v = -7777;
+	sem_getvalue((sem_t*) sem, &v);
+	fprintf(stderr, "[Semaphore %p] Post - after: value=%d\n", (sem_t*) sem, v);
+#endif
+#elif defined(_WINDOWS)
+	if (!ReleaseSemaphore((HANDLE) sem, 1, NULL)) {
+		fprintf(stderr, "ReleaseSemaphore() failed.\n");
+		std::abort();
+	}
+#else
+#error "Not implemented for this platform."
 #endif
 }
 

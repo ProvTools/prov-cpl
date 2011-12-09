@@ -225,6 +225,33 @@ cpl_rdf_escape_string(const char* str)
 
 
 /**
+ * Write a human-readable version of the value to the output stream
+ * 
+ * @param out the output stream
+ * @param value the value
+ * @return the output stream
+ */
+std::ostream&
+operator<< (std::ostream& out, const RDFValue& value)
+{
+	switch (value.type) {
+		case RDF_XSD_URI:
+			out << "<" << value.v_uri << ">";
+			break;
+		case RDF_XSD_STRING:
+			out << "\"" << cpl_rdf_escape_string(value.v_string) << "\"";
+			break;
+		case RDF_XSD_INTEGER:
+			out << value.v_integer;
+			break;
+		default:
+			out << value.raw;
+	}
+	return out;
+}
+
+
+/**
  * Create an empty result
  */
 RDFResult::RDFResult(void)
@@ -284,13 +311,37 @@ RDFResult::operator[] (const char* key)
  * @return CPL_OK or an error code
  */
 cpl_return_t
-RDFResult::get_s(const char* key, int type, RDFValue** out)
+RDFResult::get_s(const char* key, int type, RDFValue** out) const
 {
-	RDFResultMap::iterator i = m_results.find(key);
+	RDFResultMap::const_iterator i = m_results.find(key);
 	if (i == m_results.end()) return CPL_E_DB_KEY_NOT_FOUND;
 	if (i->second->type != type) return CPL_E_DB_INVALID_TYPE;
 	if (out != NULL) *out = i->second;
 	return CPL_OK;
+}
+
+
+/**
+ * Write a human-readable version of the result to the output stream
+ * 
+ * @param out the output stream
+ * @param result the result
+ * @return the output stream
+ */
+std::ostream&
+operator<< (std::ostream& out, const RDFResult& result)
+{
+	RDFResult::RDFResultMap::const_iterator i;
+	bool first = true;
+
+	out << "[";
+	for (i = result.begin(); i != result.end(); i++) {
+		if (first) first = false; else out << ", ";
+		out << i->first << "=" << *(i->second);
+	}
+	out << "]";
+
+	return out;
 }
 
 
@@ -338,6 +389,54 @@ RDFResultSet::append_error_message(const char* format, ...)
 }
 
 
+/**
+ * Print the error messages
+ *
+ * @param out the output stream
+ * @param prefix the line prefix
+ */
+void
+RDFResultSet::print_error_messages(std::ostream& out, const char* prefix) const
+{
+	for (unsigned u = 0; u < m_errors.size(); u++) {
+		out << (prefix == NULL ? "" : prefix) <<  m_errors[u] << std::endl;
+	}
+}
+
+
+/**
+ * Print the error messages
+ *
+ * @param file the output file
+ * @param prefix the line prefix
+ */
+void
+RDFResultSet::print_error_messages(FILE* file, const char* prefix) const
+{
+	for (unsigned u = 0; u < m_errors.size(); u++) {
+		fprintf(file, "%s%s\n",
+				prefix == NULL ? "" : prefix, m_errors[u].c_str());
+	}
+}
+
+
+/**
+ * Write a human-readable version of the result set to the output stream
+ * 
+ * @param out the output stream
+ * @param rs the result set
+ * @return the output stream
+ */
+std::ostream&
+operator<< (std::ostream& out, const RDFResultSet& rs)
+{
+	for (unsigned u = 0; u < rs.size(); u++) {
+		out << rs[u] << std::endl;
+	}
+	return out;
+}
+
+
 
 /***************************************************************************/
 /** Private API: Parsing XML responses                                    **/
@@ -368,6 +467,7 @@ cpl_rdf_parse_xml_value(xmlNodePtr cur,
 		// Ignore selected nodes
 
 		if (strcmp((char*) cur_value->name, "text") == 0) continue;
+		if (strcmp((char*) cur_value->name, "comment") == 0) continue;
 
 
 		// URI
@@ -464,6 +564,7 @@ cpl_rdf_parse_xml_result(xmlNodePtr cur,
 		// Ignore selected nodes
 
 		if (strcmp((char*) cur_binding->name, "text") == 0) continue;
+		if (strcmp((char*) cur_binding->name, "comment") == 0) continue;
 
 
 		// Binding
@@ -587,6 +688,7 @@ cpl_rdf_parse_xml_result_set(const char* str,
 		// Ignore selected nodes
 
 		if (strcmp((char*) cur->name, "text") == 0) continue;
+		if (strcmp((char*) cur->name, "comment") == 0) continue;
 		if (strcmp((char*) cur->name, "head") == 0) continue;
 
 
@@ -685,6 +787,7 @@ query_write_function(char *s, size_t size, size_t nmemb, void* userdata)
 {
 	_cpl_rdf_writedata_t* wd = (_cpl_rdf_writedata_t*) userdata;
 	wd->buffer += s;
+	//fprintf(stderr, "%s", s);
 	return size * nmemb;
 }
 
@@ -781,9 +884,7 @@ cpl_rdf_connection_execute_query(cpl_rdf_connection_t* connection,
 
 	cpl_return_t ret = cpl_rdf_parse_xml_result_set(wd.buffer.c_str(),
 							wd.buffer.length(), out);
-	if (!CPL_IS_OK(ret)) return ret;
-
-	return CPL_OK;
+	return ret;
 }
 
 

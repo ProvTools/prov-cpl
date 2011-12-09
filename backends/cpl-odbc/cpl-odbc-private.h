@@ -180,12 +180,6 @@ typedef struct {
 	SQLHSTMT get_object_info_stmt;
 
 	/**
-	 * The statement that returns information about a provenance object,
-	 * if the version of the object is known in advance
-	 */
-	SQLHSTMT get_object_info_with_ver_stmt;
-
-	/**
 	 * The lock for get_version_info
 	 */
 	mutex_t get_version_info_lock;

@@ -430,7 +430,6 @@ cpl_create_odbc_backend(const char* connection_string,
 	ALLOC_STMT(has_immediate_ancestor_stmt);
 	ALLOC_STMT(has_immediate_ancestor_with_ver_stmt);
 	ALLOC_STMT(get_object_info_stmt);
-	ALLOC_STMT(get_object_info_with_ver_stmt);
 	ALLOC_STMT(get_version_info_stmt);
 	ALLOC_STMT(get_object_ancestors);
 	ALLOC_STMT(get_object_ancestors_with_ver);
@@ -509,25 +508,14 @@ cpl_create_odbc_backend(const char* connection_string,
 			" LIMIT 1;");
 
 	PREPARE(get_object_info_stmt,
-			"SELECT version, session_id_hi, session_id_lo,"
+			"SELECT session_id_hi, session_id_lo,"
 			"       cpl_objects.creation_time, originator, name, type,"
 			"       container_id_hi, container_id_lo, container_ver"
 			"  FROM cpl_objects, cpl_versions"
 			" WHERE cpl_objects.id_hi = ? AND cpl_objects.id_lo = ?"
 			"   AND cpl_objects.id_hi = cpl_versions.id_hi"
 			"   AND cpl_objects.id_lo = cpl_versions.id_lo"
-			" ORDER BY version DESC"
-			" LIMIT 1;");
-
-	PREPARE(get_object_info_with_ver_stmt,
-			"SELECT version, session_id_hi, session_id_lo,"
-			"       cpl_objects.creation_time, originator, name, type,"
-			"       container_id_hi, container_id_lo, container_ver"
-			"  FROM cpl_objects, cpl_versions"
-			" WHERE cpl_objects.id_hi = ? AND cpl_objects.id_lo = ?"
-			"   AND cpl_objects.id_hi = cpl_versions.id_hi"
-			"   AND cpl_objects.id_lo = cpl_versions.id_lo"
-			"   AND version = ?"
+			"   AND version = 0"
 			" LIMIT 1;");
 
 	PREPARE(get_version_info_stmt,
@@ -582,7 +570,6 @@ err_stmts:
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->has_immediate_ancestor_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->has_immediate_ancestor_with_ver_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_info_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_info_with_ver_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_version_info_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_ancestors);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_ancestors_with_ver);
@@ -638,7 +625,6 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->has_immediate_ancestor_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->has_immediate_ancestor_with_ver_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_info_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_info_with_ver_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_version_info_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_ancestors);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_ancestors_with_ver);
@@ -1252,20 +1238,28 @@ cpl_odbc_get_object_info(struct _cpl_db_backend_t* backend,
 	memset(p, 0, sizeof(*p));
 	p->id = id;
 
-	mutex_lock(odbc->get_object_info_lock);
+
+	// Get the version
+
+	if (version_hint == CPL_VERSION_NONE) {
+		r = cpl_odbc_get_version(backend, id, &p->version);
+		if (!CPL_IS_OK(r)) {
+			free(p);
+			return r;
+		}
+	}
+	else {
+		p->version = version_hint;
+	}
 
 
 	// Prepare the statement
 
-	SQLHSTMT stmt = version_hint == CPL_VERSION_NONE
-		? odbc->get_object_info_stmt : odbc->get_object_info_with_ver_stmt;
+	mutex_lock(odbc->get_object_info_lock);
+	SQLHSTMT stmt = odbc->get_object_info_stmt;
 
 	SQL_BIND_INTEGER(stmt, 1, id.hi);
 	SQL_BIND_INTEGER(stmt, 2, id.lo);
-
-	if (version_hint != CPL_VERSION_NONE) {
-		SQL_BIND_INTEGER(stmt, 3, version_hint);
-	}
 
 
 	// Execute
@@ -1279,20 +1273,19 @@ cpl_odbc_get_object_info(struct _cpl_db_backend_t* backend,
 
 	// Fetch the result
 
-	CPL_SQL_SIMPLE_FETCH(llong, 1, &l); p->version = (cpl_version_t) l;
-	CPL_SQL_SIMPLE_FETCH(llong, 2, (long long*) &p->creation_session.hi);
-	CPL_SQL_SIMPLE_FETCH(llong, 3, (long long*) &p->creation_session.lo);
-	CPL_SQL_SIMPLE_FETCH(timestamp_as_unix_time, 4, &p->creation_time);
+	CPL_SQL_SIMPLE_FETCH(llong, 1, (long long*) &p->creation_session.hi);
+	CPL_SQL_SIMPLE_FETCH(llong, 2, (long long*) &p->creation_session.lo);
+	CPL_SQL_SIMPLE_FETCH(timestamp_as_unix_time, 3, &p->creation_time);
 
-	CPL_SQL_SIMPLE_FETCH(dynamically_allocated_string, 5, &p->originator);
-	CPL_SQL_SIMPLE_FETCH(dynamically_allocated_string, 6, &p->name);
-	CPL_SQL_SIMPLE_FETCH(dynamically_allocated_string, 7, &p->type);
+	CPL_SQL_SIMPLE_FETCH(dynamically_allocated_string, 4, &p->originator);
+	CPL_SQL_SIMPLE_FETCH(dynamically_allocated_string, 5, &p->name);
+	CPL_SQL_SIMPLE_FETCH(dynamically_allocated_string, 6, &p->type);
 
-	CPL_SQL_SIMPLE_FETCH_EXT(llong, 8, (long long*) &p->container_id.hi, true);
+	CPL_SQL_SIMPLE_FETCH_EXT(llong, 7, (long long*) &p->container_id.hi, true);
 	if (r == CPL_E_DB_NULL) p->container_id = CPL_NONE;
-	CPL_SQL_SIMPLE_FETCH_EXT(llong, 9, (long long*) &p->container_id.lo, true);
+	CPL_SQL_SIMPLE_FETCH_EXT(llong, 8, (long long*) &p->container_id.lo, true);
 	if (r == CPL_E_DB_NULL) p->container_id = CPL_NONE;
-	CPL_SQL_SIMPLE_FETCH_EXT(llong, 10, &l, true);
+	CPL_SQL_SIMPLE_FETCH_EXT(llong, 9, &l, true);
 	if (r == CPL_E_DB_NULL) l = CPL_VERSION_NONE;
 	p->container_version = (cpl_version_t) l;
 	

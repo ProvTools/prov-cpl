@@ -37,7 +37,7 @@
 
 #include <cpl.h>
 #include <cpl-db-backend.h>
-#include "cpl-lock.h"
+#include <private/cpl-lock.h>
 
 #ifdef __GNUC__
 #include <ext/hash_map>
