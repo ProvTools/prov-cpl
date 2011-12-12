@@ -45,6 +45,10 @@
 #include <libgen.h>
 #endif
 
+#ifndef _WINDOWS
+#include <sys/time.h>
+#endif
+
 
 /**
  * The program base name
@@ -161,6 +165,28 @@ print_verbose_test_header(FILE* out, const struct test_info* test)
 	header[78] = '\0';
 
 	fprintf(out, "\n%s\n", header);
+}
+
+
+/**
+ * Get the current system time in seconds
+ *
+ * @return the current time in seconds
+ */
+double
+current_time_seconds(void)
+{
+#ifdef _WINDOWS
+
+	// TODO Implement the Windows version
+	return time(NULL);
+
+#else
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+
+	return tv.tv_sec + tv.tv_usec / 1000000.0;
+#endif
 }
 
 
@@ -418,16 +444,26 @@ main(int argc, char** argv)
 
 			// Run the test
 
+			double start_time = current_time_seconds();
+
 			test->func();
+
+			double end_time = current_time_seconds();
+			double test_time = end_time - start_time;
 
 
 			// Print the success message
 
+			char str_test_time[64];
+			sprintf(str_test_time, "%ld min %.2lf sec",
+					((long) test_time) / 60,
+					test_time - 60 * (((long) test_time) / 60));
+
 			if (verbose) {
-				fprintf(stdout, "[SUCCESS]\n");
+				fprintf(stdout, "[SUCCESS] Time: %s\n", str_test_time);
 			}
 			else {
-				fprintf(stdout, "Success\n");
+				fprintf(stdout, "Success (%s)\n", str_test_time);
 				fflush(stdout);
 			}
 		}
