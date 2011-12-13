@@ -1,5 +1,5 @@
 #
-# makemake.pl
+# test.pl
 # Core Provenance Library
 #
 # Copyright 2011
@@ -32,12 +32,10 @@
 # Contributor(s): Peter Macko
 #
 
-use ExtUtils::MakeMaker;
-WriteMakefile(
-	NAME            => 'CPLDirect',
-    VERSION_FROM    => 'CPLDirect.pm',
-	INC             => '-I../../../../../include',
-	LIBS            => '-L. -lcpl -lcpl-odbc -lcpl-rdf',
-	OBJECT          => 'cpl_wrap.o'
-);
+use warnings;
+use strict;
+
+use CPL;
+
+my $ORIGINATOR = "edu.harvard.pass.cpl.perl.direct.test";
 

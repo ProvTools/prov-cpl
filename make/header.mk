@@ -122,6 +122,15 @@ endif
 
 
 #
+# The project name
+#
+
+ifndef PROJECT
+	PROJECT := $(strip $(notdir $(PWD)))
+endif
+
+
+#
 # Run directory
 #
 
@@ -236,7 +245,7 @@ endif
 #
 
 ifndef INSTALL_PREFIX
-INSTALL_PREFIX := /usr/local
+	INSTALL_PREFIX := /usr/local
 endif
 
 
@@ -255,6 +264,7 @@ endif
 # Add the build dir suffix
 #
 
+BUILD_DIR_WITHOUT_SUFFIX := $(BUILD_DIR)
 ifdef BUILD_DIR_SUFFIX
 	BUILD_DIR := $(BUILD_DIR)$(BUILD_DIR_SUFFIX)
 endif

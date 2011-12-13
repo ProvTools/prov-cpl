@@ -25,10 +25,6 @@ include $(ROOT)/make/header.mk
 # Configure the project
 #
 
-ifndef PROJECT
-	PROJECT := $(strip $(notdir $(PWD)))
-endif
-
 ifndef TARGET
 	TARGET := $(PROJECT)
 endif

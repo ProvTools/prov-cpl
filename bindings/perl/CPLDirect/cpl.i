@@ -34,3 +34,7 @@
 
 %include "../../cpl.i"
 
+%perlcode %{
+$VERSION = '1.00';
+%}
+

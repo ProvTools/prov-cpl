@@ -11,12 +11,13 @@ ROOT := ../../..
 # Customize the build
 #
 
-DEPENDENCIES := ../../cpl.i
+PERL_MODULE_DEPENDECIES := ../CPLDirect
+
 
 
 #
 # Include the magic script
 #
 
-include $(ROOT)/make/perl-module-swig.mk
+include $(ROOT)/make/perl-module.mk
 

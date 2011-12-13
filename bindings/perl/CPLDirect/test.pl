@@ -178,6 +178,10 @@ print "CPLDirect::cpl_data_flow(obj2, obj1, CPL_DATA_INPUT)";
 check_ret(CPLDirect::cpl_data_flow($obj2, $obj1, $CPLDirect::CPL_DATA_INPUT));
 print "\n";
 
+print "CPLDirect::cpl_data_flow(obj2, obj3, CPL_DATA_INPUT)";
+check_ret(CPLDirect::cpl_data_flow($obj2, $obj3, $CPLDirect::CPL_DATA_INPUT));
+print "\n";
+
 print "CPLDirect::cpl_control(obj3, obj1, CPL_CONTROL_START)";
 check_ret(CPLDirect::cpl_control($obj3, $obj1, $CPLDirect::CPL_CONTROL_START));
 print "\n";
@@ -186,6 +190,32 @@ print "CPLDirect::cpl_data_flow_ext(obj1, obj3, 0, CPL_DATA_TRANSLATION)";
 check_ret(CPLDirect::cpl_data_flow_ext($obj1, $obj3, 0,
 			$CPLDirect::CPL_DATA_TRANSLATION));
 print "\n";
+
+print "\n";
+
+
+#
+# Get version
+#
+
+my $ver1_ptr = CPLDirect::new_cpl_version_tp();
+my $ver2_ptr = CPLDirect::new_cpl_version_tp();
+my $ver3_ptr = CPLDirect::new_cpl_version_tp();
+
+print "CPLDirect::cpl_get_version(obj1)";
+check_ret(CPLDirect::cpl_get_version($obj1, $ver1_ptr));
+my $ver1 = CPLDirect::cpl_version_tp_value($ver1_ptr);
+printf ": %d\n", $ver1;
+
+print "CPLDirect::cpl_get_version(obj2)";
+check_ret(CPLDirect::cpl_get_version($obj2, $ver2_ptr));
+my $ver2 = CPLDirect::cpl_version_tp_value($ver2_ptr);
+printf ": %d\n", $ver2;
+
+print "CPLDirect::cpl_get_version(obj3)";
+check_ret(CPLDirect::cpl_get_version($obj3, $ver3_ptr));
+my $ver3 = CPLDirect::cpl_version_tp_value($ver3_ptr);
+printf ": %d\n", $ver3;
 
 print "\n";
 
@@ -201,6 +231,9 @@ CPLDirect::delete_cpl_id_tp($obj3_ptr);
 CPLDirect::delete_cpl_id_tp($obj1x_ptr);
 CPLDirect::delete_cpl_id_tp($obj2x_ptr);
 CPLDirect::delete_cpl_id_tp($obj3x_ptr);
+CPLDirect::delete_cpl_version_tp($ver1_ptr);
+CPLDirect::delete_cpl_version_tp($ver2_ptr);
+CPLDirect::delete_cpl_version_tp($ver3_ptr);
 
 print "CPLDirect::cpl_detach";
 check_ret(CPLDirect::cpl_detach());

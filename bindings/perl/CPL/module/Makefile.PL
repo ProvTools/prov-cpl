@@ -1,5 +1,5 @@
 #
-# makemake.pl
+# Makefile.PL
 # Core Provenance Library
 #
 # Copyright 2011
@@ -32,12 +32,16 @@
 # Contributor(s): Peter Macko
 #
 
+use 5.012004;
 use ExtUtils::MakeMaker;
 WriteMakefile(
-	NAME            => 'CPLDirect',
-    VERSION_FROM    => 'CPLDirect.pm',
-	INC             => '-I../../../../../include',
-	LIBS            => '-L. -lcpl -lcpl-odbc -lcpl-rdf',
-	OBJECT          => 'cpl_wrap.o'
+    NAME              => 'CPL',
+    VERSION_FROM      => 'lib/CPL.pm', # finds $VERSION
+    PREREQ_PM         => {
+	   CPLDirect => 1.00
+	},
+    ($] >= 5.005 ?
+      (ABSTRACT_FROM  => 'lib/CPL.pm', # retrieve abstract from module
+       AUTHOR         => 'Peter Macko <pmacko@eecs.harvard.edu>') : ()),
 );
 
