@@ -60,7 +60,8 @@ $(BUILD_DIR):
 # Compile Targets
 #
 
-$(BUILD_DIR)/CPLDirect.pm $(BUILD_DIR)/cpl_wrap.cxx: cpl.i $(BUILD_DIR)
+$(BUILD_DIR)/CPLDirect.pm $(BUILD_DIR)/cpl_wrap.cxx: cpl.i ../../cpl.i
+	@mkdir -p $(BUILD_DIR)
 ifeq ($(OUTPUT_TYPE),kernel)
 	@echo '  SWIG    $(PWD_REL_SEP)$<'
 	@swig -c++ -perl5 -outdir $(BUILD_DIR) -o $(BUILD_DIR)/cpl_wrap.cxx $<
@@ -68,7 +69,8 @@ else
 	swig -c++ -perl5 -outdir $(BUILD_DIR) -o $(BUILD_DIR)/cpl_wrap.cxx $<
 endif
 
-$(BUILD_DIR)/Makefile.PL: makemake.pl $(BUILD_DIR)
+$(BUILD_DIR)/Makefile.PL: makemake.pl
+	@mkdir -p $(BUILD_DIR)
 ifeq ($(OUTPUT_TYPE),kernel)
 	@/bin/cp -f $< $@
 else
@@ -77,7 +79,7 @@ endif
 
 # TODO Make the hard-coded "../../" to be dynamically computed
 
-$(BUILD_DIR)/Makefile: $(BUILD_DIR)/Makefile.PL $(BUILD_DIR)
+$(BUILD_DIR)/Makefile: $(BUILD_DIR)/Makefile.PL
 ifneq ($(SUBPROJECT_SO_FILES),)
 	@cd $(BUILD_DIR); \
 		for i in $(SUBPROJECT_SO_FILES); do \
@@ -144,7 +146,6 @@ EXTRA_LD_PATHS := $(REAL_BUILD_DIR):$(REAL_SO_DIR_PATH)
 
 
 test: test.pl all
-	@echo
 	@cd "$(BUILD_DIR)" && $(LD_PATH_VAR)=$$$(LD_PATH_VAR):$(EXTRA_LD_PATHS) \
 	perl -I $(REAL_BUILD_DIR)/blib/arch -I $(REAL_BUILD_DIR)/blib/lib \
 		"$(realpath $<)"

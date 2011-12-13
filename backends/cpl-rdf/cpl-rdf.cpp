@@ -176,9 +176,9 @@ cpl_rdf_create_session(struct _cpl_db_backend_t* backend,
 
 	std::ostringstream ss;
 
-	// XXX Only for debugging
-	cpl_rdf_connection_execute_update(rdf->connection_update,
-			"DELETE { ?s ?p ?o } WHERE { ?s ?p ?o }");
+	// Only for debugging
+	// cpl_rdf_connection_execute_update(rdf->connection_update,
+	//		"DELETE { ?s ?p ?o } WHERE { ?s ?p ?o }");
 
 	ss << "PREFIX s: <session:>\n";
 	ss << "PREFIX p: <prop:>\n";

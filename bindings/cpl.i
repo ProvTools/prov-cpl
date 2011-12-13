@@ -33,6 +33,12 @@
  */
 
 %module CPLDirect
+%include cpointer.i
+
+
+/*
+ * Additional code for the C wrapper
+ */
 
 %{
 #include <cpl.h>
@@ -55,15 +61,32 @@ cpl_is_ok(cpl_return_t ret) {
 }
 %}
 
+
+/*
+ * Special functions - workarounds for SWIG limitations
+ */
+
 inline _cpl_db_backend_t*
 cpl_dereference_pp_cpl_db_backend_t(p_cpl_db_backend_t* p);
 
 inline int
 cpl_is_ok(cpl_return_t ret);
 
+
+/*
+ * Include the CPL header files
+ */
+
 %include "../../../include/cpl.h"
 %include "../../../include/backends/cpl-odbc.h"
 
-%include cpointer.i
+
+/*
+ * Pointers
+ */
+
 %pointer_functions(p_cpl_db_backend_t, cpl_db_backend_tpp);
+%pointer_functions(cpl_session_t, cpl_session_tp);
+%pointer_functions(cpl_id_t, cpl_id_tp);
+%pointer_functions(cpl_version_t, cpl_version_tp);
 

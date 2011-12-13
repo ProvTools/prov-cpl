@@ -37,7 +37,21 @@ use strict;
 
 use CPLDirect;
 
-my $ret = 0;
+my $ORIGINATOR = "edu.harvard.pass.cpl.perl.direct.test";
+
+
+#
+# Function: Check the return code and die on error
+#
+
+sub check_ret {
+	my ($ret) = @_;
+	if (!CPLDirect::cpl_is_ok($ret)) {
+		print "\n";
+		die "CPL Error: " . CPLDirect::cpl_error_string($ret);
+	}
+	return 1;
+}
 
 
 #
@@ -45,20 +59,150 @@ my $ret = 0;
 #
 
 my $backend = CPLDirect::new_cpl_db_backend_tpp();
-$ret = CPLDirect::cpl_create_odbc_backend("DSN=CPL;", 0, $backend);
-print "CPLDirect::cpl_create_odbc_backend --> $ret\n";
-$ret = CPLDirect::cpl_attach(CPLDirect::cpl_dereference_pp_cpl_db_backend_t($backend));
-print "CPLDirect::cpl_attach --> $ret\n";
+
+print "CPLDirect::cpl_create_odbc_backend";
+check_ret(CPLDirect::cpl_create_odbc_backend("DSN=CPL;", 0, $backend));
+print "\n";
+
+print "CPLDirect::cpl_attach";
+check_ret(CPLDirect::cpl_attach(
+			CPLDirect::cpl_dereference_pp_cpl_db_backend_t($backend)));
+print "\n";
+
 CPLDirect::delete_cpl_db_backend_tpp($backend);
+
+
+#
+# Get the current session
+#
+
+my $session_ptr = CPLDirect::new_cpl_session_tp();
+print "CPLDirect::cpl_get_current_session";
+check_ret(CPLDirect::cpl_get_current_session($session_ptr));
+my $session = CPLDirect::cpl_session_tp_value($session_ptr);
+printf ": %llx:%llx\n",
+	   CPLDirect::cpl_id_t::swig_hi_get($session),
+	   CPLDirect::cpl_id_t::swig_lo_get($session);
+
+print "\n";
+
+
+#
+# Create objects
+#
+
+my $obj1_ptr = CPLDirect::new_cpl_id_tp();
+my $obj2_ptr = CPLDirect::new_cpl_id_tp();
+my $obj3_ptr = CPLDirect::new_cpl_id_tp();
+
+print "CPLDirect::cpl_create_object(\"Process A\", \"Proc\", CPL_NONE)";
+check_ret(CPLDirect::cpl_create_object($ORIGINATOR, "Process A", "Proc",
+			$CPLDirect::CPL_NONE, $obj1_ptr));
+my $obj1 = CPLDirect::cpl_id_tp_value($obj1_ptr);
+printf ": %llx:%llx --> obj1\n",
+	   CPLDirect::cpl_id_t::swig_hi_get($obj1),
+	   CPLDirect::cpl_id_t::swig_lo_get($obj1);
+
+print "CPLDirect::cpl_create_object(\"Object A\", \"File\", obj1)";
+check_ret(CPLDirect::cpl_create_object($ORIGINATOR, "Object A", "File",
+			$obj1, $obj2_ptr));
+my $obj2 = CPLDirect::cpl_id_tp_value($obj2_ptr);
+printf ": %llx:%llx --> obj2\n",
+	   CPLDirect::cpl_id_t::swig_hi_get($obj2),
+	   CPLDirect::cpl_id_t::swig_lo_get($obj2);
+
+print "CPLDirect::cpl_create_object(\"Process B\", \"Proc\", obj1)";
+check_ret(CPLDirect::cpl_create_object($ORIGINATOR, "Process B", "Proc",
+			$obj1, $obj3_ptr));
+my $obj3 = CPLDirect::cpl_id_tp_value($obj3_ptr);
+printf ": %llx:%llx --> obj3\n",
+	   CPLDirect::cpl_id_t::swig_hi_get($obj3),
+	   CPLDirect::cpl_id_t::swig_lo_get($obj3);
+
+print "\n";
+
+
+#
+# Object lookup
+#
+
+my $obj1x_ptr = CPLDirect::new_cpl_id_tp();
+my $obj2x_ptr = CPLDirect::new_cpl_id_tp();
+my $obj3x_ptr = CPLDirect::new_cpl_id_tp();
+
+print "CPLDirect::cpl_lookup_object(\"Process A\", \"Proc\")";
+check_ret(CPLDirect::cpl_lookup_object($ORIGINATOR, "Process A", "Proc",
+			$obj1x_ptr));
+my $obj1x = CPLDirect::cpl_id_tp_value($obj1x_ptr);
+printf ": %llx:%llx\n",
+	   CPLDirect::cpl_id_t::swig_hi_get($obj1x),
+	   CPLDirect::cpl_id_t::swig_lo_get($obj1x);
+if (CPLDirect::cpl_id_cmp($obj1, $obj1x) != 0) {
+	die "Object lookup returned the wrong object";
+}
+
+print "CPLDirect::cpl_lookup_object(\"Object A\", \"File\")";
+check_ret(CPLDirect::cpl_lookup_object($ORIGINATOR, "Object A", "FIle",
+			$obj2x_ptr));
+my $obj2x = CPLDirect::cpl_id_tp_value($obj2x_ptr);
+printf ": %llx:%llx\n",
+	   CPLDirect::cpl_id_t::swig_hi_get($obj2x),
+	   CPLDirect::cpl_id_t::swig_lo_get($obj2x);
+if (CPLDirect::cpl_id_cmp($obj2, $obj2x) != 0) {
+	die "Object lookup returned the wrong object";
+}
+
+print "CPLDirect::cpl_lookup_object(\"Process B\", \"Proc\")";
+check_ret(CPLDirect::cpl_lookup_object($ORIGINATOR, "Process B", "Proc",
+			$obj3x_ptr));
+my $obj3x = CPLDirect::cpl_id_tp_value($obj3x_ptr);
+printf ": %llx:%llx\n",
+	   CPLDirect::cpl_id_t::swig_hi_get($obj3x),
+	   CPLDirect::cpl_id_t::swig_lo_get($obj3x);
+if (CPLDirect::cpl_id_cmp($obj3, $obj3x) != 0) {
+	die "Object lookup returned the wrong object";
+}
+
+print "\n";
+
+
+#
+# Data and control flow / dependencies
+#
+
+print "CPLDirect::cpl_data_flow(obj2, obj1, CPL_DATA_INPUT)";
+check_ret(CPLDirect::cpl_data_flow($obj2, $obj1, $CPLDirect::CPL_DATA_INPUT));
+print "\n";
+
+print "CPLDirect::cpl_data_flow(obj2, obj1, CPL_DATA_INPUT)";
+check_ret(CPLDirect::cpl_data_flow($obj2, $obj1, $CPLDirect::CPL_DATA_INPUT));
+print "\n";
+
+print "CPLDirect::cpl_control(obj3, obj1, CPL_CONTROL_START)";
+check_ret(CPLDirect::cpl_control($obj3, $obj1, $CPLDirect::CPL_CONTROL_START));
+print "\n";
+
+print "CPLDirect::cpl_data_flow_ext(obj1, obj3, 0, CPL_DATA_TRANSLATION)";
+check_ret(CPLDirect::cpl_data_flow_ext($obj1, $obj3, 0,
+			$CPLDirect::CPL_DATA_TRANSLATION));
+print "\n";
+
+print "\n";
 
 
 #
 # Close
 #
 
-$ret = CPLDirect::cpl_detach();
-print "CPLDirect::cpl_detach --> $ret\n";
-if (!CPLDirect::cpl_is_ok($ret)) {
-	die;
-}
+CPLDirect::delete_cpl_session_tp($session_ptr);
+CPLDirect::delete_cpl_id_tp($obj1_ptr);
+CPLDirect::delete_cpl_id_tp($obj2_ptr);
+CPLDirect::delete_cpl_id_tp($obj3_ptr);
+CPLDirect::delete_cpl_id_tp($obj1x_ptr);
+CPLDirect::delete_cpl_id_tp($obj2x_ptr);
+CPLDirect::delete_cpl_id_tp($obj3x_ptr);
+
+print "CPLDirect::cpl_detach";
+check_ret(CPLDirect::cpl_detach());
+print "\n";
 
