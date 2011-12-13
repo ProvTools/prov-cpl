@@ -241,6 +241,17 @@ endif
 
 
 #
+# The shell variable that contains paths to the shared libraries
+#
+
+ifeq ($(UNAME),Darwin)
+	LD_PATH_VAR := DYLD_LIBRARY_PATH
+else
+	LD_PATH_VAR := LD_LIBRARY_PATH
+endif
+
+
+#
 # Add the build dir suffix
 #
 

@@ -11,6 +11,8 @@ ROOT :=..
 # Customize the build
 #
 
+PROJECT := cpl
+
 SHARED := yes
 INSTALL := yes
 

@@ -74,13 +74,17 @@ struct _cpl_db_backend_t;
  * A generic type for an ID. It is used primarily for object IDs.
  */
 typedef struct cpl_id {
+#ifndef SWIG
 	union {
 		struct {
+#endif
 			unsigned long long hi;
 			unsigned long long lo;
+#ifndef SWIG
 		};
 		char bytes[16];
 	};
+#endif
 } cpl_id_t;
 
 /**
@@ -176,7 +180,9 @@ typedef cpl_return_t (*cpl_ancestry_iterator_t)
 /*
  * Static assertions
  */
+#ifdef _DEBUG
 extern int __cpl_assert__cpl_id_size[sizeof(cpl_id_t) == 16 ? 1 : -1];
+#endif
 
 
 
@@ -226,7 +232,11 @@ WINDLL_API extern const cpl_id_t CPL_NONE;
 /**
  * An invalid version number
  */
+#ifdef SWIG
+#define CPL_VERSION_NONE				-1
+#else
 #define CPL_VERSION_NONE				((cpl_version_t) -1)
+#endif
 
 
 
@@ -319,8 +329,8 @@ WINDLL_API extern const cpl_id_t CPL_NONE;
  * @return true if it is OK
  */
 #define CPL_IS_OK(r)					((r) >= 0)
-#define CPL_IS_SUCCESS					CPL_IS_OK
-#define CPL_SUCCEEDED					CPL_IS_OK
+#define CPL_IS_SUCCESS(r)				CPL_IS_OK(r)
+#define CPL_SUCCEEDED(r)				CPL_IS_OK(r)
 
 /**
  * No error
