@@ -58,6 +58,11 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 	create_object
 	lookup_object
 	try_lookup_object
+	data_flow
+	control
+	data_flow_ext
+	control_ext
+	get_version
 ) ] );
 
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
@@ -68,6 +73,11 @@ our @EXPORT = qw(
 	create_object
 	lookup_object
 	try_lookup_object
+	data_flow
+	control
+	data_flow_ext
+	control_ext
+	get_version
 );
 
 our $VERSION = '1.00';
@@ -78,9 +88,17 @@ our $VERSION = '1.00';
 # Public API: Variables and Constants                                       #
 #############################################################################
 
-our %NONE = ( hi => 0, lo => 0 );
+our $NONE = { hi => 0, lo => 0 };
 
 *VERSION_NONE = *CPLDirect::CPL_VERSION_NONE;
+
+*DATA_INPUT = *CPLDirect::CPL_DATA_INPUT;
+*DATA_IPC = *CPLDirect::CPL_DATA_IPC;
+*DATA_TRANSLATION = *CPLDirect::CPL_DATA_TRANSLATION;
+*DATA_COPY = *CPLDirect::CPL_DATA_COPY;
+
+*CONTROL_OP = *CPLDirect::CPL_CONTROL_OP;
+*CONTROL_START = *CPLDirect::CPL_CONTROL_START;
 
 
 
@@ -139,15 +157,15 @@ sub detach {
 # Create a provenance object
 #
 sub create_object {
-	my ($originator, $name, $type, %container) = @_;
+	my ($originator, $name, $type, $container) = @_;
 
-	if (!%container) {
-		%container = %NONE;
+	if (!$container) {
+		$container = $NONE;
 	}
 
 	my $c_ptr = CPLDirect::new_cpl_id_tp();
-	CPLDirect::cpl_id_t::swig_hi_set($c_ptr, $container{hi});
-	CPLDirect::cpl_id_t::swig_lo_set($c_ptr, $container{lo});
+	CPLDirect::cpl_id_t::swig_hi_set($c_ptr, $container->{hi});
+	CPLDirect::cpl_id_t::swig_lo_set($c_ptr, $container->{lo});
 	my $c = CPLDirect::cpl_id_tp_value($c_ptr);
 
 	my $obj_ptr = CPLDirect::new_cpl_id_tp();
@@ -164,13 +182,13 @@ sub create_object {
 	}
 
 	my $obj = CPLDirect::cpl_id_tp_value($obj_ptr);
-	my %id = (
+	my $id = {
 	   hi => CPLDirect::cpl_id_t::swig_hi_get($obj),
 	   lo => CPLDirect::cpl_id_t::swig_lo_get($obj)
-	);
+	};
 	CPLDirect::delete_cpl_id_tp($obj_ptr);
 
-	return %id;
+	return $id;
 }
 
 
@@ -186,7 +204,7 @@ sub lookup_object {
 		CPLDirect::delete_cpl_id_tp($obj_ptr);
 
 		if ($ok_if_not_found) {
-			return %NONE;
+			return $NONE;
 		}
 
 		croak "Could not determine the ID of the following object:\n" .
@@ -197,13 +215,13 @@ sub lookup_object {
 	}
 
 	my $obj = CPLDirect::cpl_id_tp_value($obj_ptr);
-	my %id = (
+	my $id = {
 	   hi => CPLDirect::cpl_id_t::swig_hi_get($obj),
 	   lo => CPLDirect::cpl_id_t::swig_lo_get($obj)
-	);
+	};
 	CPLDirect::delete_cpl_id_tp($obj_ptr);
 
-	return %id;
+	return $id;
 }
 
 
@@ -212,6 +230,164 @@ sub lookup_object {
 #
 sub try_lookup_object {
 	return lookup_object(@_, 1);
+}
+
+
+#
+# Add a data dependency
+#
+sub data_flow {
+	my ($dest, $src, $type) = @_;
+
+	if (!$type) { $type = $CPL::DATA_INPUT }
+
+	my $d_ptr = CPLDirect::new_cpl_id_tp();
+	CPLDirect::cpl_id_t::swig_hi_set($d_ptr, $dest->{hi});
+	CPLDirect::cpl_id_t::swig_lo_set($d_ptr, $dest->{lo});
+	my $d = CPLDirect::cpl_id_tp_value($d_ptr);
+
+	my $s_ptr = CPLDirect::new_cpl_id_tp();
+	CPLDirect::cpl_id_t::swig_hi_set($s_ptr, $src->{hi});
+	CPLDirect::cpl_id_t::swig_lo_set($s_ptr, $src->{lo});
+	my $s = CPLDirect::cpl_id_tp_value($s_ptr);
+
+	my $ret = CPLDirect::cpl_data_flow($d, $s, $type);
+	CPLDirect::delete_cpl_id_tp($d_ptr);
+	CPLDirect::delete_cpl_id_tp($s_ptr);
+
+	if (!CPLDirect::cpl_is_ok($ret)) {
+		croak "Could not add a data dependency: " .
+			CPLDirect::cpl_error_string($ret);
+	}
+
+	return $ret == $CPLDirect::CPL_S_DUPLICATE_IGNORED ? 0 : 1;
+}
+
+
+#
+# Add a control dependency
+#
+sub control {
+	my ($dest, $src, $type) = @_;
+
+	if (!$type) { $type = $CPL::CONTROL_OP }
+
+	my $d_ptr = CPLDirect::new_cpl_id_tp();
+	CPLDirect::cpl_id_t::swig_hi_set($d_ptr, $dest->{hi});
+	CPLDirect::cpl_id_t::swig_lo_set($d_ptr, $dest->{lo});
+	my $d = CPLDirect::cpl_id_tp_value($d_ptr);
+
+	my $s_ptr = CPLDirect::new_cpl_id_tp();
+	CPLDirect::cpl_id_t::swig_hi_set($s_ptr, $src->{hi});
+	CPLDirect::cpl_id_t::swig_lo_set($s_ptr, $src->{lo});
+	my $s = CPLDirect::cpl_id_tp_value($s_ptr);
+
+	my $ret = CPLDirect::cpl_control($d, $s, $type);
+	CPLDirect::delete_cpl_id_tp($d_ptr);
+	CPLDirect::delete_cpl_id_tp($s_ptr);
+
+	if (!CPLDirect::cpl_is_ok($ret)) {
+		croak "Could not add a control dependency: " .
+			CPLDirect::cpl_error_string($ret);
+	}
+
+	return $ret == $CPLDirect::CPL_S_DUPLICATE_IGNORED ? 0 : 1;
+}
+
+
+#
+# Add a data dependency (specify the version number of the source)
+#
+sub data_flow_ext {
+	my ($dest, $src, $src_version, $type) = @_;
+
+	if (!$type) { $type = $CPL::DATA_INPUT }
+
+	my $d_ptr = CPLDirect::new_cpl_id_tp();
+	CPLDirect::cpl_id_t::swig_hi_set($d_ptr, $dest->{hi});
+	CPLDirect::cpl_id_t::swig_lo_set($d_ptr, $dest->{lo});
+	my $d = CPLDirect::cpl_id_tp_value($d_ptr);
+
+	my $s_ptr = CPLDirect::new_cpl_id_tp();
+	CPLDirect::cpl_id_t::swig_hi_set($s_ptr, $src->{hi});
+	CPLDirect::cpl_id_t::swig_lo_set($s_ptr, $src->{lo});
+	my $s = CPLDirect::cpl_id_tp_value($s_ptr);
+
+	my $ret = CPLDirect::cpl_data_flow_ext($d, $s, $src_version, $type);
+	CPLDirect::delete_cpl_id_tp($d_ptr);
+	CPLDirect::delete_cpl_id_tp($s_ptr);
+
+	if (!CPLDirect::cpl_is_ok($ret)) {
+		croak "Could not add a data dependency: " .
+			CPLDirect::cpl_error_string($ret);
+	}
+
+	return $ret == $CPLDirect::CPL_S_DUPLICATE_IGNORED ? 0 : 1;
+}
+
+
+#
+# Add a control dependency (specify the version number of the source)
+#
+sub control_ext {
+	my ($dest, $src, $src_version, $type) = @_;
+
+	if (!$type) { $type = $CPL::CONTROL_OP }
+
+	my $d_ptr = CPLDirect::new_cpl_id_tp();
+	CPLDirect::cpl_id_t::swig_hi_set($d_ptr, $dest->{hi});
+	CPLDirect::cpl_id_t::swig_lo_set($d_ptr, $dest->{lo});
+	my $d = CPLDirect::cpl_id_tp_value($d_ptr);
+
+	my $s_ptr = CPLDirect::new_cpl_id_tp();
+	CPLDirect::cpl_id_t::swig_hi_set($s_ptr, $src->{hi});
+	CPLDirect::cpl_id_t::swig_lo_set($s_ptr, $src->{lo});
+	my $s = CPLDirect::cpl_id_tp_value($s_ptr);
+
+	my $ret = CPLDirect::cpl_control_ext($d, $s, $src_version, $type);
+	CPLDirect::delete_cpl_id_tp($d_ptr);
+	CPLDirect::delete_cpl_id_tp($s_ptr);
+
+	if (!CPLDirect::cpl_is_ok($ret)) {
+		croak "Could not add a control dependency: " .
+			CPLDirect::cpl_error_string($ret);
+	}
+
+	return $ret == $CPLDirect::CPL_S_DUPLICATE_IGNORED ? 0 : 1;
+}
+
+
+
+#############################################################################
+# Public API: Provenance Access API                                         #
+#############################################################################
+
+
+#
+# Get version of a provenance object
+#
+sub get_version {
+	my ($id) = @_;
+
+	my $x_ptr = CPLDirect::new_cpl_id_tp();
+	CPLDirect::cpl_id_t::swig_hi_set($x_ptr, $id->{hi});
+	CPLDirect::cpl_id_t::swig_lo_set($x_ptr, $id->{lo});
+	my $x = CPLDirect::cpl_id_tp_value($x_ptr);
+
+	my $v_ptr = CPLDirect::new_cpl_version_tp();
+	my $ret = CPLDirect::cpl_get_version($x, $v_ptr);
+	CPLDirect::delete_cpl_id_tp($x_ptr);
+
+	if (!CPLDirect::cpl_is_ok($ret)) {
+		CPLDirect::delete_cpl_version_tp($v_ptr);
+		croak "Could not determine the version of an object: " .
+			CPLDirect::cpl_error_string($ret);
+	}
+
+	my $v = CPLDirect::cpl_version_tp_value($v_ptr);
+	CPLDirect::delete_cpl_version_tp($v_ptr);
+
+	return $v;
 }
 
 
@@ -240,10 +416,25 @@ CPL - Perl bindings for Core Provenance Library
 
   use CPL;
   CPL::attach_odbc("DSN=CPL;");
-  my %id  = CPL::create_object("com.example.myapp", "/bin/sh", "proc");
-  my %id1 = CPL::create_object("com.example.myapp", "~/a.txt", "file", %id);
-  my %id2 = CPL::lookup_object("com.example.myapp", "/bin/sh", "proc");
-  my %id3 = CPL::try_lookup_object("com.example.myapp", "/bin/sh", "proc");
+
+  my $id  = CPL::create_object("com.example.myapp", "/bin/sh", "proc");
+  my $id1 = CPL::create_object("com.example.myapp", "~/a.txt", "file", $id);
+  my $id2 = CPL::lookup_object("com.example.myapp", "/bin/sh", "proc");
+  my $id3 = CPL::try_lookup_object("com.example.myapp", "/bin/sh", "proc");
+  if (%$id3 eq %$CPL::NONE) { warn "The object was not found." }
+
+  CPL::data_flow($id1, $id);
+  CPL::data_flow($id1, $id, $CPL::DATA_INPUT);
+  CPL::data_flow_ext($id1, $id, 0);
+  CPL::data_flow_ext($id1, $id, 0, $CPL::DATA_INPUT);
+
+  CPL::control($id1, $id);
+  CPL::control($id1, $id, $CPL::CONTROL_OP);
+  CPL::control_ext($id1, $id, 0);
+  CPL::control_ext($id1, $id, 0, $CPL::CONTROL_OP);
+
+  my $ver1 = CPL::get_version($id1);
+
   CPL::detach();
 
 
@@ -274,33 +465,124 @@ Detaches from the backend database and cleans up the CPL.
 
 =head3 create_object
 
-  my %id = CPL::create_object($originator, $name, $type);
-  my %id = CPL::create_object($originator, $name, $type, %container);
+  my $id = CPL::create_object($originator, $name, $type);
+  my $id = CPL::create_object($originator, $name, $type, $container);
 
-Creates a provenance object %id with the given $originator (the program
+Creates a provenance object $id with the given $originator (the program
 responsible for creating the objects; it also acts as a namespace), $name,
-$type, and an optional %container. If the %container parameter is omitted
-or set to %CPL::NONE, the created object would not belong to any container.
+$type, and an optional $container. If the $container parameter is omitted
+or set to $CPL::NONE, the created object would not belong to any container.
 
 =head3 lookup_object
 
-  my %id = CPL::lookup_object($originator, $name, $type);
+  my $id = CPL::lookup_object($originator, $name, $type);
 
 Looks up a provenance object based on its $originator, $name, and $type
-and returns its %id. If more than one object matches the search criteria,
+and returns its $id. If more than one object matches the search criteria,
 return the one with the most recent timestamp.
 
 =head3 try_lookup_object
 
-  my %id = CPL::try_lookup_object($originator, $name, $type);
+  my $id = CPL::try_lookup_object($originator, $name, $type);
 
 The same as CPL::lookup_object() described above, except that the function
 call does not fail if the object does not exist, in which case it returns
-%CPL::NONE in place of the object %id.
+$CPL::NONE in place of the object $id.
+
+=head3 data_flow
+
+  my $r = CPL::data_flow($dest, $source);
+  my $r = CPL::data_flow($dest, $source, $type);
+
+Declare a data flow to $dest from $source. This creates a data dependency,
+asserting that $dest depends on the $source. The dependency relationship
+will be tagged with the given $type. If $type is not specified, the library
+uses $CPL::DATA_INPUT by default.
+
+The return value is true if the dependency was added or false if it was found
+to be a duplicate. Note that the current implementation of CPL does not
+distinguish between different types of dependencies.
+
+CPL recognizes the following types of data dependencies:
+
+=over 2
+
+=item $CPL::DATA_INPUT
+
+The most generic type of data dependency.
+
+=item $CPL::DATA_IPC
+
+An IPC message that potentially involves a data transfer between two processes.
+If the application programmer knows that the IPC did not involve any data,
+(s)he should assert an appropriate control dependency instead.
+
+=item $CPL::DATA_TRANSLATION
+
+Translation of data, or potentially a part of the data, from one format to
+another, or a translation of data serialized on a disk or in a network message
+to its in-memory representation, or vice versa.
+
+=item $CPL::DATA_COPY
+
+An exact copy of the source data.
+
+=back
+
+=head3 data_flow_ext
+
+  my $r = CPL::data_flow_ext($dest, $source_id, $source_version);
+  my $r = CPL::data_flow_ext($dest, $source_id, $source_version, $type);
+
+The same as CPL::data_flow(), except that it allows the application programmer
+to specify the version of the source object.
+
+=head3 control
+
+  my $r = CPL::control($dest, $source);
+  my $r = CPL::control($dest, $source, $type);
+
+Declare that $dest received a control command from $source. This creates a
+control dependency, asserting that $dest depends on the $source. The dependency
+relationship will be tagged with the given $type. If $type is not specified,
+the library uses $CPL::CONTROL_OP by default.
+
+The return value is true if the dependency was added or false if it was found
+to be a duplicate. Note that the current implementation of CPL does not
+distinguish between different types of dependencies.
+
+CPL recognizes the following types of control dependencies:
+
+=over 2
+
+=item $CPL::CONTROL_OP
+
+The most generic type of control dependency.
+
+=item $CPL::CONTROL_START
+
+An assertion that the $source process started (executed) the $dest process.
+
+=back
+
+=head3 control_ext
+
+  my $r = CPL::control_ext($dest, $source_id, $source_version);
+  my $r = CPL::control_ext($dest, $source_id, $source_version, $type);
+
+The same as CPL::control(), except that it allows the application programmer
+to specify the version of the source object.
+
+=head3 get_version
+
+  my $version = CPL::get_version($id);
+
+Determine the current version of an object identified by the specified $id.
 
 
 
 =head1 HISTORY
+
 
 =over 8
 
