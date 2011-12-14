@@ -50,7 +50,7 @@ extern "C" {
 }	/* Hack for editors that try to be too smart about indentation */
 #endif
 
-#define CPL_RDF_SEM_INIT		"edu.harvard.pass.cpl.rdf.newver"
+#define CPL_RDF_SEM_INIT		"edu.harvard.pass.cpl.rdf.ver"
 
 
 /***************************************************************************/

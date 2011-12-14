@@ -21,7 +21,7 @@ LIBRARIES := -lcurl $(shell xml2-config --libs)
 
 ifeq ($(UNAME),Darwin)
 LINKER_SUBPROJECT_DEPENDENCIES := cpl-standalone
-LIBRARIES := $(LIBRARIES) -lcpl-standalone
+LIBRARIES := $(LIBRARIES) -lcpl
 endif
 
 
