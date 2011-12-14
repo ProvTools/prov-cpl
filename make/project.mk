@@ -80,7 +80,7 @@ endif
 
 $(TARGETS_CLEAN)::
 ifeq ($(OUTPUT_TYPE),kernel)
-	@for S in $(SUBPROJECTS); do \
+	@for S in $(SUBPROJECTS) $(OPTIONAL); do \
 		echo "  CLEAN   $(PWD_REL_SEP)$$S"; \
 		($(NMAKE) --no-print-directory -C "$$S" $@ 2>&1) \
 			| grep --line-buffered -v 'Clock skew detected' \
@@ -89,7 +89,7 @@ ifeq ($(OUTPUT_TYPE),kernel)
 		if [[ $${PIPESTATUS[0]} -ne 0 ]]; then exit 1; fi; \
 	done
 else
-	@for S in $(SUBPROJECTS); do \
+	@for S in $(SUBPROJECTS) $(OPTIONAL); do \
 		echo -e $(COLOR_MAKE)make[$(MAKELEVEL)]: \
 			Entering $(COLOR_MAKE_PATH)$(PWD_REL_SEP)$$S \
 			$(COLOR_NORMAL); \
@@ -103,7 +103,7 @@ endif
 	@rm -rf core core.* vgcore vgcore.* 2> /dev/null || true
 	@find . \( -name "*~" -or -name "*.bak" -or -name "__db.*" \) -delete 2> /dev/null || true
 
-$(SUBPROJECTS):
+$(SUBPROJECTS) $(OPTIONAL):
 	@$(COLORMAKE) --no-print-directory -C $@
 
 
@@ -170,7 +170,7 @@ list-subproject-libs list-subproject-shared-lib-files \
 	done
 
 todo:
-	@for S in $(SUBPROJECTS); do \
+	@for S in $(SUBPROJECTS) $(OPTIONAL); do \
 		(cd "$$S" && $(COLORMAKE) --no-print-directory $@) || exit 1; \
 	done
 

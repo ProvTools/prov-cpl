@@ -34,7 +34,7 @@ include $(ROOT)/make/perl-module-header.mk
 # Compile Targets
 #
 
-WRAP_SOURCE := $(patsubst %.i,%_wrap.cxx,$(INTERFACE))
+WRAP_SOURCE := $(patsubst %.i,%_wrap.cxx,$(notdir $(INTERFACE)))
 
 $(BUILD_DIR)/$(PROJECT).pm $(BUILD_DIR)/$(WRAP_SOURCE): \
 		$(INTERFACE) $(DEPENDENCIES)
