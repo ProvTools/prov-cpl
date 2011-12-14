@@ -126,6 +126,16 @@ list-perl-inc-dirs::
 
 
 #
+# Man page viewer
+#
+
+.PNONY: view-man view-man3
+
+view-man view-man3: all
+	@man -l $(BUILD_DIR)/blib/man3/$(PROJECT).3pm
+
+
+#
 # The library test target
 #
 
@@ -144,7 +154,7 @@ ifndef TEST
 endif
 
 test: $(TEST) all
-	cd "$(BUILD_DIR)" && $(LD_PATH_VAR)=$$$(LD_PATH_VAR):$(EXTRA_LD_PATHS) \
+	@cd "$(BUILD_DIR)" && $(LD_PATH_VAR)=$$$(LD_PATH_VAR):$(EXTRA_LD_PATHS) \
 	$(PERL) -I $(ABS_BUILD_DIR)/blib/arch -I $(ABS_BUILD_DIR)/blib/lib \
 		"$(realpath $<)"
 
