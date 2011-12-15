@@ -36,6 +36,7 @@ use warnings;
 use strict;
 
 use CPL;
+use Error qw(:try);
 
 my $ORIGINATOR = "edu.harvard.pass.cpl.perl.direct.test";
 
@@ -76,10 +77,34 @@ sub str_hash_ref {
 
 
 #
+# Function: Print contents of an array
+#
+sub print_array_ref {
+    my ($a, $prefix) = @_;
+	if (!$prefix) { $prefix = "    " }
+    
+    foreach my $v (@$a) {
+		if (ref($v) eq "HASH") {
+			print "$prefix\{\n";
+			print_hash_ref($v, $prefix . "    ");
+            print "$prefix\}\n";
+		}
+		else {
+			print "$prefix$v\n";
+		}
+    }
+}
+
+
+
+#
 # Open an ODBC connection
 #
 
-CPL::attach_odbc("DSN=CPL;");
+my $connection_string = "DSN=CPL;";
+print "CPL::attach_odbc(\"$connection_string\")";
+CPL::attach_odbc($connection_string);
+print "\n";
 
 print "CPL::get_current_session()";
 my $session = CPL::get_current_session();
@@ -228,8 +253,101 @@ print "\n";
 
 
 #
+# Ancestry
+#
+
+print "CPL::get_object_ancestry(obj1, undef, CPL::D_ANCESTORS, 0)";
+my @anc1a = CPL::get_object_ancestry($obj1, undef, $CPL::D_ANCESTORS, 0);
+print ":\n";
+print_array_ref(\@anc1a);
+print "\n";
+
+print "CPL::get_object_ancestry(obj1, undef, CPL::D_DESCENDANTS, 0)";
+my @anc1d = CPL::get_object_ancestry($obj1, undef, $CPL::D_DESCENDANTS, 0);
+print ":\n";
+print_array_ref(\@anc1d);
+print "\n";
+
+print "CPL::get_object_ancestry(obj1, 0, CPL::D_ANCESTORS)";
+my @anc1v0a = CPL::get_object_ancestry($obj1, 0, $CPL::D_ANCESTORS);
+print ":\n";
+print_array_ref(\@anc1v0a);
+print "\n";
+
+print "CPL::get_object_ancestry(obj1, 0, CPL::D_DESCENDANTS, 0)";
+my @anc1v0d = CPL::get_object_ancestry($obj1, 0, $CPL::D_DESCENDANTS, 0);
+print ":\n";
+print_array_ref(\@anc1v0d);
+print "\n";
+
+print "CPL::get_object_ancestry(obj1, 0, CPL::D_DESCENDANTS,\n";
+print "                         CPL::A_NO_DATA_DEPENDENCIES)";
+my @anc1v0d_1 = CPL::get_object_ancestry($obj1, 0, $CPL::D_DESCENDANTS,
+        $CPL::A_NO_DATA_DEPENDENCIES);
+print ":\n";
+print_array_ref(\@anc1v0d_1);
+print "\n";
+
+print "CPL::get_object_ancestry(obj1, 0, CPL::D_DESCENDANTS,\n";
+print "                         CPL::A_NO_CONTROL_DEPENDENCIES)";
+my @anc1v0d_2 = CPL::get_object_ancestry($obj1, 0, $CPL::D_DESCENDANTS,
+        $CPL::A_NO_CONTROL_DEPENDENCIES);
+print ":\n";
+print_array_ref(\@anc1v0d_2);
+print "\n";
+
+print "CPL::get_object_ancestry(obj1, 0, CPL::D_DESCENDANTS,\n";
+print "        CPL::A_NO_DATA_DEPENDENCIES | CPL::A_NO_CONTROL_DEPENDENCIES)";
+my @anc1v0d_3 = CPL::get_object_ancestry($obj1, 0, $CPL::D_DESCENDANTS,
+        $CPL::A_NO_DATA_DEPENDENCIES | $CPL::A_NO_CONTROL_DEPENDENCIES);
+print ":\n";
+print_array_ref(\@anc1v0d_3);
+print "\n";
+
+
+#
+# Error handling
+#
+
+my $obj4e;
+
+eval {
+
+    # Should succeed
+    $obj4e = CPL::lookup_object($ORIGINATOR, "Object B", "File");
+
+    # Should fail
+    my $_v = CPL::get_version($CPL::NONE);
+
+};
+if ($@) {
+    print "Error handling test - eval: OK\n";
+    #print "Error message: $@\n";
+}
+
+if (%$obj4e ne %$obj4) {
+    die "The object lookup returned a wrong object ID";
+}
+
+try {
+    
+    # Should fail
+    my $_v = CPL::get_version($CPL::NONE);
+}
+catch Error with {
+    my $ex = shift;
+    print "Error handling test - try/catch: OK\n";
+    #print "Error: $ex\n";
+};
+
+print "\n";
+
+
+#
 # Close the connection
 #
 
+print "CPL::detach()";
 CPL::detach();
+print "\n";
 

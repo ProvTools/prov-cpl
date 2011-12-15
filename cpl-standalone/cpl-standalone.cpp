@@ -1103,3 +1103,89 @@ cpl_get_object_ancestry(const cpl_id_t id,
 													  context);
 }
 
+
+
+/***************************************************************************/
+/** Public API: Enhanced C++ Functionality                                **/
+/***************************************************************************/
+
+#ifdef __cplusplus
+
+/**
+ * The iterator callback for cpl_get_object_ancestry() that collects
+ * the passed-in information in an instance of std::list<cpl_ancestry_entry_t>.
+ *
+ * @param query_object_id the ID of the object on which we are querying
+ * @param query_object_verson the version of the queried object
+ * @param other_object_id the ID of the object on the other end of the
+ *                        dependency/ancestry edge
+ * @param other_object_version the version of the other object
+ * @param type the type of the data or the control dependency
+ * @param context the pointer to an instance of the list
+ * @return CPL_OK or an error code
+ */
+EXPORT cpl_return_t
+cpl_cb_collect_ancestry_list(const cpl_id_t query_object_id,
+							 const cpl_version_t query_object_version,
+							 const cpl_id_t other_object_id,
+							 const cpl_version_t other_object_version,
+							 const int type,
+							 void* context)
+{
+	if (context == NULL) return CPL_E_INVALID_ARGUMENT;
+
+	cpl_ancestry_entry_t e;
+	e.query_object_id = query_object_id;
+	e.query_object_version = query_object_version;
+	e.other_object_id = other_object_id;
+	e.other_object_version = other_object_version;
+	e.type = type;
+
+	std::list<cpl_ancestry_entry_t>& l =
+		*((std::list<cpl_ancestry_entry_t>*) context);
+	l.push_back(e);
+
+	return CPL_OK;
+}
+
+
+/**
+ * The iterator callback for cpl_get_object_ancestry() that collects
+ * the information in an instance of std::vector<cpl_ancestry_entry_t>.
+ *
+ * @param query_object_id the ID of the object on which we are querying
+ * @param query_object_verson the version of the queried object
+ * @param other_object_id the ID of the object on the other end of the
+ *                        dependency/ancestry edge
+ * @param other_object_version the version of the other object
+ * @param type the type of the data or the control dependency
+ * @param context the pointer to an instance of the vector
+ * @return CPL_OK or an error code
+ */
+EXPORT cpl_return_t
+cpl_cb_collect_ancestry_vector(const cpl_id_t query_object_id,
+							   const cpl_version_t query_object_version,
+							   const cpl_id_t other_object_id,
+							   const cpl_version_t other_object_version,
+							   const int type,
+							   void* context)
+{
+	if (context == NULL) return CPL_E_INVALID_ARGUMENT;
+
+	cpl_ancestry_entry_t e;
+	e.query_object_id = query_object_id;
+	e.query_object_version = query_object_version;
+	e.other_object_id = other_object_id;
+	e.other_object_version = other_object_version;
+	e.type = type;
+
+	std::vector<cpl_ancestry_entry_t>& l =
+		*((std::vector<cpl_ancestry_entry_t>*) context);
+	l.push_back(e);
+
+	return CPL_OK;
+}
+
+
+#endif /* __cplusplus */
+

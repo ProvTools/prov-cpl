@@ -66,6 +66,7 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 	get_version
 	get_object_info
 	get_version_info
+	get_object_ancestry
 ) ] );
 
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
@@ -84,6 +85,7 @@ our @EXPORT = qw(
 	get_version
 	get_object_info
 	get_version_info
+	get_object_ancestry
 );
 
 our $VERSION = '1.00';
@@ -105,6 +107,11 @@ our $NONE = { hi => 0, lo => 0 };
 
 *CONTROL_OP = *CPLDirect::CPL_CONTROL_OP;
 *CONTROL_START = *CPLDirect::CPL_CONTROL_START;
+
+*D_ANCESTORS = *CPLDirect::CPL_D_ANCESTORS;
+*D_DESCENDANTS = *CPLDirect::CPL_D_DESCENDANTS;
+*A_NO_DATA_DEPENDENCIES = *CPLDirect::CPL_A_NO_DATA_DEPENDENCIES;
+*A_NO_CONTROL_DEPENDENCIES = *CPLDirect::CPL_A_NO_CONTROL_DEPENDENCIES;
 
 
 
@@ -546,6 +553,76 @@ sub get_version_info {
 }
 
 
+#
+# Get the object ancestry
+#
+sub get_object_ancestry {
+	my ($id, $version, $direction, $flags) = @_;
+
+	if (!defined($version)) { $version = $CPL::VERSION_NONE }
+	if (!defined($flags)) { $flags = 0 }
+
+	my $x_ptr = CPLDirect::new_cpl_id_tp();
+	CPLDirect::cpl_id_t::swig_hi_set($x_ptr, $id->{hi});
+	CPLDirect::cpl_id_t::swig_lo_set($x_ptr, $id->{lo});
+	my $x = CPLDirect::cpl_id_tp_value($x_ptr);
+
+	my $vector_ptr = CPLDirect::new_std_vector_cpl_ancestry_entry_tp();
+	my $ret = CPLDirect::cpl_get_object_ancestry($x, $version, $direction,
+			$flags, $CPLDirect::cpl_cb_collect_ancestry_vector, $vector_ptr);
+	CPLDirect::delete_cpl_id_tp($x_ptr);
+
+	if (!CPLDirect::cpl_is_ok($ret)) {
+		CPLDirect::delete_std_vector_cpl_ancestry_entry_tp($vector_ptr);
+		croak "Could not determine ancestry of an object: " .
+			CPLDirect::cpl_error_string($ret);
+	}
+
+	my $vector =
+		CPLDirect::cpl_dereference_p_std_vector_cpl_ancestry_entry_t(
+				$vector_ptr);
+	my $vector_size = CPLDirect::cpl_ancestry_entry_t_vector::size($vector);
+
+	my @r = ();
+	for (my $i = 0; $i < $vector_size; $i++) {
+		my $e = CPLDirect::cpl_ancestry_entry_t_vector::get($vector, $i);
+
+		my $e_query_object_id =
+			CPLDirect::cpl_ancestry_entry_t::swig_query_object_id_get($e);
+		my $r_query_object_id = {
+			hi => CPLDirect::cpl_id_t::swig_hi_get($e_query_object_id),
+			lo => CPLDirect::cpl_id_t::swig_lo_get($e_query_object_id)
+		};
+		my $r_query_object_version =
+			CPLDirect::cpl_ancestry_entry_t::swig_query_object_version_get($e);
+
+		my $e_other_object_id =
+			CPLDirect::cpl_ancestry_entry_t::swig_other_object_id_get($e);
+		my $r_other_object_id = {
+			hi => CPLDirect::cpl_id_t::swig_hi_get($e_other_object_id),
+			lo => CPLDirect::cpl_id_t::swig_lo_get($e_other_object_id)
+		};
+		my $r_other_object_version =
+			CPLDirect::cpl_ancestry_entry_t::swig_other_object_version_get($e);
+
+		my $r_type = CPLDirect::cpl_ancestry_entry_t::swig_type_get($e);
+
+		my $r_element = {
+			query_object_id      => $r_query_object_id,
+			query_object_version => $r_query_object_version,
+			other_object_id      => $r_other_object_id,
+			other_object_version => $r_other_object_version,
+			type                 => $r_type,
+		};
+
+		push @r, $r_element;
+	}
+
+	CPLDirect::delete_std_vector_cpl_ancestry_entry_tp($vector_ptr);
+	return @r;
+}
+
+
 
 #############################################################################
 # Finish                                                                    #
@@ -590,9 +667,13 @@ CPL - Perl bindings for Core Provenance Library
   CPL::control_ext($id1, $id, 0);
   CPL::control_ext($id1, $id, 0, $CPL::CONTROL_OP);
 
-  my $ver1 = CPL::get_version($id1);
-  my %info = CPL::get_object_info($id1);
-  my %version_info = CPL::get_version_info($id1, 1);
+  my $ver1 = CPL::get_version($id);
+  my %info = CPL::get_object_info($id);
+  my %version_info = CPL::get_version_info($id, 0);
+
+  my @ancestors  = CPL::get_object_ancestry($id, undef, $CPL::D_ANCESTORS);
+  my @descenants = CPL::get_object_ancestry($id, undef, $CPL::D_DESCENDANTS);
+  my @descenants_of_v0 = CPL::get_object_ancestry($id, 0, $CPL::D_DESCENDANTS);
 
   CPL::detach();
 
@@ -653,7 +734,7 @@ $CPL::NONE in place of the object $id.
   my $r = CPL::data_flow($dest, $source);
   my $r = CPL::data_flow($dest, $source, $type);
 
-Declare a data flow to $dest from $source. This creates a data dependency,
+Declares a data flow to $dest from $source. This creates a data dependency,
 asserting that $dest depends on the $source. The dependency relationship
 will be tagged with the given $type. If $type is not specified, the library
 uses $CPL::DATA_INPUT by default.
@@ -701,7 +782,7 @@ to specify the version of the source object.
   my $r = CPL::control($dest, $source);
   my $r = CPL::control($dest, $source, $type);
 
-Declare that $dest received a control command from $source. This creates a
+Declares that $dest received a control command from $source. This creates a
 control dependency, asserting that $dest depends on the $source. The dependency
 relationship will be tagged with the given $type. If $type is not specified,
 the library uses $CPL::CONTROL_OP by default.
@@ -736,20 +817,20 @@ to specify the version of the source object.
 
   my $session = CPL::get_current_session();
 
-Return the ID of the current session of the provenance-aware application
+Returns the ID of the current session of the provenance-aware application
 (the caller).
 
 =head3 get_version
 
   my $version = CPL::get_version($id);
 
-Determine the current version of an object identified by the specified $id.
+Determines the current version of an object identified by the specified $id.
 
 =head3 get_object_info
 
   my %info = CPL::get_object_info($id);
 
-Determine the information about an object identified by the given $id, and
+Determines the information about an object identified by the given $id, and
 return a hash of its properties, such as its orginator, name, type, version,
 container, creation time, and the session that created the object.
 
@@ -757,15 +838,30 @@ container, creation time, and the session that created the object.
 
   my %info = CPL::get_version_info($id, $version);
 
-Determine the information about a specific version of a provenancne object
+Determines the information about a specific version of a provenancne object
 (a node in the provenance graph) identified by the given $id and the $version
 number. The function returns a hash of the node properties, such as its
 creation time and the session that created it.
 
+=head3 get_object_ancestry
+
+  my @result = CPL::get_object_ancestry($id, $version, $direction);
+  my @result = CPL::get_object_ancestry($id, $version, $direction, $flags);
+
+Determines the list of ancestors or descendants of an object identified
+by the given $id. If $version is specified, return only the list pertaining
+to this version. If $version is undef, return all ancestors or descendants
+of (all versions of) the object.
+
+The $direction can be either $CPL::D_ANCESTORS or $CPL::D_DESCENDANTS.
+The $flags are optional, and they are a logical "or" (using the | operator)
+combination of flags such as $CPL::A_NO_DATA_DEPENDENCIES for ignoring all
+data deoendencies or $CPL::A_NO_CONTROL_DEPENDENCIES for ignoring all control
+dependencies.
+
 
 
 =head1 HISTORY
-
 
 =over 8
 
@@ -774,12 +870,6 @@ creation time and the session that created it.
 Original version.
 
 =back
-
-
-
-=head1 SEE ALSO
-
-TODO
 
 
 

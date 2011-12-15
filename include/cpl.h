@@ -43,6 +43,11 @@
 
 #ifdef __cplusplus
 #include <cpl-exception.h>
+#include <list>
+#include <vector>
+#endif
+
+#ifdef __cplusplus
 extern "C" {
 #endif
 #if 0
@@ -196,6 +201,29 @@ typedef cpl_return_t (*cpl_ancestry_iterator_t)
 						 const cpl_version_t other_object_version,
 						 const int type,
 						 void* context);
+
+/**
+ * The arguments of cpl_ancestry_iterator_t() expressed as a struct (excluding
+ * the caller-provided context).
+ */
+typedef struct cpl_ancestry_entry {
+
+	/// The ID of the object on which we are querying.
+	cpl_id_t query_object_id;
+
+	/// The version of the queried object.
+	cpl_version_t query_object_version;
+
+	/// The ID of the object on the other end of the dependency/ancestry edge.
+	cpl_id_t other_object_id;
+
+	/// The version of the other object.
+	cpl_version_t other_object_version;
+
+	/// The type of the data or the control dependency.
+	int type;
+
+} cpl_ancestry_entry_t;
 
 /*
  * Static assertions
@@ -944,8 +972,55 @@ public:
 	}
 };
 
-#endif /* __cplusplus */
+/**
+ * The iterator callback for cpl_get_object_ancestry() that collects
+ * the passed-in information in an instance of std::list<cpl_ancestry_entry_t>.
+ *
+ * @param query_object_id the ID of the object on which we are querying
+ * @param query_object_verson the version of the queried object
+ * @param other_object_id the ID of the object on the other end of the
+ *                        dependency/ancestry edge
+ * @param other_object_version the version of the other object
+ * @param type the type of the data or the control dependency
+ * @param context the pointer to an instance of the list
+ * @return CPL_OK or an error code
+ */
+#ifdef SWIG
+%constant
+#endif
+EXPORT cpl_return_t
+cpl_cb_collect_ancestry_list(const cpl_id_t query_object_id,
+							 const cpl_version_t query_object_version,
+							 const cpl_id_t other_object_id,
+							 const cpl_version_t other_object_version,
+							 const int type,
+							 void* context);
 
+/**
+ * The iterator callback for cpl_get_object_ancestry() that collects
+ * the information in an instance of std::vector<cpl_ancestry_entry_t>.
+ *
+ * @param query_object_id the ID of the object on which we are querying
+ * @param query_object_verson the version of the queried object
+ * @param other_object_id the ID of the object on the other end of the
+ *                        dependency/ancestry edge
+ * @param other_object_version the version of the other object
+ * @param type the type of the data or the control dependency
+ * @param context the pointer to an instance of the vector 
+ * @return CPL_OK or an error code
+ */
+#ifdef SWIG
+%constant
+#endif
+EXPORT cpl_return_t
+cpl_cb_collect_ancestry_vector(const cpl_id_t query_object_id,
+							   const cpl_version_t query_object_version,
+							   const cpl_id_t other_object_id,
+							   const cpl_version_t other_object_version,
+							   const int type,
+							   void* context);
+
+#endif /* __cplusplus */
 
 #endif /* __CPL_STANDALONE_H__ */
 
