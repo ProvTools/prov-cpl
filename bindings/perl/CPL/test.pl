@@ -144,27 +144,27 @@ print "\n";
 
 print "CPL::data_flow(obj2, obj1)";
 my $r1 = CPL::data_flow($obj2, $obj1);
-if (!$r1) { print " (duplicate ignored)" }
+if (!$r1) { print " [duplicate ignored]" }
 print "\n";
 
 print "CPL::data_flow(obj2, obj1, CPL::DATA_INPUT)";
 my $r2 = CPL::data_flow($obj2, $obj1, $CPL::DATA_INPUT);
-if (!$r2) { print " (duplicate ignored)" }
+if (!$r2) { print " [duplicate ignored]" }
 print "\n";
 
 print "CPL::data_flow(obj3, obj2, CPL::DATA_INPUT)";
 my $r3 = CPL::data_flow($obj3, $obj2, $CPL::DATA_INPUT);
-if (!$r3) { print " (duplicate ignored)" }
+if (!$r3) { print " [duplicate ignored]" }
 print "\n";
 
 print "CPL::control(obj3, obj1, CPL::CONTROL_START)";
 my $r4 = CPL::control($obj3, $obj1, $CPL::CONTROL_START);
-if (!$r4) { print " (duplicate ignored)" }
+if (!$r4) { print " [duplicate ignored]" }
 print "\n";
 
 print "CPL::data_flow_ext(obj1, obj3, 0, CPL::DATA_TRANSLATION)";
 my $r5 = CPL::data_flow_ext($obj1, $obj3, 0, $CPL::DATA_TRANSLATION);
-if (!$r5) { print " (duplicate ignored)" }
+if (!$r5) { print " [duplicate ignored]" }
 print "\n";
 
 print "\n";
@@ -203,6 +203,27 @@ print ":\n";
 print_hash_ref(\%info1);
 print "\n";
 
+print "CPL::get_object_info(obj2)";
+my %info2 = CPL::get_object_info($obj2);
+print ":\n";
+print_hash_ref(\%info2);
+print "\n";
+
+
+#
+# Get version info
+#
+
+print "CPL::get_version_info(obj1, $ver1)";
+my %version_info1 = CPL::get_version_info($obj1, $ver1);
+print ":\n";
+print_hash_ref(\%version_info1);
+print "\n";
+
+print "CPL::get_version_info(obj2, $ver2)";
+my %version_info2 = CPL::get_version_info($obj2, $ver2);
+print ":\n";
+print_hash_ref(\%version_info2);
 print "\n";
 
 

@@ -65,6 +65,7 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 	get_current_session
 	get_version
 	get_object_info
+	get_version_info
 ) ] );
 
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
@@ -82,6 +83,7 @@ our @EXPORT = qw(
 	get_current_session
 	get_version
 	get_object_info
+	get_version_info
 );
 
 our $VERSION = '1.00';
@@ -490,6 +492,60 @@ sub get_object_info {
 }
 
 
+#
+# Get the version info
+#
+sub get_version_info {
+	my ($id, $version) = @_;
+
+	my $x_ptr = CPLDirect::new_cpl_id_tp();
+	CPLDirect::cpl_id_t::swig_hi_set($x_ptr, $id->{hi});
+	CPLDirect::cpl_id_t::swig_lo_set($x_ptr, $id->{lo});
+	my $x = CPLDirect::cpl_id_tp_value($x_ptr);
+
+	my $info_ptr_ptr = CPLDirect::new_cpl_version_info_tpp();
+	my $ret = CPLDirect::cpl_get_version_info($x, $version,
+			CPLDirect::cpl_convert_pp_cpl_version_info_t($info_ptr_ptr));
+	CPLDirect::delete_cpl_id_tp($x_ptr);
+
+	if (!CPLDirect::cpl_is_ok($ret)) {
+		CPLDirect::delete_cpl_version_info_tpp($info_ptr_ptr);
+		croak "Could not determine information about a version of an object: " .
+			CPLDirect::cpl_error_string($ret);
+	}
+
+	my $info_ptr = 
+		CPLDirect::cpl_dereference_pp_cpl_version_info_t($info_ptr_ptr);
+	my $info = CPLDirect::cpl_version_info_tp_value($info_ptr);
+
+	my $info_id = CPLDirect::cpl_version_info_t::swig_id_get($info);
+	my $r_id = {
+	   hi => CPLDirect::cpl_id_t::swig_hi_get($info_id),
+	   lo => CPLDirect::cpl_id_t::swig_lo_get($info_id)
+	};
+
+	my $info_session =
+		CPLDirect::cpl_version_info_t::swig_session_get($info);
+	my $r_session = {
+	   hi => CPLDirect::cpl_id_t::swig_hi_get($info_session),
+	   lo => CPLDirect::cpl_id_t::swig_lo_get($info_session)
+	};
+
+	my %r = (
+		id                => $r_id,
+		version           => 
+			CPLDirect::cpl_version_info_t::swig_version_get($info),
+		session           => $r_session,
+		creation_time     => 
+			CPLDirect::cpl_version_info_t::swig_creation_time_get($info),
+	);
+
+	CPLDirect::cpl_free_version_info($info_ptr);
+	CPLDirect::delete_cpl_version_info_tpp($info_ptr_ptr);
+	return %r;
+}
+
+
 
 #############################################################################
 # Finish                                                                    #
@@ -536,6 +592,7 @@ CPL - Perl bindings for Core Provenance Library
 
   my $ver1 = CPL::get_version($id1);
   my %info = CPL::get_object_info($id1);
+  my %version_info = CPL::get_version_info($id1, 1);
 
   CPL::detach();
 
@@ -695,6 +752,15 @@ Determine the current version of an object identified by the specified $id.
 Determine the information about an object identified by the given $id, and
 return a hash of its properties, such as its orginator, name, type, version,
 container, creation time, and the session that created the object.
+
+=head3 get_version_info
+
+  my %info = CPL::get_version_info($id, $version);
+
+Determine the information about a specific version of a provenancne object
+(a node in the provenance graph) identified by the given $id and the $version
+number. The function returns a hash of the node properties, such as its
+creation time and the session that created it.
 
 
 
