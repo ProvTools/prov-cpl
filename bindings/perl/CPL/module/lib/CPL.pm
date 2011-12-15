@@ -55,6 +55,7 @@ our @ISA = qw(Exporter);
 our %EXPORT_TAGS = ( 'all' => [ qw(
 	attach_odbc
 	detach
+	id_eq
 	create_object
 	lookup_object
 	try_lookup_object
@@ -74,6 +75,7 @@ our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw(
 	attach_odbc
 	detach
+	id_eq
 	create_object
 	lookup_object
 	try_lookup_object
@@ -97,7 +99,6 @@ our $VERSION = '1.00';
 #############################################################################
 
 our $NONE = { hi => 0, lo => 0 };
-
 *VERSION_NONE = *CPLDirect::CPL_VERSION_NONE;
 
 *DATA_INPUT = *CPLDirect::CPL_DATA_INPUT;
@@ -162,6 +163,26 @@ sub detach {
 
 
 #############################################################################
+# Public API: Helpers                                                       #
+#############################################################################
+
+
+#
+# Determine whether two IDs are equal
+#
+sub id_eq {
+	my ($id1, $id2) = @_;
+
+	# Is this the desired behavior?
+	if (!defined($id1)) { $id1 = $NONE; }
+	if (!defined($id2)) { $id2 = $NONE; }
+
+	return %$id1 eq %$id2;
+}
+
+
+
+#############################################################################
 # Public API: Disclosed Provenance API                                      #
 #############################################################################
 
@@ -217,7 +238,8 @@ sub lookup_object {
 		CPLDirect::delete_cpl_id_tp($obj_ptr);
 
 		if ($ok_if_not_found) {
-			return $NONE;
+			#return $NONE;
+			return undef;
 		}
 
 		croak "Could not determine the ID of the following object:\n" .
@@ -655,7 +677,8 @@ CPL - Perl bindings for Core Provenance Library
   my $id1 = CPL::create_object("com.example.myapp", "~/a.txt", "file", $id);
   my $id2 = CPL::lookup_object("com.example.myapp", "/bin/sh", "proc");
   my $id3 = CPL::try_lookup_object("com.example.myapp", "/bin/sh", "proc");
-  if (%$id3 eq %$CPL::NONE) { warn "The object was not found." }
+  if (!defined($id3)) { warn "The object was not found." }
+  if (CPL::id_eq($id3, $id)) { print "The two IDs are the same.\n" }
 
   CPL::data_flow($id1, $id);
   CPL::data_flow($id1, $id, $CPL::DATA_INPUT);
@@ -703,6 +726,15 @@ given $connection_string.
 
 Detaches from the backend database and cleans up the CPL.
 
+=head3 id_eq
+
+  my $r = CPL::id_eq($id1, $id2);
+
+Compares the two ID's $id1 and $id2 for equality. It sets $r to true if they
+are equal or false if they are not. The function currently treats $CPL::NONE
+and undef as synonyms, because both refer to an invalid/nonexistent object
+or session.
+
 =head3 create_object
 
   my $id = CPL::create_object($originator, $name, $type);
@@ -727,7 +759,7 @@ return the one with the most recent timestamp.
 
 The same as CPL::lookup_object() described above, except that the function
 call does not fail if the object does not exist, in which case it returns
-$CPL::NONE in place of the object $id.
+undef instead of the object $id.
 
 =head3 data_flow
 
@@ -889,15 +921,15 @@ modification, are permitted provided that the following conditions
 are met:
 
 1. Redistributions of source code must retain the above copyright
-   notice, this list of conditions and the following disclaimer.
+notice, this list of conditions and the following disclaimer.
 
 2. Redistributions in binary form must reproduce the above copyright
-   notice, this list of conditions and the following disclaimer in the
-   documentation and/or other materials provided with the distribution.
+notice, this list of conditions and the following disclaimer in the
+documentation and/or other materials provided with the distribution.
 
 3. Neither the name of the University nor the names of its contributors
-   may be used to endorse or promote products derived from this software
-   without specific prior written permission.
+may be used to endorse or promote products derived from this software
+without specific prior written permission.
 
 THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY AND CONTRIBUTORS ``AS IS'' AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -910,8 +942,6 @@ HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
 LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
 OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 SUCH DAMAGE.
-
-Contributor(s): Peter Macko
 
 
 =cut

@@ -158,7 +158,12 @@ if (%$obj3 ne %$obj3x) { die "Object lookup returned the wrong object"; }
 print "CPL::try_lookup_object(\"Object B\", \"File\")";
 my $obj4x = CPL::try_lookup_object($ORIGINATOR, "Object B", "File");
 print ": " . str_hash_ref($obj4x) . "\n";
-if (%$obj4 ne %$obj4x) { die "Object lookup returned the wrong object"; }
+if (!CPL::id_eq($obj4, $obj4x)) {die "Object lookup returned the wrong object";}
+
+print "CPL::try_lookup_object(...should fail...)";
+my $objfx = CPL::try_lookup_object($ORIGINATOR, "%%%%%%", "****");
+if (!defined($objfx)) { print ": OK\n"; }
+if (defined($objfx)) { die "Object lookup did not fail as expected"; }
 
 print "\n";
 
