@@ -11,6 +11,7 @@ ROOT := ../../..
 # Customize the build
 #
 
+INSTALL := yes
 DEPENDENCIES := ../../cpl.i
 
 

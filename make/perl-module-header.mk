@@ -158,3 +158,34 @@ test: $(TEST) all
 	$(PERL) -I $(ABS_BUILD_DIR)/blib/arch -I $(ABS_BUILD_DIR)/blib/lib \
 		"$(realpath $<)"
 
+
+#
+# Install & unistall
+#
+
+.PHONY: install uninstall
+
+install:: $(INSTALL_DEPENDENCIES) all
+ifdef INSTALL
+ifeq ($(OUTPUT_TYPE),kernel)
+	@echo '  INSTALL $(PWD_REL_SEP)$(BUILD_DIR)'
+	@make --no-print-directory -C "$(BUILD_DIR)" install
+else
+	make -C "$(BUILD_DIR)" install
+endif
+else
+	@true
+endif
+
+uninstall:: $(BUILD_DIR)/Makefile
+ifdef INSTALL
+ifeq ($(OUTPUT_TYPE),kernel)
+	@echo '  UNINST  $(PWD_REL_SEP)$(BUILD_DIR)'
+	@make --no-print-directory -C "$(BUILD_DIR)" uninstall
+else
+	make -C "$(BUILD_DIR)" uninstall
+endif
+else
+	@true
+endif
+

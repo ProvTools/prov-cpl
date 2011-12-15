@@ -11,8 +11,8 @@ ROOT := ../../..
 # Customize the build
 #
 
+INSTALL := yes
 PERL_MODULE_DEPENDECIES := ../CPLDirect
-
 
 
 #
