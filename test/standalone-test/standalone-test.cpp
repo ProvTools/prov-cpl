@@ -178,8 +178,18 @@ current_time_seconds(void)
 {
 #ifdef _WINDOWS
 
-	// TODO Implement the Windows version
-	return time(NULL);
+	FILETIME ft;
+	GetSystemTimeAsFileTime(&ft);
+
+	unsigned __int64 tmpres = 0;
+	tmpres |= ft.dwHighDateTime;
+	tmpres <<= 32;
+	tmpres |= ft.dwLowDateTime;
+
+	tmpres /= 10;
+	tmpres -= 11644473600000000Ui64;
+
+	return tmpres / 1000000.0;
 
 #else
 	struct timeval tv;
