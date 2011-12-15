@@ -49,10 +49,32 @@
 #endif
 
 typedef cpl_db_backend_t* p_cpl_db_backend_t;
+typedef cpl_object_info_t* p_cpl_object_info_t;
+typedef cpl_version_info_t* p_cpl_version_info_t;
 
 inline _cpl_db_backend_t*
 cpl_dereference_pp_cpl_db_backend_t(p_cpl_db_backend_t* p) {
     return *p;
+}
+
+inline cpl_object_info_t*
+cpl_dereference_pp_cpl_object_info_t(p_cpl_object_info_t* p) {
+    return *p;
+}
+
+inline cpl_version_info_t*
+cpl_dereference_pp_cpl_version_info_t(p_cpl_version_info_t* p) {
+    return *p;
+}
+
+inline cpl_object_info_t**
+cpl_convert_pp_cpl_object_info_t(p_cpl_object_info_t* p) {
+    return p;
+}
+
+inline cpl_version_info_t**
+cpl_convert_pp_cpl_version_info_t(p_cpl_version_info_t* p) {
+    return p;
 }
 
 inline int
@@ -68,6 +90,18 @@ cpl_is_ok(cpl_return_t ret) {
 
 inline _cpl_db_backend_t*
 cpl_dereference_pp_cpl_db_backend_t(p_cpl_db_backend_t* p);
+
+inline cpl_object_info_t*
+cpl_dereference_pp_cpl_object_info_t(p_cpl_object_info_t* p);
+
+inline cpl_version_info_t*
+cpl_dereference_pp_cpl_version_info_t(p_cpl_version_info_t* p);
+
+inline cpl_object_info_t**
+cpl_convert_pp_cpl_object_info_t(p_cpl_object_info_t* p);
+
+inline cpl_version_info_t**
+cpl_convert_pp_cpl_version_info_t(p_cpl_version_info_t* p);
 
 inline int
 cpl_is_ok(cpl_return_t ret);
@@ -86,7 +120,13 @@ cpl_is_ok(cpl_return_t ret);
  */
 
 %pointer_functions(p_cpl_db_backend_t, cpl_db_backend_tpp);
+%pointer_functions(p_cpl_object_info_t, cpl_object_info_tpp);
+%pointer_functions(p_cpl_version_info_t, cpl_version_info_tpp);
+
 %pointer_functions(cpl_session_t, cpl_session_tp);
 %pointer_functions(cpl_id_t, cpl_id_tp);
 %pointer_functions(cpl_version_t, cpl_version_tp);
+
+%pointer_functions(cpl_object_info_t, cpl_object_info_tp);
+%pointer_functions(cpl_version_info_t, cpl_version_info_tp);
 

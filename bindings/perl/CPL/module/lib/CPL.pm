@@ -62,7 +62,9 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 	control
 	data_flow_ext
 	control_ext
+	get_current_session
 	get_version
+	get_object_info
 ) ] );
 
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
@@ -77,7 +79,9 @@ our @EXPORT = qw(
 	control
 	data_flow_ext
 	control_ext
+	get_current_session
 	get_version
+	get_object_info
 );
 
 our $VERSION = '1.00';
@@ -364,6 +368,31 @@ sub control_ext {
 
 
 #
+# Get the ID of the currenet session
+#
+sub get_current_session {
+
+	my $s_ptr = CPLDirect::new_cpl_id_tp();
+	my $ret = CPLDirect::cpl_get_current_session($s_ptr);
+
+	if (!CPLDirect::cpl_is_ok($ret)) {
+		CPLDirect::delete_cpl_id_tp($s_ptr);
+		croak "Could not determine the ID of the current session: " .
+			CPLDirect::cpl_error_string($ret);
+	}
+
+	my $s = CPLDirect::cpl_id_tp_value($s_ptr);
+	my $id = {
+	   hi => CPLDirect::cpl_id_t::swig_hi_get($s),
+	   lo => CPLDirect::cpl_id_t::swig_lo_get($s)
+	};
+	CPLDirect::delete_cpl_id_tp($s_ptr);
+
+	return $id;
+}
+
+
+#
 # Get version of a provenance object
 #
 sub get_version {
@@ -391,6 +420,76 @@ sub get_version {
 }
 
 
+#
+# Get the object info
+#
+sub get_object_info {
+	my ($id) = @_;
+
+	my $x_ptr = CPLDirect::new_cpl_id_tp();
+	CPLDirect::cpl_id_t::swig_hi_set($x_ptr, $id->{hi});
+	CPLDirect::cpl_id_t::swig_lo_set($x_ptr, $id->{lo});
+	my $x = CPLDirect::cpl_id_tp_value($x_ptr);
+
+	my $info_ptr_ptr = CPLDirect::new_cpl_object_info_tpp();
+	my $ret = CPLDirect::cpl_get_object_info($x,
+			CPLDirect::cpl_convert_pp_cpl_object_info_t($info_ptr_ptr));
+	CPLDirect::delete_cpl_id_tp($x_ptr);
+
+	if (!CPLDirect::cpl_is_ok($ret)) {
+		CPLDirect::delete_cpl_object_info_tpp($info_ptr_ptr);
+		croak "Could not determine information about an object: " .
+			CPLDirect::cpl_error_string($ret);
+	}
+
+	my $info_ptr = 
+		CPLDirect::cpl_dereference_pp_cpl_object_info_t($info_ptr_ptr);
+	my $info = CPLDirect::cpl_object_info_tp_value($info_ptr);
+
+	my $info_id = CPLDirect::cpl_object_info_t::swig_id_get($info);
+	my $r_id = {
+	   hi => CPLDirect::cpl_id_t::swig_hi_get($info_id),
+	   lo => CPLDirect::cpl_id_t::swig_lo_get($info_id)
+	};
+
+	my $info_session =
+		CPLDirect::cpl_object_info_t::swig_creation_session_get($info);
+	my $r_session = {
+	   hi => CPLDirect::cpl_id_t::swig_hi_get($info_session),
+	   lo => CPLDirect::cpl_id_t::swig_lo_get($info_session)
+	};
+
+	my $info_container =
+		CPLDirect::cpl_object_info_t::swig_container_id_get($info);
+	my $r_container = {
+	   hi => CPLDirect::cpl_id_t::swig_hi_get($info_container),
+	   lo => CPLDirect::cpl_id_t::swig_lo_get($info_container)
+	};
+
+	my %r = (
+		id                => $r_id,
+		version           => 
+			CPLDirect::cpl_object_info_t::swig_version_get($info),
+		creation_session  => $r_session,
+		creation_time     => 
+			CPLDirect::cpl_object_info_t::swig_creation_time_get($info),
+		originator        => 
+			CPLDirect::cpl_object_info_t::swig_originator_get($info),
+		name              => 
+			CPLDirect::cpl_object_info_t::swig_name_get($info),
+		type              => 
+			CPLDirect::cpl_object_info_t::swig_type_get($info),
+		container_id      => $r_container,
+		container_version =>
+			CPLDirect::cpl_object_info_t::swig_container_version_get($info),
+	);
+
+	CPLDirect::cpl_free_object_info($info_ptr);
+	CPLDirect::delete_cpl_object_info_tpp($info_ptr_ptr);
+	return %r;
+}
+
+
 
 #############################################################################
 # Finish                                                                    #
@@ -415,7 +514,9 @@ CPL - Perl bindings for Core Provenance Library
 =head1 SYNOPSIS
 
   use CPL;
+
   CPL::attach_odbc("DSN=CPL;");
+  my $session = CPL::get_current_session();
 
   my $id  = CPL::create_object("com.example.myapp", "/bin/sh", "proc");
   my $id1 = CPL::create_object("com.example.myapp", "~/a.txt", "file", $id);
@@ -434,6 +535,7 @@ CPL - Perl bindings for Core Provenance Library
   CPL::control_ext($id1, $id, 0, $CPL::CONTROL_OP);
 
   my $ver1 = CPL::get_version($id1);
+  my %info = CPL::get_object_info($id1);
 
   CPL::detach();
 
@@ -573,11 +675,26 @@ An assertion that the $source process started (executed) the $dest process.
 The same as CPL::control(), except that it allows the application programmer
 to specify the version of the source object.
 
+=head3 get_current_session
+
+  my $session = CPL::get_current_session();
+
+Return the ID of the current session of the provenance-aware application
+(the caller).
+
 =head3 get_version
 
   my $version = CPL::get_version($id);
 
 Determine the current version of an object identified by the specified $id.
+
+=head3 get_object_info
+
+  my %info = CPL::get_object_info($id);
+
+Determine the information about an object identified by the given $id, and
+return a hash of its properties, such as its orginator, name, type, version,
+container, creation time, and the session that created the object.
 
 
 

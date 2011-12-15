@@ -43,11 +43,18 @@ my $ORIGINATOR = "edu.harvard.pass.cpl.perl.direct.test";
 #
 # Function: Print contents of a hash
 #
-sub print_hash {
-    my (%hash) = @_;
+sub print_hash_ref {
+    my ($hash, $prefix) = @_;
+	if (!$prefix) { $prefix = "    " }
     
-    while (my ($k, $v) = each %hash) {
-        print "\t$k => $v\n";
+    while (my ($k, $v) = each %$hash) {
+		if (ref($v) eq "HASH") {
+			print "$prefix$k =>\n";
+			print_hash_ref($v, $prefix . "    ");
+		}
+		else {
+			print "$prefix$k => $v\n";
+		}
     }
 }
 
@@ -73,6 +80,12 @@ sub str_hash_ref {
 #
 
 CPL::attach_odbc("DSN=CPL;");
+
+print "CPL::get_current_session()";
+my $session = CPL::get_current_session();
+print ": " . str_hash_ref($session) . "\n";
+
+print "\n";
 
 
 #
@@ -176,6 +189,19 @@ printf ": %d\n", $ver3;
 print "CPL::get_version(obj4)";
 my $ver4 = CPL::get_version($obj4);
 printf ": %d\n", $ver4;
+
+print "\n";
+
+
+#
+# Get object info
+#
+
+print "CPL::get_object_info(obj1)";
+my %info1 = CPL::get_object_info($obj1);
+print ":\n";
+print_hash_ref(\%info1);
+print "\n";
 
 print "\n";
 
