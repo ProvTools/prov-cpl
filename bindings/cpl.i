@@ -127,6 +127,9 @@ cpl_is_ok(cpl_return_t ret);
 %include "../../../include/cpl.h"
 %include "../../../include/backends/cpl-odbc.h"
 
+/* XXX The RDF driver does not work on Windows, so this should be conditional */
+%include "../../../include/backends/cpl-rdf.h"
+
 
 /*
  * STL containers

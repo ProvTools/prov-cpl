@@ -54,6 +54,7 @@ our @ISA = qw(Exporter);
 # will save memory.
 our %EXPORT_TAGS = ( 'all' => [ qw(
 	attach_odbc
+	attach_rdf
 	detach
 	id_eq
 	create_object
@@ -74,6 +75,7 @@ our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
 our @EXPORT = qw(
 	attach_odbc
+	attach_rdf
 	detach
 	id_eq
 	create_object
@@ -133,6 +135,32 @@ sub attach_odbc {
 	if (!CPLDirect::cpl_is_ok($ret)) {
 		CPLDirect::delete_cpl_db_backend_tpp($backend_ptr);
 		croak "Could not open an ODBC connection: " . \
+			CPLDirect::cpl_error_string($ret);
+	}
+
+	my $backend = CPLDirect::cpl_dereference_pp_cpl_db_backend_t($backend_ptr);
+	$ret = CPLDirect::cpl_attach($backend);
+	CPLDirect::delete_cpl_db_backend_tpp($backend_ptr);
+	if (!CPLDirect::cpl_is_ok($ret)) {
+		croak "Could not initialize CPL: " . CPLDirect::cpl_error_string($ret);
+	}
+
+	return 1;
+}
+
+
+#
+# Initialize the CPL by opening a RDF/SPARQL connection
+#
+sub attach_rdf {
+	my ($url_query, $url_update) = @_;
+
+	my $backend_ptr = CPLDirect::new_cpl_db_backend_tpp();
+	my $ret = CPLDirect::cpl_create_rdf_backend($url_query, $url_update,
+			$CPLDirect::CPL_RDF_GENERIC, $backend_ptr);
+	if (!CPLDirect::cpl_is_ok($ret)) {
+		CPLDirect::delete_cpl_db_backend_tpp($backend_ptr);
+		croak "Could not open a RDF/SPARQL connection: " . \
 			CPLDirect::cpl_error_string($ret);
 	}
 
@@ -719,6 +747,14 @@ The following functions are exported by default:
 Initializes the Core Provenance Library for this program and attaches it to
 the CPL's backend database via an ODBC connection specified through the
 given $connection_string.
+
+=head3 attach_rdf
+
+  CPL::attach_rdf($url_query, $url_update);
+
+Initializes the Core Provenance Library for this program and attaches it to
+the CPL's backend database via a RDF/SPARQL connection to the specfied
+SPARQL query endpoint $url_query and to the update endpoint $url_update.
 
 =head3 detach
 

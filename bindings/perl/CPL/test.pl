@@ -101,10 +101,24 @@ sub print_array_ref {
 # Open an ODBC connection
 #
 
-my $connection_string = "DSN=CPL;";
-print "CPL::attach_odbc(\"$connection_string\")";
-CPL::attach_odbc($connection_string);
-print "\n";
+my $backend_type = "ODBC";
+
+if ($backend_type eq "ODBC") {
+	my $connection_string = "DSN=CPL;";
+	print "CPL::attach_odbc(\"$connection_string\")";
+	CPL::attach_odbc($connection_string);
+	print "\n";
+}
+elsif ($backend_type eq "RDF") {
+	my $url_query = "http://localhost:8080/sparql/";
+	my $url_update = "http://localhost:8080/update/";
+	print "CPL::attach_rdf(\"$url_query\", \"$url_update\")";
+	CPL::attach_rdf($url_query, $url_update);
+	print "\n";
+}
+else {
+	die "Unsupported backend type: $backend_type";
+}
 
 print "CPL::get_current_session()";
 my $session = CPL::get_current_session();
