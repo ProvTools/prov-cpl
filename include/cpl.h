@@ -128,6 +128,31 @@ typedef cpl_id_t cpl_session_t;
 typedef int cpl_return_t;
 
 /**
+ * Information about a provenance session.
+ */
+typedef struct cpl_session_info {
+
+	/// The session ID.
+	cpl_session_t id;
+
+	/// The MAC address of the computer responsible for the provenance record.
+	char* mac_address;
+
+	/// The user name.
+	char* user;
+
+	/// The PID of the application that created the record.
+	int pid;
+
+	/// The program name.
+	char* program;
+
+	/// The start time of the session (expressed as UNIX time).
+	unsigned long start_time;
+
+} cpl_session_info_t;
+
+/**
  * Information about a provenance object.
  */
 typedef struct cpl_object_info {
@@ -676,7 +701,7 @@ cpl_control_ext(const cpl_id_t object_id,
 /***************************************************************************/
 
 /**
- * Get a version of a provenance object
+ * Get a version of a provenance object.
  *
  * @param id the object ID
  * @param out_version the pointer to store the version of the object
@@ -687,7 +712,7 @@ cpl_get_version(const cpl_id_t id,
 				cpl_version_t* out_version);
 
 /**
- * Get the ID of the current session
+ * Get the ID of the current session.
  *
  * @param out_session the pointer to store the ID of the current session
  * @return CPL_OK or an error code
@@ -696,7 +721,27 @@ EXPORT cpl_return_t
 cpl_get_current_session(cpl_session_t* out_session);
 
 /**
- * Get information about the given provenance object
+ * Get information about the given provenance session.
+ *
+ * @param id the session ID
+ * @param out_info the pointer to store the session info structure
+ * @return CPL_OK or an error code
+ */
+EXPORT cpl_return_t
+cpl_get_session_info(const cpl_session_t id,
+					 cpl_session_info_t** out_info);
+
+/**
+ * Free cpl_session_info_t.
+ *
+ * @param info the pointer to the session info structure
+ * @return CPL_OK or an error code
+ */
+EXPORT cpl_return_t
+cpl_free_session_info(cpl_session_info_t* info);
+
+/**
+ * Get information about the given provenance object.
  *
  * @param id the object ID
  * @param out_info the pointer to store the object info structure
@@ -707,7 +752,7 @@ cpl_get_object_info(const cpl_id_t id,
 					cpl_object_info_t** out_info);
 
 /**
- * Free cpl_object_info_t
+ * Free cpl_object_info_t.
  *
  * @param info the pointer to the object info structure
  * @return CPL_OK or an error code
@@ -716,7 +761,7 @@ EXPORT cpl_return_t
 cpl_free_object_info(cpl_object_info_t* info);
 
 /**
- * Get information about the specific version of a provenance object
+ * Get information about the specific version of a provenance object.
  *
  * @param id the object ID
  * @param version the version of the given provenance object
@@ -729,7 +774,7 @@ cpl_get_version_info(const cpl_id_t id,
 					 cpl_version_info_t** out_info);
 
 /**
- * Free cpl_version_info_t
+ * Free cpl_version_info_t.
  *
  * @param info the pointer to the version info structure
  * @return CPL_OK or an error code

@@ -367,6 +367,7 @@ cpl_create_odbc_backend(const char* connection_string,
 	mutex_init(odbc->get_version_lock);
 	mutex_init(odbc->add_ancestry_edge_lock);
 	mutex_init(odbc->has_immediate_ancestor_lock);
+	mutex_init(odbc->get_session_info_lock);
 	mutex_init(odbc->get_object_info_lock);
 	mutex_init(odbc->get_version_info_lock);
 	mutex_init(odbc->get_object_ancestry_lock);
@@ -429,6 +430,7 @@ cpl_create_odbc_backend(const char* connection_string,
 	ALLOC_STMT(add_ancestry_edge_stmt);
 	ALLOC_STMT(has_immediate_ancestor_stmt);
 	ALLOC_STMT(has_immediate_ancestor_with_ver_stmt);
+	ALLOC_STMT(get_session_info_stmt);
 	ALLOC_STMT(get_object_info_stmt);
 	ALLOC_STMT(get_version_info_stmt);
 	ALLOC_STMT(get_object_ancestors);
@@ -518,6 +520,13 @@ cpl_create_odbc_backend(const char* connection_string,
 			"   AND version = 0"
 			" LIMIT 1;");
 
+	PREPARE(get_session_info_stmt,
+			"SELECT mac_address, username,"
+			"       pid, program, initialization_time"
+			"  FROM cpl_sessions"
+			" WHERE id_hi = ? AND id_lo = ?"
+			" LIMIT 1;");
+
 	PREPARE(get_version_info_stmt,
 			"SELECT session_id_hi, session_id_lo, creation_time"
 			"  FROM cpl_versions"
@@ -569,6 +578,7 @@ err_stmts:
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->add_ancestry_edge_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->has_immediate_ancestor_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->has_immediate_ancestor_with_ver_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_session_info_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_info_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_version_info_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_ancestors);
@@ -590,6 +600,7 @@ err_sync:
 	mutex_destroy(odbc->get_version_lock);
 	mutex_destroy(odbc->add_ancestry_edge_lock);
 	mutex_destroy(odbc->has_immediate_ancestor_lock);
+	mutex_destroy(odbc->get_session_info_lock);
 	mutex_destroy(odbc->get_object_info_lock);
 	mutex_destroy(odbc->get_version_info_lock);
 	mutex_destroy(odbc->get_object_ancestry_lock);
@@ -624,6 +635,7 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->add_ancestry_edge_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->has_immediate_ancestor_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->has_immediate_ancestor_with_ver_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_session_info_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_info_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_version_info_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_ancestors);
@@ -643,6 +655,7 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
 	mutex_destroy(odbc->get_version_lock);
 	mutex_destroy(odbc->add_ancestry_edge_lock);
 	mutex_destroy(odbc->has_immediate_ancestor_lock);
+	mutex_destroy(odbc->get_session_info_lock);
 	mutex_destroy(odbc->get_object_info_lock);
 	mutex_destroy(odbc->get_version_info_lock);
 	mutex_destroy(odbc->get_object_ancestry_lock);
@@ -1212,6 +1225,89 @@ err:
 
 
 /**
+ * Get information about the given provenance session.
+ *
+ * @param id the session ID
+ * @param out_info the pointer to store the session info structure
+ * @return CPL_OK or an error code
+ */
+cpl_return_t
+cpl_odbc_get_session_info(struct _cpl_db_backend_t* backend,
+						  const cpl_session_t id,
+						  cpl_session_info_t** out_info)
+{
+	assert(backend != NULL);
+	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
+
+	SQLRETURN ret;
+	cpl_return_t r = CPL_E_INTERNAL_ERROR;
+	long long l;
+
+	cpl_session_info_t* p = (cpl_session_info_t*) malloc(sizeof(*p));
+	if (p == NULL) return CPL_E_INSUFFICIENT_RESOURCES;
+	memset(p, 0, sizeof(*p));
+	p->id = id;
+
+
+	// Prepare the statement
+
+	mutex_lock(odbc->get_session_info_lock);
+	SQLHSTMT stmt = odbc->get_session_info_stmt;
+
+	SQL_BIND_INTEGER(stmt, 1, id.hi);
+	SQL_BIND_INTEGER(stmt, 2, id.lo);
+
+
+	// Execute
+	
+	ret = SQLExecute(stmt);
+	if (!SQL_SUCCEEDED(ret)) {
+		print_odbc_error("SQLExecute", stmt, SQL_HANDLE_STMT);
+		goto err;
+	}
+
+
+	// Fetch the result
+
+	CPL_SQL_SIMPLE_FETCH(dynamically_allocated_string, 1, &p->mac_address);
+	CPL_SQL_SIMPLE_FETCH(dynamically_allocated_string, 2, &p->user);
+	CPL_SQL_SIMPLE_FETCH(llong, 3, &l); p->pid = (int) l;
+	CPL_SQL_SIMPLE_FETCH(dynamically_allocated_string, 4, &p->program);
+	CPL_SQL_SIMPLE_FETCH(timestamp_as_unix_time, 5, &p->start_time);
+
+	ret = SQLCloseCursor(stmt);
+	if (!SQL_SUCCEEDED(ret)) {
+		print_odbc_error("SQLCloseCursor", stmt, SQL_HANDLE_STMT);
+		goto err;
+	}
+
+
+	// Cleanup
+
+	mutex_unlock(odbc->get_session_info_lock);
+	
+	*out_info = p;
+	return CPL_OK;
+
+
+	// Error handling
+
+err:
+	r = CPL_E_STATEMENT_ERROR;
+
+err_r:
+	mutex_unlock(odbc->get_session_info_lock);
+
+	if (p->mac_address != NULL) free(p->mac_address);
+	if (p->user != NULL) free(p->user);
+	if (p->program != NULL) free(p->program);
+	free(p);
+
+	return r;
+}
+
+
+/**
  * Get information about the given provenance object
  *
  * @param id the object ID
@@ -1610,6 +1706,7 @@ const cpl_db_backend_t CPL_ODBC_BACKEND = {
 	cpl_odbc_get_version,
 	cpl_odbc_add_ancestry_edge,
 	cpl_odbc_has_immediate_ancestor,
+	cpl_odbc_get_session_info,
 	cpl_odbc_get_object_info,
 	cpl_odbc_get_version_info,
 	cpl_odbc_get_object_ancestry,

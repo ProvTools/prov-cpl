@@ -66,6 +66,7 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 	control_ext
 	get_current_session
 	get_version
+	get_session_info
 	get_object_info
 	get_version_info
 	get_object_ancestry
@@ -87,6 +88,7 @@ our @EXPORT = qw(
 	control_ext
 	get_current_session
 	get_version
+	get_session_info
 	get_object_info
 	get_version_info
 	get_object_ancestry
@@ -476,6 +478,58 @@ sub get_version {
 	CPLDirect::delete_cpl_version_tp($v_ptr);
 
 	return $v;
+}
+
+
+#
+# Get the session info
+#
+sub get_session_info {
+	my ($id) = @_;
+
+	my $x_ptr = CPLDirect::new_cpl_id_tp();
+	CPLDirect::cpl_id_t::swig_hi_set($x_ptr, $id->{hi});
+	CPLDirect::cpl_id_t::swig_lo_set($x_ptr, $id->{lo});
+	my $x = CPLDirect::cpl_id_tp_value($x_ptr);
+
+	my $info_ptr_ptr = CPLDirect::new_cpl_session_info_tpp();
+	my $ret = CPLDirect::cpl_get_session_info($x,
+			CPLDirect::cpl_convert_pp_cpl_session_info_t($info_ptr_ptr));
+	CPLDirect::delete_cpl_id_tp($x_ptr);
+
+	if (!CPLDirect::cpl_is_ok($ret)) {
+		CPLDirect::delete_cpl_session_info_tpp($info_ptr_ptr);
+		croak "Could not determine information about a session: " .
+			CPLDirect::cpl_error_string($ret);
+	}
+
+	my $info_ptr = 
+		CPLDirect::cpl_dereference_pp_cpl_session_info_t($info_ptr_ptr);
+	my $info = CPLDirect::cpl_session_info_tp_value($info_ptr);
+
+	my $info_id = CPLDirect::cpl_session_info_t::swig_id_get($info);
+	my $r_id = {
+	   hi => CPLDirect::cpl_id_t::swig_hi_get($info_id),
+	   lo => CPLDirect::cpl_id_t::swig_lo_get($info_id)
+	};
+
+	my %r = (
+		id                => $r_id,
+		mac_address       => 
+			CPLDirect::cpl_session_info_t::swig_mac_address_get($info),
+		user              => 
+			CPLDirect::cpl_session_info_t::swig_user_get($info),
+		pid               => 
+			CPLDirect::cpl_session_info_t::swig_pid_get($info),
+		program           => 
+			CPLDirect::cpl_session_info_t::swig_program_get($info),
+		start_time        => 
+			CPLDirect::cpl_session_info_t::swig_start_time_get($info),
+	);
+
+	CPLDirect::cpl_free_session_info($info_ptr);
+	CPLDirect::delete_cpl_session_info_tpp($info_ptr_ptr);
+	return %r;
 }
 
 

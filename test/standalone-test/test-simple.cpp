@@ -41,6 +41,34 @@ using namespace std;
 
 
 /**
+ * Print the cpl_session_info_t structure
+ *
+ * @param info the info structure
+ */
+static void
+print_session_info(cpl_session_info_t* info)
+{
+	time_t start_time = (time_t) info->start_time;
+#ifdef _WINDOWS
+	char s_start_time[64];
+	ctime_s(s_start_time, sizeof(s_start_time), &start_time);
+#else
+	char* s_start_time = ctime(&start_time);
+#endif
+	if (s_start_time[strlen(s_start_time)-1] == '\n') {
+		s_start_time[strlen(s_start_time)-1] = '\0';
+	}
+
+	print(L_DEBUG, "  ID               : %llx:%llx", info->id.hi, info->id.lo);
+	print(L_DEBUG, "  MAC Address      : %s", info->mac_address);
+	print(L_DEBUG, "  User Name        : %s", info->user);
+	print(L_DEBUG, "  PID              : %d", info->pid);
+	print(L_DEBUG, "  Program Name     : %s", info->program);
+	print(L_DEBUG, "  Start Time       : %s", s_start_time);
+}
+
+
+/**
  * Print the cpl_object_info_t structure
  *
  * @param info the info structure
@@ -239,6 +267,27 @@ test_simple(void)
 	ret = cpl_data_flow_ext(obj, obj3, 0, CPL_DATA_TRANSLATION);
 	print(L_DEBUG, "cpl_data_flow_ext --> %d", ret);
 	CPL_VERIFY(cpl_data_flow, ret);
+
+	print(L_DEBUG, " ");
+
+
+	// Session info (assume that the session started less than 10 sec. ago)
+
+	cpl_session_info_t* sinfo = NULL;
+
+	ret = cpl_get_session_info(session, &sinfo);
+	print(L_DEBUG, "cpl_get_session_info --> %d", ret);
+	CPL_VERIFY(cpl_get_session_info, ret);
+
+	print_session_info(sinfo);
+	if (sinfo->id != session
+			|| sinfo->start_time > time(NULL)
+			|| sinfo->start_time + 10 < time(NULL)) {
+		throw CPLException("The returned session information is incorrect");
+	}
+
+	ret = cpl_free_session_info(sinfo);
+	CPL_VERIFY(cpl_free_session_info, ret);
 
 	print(L_DEBUG, " ");
 

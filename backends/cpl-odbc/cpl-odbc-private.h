@@ -170,6 +170,16 @@ typedef struct {
 	SQLHSTMT has_immediate_ancestor_with_ver_stmt;
 
 	/**
+	 * The lock for get_session_info
+	 */
+	mutex_t get_session_info_lock;
+
+	/**
+	 * The statement that returns information about a provenance session
+	 */
+	SQLHSTMT get_session_info_stmt;
+
+	/**
 	 * The lock for get_object_info
 	 */
 	mutex_t get_object_info_lock;

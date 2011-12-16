@@ -912,7 +912,7 @@ cpl_add_dependency(const cpl_id_t from_id,
 
 
 /**
- * Get a version of a provenance object
+ * Get a version of a provenance object.
  *
  * @param id the object ID
  * @param out_version the pointer to store the version of the object
@@ -944,7 +944,7 @@ cpl_get_version(const cpl_id_t id,
 
 
 /**
- * Get the ID of the current session
+ * Get the ID of the current session.
  *
  * @param out_session the pointer to store the ID of the current session
  * @return CPL_OK or an error code
@@ -960,7 +960,49 @@ cpl_get_current_session(cpl_session_t* out_session)
 
 
 /**
- * Get information about the given provenance object
+ * Get information about the given provenance session.
+ *
+ * @param id the session ID
+ * @param out_info the pointer to store the session info structure
+ * @return CPL_OK or an error code
+ */
+extern "C" EXPORT cpl_return_t
+cpl_get_session_info(const cpl_session_t id,
+					 cpl_session_info_t** out_info)
+{
+	CPL_ENSURE_NOT_NONE(id);
+	CPL_ENSURE_NOT_NULL(out_info);
+
+
+	// Call the database backend
+
+	return cpl_db_backend->cpl_db_get_session_info(cpl_db_backend, id,
+												   out_info);
+}
+
+
+/**
+ * Free cpl_session_info_t.
+ *
+ * @param info the pointer to the session info structure
+ * @return CPL_OK or an error code
+ */
+extern "C" EXPORT cpl_return_t
+cpl_free_session_info(cpl_session_info_t* info)
+{
+	CPL_ENSURE_NOT_NULL(info);
+
+	if (info->mac_address != NULL) free(info->mac_address);
+	if (info->user != NULL) free(info->user);
+	if (info->program != NULL) free(info->program);
+
+	free(info);
+	return CPL_OK;
+}
+
+
+/**
+ * Get information about the given provenance object.
  *
  * @param id the object ID
  * @param out_info the pointer to store the object info structure
@@ -993,9 +1035,9 @@ cpl_get_object_info(const cpl_id_t id,
 
 
 /**
- * Free cpl_object_info_t
+ * Free cpl_object_info_t.
  *
- * @param info the pointer to the object info structure
+ * @param info the pointer to the object info structure.
  * @return CPL_OK or an error code
  */
 extern "C" EXPORT cpl_return_t
@@ -1013,7 +1055,7 @@ cpl_free_object_info(cpl_object_info_t* info)
 
 
 /**
- * Get information about the specific version of a provenance object
+ * Get information about the specific version of a provenance object.
  *
  * @param id the object ID
  * @param version the version of the given provenance object
@@ -1034,7 +1076,7 @@ cpl_get_version_info(const cpl_id_t id,
 
 
 /**
- * Free cpl_version_info_t
+ * Free cpl_version_info_t.
  *
  * @param info the pointer to the version info structure
  * @return CPL_OK or an error code

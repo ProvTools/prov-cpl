@@ -565,6 +565,101 @@ cpl_rdf_has_immediate_ancestor(struct _cpl_db_backend_t* backend,
 
 
 /**
+ * Get information about the given provenance session.
+ *
+ * @param id the session ID
+ * @param out_info the pointer to store the session info structure
+ * @return CPL_OK or an error code
+ */
+cpl_return_t
+cpl_rdf_get_session_info(struct _cpl_db_backend_t* backend,
+						 const cpl_session_t id,
+						 cpl_session_info_t** out_info)
+{
+	assert(backend != NULL);
+	cpl_rdf_t* rdf = (cpl_rdf_t*) backend;
+	cpl_return_t ret;
+
+
+	// Prepare the query
+
+	char id_str[64];
+	sprintf(id_str, "s:%llx-%llx", id.hi, id.lo);
+
+	std::ostringstream ss;
+
+	ss << "PREFIX s: <session:>\n";
+	ss << "PREFIX p: <prop:>\n";
+	ss << "SELECT ?mac_address, ?username, ?pid, ?program, ";
+	ss << "?initialization_time WHERE { " << id_str;
+	ss << " p:mac_address ?mac_address ;";
+	ss << " p:username ?username ;";
+	ss << " p:pid ?pid ;";
+	ss << " p:program ?program ;";
+	ss << " p:initialization_time ?initialization_time .";
+	ss << "}";
+
+
+	// Execute query
+
+	RDFResultSet rs;
+	ret = cpl_rdf_connection_execute_query(rdf->connection_query,
+			ss.str().c_str(), &rs);
+
+	if (ret == CPL_S_NO_DATA) return CPL_E_NOT_FOUND;
+	if (!CPL_IS_OK(ret)) {
+		//rs.print_error_messages(std::cerr);
+		return ret;
+	}
+
+
+	// Process the result
+
+	if (out_info == NULL) return CPL_OK;
+	if (rs.size() == 0) return CPL_E_BACKEND_INTERNAL_ERROR;
+	if (rs.size() >  1) return CPL_E_BACKEND_INTERNAL_ERROR;
+
+	cpl_session_info_t* p = (cpl_session_info_t*) malloc(sizeof(*p));
+	if (p == NULL) return CPL_E_INSUFFICIENT_RESOURCES;
+	memset(p, 0, sizeof(*p));
+	p->id = id;
+
+	RDFValue* v;
+
+	ret = rs[0].get_s("mac_address", RDF_XSD_STRING, &v);
+	if (!CPL_IS_OK(ret)) goto err;
+	p->mac_address = strdup(v->v_string);
+
+	ret = rs[0].get_s("username", RDF_XSD_STRING, &v);
+	if (!CPL_IS_OK(ret)) goto err;
+	p->user = strdup(v->v_string);
+
+	ret = rs[0].get_s("pid", RDF_XSD_INTEGER, &v);
+	if (!CPL_IS_OK(ret)) goto err;
+	p->pid = v->v_integer;
+
+	ret = rs[0].get_s("program", RDF_XSD_STRING, &v);
+	if (!CPL_IS_OK(ret)) goto err;
+	p->program = strdup(v->v_string);
+
+	ret = rs[0].get_s("initialization_time", RDF_XSD_INTEGER, &v);
+	if (!CPL_IS_OK(ret)) goto err;
+	p->start_time = v->v_integer;
+
+	*out_info = p;
+	return CPL_OK;
+
+err:
+	if (p->mac_address != NULL) free(p->mac_address);
+	if (p->user != NULL) free(p->user);
+	if (p->program != NULL) free(p->program);
+	free(p);
+
+	return ret;
+}
+
+
+/**
  * Get information about the given provenance object
  *
  * @param id the object ID
@@ -964,6 +1059,7 @@ const cpl_db_backend_t CPL_RDF_BACKEND = {
 	cpl_rdf_get_version,
 	cpl_rdf_add_ancestry_edge,
 	cpl_rdf_has_immediate_ancestor,
+	cpl_rdf_get_session_info,
 	cpl_rdf_get_object_info,
 	cpl_rdf_get_version_info,
 	cpl_rdf_get_object_ancestry,

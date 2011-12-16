@@ -198,6 +198,18 @@ typedef struct _cpl_db_backend_t {
 									 int* out);
 
 	/**
+	 * Get information about the given provenance session.
+	 *
+	 * @param id the session ID
+	 * @param out_info the pointer to store the session info structure
+	 * @return CPL_OK or an error code
+	 */
+	cpl_return_t
+	(*cpl_db_get_session_info)(struct _cpl_db_backend_t* backend,
+							   const cpl_session_t id,
+							   cpl_session_info_t** out_info);
+
+	/**
 	 * Get information about the given provenance object
 	 *
 	 * @param backend the pointer to the backend structure

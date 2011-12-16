@@ -52,11 +52,17 @@
 #endif
 
 typedef cpl_db_backend_t* p_cpl_db_backend_t;
+typedef cpl_session_info_t* p_cpl_session_info_t;
 typedef cpl_object_info_t* p_cpl_object_info_t;
 typedef cpl_version_info_t* p_cpl_version_info_t;
 
 inline _cpl_db_backend_t*
 cpl_dereference_pp_cpl_db_backend_t(p_cpl_db_backend_t* p) {
+    return *p;
+}
+
+inline cpl_session_info_t*
+cpl_dereference_pp_cpl_session_info_t(p_cpl_session_info_t* p) {
     return *p;
 }
 
@@ -68,6 +74,11 @@ cpl_dereference_pp_cpl_object_info_t(p_cpl_object_info_t* p) {
 inline cpl_version_info_t*
 cpl_dereference_pp_cpl_version_info_t(p_cpl_version_info_t* p) {
     return *p;
+}
+
+inline cpl_session_info_t**
+cpl_convert_pp_cpl_session_info_t(p_cpl_session_info_t* p) {
+    return p;
 }
 
 inline cpl_object_info_t**
@@ -104,11 +115,17 @@ cpl_dereference_p_std_vector_cpl_ancestry_entry_t(
 inline _cpl_db_backend_t*
 cpl_dereference_pp_cpl_db_backend_t(p_cpl_db_backend_t* p);
 
+inline cpl_session_info_t*
+cpl_dereference_pp_cpl_session_info_t(p_cpl_session_info_t* p);
+
 inline cpl_object_info_t*
 cpl_dereference_pp_cpl_object_info_t(p_cpl_object_info_t* p);
 
 inline cpl_version_info_t*
 cpl_dereference_pp_cpl_version_info_t(p_cpl_version_info_t* p);
+
+inline cpl_session_info_t**
+cpl_convert_pp_cpl_session_info_t(p_cpl_session_info_t* p);
 
 inline cpl_object_info_t**
 cpl_convert_pp_cpl_object_info_t(p_cpl_object_info_t* p);
@@ -148,6 +165,7 @@ cpl_dereference_p_std_vector_cpl_ancestry_entry_t(
  */
 
 %pointer_functions(p_cpl_db_backend_t, cpl_db_backend_tpp);
+%pointer_functions(p_cpl_session_info_t, cpl_session_info_tpp);
 %pointer_functions(p_cpl_object_info_t, cpl_object_info_tpp);
 %pointer_functions(p_cpl_version_info_t, cpl_version_info_tpp);
 
@@ -155,6 +173,7 @@ cpl_dereference_p_std_vector_cpl_ancestry_entry_t(
 %pointer_functions(cpl_id_t, cpl_id_tp);
 %pointer_functions(cpl_version_t, cpl_version_tp);
 
+%pointer_functions(cpl_session_info_t, cpl_session_info_tp);
 %pointer_functions(cpl_object_info_t, cpl_object_info_tp);
 %pointer_functions(cpl_version_info_t, cpl_version_info_tp);
 

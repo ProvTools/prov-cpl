@@ -238,6 +238,17 @@ print "\n";
 
 
 #
+# Get session info
+#
+
+print "CPL::get_session_info(session)";
+my %session_info = CPL::get_session_info($session);
+print ":\n";
+print_hash_ref(\%session_info);
+print "\n";
+
+
+#
 # Get object info
 #
 
