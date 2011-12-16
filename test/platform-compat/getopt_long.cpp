@@ -144,7 +144,7 @@ getopt_internal(int nargc, char * const * nargv, const char *ostr)
  * getopt_long --
  *	Parse argc/argv argument vector.
  */
-int
+extern "C" int
 getopt_long(int nargc, char ** nargv, char * options, struct option * long_options, int * index)
 {
 	int retval;

@@ -42,6 +42,7 @@ int __dummy_function_that_returns_0(void) { return 0; }
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
+#include "getopt_compat.h"
 
 #define __P(x) x
 #define _DIAGASSERT(x) assert(x)

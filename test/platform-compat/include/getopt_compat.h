@@ -33,6 +33,7 @@
 
 #ifndef __CPL_PLATFORM_COMPAT__GETOPT_H__
 #define __CPL_PLATFORM_COMPAT__GETOPT_H__
+
 #if !(defined _WIN64 || defined _WIN32)
 #include <getopt.h>
 #else
@@ -59,7 +60,7 @@ struct option
 #define required_argument 1
 #define optional_argument 2
 
-int getopt(int, char**, char*);
+int getopt(int, char * const [], const char*);
 int getopt_long(int, char**, char*, struct option*, int*);
 
 #ifdef __cplusplus

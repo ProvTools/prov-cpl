@@ -465,7 +465,12 @@ main(int argc, char** argv)
 			// Print the success message
 
 			char str_test_time[64];
-			sprintf(str_test_time, "%ld min %.2lf sec",
+#ifdef _WINDOWS
+			sprintf_s(str_test_time, 64,
+#else
+			snprintf(str_test_time, 64,
+#endif
+					"%ld min %.2lf sec",
 					((long) test_time) / 60,
 					test_time - 60 * (((long) test_time) / 60));
 

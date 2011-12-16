@@ -244,8 +244,13 @@ cpl_shared_semaphore_open(const char* name)
 
 #elif defined(_WINDOWS)
 
-	char* n = (char*) alloca(strlen(name) + 12);
-	sprintf(n, "Global\\%s", name);
+	size_t n_size = strlen(name) + 12;
+	char* n = (char*) alloca(n_size);
+#ifdef _WINDOWS
+	sprintf_s(n, n_size, "Global\\%s", name);
+#else
+	snprintf(n, n_size, "Global\\%s", name);
+#endif
 
 	// Portions of the following code are from:
 	//   http://msdn.microsoft.com/en-us/library/windows/desktop/aa446595%28v=vs.85%29.aspx
