@@ -182,15 +182,16 @@ INSTALL_PERM := 644
 endif
 
 ifdef INSTALL
-	INSTALL_DEPENDENCIES := $(INSTALL_DEPENDENCIES) $(BUILD_DIR)/$(TARGET)
+#INSTALL_DEPENDENCIES := $(INSTALL_DEPENDENCIES) $(BUILD_DIR)/$(TARGET)
 	INSTALL_DIR := $(INSTALL_PREFIX)/lib
 else
 	INSTALL_DEPENDENCIES :=
 endif
 
-install:: $(INSTALL_DEPENDENCIES)
+install:: release $(INSTALL_DEPENDENCIES)
 ifdef INSTALL
 	@mkdir -p $(INSTALL_DIR)
+ifdef RELEASE
 ifdef SHARED
 	@rm -f $(INSTALL_DIR)/$(TARGET_WITH_VER) 2> /dev/null || true
 ifeq ($(OUTPUT_TYPE),kernel)
@@ -217,6 +218,9 @@ ifeq ($(OUTPUT_TYPE),kernel)
 else
 	install -D -m $(INSTALL_PERM) -t $(INSTALL_DIR) $(BUILD_DIR)/$(TARGET)
 endif
+endif
+else
+	@$(MAKE) --no-print-directory RELEASE=yes install
 endif
 else
 	@true

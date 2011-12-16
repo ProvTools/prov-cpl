@@ -105,22 +105,10 @@ time-dev: all pre-run
 # Shortcut targets
 #
 
-.PHONY: release release-run Release debug Debug
-
-debug: all
-
-release:
-	@$(MAKE) --no-print-directory RELEASE=yes all
+.PHONY: release-run
 
 release-run:
 	@$(MAKE) --no-print-directory RELEASE=yes run
-
-
-# Aliases
-
-Debug: debug
-
-Release: release
 
 
 #
@@ -206,20 +194,24 @@ $(SUBPROJECT_FILES):
 .PHONY: install uninstall
 
 ifdef INSTALL
-	INSTALL_DEPENDENCIES := $(INSTALL_DEPENDENCIES) $(BUILD_DIR)/$(TARGET)
+#INSTALL_DEPENDENCIES := $(INSTALL_DEPENDENCIES) $(BUILD_DIR)/$(TARGET)
 	INSTALL_DIR := $(INSTALL_PREFIX)/bin
 else
 	INSTALL_DEPENDENCIES :=
 endif
 
-install:: $(INSTALL_DEPENDENCIES)
+install:: release $(INSTALL_DEPENDENCIES)
 ifdef INSTALL
+ifdef RELEASE
 	@mkdir -p $(INSTALL_DIR)
 ifeq ($(OUTPUT_TYPE),kernel)
 	@echo '  INSTALL $(PWD_REL_SEP)$(BUILD_DIR)/$(TARGET)'
 	@install -D -m 755 -t $(INSTALL_DIR) $(BUILD_DIR)/$(TARGET)
 else
 	install -D -m 755 -t $(INSTALL_DIR) $(BUILD_DIR)/$(TARGET)
+endif
+else
+	@$(MAKE) --no-print-directory RELEASE=yes install
 endif
 else
 	@true

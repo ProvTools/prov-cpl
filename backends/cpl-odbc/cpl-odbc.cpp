@@ -1241,7 +1241,7 @@ cpl_odbc_get_session_info(struct _cpl_db_backend_t* backend,
 
 	SQLRETURN ret;
 	cpl_return_t r = CPL_E_INTERNAL_ERROR;
-	long long l;
+	long long l = 0;
 
 	cpl_session_info_t* p = (cpl_session_info_t*) malloc(sizeof(*p));
 	if (p == NULL) return CPL_E_INSUFFICIENT_RESOURCES;

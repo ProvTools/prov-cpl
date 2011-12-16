@@ -94,6 +94,25 @@ $(BUILD_DIR):
 
 
 #
+# Shortcut targets
+#
+
+.PHONY: release Release debug Debug
+
+debug: all
+
+release:
+	@$(MAKE) --no-print-directory RELEASE=yes all
+
+
+# Aliases
+
+Debug: debug
+
+Release: release
+
+
+#
 # Special-purpose targets
 #
 
@@ -165,13 +184,17 @@ test: $(TEST) all
 
 .PHONY: install uninstall
 
-install:: $(INSTALL_DEPENDENCIES) all
+install:: release $(INSTALL_DEPENDENCIES)
 ifdef INSTALL
+ifdef RELEASE
 ifeq ($(OUTPUT_TYPE),kernel)
 	@echo '  INSTALL $(PWD_REL_SEP)$(BUILD_DIR)'
 	@make --no-print-directory -C "$(BUILD_DIR)" install
 else
 	make -C "$(BUILD_DIR)" install
+endif
+else
+	@$(MAKE) --no-print-directory RELEASE=yes install
 endif
 else
 	@true

@@ -107,7 +107,7 @@ endif
 # Build-related phony and preliminary targets
 #
 
-.PHONY: all clean distclean messclean depend target targetclean relink
+.PHONY: all clean distclean messclean depend target targetclean relink release
 
 all: $(BUILD_DIR)/$(TARGET)
 
@@ -132,6 +132,25 @@ messclean::
 
 $(BUILD_DIR):
 	@mkdir -p $(BUILD_DIR)
+
+
+#
+# Shortcut targets
+#
+
+.PHONY: release Release debug Debug
+
+debug: all
+
+release:
+	@$(MAKE) --no-print-directory RELEASE=yes all
+
+
+# Aliases
+
+Debug: debug
+
+Release: release
 
 
 #
