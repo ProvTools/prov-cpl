@@ -1,0 +1,25 @@
+
+  CPL Installation Notes
+==========================
+
+Contents:
+  1. Compiling and installing CPL
+
+Copyright 2011 The President and Fellows of Harvard College.
+Contributor(s): Peter Macko
+
+
+  1. Compiling and installing CPL
+-----------------------------------
+
+To compile CPL on Windows, please use Microsoft Visual C++ 2010 or newer (the
+Express edition is sufficient). Open the solution file cpl.sln, change the
+build configuration to Release, and build the solution. You can then copy
+the generated .dll files to C:\WINDOWS\SYSTEM32 (or to some other appropriate
+directory). You might also want to copy the public header files and the
+generated static libraries (that accompany the .dll files) to the appropriate
+include and library directories.
+
+Note that the RDF/SPARQL driver and the Perl bindings have not yet been ported
+to Microsoft Windows.
+
