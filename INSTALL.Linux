@@ -1,0 +1,45 @@
+
+  CPL Installation Notes
+==========================
+
+Contents:
+  1. Required packages on Ubuntu
+  2. Compiling and installing CPL
+
+Copyright 2011 The President and Fellows of Harvard College.
+Contributor(s): Peter Macko
+
+
+  1. Required packages on Ubuntu
+----------------------------------
+
+Please make sure that the following packages are installed:
+  uuid-dev
+  unixodbc
+  unixodbc-dev
+  odbcinst
+  libmyodbc (for MySQL)
+  odbc-postgresql (for PostgreSQL)
+  libcurl4-openssl-dev
+  libxml2-dev
+
+These additional packages are required for the Perl bindings:
+  libperl-dev
+  swig
+
+
+  2. Compiling and installing CPL
+-----------------------------------
+
+To compile and install CPL, please type the following commands:
+  make release
+  sudo make install
+
+To compile and install the Perl bindings, please run the following:
+  make -C bindings/perl release
+  sudo make -C bindings/perl install
+
+To clean the compile, please use the "clean" or "distclean" make targets.
+To uninstall, please use the "uninstall" target - separately on the main
+CPL build and on the language-specific bindings.
+
