@@ -40,6 +40,6 @@ To compile and install the Perl bindings, please run the following:
   sudo make -C bindings/perl install
 
 To clean the compile, please use the "clean" or "distclean" make targets.
-To uninstall, please use the "uninstall" target - separately on the main
-CPL build and on the language-specific bindings.
+To uninstall, please use the "uninstall" target - separately for the main
+CPL build and for the language-specific bindings.
 
