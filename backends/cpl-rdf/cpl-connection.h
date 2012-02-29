@@ -36,7 +36,7 @@
 #define __CPL_CONNECTION_H__
 
 #include <private/cpl-platform.h>
-#include <cpl.h>
+#include <cplxx.h>
 
 #include <curl/curl.h>
 #include <iostream>

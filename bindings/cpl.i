@@ -45,6 +45,7 @@
 
 %{
 #include <cpl.h>
+#include <cplxx.h>
 #include <backends/cpl-odbc.h>
 
 #if defined(__unix__) || defined(__APPLE__)
@@ -142,6 +143,7 @@ cpl_is_ok(cpl_return_t ret);
  */
 
 %include "../../../include/cpl.h"
+%include "../../../include/cplxx.h"
 %include "../../../include/backends/cpl-odbc.h"
 
 /* XXX The RDF driver does not work on Windows, so this should be conditional */

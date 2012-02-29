@@ -37,6 +37,7 @@
 
 #include <backends/cpl-odbc.h>
 #include <private/cpl-platform.h>
+#include <cplxx.h>
 
 #include <sql.h>
 #include <sqlext.h>

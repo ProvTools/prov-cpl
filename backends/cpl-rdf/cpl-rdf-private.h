@@ -40,6 +40,7 @@
 #include <private/cpl-platform.h>
 #include <string>
 
+#include <cplxx.h>
 #include "cpl-connection.h"
 
 

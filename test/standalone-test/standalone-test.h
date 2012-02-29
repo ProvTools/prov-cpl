@@ -35,7 +35,7 @@
 #ifndef __STANDALONE_TEST_H__
 #define __STANDALONE_TEST_H__
 
-#include <cpl.h>
+#include <cplxx.h>
 #include <cpl-exception.h>
 
 #include "print-buffer.h"
