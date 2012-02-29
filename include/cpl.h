@@ -555,6 +555,22 @@ WINDLL_API extern const cpl_id_t CPL_NONE;
 
 
 /***************************************************************************/
+/** Standard Object Constants - Originators and Types                     **/
+/***************************************************************************/
+
+/**
+ * The file system originator (use for files, set object name to real-path)
+ */
+#define CPL_O_FILESYSTEM				"/fs"
+
+/**
+ * The default file type
+ */
+#define CPL_T_FILE						"FILE"
+
+
+
+/***************************************************************************/
 /** Initialization and Cleanup                                            **/
 /***************************************************************************/
 
