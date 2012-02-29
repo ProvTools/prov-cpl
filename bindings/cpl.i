@@ -35,7 +35,7 @@
 %module CPLDirect
 
 %include cpointer.i
-%include std_list.i
+/*%include std_list.i*/
 %include std_vector.i
 
 
@@ -97,7 +97,7 @@ cpl_is_ok(cpl_return_t ret) {
     return CPL_IS_OK(ret);
 }
 
-typedef std::list<cpl_ancestry_entry_t> std_list_cpl_ancestry_entry_t;
+/*typedef std::list<cpl_ancestry_entry_t> std_list_cpl_ancestry_entry_t;*/
 typedef std::vector<cpl_ancestry_entry_t> std_vector_cpl_ancestry_entry_t;
 
 inline std::vector<cpl_ancestry_entry_t>&
@@ -154,7 +154,7 @@ cpl_is_ok(cpl_return_t ret);
  * STL containers
  */
 
-%template (cpl_ancestry_entry_t_list) std::list<cpl_ancestry_entry_t>;
+/*%template (cpl_ancestry_entry_t_list) std::list<cpl_ancestry_entry_t>;*/
 %template (cpl_ancestry_entry_t_vector) std::vector<cpl_ancestry_entry_t>;
 
 inline std::vector<cpl_ancestry_entry_t>&
@@ -179,8 +179,8 @@ cpl_dereference_p_std_vector_cpl_ancestry_entry_t(
 %pointer_functions(cpl_object_info_t, cpl_object_info_tp);
 %pointer_functions(cpl_version_info_t, cpl_version_info_tp);
 
-%pointer_functions(std_list_cpl_ancestry_entry_t,
-        std_list_cpl_ancestry_entry_tp);
+/*%pointer_functions(std_list_cpl_ancestry_entry_t,
+        std_list_cpl_ancestry_entry_tp);*/
 %pointer_functions(std_vector_cpl_ancestry_entry_t,
         std_vector_cpl_ancestry_entry_tp);
 
