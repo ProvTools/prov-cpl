@@ -22,15 +22,6 @@ include $(ROOT)/make/header.mk
 
 
 #
-# Perl
-#
-
-ifndef PERL
-	PERL := perl
-endif
-
-
-#
 # Target
 #
 
@@ -45,7 +36,7 @@ endif
 
 ifndef PROJECT_DIRS
 	PROJECT_DIRS := $(ROOT) $(ADDITIONAL_PROJECT_DIRS) \
-					$(PERL_MODULE_DEPENDECIES)
+					$(JAVA_MODULE_DEPENDECIES)
 endif
 
 ifdef __PROGRAM__NO_SUBPROJECT_FILES
@@ -60,15 +51,15 @@ else
 				$(pdir)/$(proj)))
 endif
 
-ifdef PERL_MODULE_DEPENDECIES
-	PERL := $(PERL) \
+ifdef JAVA_MODULE_DEPENDECIES
+	EXTERNAL_JARS := $(EXTERNAL_JARS) \
 		$(foreach pdir, \
-			$(PERL_MODULE_DEPENDECIES), \
-			$(foreach incdir, \
+			$(JAVA_MODULE_DEPENDECIES), \
+			$(foreach jar, \
 				$(shell unset MAKEFLAGS MFLAGS && \
 					$(MAKE) --no-print-directory --quiet -C $(pdir) \
-					list-perl-inc-dirs), \
-				-I $(realpath $(pdir)/$(incdir))))
+					list-project-jars), \
+				$(pdir)/$(jar)))
 endif
 
 
@@ -146,7 +137,8 @@ Release: release
 #
 
 .PHONY: lines todo list-subproject-lib-files \
-		list-subproject-shared-lib-files list-subproject-libs
+		list-subproject-shared-lib-files list-subproject-libs \
+		list-project-jars
 
 lines:
 	@echo Total number of lines:
@@ -164,9 +156,11 @@ todo:
 list-subproject-lib-files::
 
 list-subproject-shared-lib-files::
-	@echo $(BUILD_DIR)/blib/arch/auto/$(PROJECT)/$(PROJECT).so
 
 list-subproject-libs::
+
+list-project-jars::
+	@echo $(BUILD_DIR)/$(TARGET)
 
 
 #
@@ -196,7 +190,7 @@ else
 	/bin/cp -fu $< $(BUILD_DIR)/
 endif
 ifeq ($(OUTPUT_TYPE),kernel)
-	@echo "  JAVAC   $(PWD_REL_SEP)$(BUILD_DIR)/$(JAVA_PACKAGE_DIR)/*.java"
+	@echo "  JAVAC   $(PWD_REL_SEP)$(TEST_CLASS_FILE)"
 	@cd $(BUILD_DIR) && $(JAVAC) -classpath $(TEST_CLASSPATH) `basename $<`
 else
 	@cd $(BUILD_DIR) && $(JAVAC) -classpath $(TEST_CLASSPATH) `basename $<`

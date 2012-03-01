@@ -123,6 +123,14 @@ endif
 
 
 #
+# Miscellaneous targets
+#
+
+list-subproject-shared-lib-files::
+	@echo $(BUILD_DIR)/$(WRAP_LIBRARY)
+
+
+#
 # Install & unistall
 #
 
