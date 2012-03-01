@@ -88,6 +88,7 @@ static struct test_info TESTS[] =
 static struct option LONG_OPTIONS[] =
 {
 	{"help",                 no_argument,       0, 'h'},
+	{"pause",                no_argument,       0, 'P'},
 	{"verbose",              no_argument,       0, 'v'},
 	{"odbc",                 required_argument, 0,  0 },
 	{"rdf",                  no_argument,       0,  0 },
@@ -201,6 +202,21 @@ current_time_seconds(void)
 
 
 /**
+ * Return from the function, pausing if configured to do so
+ *
+ * @param n the return value
+ */
+#define RETURN(n) { \
+	if (pause) { \
+		fprintf(stderr, "\nPress Enter to exit."); \
+		char ___b[8]; \
+		fgets(___b, 4, stdin); \
+	} \
+	return (n); \
+}
+
+
+/**
  * The main function
  *
  * @param argc the number of command-line arguments
@@ -216,6 +232,8 @@ main(int argc, char** argv)
 
 	std::vector<const struct test_info*> tests;
 
+	bool pause = false;
+
 	set_program_name(argv[0]);
 	srand((unsigned int) time(NULL));
 
@@ -224,7 +242,7 @@ main(int argc, char** argv)
 
 	try {
 		int c, option_index = 0;
-		while ((c = getopt_long(argc, argv, "hv",
+		while ((c = getopt_long(argc, argv, "hPv",
 								LONG_OPTIONS, &option_index)) >= 0) {
 
 			switch (c) {
@@ -245,6 +263,10 @@ main(int argc, char** argv)
 			case 'h':
 				usage();
 				return 0;
+
+			case 'P':
+				pause = true;
+				break;
 
 			case 'v':
 				verbose = true;
@@ -405,7 +427,7 @@ main(int argc, char** argv)
 	catch (std::exception& e) {
 		fprintf(stderr, "%s: %s\n", program_name, e.what());
 		if (backend != NULL) backend->cpl_db_destroy(backend);
-		return 1;
+		RETURN(1);
 	}
 
 
@@ -422,7 +444,7 @@ main(int argc, char** argv)
 	catch (std::exception& e) {
 		fprintf(stderr, "%s: %s\n", program_name, e.what());
 		if (backend != NULL) backend->cpl_db_destroy(backend);
-		return 1;
+		RETURN(1);
 	}
 
 
@@ -490,12 +512,11 @@ main(int argc, char** argv)
 				print_buffer(stdout);
 			}
 			fprintf(stdout, "[FAILED] %s\n\n", e.what());
-			return 1;
+			RETURN(1);
 		}
 	}
 
 	if (verbose) fputc('\n', stdout);
 
-	return 0;
+	RETURN(0);
 }
-
