@@ -564,6 +564,8 @@ sub get_session_info {
 			CPLDirect::cpl_session_info_t::swig_pid_get($info),
 		program           => 
 			CPLDirect::cpl_session_info_t::swig_program_get($info),
+		cmdline           => 
+			CPLDirect::cpl_session_info_t::swig_cmdline_get($info),
 		start_time        => 
 			CPLDirect::cpl_session_info_t::swig_start_time_get($info),
 	);

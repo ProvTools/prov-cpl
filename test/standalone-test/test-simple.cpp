@@ -64,6 +64,7 @@ print_session_info(cpl_session_info_t* info)
 	print(L_DEBUG, "  User Name        : %s", info->user);
 	print(L_DEBUG, "  PID              : %d", info->pid);
 	print(L_DEBUG, "  Program Name     : %s", info->program);
+	print(L_DEBUG, "  Command Line     : %s", info->cmdline);
 	print(L_DEBUG, "  Start Time       : %s", s_start_time);
 }
 
@@ -199,6 +200,7 @@ test_simple(void)
 	cpl_id_t obj  = CPL_NONE;
 	cpl_id_t obj2 = CPL_NONE;
 	cpl_id_t obj3 = CPL_NONE;
+	cpl_id_t obj4 = CPL_NONE;
 
 
 	// Get the current session
@@ -224,6 +226,11 @@ test_simple(void)
 	ret = cpl_create_object(ORIGINATOR, "Process B", "Proc", obj, &obj3);
 	print(L_DEBUG, "cpl_create_object --> %llx:%llx [%d]", obj3.hi,obj3.lo,ret);
 	CPL_VERIFY(cpl_create_object, ret);
+
+	ret = cpl_lookup_or_create_object(ORIGINATOR, "Process C", "Proc", CPL_NONE, &obj4);
+	print(L_DEBUG, "cpl_lookup_or_create_object --> %llx:%llx [%d]",
+			obj4.hi,obj4.lo,ret);
+	CPL_VERIFY(cpl_lookup_or_create_object, ret);
 
 	print(L_DEBUG, " ");
 

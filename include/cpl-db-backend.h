@@ -76,6 +76,7 @@ typedef struct _cpl_db_backend_t {
 	 * @param user the user name
 	 * @param pid the process ID
 	 * @param program the program name
+	 * @param cmdline the command line
 	 * @return CPL_OK or an error code
 	 */
 	cpl_return_t
@@ -84,7 +85,8 @@ typedef struct _cpl_db_backend_t {
 							 const char* mac_address,
 							 const char* user,
 							 const int pid,
-							 const char* program);
+							 const char* program,
+							 const char* cmdline);
 
 	/**
 	 * Create an object.

@@ -158,6 +158,7 @@ cpl_rdf_destroy(struct _cpl_db_backend_t* backend)
  * @param user the user name
  * @param pid the process ID
  * @param program the program name
+ * @param cmdline the command line
  * @return CPL_OK or an error code
  */
 extern "C" cpl_return_t
@@ -166,9 +167,10 @@ cpl_rdf_create_session(struct _cpl_db_backend_t* backend,
 					   const char* mac_address,
 					   const char* user,
 					   const int pid,
-					   const char* program)
+					   const char* program,
+					   const char* cmdline)
 {
-	assert(backend != NULL && user != NULL && program != NULL);
+	assert(backend != NULL && user != NULL && program != NULL && cmdline!=NULL);
 	cpl_rdf_t* rdf = (cpl_rdf_t*) backend;
 
 	char session_str[64];
@@ -187,6 +189,7 @@ cpl_rdf_create_session(struct _cpl_db_backend_t* backend,
 	ss << " p:username \"" << cpl_rdf_escape_string(user) << "\";";
 	ss << " p:pid " << pid << ";";
 	ss << " p:program \"" << cpl_rdf_escape_string(program) << "\";";
+	ss << " p:cmdline \"" << cpl_rdf_escape_string(cmdline) << "\";";
 	ss << " p:initialization_time " << time(NULL) << " }\n";
 
 	cpl_return_t ret = cpl_rdf_connection_execute_update(rdf->connection_update,
@@ -591,11 +594,12 @@ cpl_rdf_get_session_info(struct _cpl_db_backend_t* backend,
 	ss << "PREFIX s: <session:>\n";
 	ss << "PREFIX p: <prop:>\n";
 	ss << "SELECT ?mac_address, ?username, ?pid, ?program, ";
-	ss << "?initialization_time WHERE { " << id_str;
+	ss << "?initialization_time, ?cmdline WHERE { " << id_str;
 	ss << " p:mac_address ?mac_address ;";
 	ss << " p:username ?username ;";
 	ss << " p:pid ?pid ;";
 	ss << " p:program ?program ;";
+	ss << " p:cmdline ?cmdline ;";
 	ss << " p:initialization_time ?initialization_time .";
 	ss << "}";
 
@@ -642,6 +646,10 @@ cpl_rdf_get_session_info(struct _cpl_db_backend_t* backend,
 	if (!CPL_IS_OK(ret)) goto err;
 	p->program = strdup(v->v_string);
 
+	ret = rs[0].get_s("cmdline", RDF_XSD_STRING, &v);
+	if (!CPL_IS_OK(ret)) goto err;
+	p->cmdline = strdup(v->v_string);
+
 	ret = rs[0].get_s("initialization_time", RDF_XSD_INTEGER, &v);
 	if (!CPL_IS_OK(ret)) goto err;
 	p->start_time = v->v_integer;
@@ -653,6 +661,7 @@ err:
 	if (p->mac_address != NULL) free(p->mac_address);
 	if (p->user != NULL) free(p->user);
 	if (p->program != NULL) free(p->program);
+	if (p->cmdline != NULL) free(p->cmdline);
 	free(p);
 
 	return ret;

@@ -269,7 +269,7 @@ cpl_sql_fetch_single_timestamp_as_unix_time(SQLHSTMT stmt, unsigned long* out,
 static cpl_return_t
 cpl_sql_fetch_single_dynamically_allocated_string(SQLHSTMT stmt, char** out,
 						   int column=1, bool fetch=true, bool close_if_ok=true,
-						   bool handle_nulls=false, size_t max_length=255)
+						   bool handle_nulls=false, size_t max_length=4096)
 {
 	char* str = (char*) malloc(max_length + 1);
 	if (str == NULL) return CPL_E_INSUFFICIENT_RESOURCES;
@@ -453,8 +453,9 @@ cpl_create_odbc_backend(const char* connection_string,
 
 	PREPARE(create_session_insert_stmt,
 			"INSERT INTO cpl_sessions"
-			"            (id_hi, id_lo, mac_address, username, pid, program)"
-			"     VALUES (?, ?, ?, ?, ?, ?);");
+			"            (id_hi, id_lo, mac_address, username, pid, program,"
+			"             cmdline)"
+			"     VALUES (?, ?, ?, ?, ?, ?, ?);");
 
 	PREPARE(create_object_insert_stmt,
 			"INSERT INTO cpl_objects"
@@ -522,7 +523,7 @@ cpl_create_odbc_backend(const char* connection_string,
 
 	PREPARE(get_session_info_stmt,
 			"SELECT mac_address, username,"
-			"       pid, program, initialization_time"
+			"       pid, program, cmdline, initialization_time"
 			"  FROM cpl_sessions"
 			" WHERE id_hi = ? AND id_lo = ?"
 			" LIMIT 1;");
@@ -720,6 +721,7 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
  * @param user the user name
  * @param pid the process ID
  * @param program the program name
+ * @param cmdline the command line
  * @return CPL_OK or an error code
  */
 extern "C" cpl_return_t
@@ -728,9 +730,10 @@ cpl_odbc_create_session(struct _cpl_db_backend_t* backend,
 						const char* mac_address,
 						const char* user,
 						const int pid,
-						const char* program)
+						const char* program,
+						const char* cmdline)
 {
-	assert(backend != NULL && user != NULL && program != NULL);
+	assert(backend != NULL && user != NULL && program != NULL && cmdline!=NULL);
 	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
 
 	mutex_lock(odbc->create_session_lock);
@@ -747,6 +750,7 @@ cpl_odbc_create_session(struct _cpl_db_backend_t* backend,
 	SQL_BIND_VARCHAR(stmt, 4, 255, user);
 	SQL_BIND_INTEGER(stmt, 5, pid);
 	SQL_BIND_VARCHAR(stmt, 6, 4096, program);
+	SQL_BIND_VARCHAR(stmt, 7, 4096, cmdline);
 
 
 	// Insert the new row to the sessions table
@@ -1273,7 +1277,8 @@ cpl_odbc_get_session_info(struct _cpl_db_backend_t* backend,
 	CPL_SQL_SIMPLE_FETCH(dynamically_allocated_string, 2, &p->user);
 	CPL_SQL_SIMPLE_FETCH(llong, 3, &l); p->pid = (int) l;
 	CPL_SQL_SIMPLE_FETCH(dynamically_allocated_string, 4, &p->program);
-	CPL_SQL_SIMPLE_FETCH(timestamp_as_unix_time, 5, &p->start_time);
+	CPL_SQL_SIMPLE_FETCH(dynamically_allocated_string, 5, &p->cmdline);
+	CPL_SQL_SIMPLE_FETCH(timestamp_as_unix_time, 6, &p->start_time);
 
 	ret = SQLCloseCursor(stmt);
 	if (!SQL_SUCCEEDED(ret)) {
@@ -1301,6 +1306,7 @@ err_r:
 	if (p->mac_address != NULL) free(p->mac_address);
 	if (p->user != NULL) free(p->user);
 	if (p->program != NULL) free(p->program);
+	if (p->cmdline != NULL) free(p->cmdline);
 	free(p);
 
 	return r;

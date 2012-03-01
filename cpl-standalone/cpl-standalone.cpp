@@ -309,6 +309,7 @@ cpl_attach(struct _cpl_db_backend_t* backend)
 
 	const char* user;
 	const char* program;
+	const char* cmdline;
 	int pid;
 
 #ifdef _WINDOWS
@@ -371,6 +372,7 @@ cpl_attach(struct _cpl_db_backend_t* backend)
 	user = _user;
 	program = _program;
 	pid = GetCurrentProcessId();
+	cmdline = GetCommandLine();
 
 #elif defined(__APPLE__)
 
@@ -391,12 +393,58 @@ cpl_attach(struct _cpl_db_backend_t* backend)
 	if (_program == NULL) return CPL_E_PLATFORM_ERROR;
 	program = _program;
 
+#error TODO cmdline
+
 #else
 	user = getenv("USER");
 	pid = getpid();
 	program = program_invocation_name;
 	if (user == NULL) return CPL_E_PLATFORM_ERROR;
 	if (program == NULL) return CPL_E_PLATFORM_ERROR;
+
+	FILE* f = fopen("/proc/self/cmdline", "rb");
+	if (f == NULL) return CPL_E_PLATFORM_ERROR;
+	char* _cmdbuf = new char[4096 + 4];
+	if (_cmdbuf == NULL) { fclose(f); return CPL_E_INSUFFICIENT_RESOURCES; }
+	size_t l = fread(_cmdbuf, 1, 4096, f);
+	_cmdbuf[l] = '\0';
+	fclose(f);
+	
+	std::string _cmdline = "";
+	std::string token = "";
+	bool has_white = false;
+	bool has_sq = false;
+	for (size_t i = 0; i <= l; i++) {
+		char c = _cmdbuf[i];
+		if (c != '\0') {
+			has_white = has_white || isspace(c);
+			has_sq    = has_sq    || c == '\'';
+			token += c;
+		}
+		else {
+			if (has_sq) {
+				std::string s = "";
+				const char* _t = token.c_str();
+				size_t _tl = strlen(_t);
+				for (size_t j = 0; j < _tl; j++) {
+					char d = _t[j];
+					if (d == '\'' || d == '\\') s += '\\';
+					s += d;
+				}
+				token = s;
+			}
+			if (has_white || has_sq) {
+				token = "'" + token + "'";
+				if (has_sq) token = "@" + token;
+			}
+			if (_cmdline != "") _cmdline += " ";
+			_cmdline += token;
+			token = "";
+		}
+	}
+	assert(token == "");
+	delete[] _cmdbuf;
+	cmdline = _cmdline.c_str();
 #endif
 
 	cpl_mac_address_t mac;
@@ -426,7 +474,8 @@ cpl_attach(struct _cpl_db_backend_t* backend)
 												mac_string_ptr,
 												user,
 												pid,
-												program);
+												program,
+												cmdline);
 
 #ifdef _WINDOWS
 	delete[] _user;
@@ -1054,6 +1103,7 @@ cpl_free_session_info(cpl_session_info_t* info)
 	if (info->mac_address != NULL) free(info->mac_address);
 	if (info->user != NULL) free(info->user);
 	if (info->program != NULL) free(info->program);
+	if (info->cmdline != NULL) free(info->cmdline);
 
 	free(info);
 	return CPL_OK;

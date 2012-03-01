@@ -76,6 +76,12 @@ CREATE TABLE IF NOT EXISTS cpl_sessions (
        username VARCHAR(255),
        pid INT,
        program VARCHAR(4096),
+       cmdline VARCHAR(4096),
+       initialization_time TIMESTAMP DEFAULT NOW(),
+       PRIMARY KEY (id_hi, id_lo));
+
+CREATE TABLE IF NOT EXISTS cpl_versions (
+       id_hi BIGINT,
        initialization_time TIMESTAMP DEFAULT NOW(),
        PRIMARY KEY (id_hi, id_lo));
 

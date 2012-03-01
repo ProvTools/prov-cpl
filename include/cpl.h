@@ -141,6 +141,9 @@ typedef struct cpl_session_info {
 	/// The program name.
 	char* program;
 
+	/// The program's command line.
+	char* cmdline;
+
 	/// The start time of the session (expressed as UNIX time).
 	unsigned long start_time;
 

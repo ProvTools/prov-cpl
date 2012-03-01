@@ -57,6 +57,9 @@ public class CPLSession {
 	/// Program name
 	private String program = null;
 
+	/// Program command line
+	private String cmdline = null;
+
 	/// User name
 	private String user = null;
 
@@ -170,6 +173,7 @@ public class CPLSession {
 			user = info.getUser();
 			pid = info.getPid();
 			program = info.getProgram();
+			cmdline = info.getCmdline();
 			startTime = info.getStart_time();
 
 			knowInfo = true;
@@ -217,6 +221,17 @@ public class CPLSession {
 
 
 	/**
+	 * Get the program's command line
+	 *
+	 * @return the program's command line
+	 */
+	public String getCommandLine() {
+		if (!knowInfo) fetchInfo();
+		return cmdline;
+	}
+
+
+	/**
 	 * Get the PID of the program
 	 *
 	 * @return the PID
@@ -259,6 +274,10 @@ public class CPLSession {
 		sb.append("\n");
 
 		if (detail) {
+			sb.append("Command line: ");
+			sb.append(getCommandLine());
+			sb.append("\n");
+
 			sb.append("Program PID : ");
 			sb.append(getPID());
 			sb.append("\n");
