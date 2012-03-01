@@ -36,6 +36,7 @@ package edu.harvard.pass.cpl;
 
 
 import swig.direct.CPLDirect.*;
+import java.math.BigInteger;
 
 
 /**
@@ -101,7 +102,12 @@ public class CPL {
         int r = CPLDirect.cpl_create_odbc_backend(connectionString, 0, outDb);
 		CPLException.assertSuccess("Could not open database connection", r);
 
-		cpl = new CPL(CPLDirect.cpl_dereference_pp_cpl_db_backend_t(outDb));
+		try {
+			cpl = new CPL(CPLDirect.cpl_dereference_pp_cpl_db_backend_t(outDb));
+		}
+		finally {
+			CPLDirect.delete_cpl_db_backend_tpp(outDb);
+		}
 	}
 
 
@@ -121,7 +127,12 @@ public class CPL {
         int r = CPLDirect.cpl_create_rdf_backend(queryURL, updateURL, 0, outDb);
 		CPLException.assertSuccess("Could not open database connection", r);
 
-		cpl = new CPL(CPLDirect.cpl_dereference_pp_cpl_db_backend_t(outDb));
+		try {
+			cpl = new CPL(CPLDirect.cpl_dereference_pp_cpl_db_backend_t(outDb));
+		}
+		finally {
+			CPLDirect.delete_cpl_db_backend_tpp(outDb);
+		}
 	}
 
 
@@ -132,6 +143,18 @@ public class CPL {
 	 */
 	public static synchronized boolean isAttached() {
 		return cpl != null;
+	}
+
+
+	/**
+	 * Determine whether the given CPL internal ID is CPL_NONE
+	 *
+	 * @param id the internal id
+	 * @return if it is CPL_NONE
+	 */
+	static boolean isNone(cpl_id_t id) {
+		return id.getHi().equals(BigInteger.ZERO)
+			&& id.getLo().equals(BigInteger.ZERO);
 	}
 }
 

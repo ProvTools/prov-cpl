@@ -425,6 +425,13 @@ WINDLL_API extern const cpl_id_t CPL_NONE;
 #define __CPL_S_STR__2					"Success (no data)"
 
 /**
+ * Success, but the desired object was not found, so it was automatically
+ * created
+ */
+#define CPL_S_OBJECT_CREATED			3
+#define __CPL_S_STR__3					"Success (object created)"
+
+/**
  * Invalid argument
  */
 #define CPL_E_INVALID_ARGUMENT			-1
@@ -646,6 +653,25 @@ cpl_lookup_object(const char* originator,
 				  const char* name,
 				  const char* type,
 				  cpl_id_t* out_id);
+
+/**
+ * Lookup or create an object if it does not exist.
+ *
+ * @param originator the application responsible for creating the object
+ *                   and generating unique names within its namespace
+ * @param name the object name
+ * @param type the object type
+ * @param container the ID of the object that should contain this object
+ *                  (use CPL_NONE for no container)
+ * @param out_id the pointer to store the ID of the newly created object
+ * @return CPL_OK or an error code
+ */
+EXPORT cpl_return_t
+cpl_lookup_or_create_object(const char* originator,
+							const char* name,
+							const char* type,
+							const cpl_id_t container,
+							cpl_id_t* out_id);
 
 /**
  * Disclose a data flow.

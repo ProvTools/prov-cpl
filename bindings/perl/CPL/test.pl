@@ -38,7 +38,7 @@ use strict;
 use CPL;
 use Error qw(:try);
 
-my $ORIGINATOR = "edu.harvard.pass.cpl.perl.direct.test";
+my $ORIGINATOR = "edu.harvard.pass.cpl.perl.test";
 
 
 #
@@ -147,6 +147,15 @@ print "CPL::create_object(\"Object B\", \"File\", CPL::NONE)";
 my $obj4 = CPL::create_object($ORIGINATOR, "Object B", "File", $CPL::NONE);
 print ": " . str_hash_ref($obj4) . "\n";
 
+print "CPL::lookup_or_create_object(\"Object B\", \"File\", CPL::NONE)";
+my $obj4t = CPL::lookup_or_create_object($ORIGINATOR, "Object B", "File", $CPL::NONE);
+print ": " . str_hash_ref($obj4t) . "\n";
+if (!CPL::id_eq($obj4, $obj4t)) {die "Object lookup returned the wrong object";}
+
+print "CPL::lookup_or_create_object(\"Object C\", \"File\",  obj1)";
+my $obj5 = CPL::lookup_or_create_object($ORIGINATOR, "Object C", "File", $obj1);
+print ": " . str_hash_ref($obj5) . "\n";
+
 print "\n";
 
 
@@ -173,6 +182,11 @@ print "CPL::try_lookup_object(\"Object B\", \"File\")";
 my $obj4x = CPL::try_lookup_object($ORIGINATOR, "Object B", "File");
 print ": " . str_hash_ref($obj4x) . "\n";
 if (!CPL::id_eq($obj4, $obj4x)) {die "Object lookup returned the wrong object";}
+
+print "CPL::try_lookup_object(\"Object C\", \"File\")";
+my $obj5x = CPL::lookup_or_create_object($ORIGINATOR, "Object C", "File");
+print ": " . str_hash_ref($obj5x) . "\n";
+if (!CPL::id_eq($obj5, $obj5x)) {die "Object lookup returned the wrong object";}
 
 print "CPL::try_lookup_object(...should fail...)";
 my $objfx = CPL::try_lookup_object($ORIGINATOR, "%%%%%%", "****");

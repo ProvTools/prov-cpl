@@ -58,7 +58,7 @@ EXPORT const cpl_id_t CPL_NONE = { { { 0, 0 } } };
 /**
  * The last success code number
  */
-#define __CPL_S_LAST_SUCCESS			2
+#define __CPL_S_LAST_SUCCESS			3
 
 /**
  * Success code strings
@@ -67,6 +67,7 @@ EXPORT const char* CPL_S_STR[] = {
 	__CPL_S_STR__0,
 	__CPL_S_STR__1,
 	__CPL_S_STR__2,
+	__CPL_S_STR__3,
 };
 
 /**
@@ -98,6 +99,11 @@ EXPORT const char* CPL_E_STR[] = {
 	__CPL_E_STR__17,
 };
 
+/**
+ * The name of the shared semaphore for preserving the atomicity of
+ * cpl_lookup_or_create_object()
+ */
+#define CPL_LOOKUP_OR_CREATE_SEM_INIT	"edu.harvard.pass.cpl.l_or_cr"
 
 
 /***************************************************************************/
@@ -123,6 +129,11 @@ static cpl_hash_map_id_to_open_object_t cpl_open_objects;
  * The lock for the cache of open objects
  */
 static cpl_lock_t cpl_open_objects_lock;
+
+/**
+ * The shared lock for preserving the atomicity of cpl_lookup_or_create_object
+ */
+static cpl_shared_semaphore_t cpl_lookup_or_create_object_semaphore;
 
 /**
  * The database backend
@@ -432,6 +443,17 @@ cpl_attach(struct _cpl_db_backend_t* backend)
 	}
 
 
+	// Initialize the locks
+
+	cpl_lookup_or_create_object_semaphore
+		= cpl_shared_semaphore_open(CPL_LOOKUP_OR_CREATE_SEM_INIT);
+	if (cpl_lookup_or_create_object_semaphore == NULL) {
+		ret = CPL_E_PLATFORM_ERROR;
+		cpl_db_backend = NULL;
+		return ret;
+	}
+
+
 	// Finish
 
 	cpl_initialized = true;
@@ -454,6 +476,7 @@ cpl_detach(void)
 	cpl_db_backend->cpl_db_destroy(cpl_db_backend);
 	cpl_db_backend = NULL;
 
+	cpl_shared_semaphore_close(cpl_lookup_or_create_object_semaphore);
 	cpl_lock_cleanup();
 
 	return CPL_OK;
@@ -610,6 +633,42 @@ cpl_lookup_object(const char* originator,
 
 	if (out_id != NULL) *out_id = id;
 	return CPL_OK;
+}
+
+
+/**
+ * Lookup or create an object if it does not exist.
+ *
+ * @param originator the application responsible for creating the object
+ *                   and generating unique names within its namespace
+ * @param name the object name
+ * @param type the object type
+ * @param container the ID of the object that should contain this object
+ *                  (use CPL_NONE for no container)
+ * @param out_id the pointer to store the ID of the newly created object
+ * @return CPL_OK or an error code
+ */
+extern "C" EXPORT cpl_return_t
+cpl_lookup_or_create_object(const char* originator,
+							const char* name,
+							const char* type,
+							const cpl_id_t container,
+							cpl_id_t* out_id)
+{
+	CPL_ENSURE_INITALIZED;
+	int r = CPL_E_INTERNAL_ERROR;
+
+	cpl_shared_semaphore_wait(cpl_lookup_or_create_object_semaphore);
+
+	r = cpl_lookup_object(originator, name, type, out_id);
+	if (r != CPL_E_NOT_FOUND) goto out;
+
+	r = cpl_create_object(originator, name, type, container, out_id);
+	if (CPL_IS_OK(r)) r = CPL_S_OBJECT_CREATED;
+
+out:
+	cpl_shared_semaphore_post(cpl_lookup_or_create_object_semaphore);
+	return r;
 }
 
 

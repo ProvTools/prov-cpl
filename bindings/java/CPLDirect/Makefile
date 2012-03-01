@@ -11,11 +11,12 @@ ROOT := ../../..
 # Customize the build
 #
 
-INSTALL := yes
-DEPENDENCIES := ../../cpl.i
-CXXFLAGS     := $(CXXFLAGS) -Wno-strict-aliasing
-LINKER_FLAGS := $(LINKER_FLAGS)
-LIBRARIES    := $(LIBRARIES) -lcpl -lcpl-odbc -lcpl-rdf
+INSTALL       := yes
+DEPENDENCIES  := ../../cpl.i $(ROOT)/include/cpl.h $(ROOT)/include/cplxx.h
+CXXFLAGS      := $(CXXFLAGS)
+INCLUDE_FLAGS := $(INCLUDE_FLAGS) -I$(ROOT)/include
+LINKER_FLAGS  := $(LINKER_FLAGS)
+LIBRARIES     := $(LIBRARIES) -lcpl -lcpl-odbc -lcpl-rdf
 
 
 #

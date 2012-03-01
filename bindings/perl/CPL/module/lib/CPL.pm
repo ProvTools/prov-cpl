@@ -59,6 +59,7 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 	id_eq
 	create_object
 	lookup_object
+	lookup_or_create_object
 	try_lookup_object
 	data_flow
 	control
@@ -81,6 +82,7 @@ our @EXPORT = qw(
 	id_eq
 	create_object
 	lookup_object
+	lookup_or_create_object
 	try_lookup_object
 	data_flow
 	control
@@ -295,6 +297,45 @@ sub lookup_object {
 #
 sub try_lookup_object {
 	return lookup_object(@_, 1);
+}
+
+
+#
+# Lookup or create a provenance object
+#
+sub lookup_or_create_object {
+	my ($originator, $name, $type, $container) = @_;
+
+	if (!$container) {
+		$container = $NONE;
+	}
+
+	my $c_ptr = CPLDirect::new_cpl_id_tp();
+	CPLDirect::cpl_id_t::swig_hi_set($c_ptr, $container->{hi});
+	CPLDirect::cpl_id_t::swig_lo_set($c_ptr, $container->{lo});
+	my $c = CPLDirect::cpl_id_tp_value($c_ptr);
+
+	my $obj_ptr = CPLDirect::new_cpl_id_tp();
+	my $ret = CPLDirect::cpl_lookup_or_create_object($originator, $name, $type,
+			$c, $obj_ptr);
+	CPLDirect::delete_cpl_id_tp($c_ptr);
+	if (!CPLDirect::cpl_is_ok($ret)) {
+		CPLDirect::delete_cpl_id_tp($obj_ptr);
+		croak "Could not lookup or create a provenance object:\n" .
+			"    Originator: \"$originator\"\n" .
+			"    Name: \"$name\"\n" .
+			"    Type: \"$type\"\n" .
+			"Error: " . CPLDirect::cpl_error_string($ret) . "\n";
+	}
+
+	my $obj = CPLDirect::cpl_id_tp_value($obj_ptr);
+	my $id = {
+	   hi => CPLDirect::cpl_id_t::swig_hi_get($obj),
+	   lo => CPLDirect::cpl_id_t::swig_lo_get($obj)
+	};
+	CPLDirect::delete_cpl_id_tp($obj_ptr);
+
+	return $id;
 }
 
 
@@ -758,9 +799,12 @@ CPL - Perl bindings for Core Provenance Library
   my $id  = CPL::create_object("com.example.myapp", "/bin/sh", "proc");
   my $id1 = CPL::create_object("com.example.myapp", "~/a.txt", "file", $id);
   my $id2 = CPL::lookup_object("com.example.myapp", "/bin/sh", "proc");
-  my $id3 = CPL::try_lookup_object("com.example.myapp", "/bin/sh", "proc");
-  if (!defined($id3)) { warn "The object was not found." }
-  if (CPL::id_eq($id3, $id)) { print "The two IDs are the same.\n" }
+  my $id3 = CPL::lookup_or_createobject("com.example.myapp", "/bin/sh", "proc");
+  my $id4 = CPL::lookup_or_create_object("com.example.myapp", "~/a.txt",
+                                         "file", $id);
+  my $id5 = CPL::try_lookup_object("com.example.myapp", "/bin/sh", "proc");
+  if (!defined($id5)) { warn "The object was not found." }
+  if (CPL::id_eq($id5, $id2)) { print "The two IDs are the same.\n" }
 
   CPL::data_flow($id1, $id);
   CPL::data_flow($id1, $id, $CPL::DATA_INPUT);
@@ -850,6 +894,15 @@ return the one with the most recent timestamp.
 The same as CPL::lookup_object() described above, except that the function
 call does not fail if the object does not exist, in which case it returns
 undef instead of the object $id.
+
+=head3 lookup_or_create_object
+
+  my $id = CPL::lookup_or_create_object($originator, $name, $type);
+  my $id = CPL::lookup_or_create_object($originator, $name, $type, $container);
+
+Looks up a provenance object based on its $originator, $name, and $type
+and returns its $id if it exists. If not, create a new object that satisfies
+the given criteria and is optionally placed in the given $container.
 
 =head3 data_flow
 

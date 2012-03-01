@@ -12,7 +12,7 @@ ROOT := ../../..
 #
 
 INSTALL := yes
-DEPENDENCIES := ../../cpl.i
+DEPENDENCIES := ../../cpl.i $(ROOT)/include/cpl.h $(ROOT)/include/cplxx.h
 
 
 #

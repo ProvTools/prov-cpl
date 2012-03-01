@@ -49,7 +49,25 @@ public class CPLSession {
 	private static CPLSession current;
 
 	/// The internal id
-	private cpl_id_t id;
+	cpl_id_t id;
+
+	/// The MAC address
+	private String macAddress = null;
+
+	/// Program name
+	private String program = null;
+
+	/// User name
+	private String user = null;
+
+	/// PID
+	private int pid = -1;
+
+	/// Start time
+	private long startTime = -1;
+
+	/// Whether we know the above information about the session
+	private boolean knowInfo = false;
 
 
 	/**
@@ -57,7 +75,7 @@ public class CPLSession {
 	 *
 	 * @param id the internal CPL session ID
 	 */
-	private CPLSession(cpl_id_t id) {
+	CPLSession(cpl_id_t id) {
 		this.id = id;
 	}
 
@@ -122,6 +140,144 @@ public class CPLSession {
 	@Override
 	public String toString() {
 		return id.getHi().toString(16) + ":" + id.getLo().toString(16);
+	}
+
+
+	/**
+	 * Fetch the session info if it is not already present
+	 *
+	 * @return true if the info was just fetched, false if we already had it
+	 */
+	protected boolean fetchInfo() {
+
+		if (knowInfo) return false;
+
+
+		// Fetch the info from CPL
+		
+		SWIGTYPE_p_p_cpl_session_info_t ppInfo
+			= CPLDirect.new_cpl_session_info_tpp();
+
+		try {
+			int r = CPLDirect.cpl_get_session_info(id,
+					CPLDirect.cpl_convert_pp_cpl_session_info_t(ppInfo));
+			CPLException.assertSuccess(r);
+
+			cpl_session_info_t info
+				= CPLDirect.cpl_dereference_pp_cpl_session_info_t(ppInfo);
+
+			macAddress = info.getMac_address();
+			user = info.getUser();
+			pid = info.getPid();
+			program = info.getProgram();
+			startTime = info.getStart_time();
+
+			knowInfo = true;
+			CPLDirect.cpl_free_session_info(info);
+		}
+		finally {
+			CPLDirect.delete_cpl_session_info_tpp(ppInfo);
+		}
+
+		return true;
+	}
+
+
+	/**
+	 * Get the MAC address of the computer associated with the session
+	 *
+	 * @return the MAC address as a string
+	 */
+	public String getMACAddress() {
+		if (!knowInfo) fetchInfo();
+		return macAddress;
+	}
+
+
+	/**
+	 * Get the user name
+	 *
+	 * @return the user name
+	 */
+	public String getUser() {
+		if (!knowInfo) fetchInfo();
+		return user;
+	}
+
+
+	/**
+	 * Get the program name
+	 *
+	 * @return the program name
+	 */
+	public String getProgram() {
+		if (!knowInfo) fetchInfo();
+		return program;
+	}
+
+
+	/**
+	 * Get the PID of the program
+	 *
+	 * @return the PID
+	 */
+	public int getPID() {
+		if (!knowInfo) fetchInfo();
+		return pid;
+	}
+
+
+	/**
+	 * Get the session start time
+	 *
+	 * @return the session start time expressed as Unix time
+	 */
+	public long getStartTime() {
+		if (!knowInfo) fetchInfo();
+		return startTime;
+	}
+
+
+	/**
+	 * Create a more detailed string representation of the object
+	 *
+	 * @param detail whether to provide even more detail
+	 * @return a multi-line string describing the object
+	 */
+	public String toString(boolean detail) {
+
+		StringBuilder sb = new StringBuilder();
+
+		sb.append("MAC Address ");
+		if (detail) sb.append(": "); else sb.append(": ");
+		sb.append(getMACAddress());
+		sb.append("\n");
+
+		sb.append("Program name");
+		if (detail) sb.append(": "); else sb.append(": ");
+		sb.append(getProgram());
+		sb.append("\n");
+
+		if (detail) {
+			sb.append("Program PID : ");
+			sb.append(getPID());
+			sb.append("\n");
+		}
+
+		sb.append("User name   ");
+		if (detail) sb.append(": "); else sb.append(": ");
+		sb.append(getUser());
+		sb.append("\n");
+
+		if (detail) {
+			sb.append("Start time  : ");
+			sb.append(new java.sql.Date(1000L * getStartTime()));
+			sb.append(" ");
+			sb.append(new java.sql.Time(1000L * getStartTime()));
+			sb.append("\n");
+		}
+
+		return sb.toString();
 	}
 }
 

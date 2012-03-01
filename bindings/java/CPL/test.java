@@ -106,6 +106,16 @@ public class test {
 		CPLObject obj4 = new CPLObject(ORIGINATOR, "Object B", "File", null);
 		System.out.println(": " + obj4);
 
+		System.out.print("CPLObject.lookupOrCreate(\"Object B\", \"File\")");
+		CPLObject obj4t = CPLObject.lookupOrCreate(ORIGINATOR, "Object B", "File");
+		System.out.println(": " + obj4t);
+		if (!obj4.equals(obj4t))
+			throw new RuntimeException("Object lookup returned the wrong object");
+
+		System.out.print("CPLObject.lookupOrCreate(\"Object C\", \"File\", obj1)");
+		CPLObject obj5 = CPLObject.lookupOrCreate(ORIGINATOR, "Object C", "File", obj1);
+		System.out.println(": " + obj5);
+
 		System.out.println();
 
 
@@ -137,6 +147,12 @@ public class test {
 		if (!obj4.equals(obj4x))
 			throw new RuntimeException("Object lookup returned the wrong object");
 
+		System.out.print("CPLObject.tryLookup(\"Object C\", \"File\")");
+		CPLObject obj5x = CPLObject.tryLookup(ORIGINATOR, "Object C", "File");
+		System.out.println(": " + obj5x);
+		if (!obj5.equals(obj5x))
+			throw new RuntimeException("Object lookup returned the wrong object");
+
 		System.out.print("CPLObject.tryLookup(...should fail...)");
 		CPLObject objfx = CPLObject.tryLookup(ORIGINATOR, "%%%%%%", "****");
 		if (objfx == null) System.out.println(": OK");
@@ -145,6 +161,27 @@ public class test {
 
 		System.out.println();
 
+
+		/*
+		 * Session info
+		 */
+
+		System.out.println("Current Session");
+		System.out.println(session.toString(true));
+
+
+		/*
+		 * Object infos
+		 */
+
+		System.out.println("Object obj1");
+		System.out.println(obj1.toString(true));
+
+		System.out.println("Object obj2");
+		System.out.println(obj2.toString(true));
+
+		System.out.println("Object obj3 (less detail)");
+		System.out.println(obj3.toString(false));
     }
 }
 
