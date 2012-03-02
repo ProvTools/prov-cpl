@@ -256,6 +256,20 @@ public class test {
 		for (CPLAncestryEntry e : anc1v0d) System.out.println(e);
 		System.out.println();
 
+		System.out.print("obj1.getObjectAncestry(1, D_ANCESTORS, 0)");
+		Vector<CPLAncestryEntry> anc1v1a
+			= obj1.getObjectAncestry(1, CPLObject.D_ANCESTORS, 0);
+		System.out.println(":");
+		for (CPLAncestryEntry e : anc1v1a) System.out.println(e);
+		System.out.println();
+
+		System.out.print("obj1.getObjectAncestry(1, D_DESCENDANTS, 0)");
+		Vector<CPLAncestryEntry> anc1v1d
+			= obj1.getObjectAncestry(1, CPLObject.D_DESCENDANTS, 0);
+		System.out.println(":");
+		for (CPLAncestryEntry e : anc1v1d) System.out.println(e);
+		System.out.println();
+
 		System.out.println("obj1.getObjectAncestry(0, D_DESCENDANTS,");
 		System.out.print  ("                       A_NO_DATA_DEPENDENCIES)");
 		Vector<CPLAncestryEntry> anc1v0d_1

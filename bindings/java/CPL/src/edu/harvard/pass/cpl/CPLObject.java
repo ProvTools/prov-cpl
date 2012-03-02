@@ -126,7 +126,8 @@ public class CPLObject {
 	 * @param id the internal CPL object ID
 	 */
 	CPLObject(cpl_id_t id) {
-		this.id = id;
+		this.id = CPLDirect.new_cpl_id_tp();
+		CPLDirect.cpl_id_copy(this.id, id);
 	}
 
 

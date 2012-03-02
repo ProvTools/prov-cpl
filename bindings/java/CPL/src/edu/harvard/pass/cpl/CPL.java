@@ -64,6 +64,9 @@ public class CPL {
     /// Whether the shared CPL libraries are installed
     private static boolean cplInstalled = false;
 
+	/// Whether the CPL is attached
+	private boolean attached = false;
+
 
     /**
      * Initialize
@@ -128,6 +131,7 @@ public class CPL {
 
         int r = CPLDirect.cpl_attach(backend);
 		CPLException.assertSuccess("Could not attach to the CPL", r);
+		attached = true;
     }
 
 
@@ -139,8 +143,11 @@ public class CPL {
 
         // Detach from the CPL
 
-        int r = CPLDirect.cpl_detach();
-		CPLException.assertSuccess("Could not detach from the CPL", r);
+		if (attached) {
+			int r = CPLDirect.cpl_detach();
+			CPLException.assertSuccess("Could not detach from the CPL", r);
+			attached = false;
+		}
     }
 
 
@@ -149,7 +156,7 @@ public class CPL {
      *
      * @return true if they are installed
      */
-    public static boolean isCPLInstalled() {
+    public static boolean isInstalled() {
         return cplInstalled;
     }
 
@@ -210,6 +217,28 @@ public class CPL {
 		finally {
 			CPLDirect.delete_cpl_db_backend_tpp(outDb);
 		}
+	}
+
+
+	/**
+	 * Detach from the CPL. Do nothing if the CPL is not attached.
+	 */
+	public static synchronized void detach() {
+
+        if (!cplInstalled) {
+            throw new RuntimeException("The shared library for CPL Java "
+                    + "bindings is not (properly) installed");
+        }
+
+		if (cpl == null) return;
+
+		if (cpl.attached) {
+			int r = CPLDirect.cpl_detach();
+			CPLException.assertSuccess("Could not detach from the CPL", r);
+			cpl.attached = false;
+		}
+
+		cpl = null;
 	}
 
 

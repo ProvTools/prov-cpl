@@ -79,7 +79,8 @@ public class CPLSession {
 	 * @param id the internal CPL session ID
 	 */
 	CPLSession(cpl_id_t id) {
-		this.id = id;
+		this.id = CPLDirect.new_cpl_id_tp();
+		CPLDirect.cpl_id_copy(this.id, id);
 	}
 
 

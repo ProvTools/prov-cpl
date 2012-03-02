@@ -210,7 +210,8 @@ current_time_seconds(void)
 	if (pause) { \
 		fprintf(stderr, "\nPress Enter to exit."); \
 		char ___b[8]; \
-		fgets(___b, 4, stdin); \
+		char* ___r = fgets(___b, 4, stdin); \
+		(void) ___r; \
 	} \
 	return (n); \
 }
