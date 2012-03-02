@@ -37,6 +37,8 @@ package edu.harvard.pass.cpl;
 
 import swig.direct.CPLDirect.*;
 
+import java.util.Vector;
+
 
 /**
  * A provenance object
@@ -47,6 +49,42 @@ public class CPLObject {
 
 	/// The null object
 	private static final cpl_id_t nullId = CPLDirect.getCPL_NONE();
+
+	/// Data flow type: Generic
+	public static final int DATA_INPUT = CPLDirectConstants.CPL_DATA_INPUT;
+
+	/// Data flow type: IPC
+	public static final int DATA_IPC = CPLDirectConstants.CPL_DATA_IPC;
+
+	/// Data flow type: Translation
+	public static final int DATA_TRANSLATION
+		= CPLDirectConstants.CPL_DATA_TRANSLATION;
+
+	/// Data flow type: Copy
+	public static final int DATA_COPY = CPLDirectConstants.CPL_DATA_COPY;
+
+	/// Control flow type: Generic
+	public static final int CONTROL_OP = CPLDirectConstants.CPL_CONTROL_OP;
+
+	/// Control flow type: Start
+	public static final int CONTROL_START=CPLDirectConstants.CPL_CONTROL_START;
+
+	/// Traversal direction: Ancestors
+	public static final int D_ANCESTORS = CPLDirectConstants.CPL_D_ANCESTORS;
+
+	/// Traversal direction: Descendants
+	public static final int D_DESCENDANTS=CPLDirectConstants.CPL_D_DESCENDANTS;
+
+	/// Traversal option: No data dependencies
+	public static final int A_NO_DATA_DEPENDENCIES
+		= CPLDirectConstants.CPL_A_NO_DATA_DEPENDENCIES;
+
+	/// Traversal option: No control dependencies
+	public static final int A_NO_CONTROL_DEPENDENCIES
+		= CPLDirectConstants.CPL_A_NO_CONTROL_DEPENDENCIES;
+
+	/// Specify all versions where supported
+	public static final int ALL_VERSIONS = -1;
 
 	/// The internal object ID
 	cpl_id_t id;
@@ -507,6 +545,137 @@ public class CPLObject {
 		}
 
 		return sb.toString();
+	}
+
+
+	/**
+	 * Disclose data flow
+	 *
+	 * @param source the data source object
+	 * @param source_version the version of the source object
+	 * @param type the data flow type (one of CPLObject.DATA_*)
+	 * @return true if the dependency was added, false if it is a duplicate
+	 */
+	public boolean dataFlowFrom(CPLObject source, int source_version, int type){
+		int r = CPLDirect.cpl_data_flow_ext(id, source.id, source_version,type);
+		CPLException.assertSuccess(r);
+		return r != CPLDirectConstants.CPL_S_DUPLICATE_IGNORED;
+	}
+
+
+	/**
+	 * Disclose data flow
+	 *
+	 * @param source the data source object
+	 * @param type the data flow type (one of CPLObject.DATA_*)
+	 * @return true if the dependency was added, false if it is a duplicate
+	 */
+	public boolean dataFlowFrom(CPLObject source, int type) {
+		int r = CPLDirect.cpl_data_flow(id, source.id, type);
+		CPLException.assertSuccess(r);
+		return r != CPLDirectConstants.CPL_S_DUPLICATE_IGNORED;
+	}
+
+
+	/**
+	 * Disclose data flow
+	 *
+	 * @param source the data source object
+	 * @return true if the dependency was added, false if it is a duplicate
+	 */
+	public boolean dataFlowFrom(CPLObject source) {
+		int r = CPLDirect.cpl_data_flow(id, source.id, DATA_INPUT);
+		CPLException.assertSuccess(r);
+		return r != CPLDirectConstants.CPL_S_DUPLICATE_IGNORED;
+	}
+
+
+	/**
+	 * Disclose control flow
+	 *
+	 * @param controller the controller object
+	 * @param controller_version the version of the controller object
+	 * @param type the data flow type (one of CPLObject.CONTROL_*)
+	 * @return true if the dependency was added, false if it is a duplicate
+	 */
+	public boolean controlledBy(CPLObject controller, int controller_version,
+			int type) {
+		int r = CPLDirect.cpl_control_ext(id, controller.id, controller_version,
+				type);
+		CPLException.assertSuccess(r);
+		return r != CPLDirectConstants.CPL_S_DUPLICATE_IGNORED;
+	}
+
+
+	/**
+	 * Disclose control flow
+	 *
+	 * @param controller the controller object
+	 * @param type the data flow type (one of CPLObject.CONTROL_*)
+	 * @return true if the dependency was added, false if it is a duplicate
+	 */
+	public boolean controlledBy(CPLObject controller, int type) {
+		int r = CPLDirect.cpl_control(id, controller.id, type);
+		CPLException.assertSuccess(r);
+		return r != CPLDirectConstants.CPL_S_DUPLICATE_IGNORED;
+	}
+
+
+	/**
+	 * Disclose control flow
+	 *
+	 * @param controller the controller object
+	 * @return true if the dependency was added, false if it is a duplicate
+	 */
+	public boolean controlledBy(CPLObject controller) {
+		int r = CPLDirect.cpl_control(id, controller.id, CONTROL_OP);
+		CPLException.assertSuccess(r);
+		return r != CPLDirectConstants.CPL_S_DUPLICATE_IGNORED;
+	}
+
+
+	/**
+	 * Query the ancestry of the object
+	 *
+	 * @param version a specific version, or ALL_VERSIONS for all versions
+	 * @param direction the direction, either D_ANCESTORS or D_DESCENDANTS
+	 * @param flags a combination of A_* flags, or 0 for defaults
+	 * @return a vector of results &ndash; instances of CPLAncestryEntry
+	 * @see CPLAncestryEntry
+	 */
+	public Vector<CPLAncestryEntry> getObjectAncestry(int version,
+			int direction, int flags) {
+
+		SWIGTYPE_p_std_vector_cpl_ancestry_entry_t pVector
+			= CPLDirect.new_std_vector_cpl_ancestry_entry_tp();
+		SWIGTYPE_p_void pv = CPLDirect
+			.cpl_convert_p_std_vector_cpl_ancestry_entry_t_to_p_void(pVector);
+		Vector<CPLAncestryEntry> result = null;
+
+		try {
+			int r = CPLDirect.cpl_get_object_ancestry(id, version, direction,
+					flags, CPLDirect.cpl_cb_collect_ancestry_vector, pv);
+			CPLException.assertSuccess(r);
+
+			cpl_ancestry_entry_t_vector v = CPLDirect
+				.cpl_dereference_p_std_vector_cpl_ancestry_entry_t(pVector);
+			long l = v.size();
+			result = new Vector<CPLAncestryEntry>((int) l);
+			for (long i = 0; i < l; i++) {
+				cpl_ancestry_entry_t e = v.get((int) i);
+				result.add(new CPLAncestryEntry(this,
+							e.getQuery_object_version(),
+							new CPLObject(e.getOther_object_id()),
+							e.getOther_object_version(),
+							e.getType(),
+							direction == D_ANCESTORS));
+			}
+		}
+		finally {
+			CPLDirect.delete_std_vector_cpl_ancestry_entry_tp(pVector);
+		}
+
+		return result;
 	}
 }
 

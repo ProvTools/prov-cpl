@@ -34,6 +34,8 @@
 
 import edu.harvard.pass.cpl.*;
 
+import java.util.Vector;
+
 
 /**
  * CPL test
@@ -74,6 +76,10 @@ public class test {
      * The real main function
      */
     public void run() {
+
+		System.out.println("CPL ver. " + CPL.VERSION_STR);
+		System.out.println();
+
 
 		/*
 		 * Get the current session
@@ -163,6 +169,38 @@ public class test {
 
 
 		/*
+		 * Data and control dependencies
+		 */
+
+		System.out.print("obj2.dataFlowFrom(obj1)");
+		boolean r1 = obj2.dataFlowFrom(obj1);
+		if (!r1) { System.out.println(" [duplicate ignored]"); }
+		System.out.println();
+
+		System.out.print("obj2.dataFlowFrom(obj1, DATA_INPUT)");
+		boolean r2 = obj2.dataFlowFrom(obj1, CPLObject.DATA_INPUT);
+		if (!r2) { System.out.println(" [duplicate ignored]"); }
+		System.out.println();
+
+		System.out.print("obj3.dataFlowFrom(obj2, DATA_INPUT)");
+		boolean r3 = obj3.dataFlowFrom(obj2, CPLObject.DATA_INPUT);
+		if (!r3) { System.out.println(" [duplicate ignored]"); }
+		System.out.println();
+
+		System.out.print("obj3.controlledBy(obj1, CONTROL_START)");
+		boolean r4 = obj3.controlledBy(obj1, CPLObject.CONTROL_START);
+		if (!r4) { System.out.println(" [duplicate ignored]"); }
+		System.out.println();
+
+		System.out.print("obj1.dataFlowFrom(obj3, 0, DATA_TRANSLATION)");
+		boolean r5 = obj1.dataFlowFrom(obj3, 0, CPLObject.DATA_TRANSLATION);
+		if (!r5) { System.out.println(" [duplicate ignored]"); }
+		System.out.println();
+
+		System.out.println();
+
+
+		/*
 		 * Session info
 		 */
 
@@ -182,6 +220,69 @@ public class test {
 
 		System.out.println("Object obj3 (less detail)");
 		System.out.println(obj3.toString(false));
-    }
+
+
+		/*
+		 * Query ancestry
+		 */
+
+		System.out.print("obj1.getObjectAncestry(ALL_VERSIONS, D_ANCESTORS, 0)");
+		Vector<CPLAncestryEntry> anc1a
+			= obj1.getObjectAncestry(CPLObject.ALL_VERSIONS,
+					CPLObject.D_ANCESTORS, 0);
+		System.out.println(":");
+		for (CPLAncestryEntry e : anc1a) System.out.println(e);
+		System.out.println();
+
+		System.out.print("obj1.getObjectAncestry(ALL_VERSIONS, D_DESCENDANTS, 0)");
+		Vector<CPLAncestryEntry> anc1d
+			= obj1.getObjectAncestry(CPLObject.ALL_VERSIONS,
+					CPLObject.D_DESCENDANTS, 0);
+		System.out.println(":");
+		for (CPLAncestryEntry e : anc1d) System.out.println(e);
+		System.out.println();
+
+		System.out.print("obj1.getObjectAncestry(0, D_ANCESTORS, 0)");
+		Vector<CPLAncestryEntry> anc1v0a
+			= obj1.getObjectAncestry(0, CPLObject.D_ANCESTORS, 0);
+		System.out.println(":");
+		for (CPLAncestryEntry e : anc1v0a) System.out.println(e);
+		System.out.println();
+
+		System.out.print("obj1.getObjectAncestry(0, D_DESCENDANTS, 0)");
+		Vector<CPLAncestryEntry> anc1v0d
+			= obj1.getObjectAncestry(0, CPLObject.D_DESCENDANTS, 0);
+		System.out.println(":");
+		for (CPLAncestryEntry e : anc1v0d) System.out.println(e);
+		System.out.println();
+
+		System.out.println("obj1.getObjectAncestry(0, D_DESCENDANTS,");
+		System.out.print  ("                       A_NO_DATA_DEPENDENCIES)");
+		Vector<CPLAncestryEntry> anc1v0d_1
+			= obj1.getObjectAncestry(0, CPLObject.D_DESCENDANTS,
+					CPLObject.A_NO_DATA_DEPENDENCIES);
+		System.out.println(":");
+		for (CPLAncestryEntry e : anc1v0d_1) System.out.println(e);
+		System.out.println();
+
+		System.out.println("obj1.getObjectAncestry(0, D_DESCENDANTS,");
+		System.out.print  ("                       A_NO_CONTROL_DEPENDENCIES)");
+		Vector<CPLAncestryEntry> anc1v0d_2
+			= obj1.getObjectAncestry(0, CPLObject.D_DESCENDANTS,
+					CPLObject.A_NO_CONTROL_DEPENDENCIES);
+		System.out.println(":");
+		for (CPLAncestryEntry e : anc1v0d_2) System.out.println(e);
+		System.out.println();
+
+		System.out.println("obj1.getObjectAncestry(0, D_DESCENDANTS,");
+		System.out.print  ("  A_NO_DATA_DEPENDENCIES | A_NO_CONTROL_DEPENDENCIES)");
+		Vector<CPLAncestryEntry> anc1v0d_3
+			= obj1.getObjectAncestry(0, CPLObject.D_DESCENDANTS,
+					CPLObject.A_NO_DATA_DEPENDENCIES
+					| CPLObject.A_NO_CONTROL_DEPENDENCIES);
+		System.out.println(":");
+		for (CPLAncestryEntry e : anc1v0d_3) System.out.println(e);
+		System.out.println();
+	}
 }
 

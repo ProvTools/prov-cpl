@@ -106,6 +106,12 @@ cpl_dereference_p_std_vector_cpl_ancestry_entry_t(
     return *p;
 }
 
+inline void*
+cpl_convert_p_std_vector_cpl_ancestry_entry_t_to_p_void(
+        std_vector_cpl_ancestry_entry_t* p) {
+    return (void*) p;
+}
+
 %}
 
 
@@ -160,6 +166,10 @@ cpl_is_ok(cpl_return_t ret);
 inline std::vector<cpl_ancestry_entry_t>&
 cpl_dereference_p_std_vector_cpl_ancestry_entry_t(
     std_vector_cpl_ancestry_entry_t* p);
+
+inline void*
+cpl_convert_p_std_vector_cpl_ancestry_entry_t_to_p_void(
+        std_vector_cpl_ancestry_entry_t* p);
 
 
 /*

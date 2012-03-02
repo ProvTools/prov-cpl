@@ -36,6 +36,9 @@ package edu.harvard.pass.cpl;
 
 
 import swig.direct.CPLDirect.*;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.math.BigInteger;
 
 
@@ -46,8 +49,20 @@ import java.math.BigInteger;
  */
 public class CPL {
 
+    /// The major version number
+    public static final int VERSION_MAJOR = -1;
+
+    /// The minor version number
+    public static final int VERSION_MINOR = -1;
+
+    /// The version string
+    public static final String VERSION_STR = null;
+
 	/// The class instance
 	private static CPL cpl = null;
+
+    /// Whether the shared CPL libraries are installed
+    private static boolean cplInstalled = false;
 
 
     /**
@@ -55,8 +70,50 @@ public class CPL {
      */
     static {
         
-        // Load the shared library
-        System.loadLibrary("CPLDirect-java");
+        // Attempt to load the shared library
+
+        try {
+            System.loadLibrary("CPLDirect-java");
+            cplInstalled = true;
+        }
+        catch (Throwable t) {
+            cplInstalled = false;
+        }
+
+            
+        // Get the version -- hack!
+        // See: http://stackoverflow.com/questions/3301635/change-private-static-final-field-using-java-reflection
+
+        if (cplInstalled) try {
+            Field modifiersField = Field.class.getDeclaredField("modifiers");
+            modifiersField.setAccessible(true);
+
+            Field vMajor = CPL.class.getDeclaredField("VERSION_MAJOR");
+            vMajor.setAccessible(true);
+            modifiersField.setInt(vMajor, vMajor.getModifiers() & ~Modifier.FINAL);
+            vMajor.setInt(null, CPLDirectConstants.CPL_VERSION_MAJOR);
+            modifiersField.setInt(vMajor, vMajor.getModifiers() | Modifier.FINAL);
+            vMajor.setAccessible(false);
+            
+            Field vMinor = CPL.class.getDeclaredField("VERSION_MINOR");
+            vMinor.setAccessible(true);
+            modifiersField.setInt(vMinor, vMinor.getModifiers() & ~Modifier.FINAL);
+            vMinor.setInt(null, CPLDirectConstants.CPL_VERSION_MINOR);
+            modifiersField.setInt(vMinor, vMinor.getModifiers() | Modifier.FINAL);
+            vMinor.setAccessible(false);
+            
+            Field vStr = CPL.class.getDeclaredField("VERSION_STR");
+            vStr.setAccessible(true);
+            modifiersField.setInt(vStr, vStr.getModifiers() & ~Modifier.FINAL);
+            vStr.set(null, CPLDirectConstants.CPL_VERSION_STR);
+            modifiersField.setInt(vStr, vStr.getModifiers() | Modifier.FINAL);
+            vStr.setAccessible(false);
+
+            modifiersField.setAccessible(false);
+        }
+        catch (Throwable t) {
+            // Silent failover
+        }
     }
 
 
@@ -87,12 +144,27 @@ public class CPL {
     }
 
 
+    /**
+     * Determine whether the CPL bindings are installed
+     *
+     * @return true if they are installed
+     */
+    public static boolean isCPLInstalled() {
+        return cplInstalled;
+    }
+
+
 	/**
 	 * Attach to the CPL using an ODBC connection
 	 *
 	 * @param connectionString the ODBC connection string
 	 */
 	public static synchronized void attachODBC(String connectionString) {
+
+        if (!cplInstalled) {
+            throw new RuntimeException("The shared library for CPL Java "
+                    + "bindings is not (properly) installed");
+        }
 
 		if (cpl != null) {
 			throw new CPLException(CPLDirectConstants.CPL_E_ALREADY_INITIALIZED);
@@ -118,6 +190,11 @@ public class CPL {
 	 * @param updateURL the update URL
 	 */
 	public static synchronized void attachRDF(String queryURL, String updateURL) {
+
+        if (!cplInstalled) {
+            throw new RuntimeException("The shared library for CPL Java "
+                    + "bindings is not (properly) installed");
+        }
 
 		if (cpl != null) {
 			throw new CPLException(CPLDirectConstants.CPL_E_ALREADY_INITIALIZED);
