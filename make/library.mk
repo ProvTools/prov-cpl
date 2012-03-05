@@ -61,8 +61,8 @@ endif
 # Platform-specific settings
 #
 
-ifeq ($(UNAME),Darwin)
-	SONAME_OPTION := -WL,-soname,
+ifeq ($(OSTYPE),darwin)
+	SONAME_OPTION := -WL,-install_name,
 	SHARED_OPTION := -dynamiclib
 else
 	SONAME_OPTION := -Wl,-soname,
@@ -104,7 +104,7 @@ ifdef SHARED
 #
 ifeq ($(OUTPUT_TYPE),kernel)
 	@echo '  LD      $(PWD_REL_SEP)$@'
-ifeq ($(UNAME),Darwin)
+ifeq ($(OSTYPE),darwin)
 	@$(LINK) $(SHARED_OPTION) $(SONAME_OPTION)$(TARGET).$(SO_MAJOR_VERSION) \
 		-o $(TARGET_WITH_VER) $(OBJECTS) $(LIBRARIES)
 	@/bin/mv -f $(TARGET_WITH_VER) $(BUILD_DIR)/$(TARGET_WITH_VER) \
@@ -119,7 +119,7 @@ endif
 # ----- Shared Libray: Normal Output Type -----
 #
 else
-ifeq ($(UNAME),Darwin)
+ifeq ($(OSTYPE),darwin)
 	$(LINK) $(SHARED_OPTION) $(SONAME_OPTION)$(TARGET).$(SO_MAJOR_VERSION) \
 		-o $(TARGET_WITH_VER) $(OBJECTS) $(LIBRARIES)
 	/bin/mv -f $(TARGET_WITH_VER) $(BUILD_DIR)/$(TARGET_WITH_VER) \

@@ -377,6 +377,7 @@ cpl_attach(struct _cpl_db_backend_t* backend)
 #elif defined(__APPLE__)
 
 	user = getenv("USER");
+	pid = getpid();
 	if (user == NULL) return CPL_E_PLATFORM_ERROR;
 
 	uint32_t _program_size = 8192;
@@ -393,7 +394,8 @@ cpl_attach(struct _cpl_db_backend_t* backend)
 	if (_program == NULL) return CPL_E_PLATFORM_ERROR;
 	program = _program;
 
-#error TODO cmdline
+#warning TODO cmdline
+	cmdline = "";
 
 #else
 	user = getenv("USER");

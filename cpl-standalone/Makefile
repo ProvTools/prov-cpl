@@ -19,7 +19,7 @@ INSTALL := yes
 DEPENDENCIES := $(ROOT)/include/*.h
 INCLUDE_FLAGS := $(INCLUDE_FLAGS) -I$(ROOT)/include
 
-ifeq ($(UNAME),Darwin)
+ifeq ($(OSTYPE),darwin)
 LIBRARIES := -framework IOKit -framework CoreFoundation
 else
 LIBRARIES := -luuid

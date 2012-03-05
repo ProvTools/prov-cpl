@@ -19,7 +19,7 @@ INCLUDE_FLAGS := $(INCLUDE_FLAGS) -I$(ROOT)/include
 INCLUDE_FLAGS := $(INCLUDE_FLAGS) $(shell xml2-config --cflags)
 LIBRARIES := -lcurl $(shell xml2-config --libs)
 
-ifeq ($(UNAME),Darwin)
+ifeq ($(OSTYPE),darwin)
 LINKER_SUBPROJECT_DEPENDENCIES := cpl-standalone
 LIBRARIES := $(LIBRARIES) -lcpl
 endif

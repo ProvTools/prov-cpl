@@ -34,8 +34,8 @@ include $(ROOT)/make/java-module-header.mk
 # Platform-specific settings
 #
 
-ifeq ($(UNAME),Darwin)
-	SONAME_OPTION := -WL,-soname,
+ifeq ($(OSTYPE),darwin)
+	SONAME_OPTION := -WL,-install_name,
 	SHARED_OPTION := -dynamiclib
 else
 	SONAME_OPTION := -Wl,-soname,

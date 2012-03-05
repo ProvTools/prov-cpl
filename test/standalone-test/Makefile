@@ -26,7 +26,7 @@ INCLUDE_FLAGS := $(INCLUDE_FLAGS) -I$(ROOT)/include \
 # Curl
 #
 
-ifeq ($(UNAME),Darwin)
+ifeq ($(OSTYPE),darwin)
 	LIBRARIES_CURL := -lcurl
 else
 	LIBRARIES_CURL := `pkg-config --libs libcurl`
@@ -44,7 +44,7 @@ LIBRARIES_XML2 := $(shell xml2-config --libs)
 # uuid
 #
 
-ifneq ($(UNAME),Darwin)
+ifneq ($(OSTYPE),darwin)
 LIBRARIES_UUID := -luuid
 endif
 

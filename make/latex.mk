@@ -91,7 +91,7 @@ CMD_SUFFIX := 2>&1 | $(ROOT)/make/tools/colorlatex.pl ; exit $${PIPESTATUS[0]}
 # Preview
 #
 
-ifeq ($(UNAME),Darwin)
+ifeq ($(OSTYPE),darwin)
 	VIEW := open
 	VIEW_SUFFIX :=
 else

@@ -57,7 +57,7 @@ else
 	BITS := 32
 endif
 
-ifeq ($(UNAME),Darwin)
+ifeq ($(OSTYPE),darwin)
 	ifeq ($(shell sw_vers | fgrep -c 10.6.),1)
 		BITS := 64
 	endif
@@ -215,7 +215,7 @@ endif
 # Color
 #
 
-ifeq ($(UNAME),Darwin)
+ifeq ($(OSTYPE),darwin)
 	NO_COLOR := yes
 endif
 
@@ -253,7 +253,7 @@ endif
 # The shell variable that contains paths to the shared libraries
 #
 
-ifeq ($(UNAME),Darwin)
+ifeq ($(OSTYPE),darwin)
 	LD_PATH_VAR := DYLD_LIBRARY_PATH
 else
 	LD_PATH_VAR := LD_LIBRARY_PATH

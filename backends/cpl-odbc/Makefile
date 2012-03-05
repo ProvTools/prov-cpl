@@ -18,7 +18,7 @@ DEPENDENCIES := $(ROOT)/include/*.h
 INCLUDE_FLAGS := $(INCLUDE_FLAGS) -I$(ROOT)/include
 LIBRARIES := -lodbc
 
-ifeq ($(UNAME),Darwin)
+ifeq ($(OSTYPE),darwin)
 LINKER_SUBPROJECT_DEPENDENCIES := cpl-standalone
 LIBRARIES := $(LIBRARIES) -lcpl
 endif

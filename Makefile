@@ -14,7 +14,7 @@ ROOT := .
 LIBRARIES := cpl-standalone backends
 HEADERS := include
 PROGRAMS := test
-OPTIONAL := bindings/perl
+OPTIONAL := bindings/perl bindings/java
 
 
 #
