@@ -196,9 +196,9 @@ ifdef SHARED
 	@rm -f $(INSTALL_DIR)/$(TARGET_WITH_VER) 2> /dev/null || true
 ifeq ($(OUTPUT_TYPE),kernel)
 	@echo '  INSTALL $(PWD_REL_SEP)$(BUILD_DIR)/$(TARGET_WITH_VER)'
-	@install -D -m $(INSTALL_PERM) -t $(INSTALL_DIR) $(BUILD_DIR)/$(TARGET_WITH_VER)
+	@install -m $(INSTALL_PERM) $(BUILD_DIR)/$(TARGET_WITH_VER) $(INSTALL_DIR)
 else
-	install -D -m $(INSTALL_PERM) -t $(INSTALL_DIR) $(BUILD_DIR)/$(TARGET_WITH_VER)
+	install -m $(INSTALL_PERM) $(BUILD_DIR)/$(TARGET_WITH_VER) $(INSTALL_DIR)
 endif
 	@rm -f $(INSTALL_DIR)/$(TARGET) 2> /dev/null || true
 	@rm -f $(INSTALL_DIR)/$(TARGET).$(SO_MAJOR_VERSION) 2> /dev/null || true
@@ -214,9 +214,9 @@ endif
 else
 ifeq ($(OUTPUT_TYPE),kernel)
 	@echo '  INSTALL $(PWD_REL_SEP)$(BUILD_DIR)/$(TARGET)'
-	@install -D -m $(INSTALL_PERM) -t $(INSTALL_DIR) $(BUILD_DIR)/$(TARGET)
+	@install -m $(INSTALL_PERM) $(BUILD_DIR)/$(TARGET) $(INSTALL_DIR)
 else
-	install -D -m $(INSTALL_PERM) -t $(INSTALL_DIR) $(BUILD_DIR)/$(TARGET)
+	install -m $(INSTALL_PERM) $(BUILD_DIR)/$(TARGET) $(INSTALL_DIR)
 endif
 endif
 else

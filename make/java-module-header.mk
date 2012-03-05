@@ -219,9 +219,9 @@ ifdef INSTALL
 ifdef RELEASE
 ifeq ($(OUTPUT_TYPE),kernel)
 	@echo '  INSTALL $(PWD_REL_SEP)$(BUILD_DIR)/$(TARGET)'
-	@install -D -m 644 -t $(INSTALL_DIR) $(BUILD_DIR)/$(TARGET)
+	@install -m 644 $(BUILD_DIR)/$(TARGET) $(INSTALL_DIR)
 else
-	install -D -m 644 -t $(INSTALL_DIR) $(BUILD_DIR)/$(TARGET)
+	install -m 644 $(BUILD_DIR)/$(TARGET) $(INSTALL_DIR)
 endif
 else
 	@$(MAKE) --no-print-directory RELEASE=yes install

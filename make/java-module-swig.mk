@@ -145,9 +145,9 @@ ifdef INSTALL
 ifdef RELEASE
 ifeq ($(OUTPUT_TYPE),kernel)
 	@echo '  INSTALL $(PWD_REL_SEP)$(BUILD_DIR)/$(WRAP_LIBRARY)'
-	@install -D -m 755 -t $(SO_INSTALL_DIR) $(BUILD_DIR)/$(WRAP_LIBRARY)
+	@install -m 755 $(BUILD_DIR)/$(WRAP_LIBRARY) $(SO_INSTALL_DIR)
 else
-	install -D -m 755 -t $(SO_INSTALL_DIR) $(BUILD_DIR)/$(WRAP_LIBRARY)
+	install -m 755 $(BUILD_DIR)/$(WRAP_LIBRARY) $(SO_INSTALL_DIR)
 endif
 else
 	@true

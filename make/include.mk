@@ -102,12 +102,14 @@ ifdef INSTALL
 ifeq ($(OUTPUT_TYPE),kernel)
 	@for i in $(INSTALL_FILES); do \
 		echo '  INSTALL $(PWD_REL_SEP)'$$i; \
-		install -D -m 644 $$i $(INSTALL_DIR)/$$i; \
+		mkdir -p "`dirname $(INSTALL_DIR)/$$i`"; \
+		install -m 644 $$i $(INSTALL_DIR)/$$i; \
 	done
 else
 	@for i in $(INSTALL_FILES); do \
+		mkdir -p "`dirname $(INSTALL_DIR)/$$i`"; \
 		echo 'install -m 644 $$i $(INSTALL_DIR)/'$$i; \
-		install -D -m 644 $i $(INSTALL_DIR)/$$i; \
+		install -m 644 $i $(INSTALL_DIR)/$$i; \
 	done
 endif
 else

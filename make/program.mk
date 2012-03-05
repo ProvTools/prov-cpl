@@ -206,9 +206,9 @@ ifdef RELEASE
 	@mkdir -p $(INSTALL_DIR)
 ifeq ($(OUTPUT_TYPE),kernel)
 	@echo '  INSTALL $(PWD_REL_SEP)$(BUILD_DIR)/$(TARGET)'
-	@install -D -m 755 -t $(INSTALL_DIR) $(BUILD_DIR)/$(TARGET)
+	@install -m 755 $(BUILD_DIR)/$(TARGET) $(INSTALL_DIR)
 else
-	install -D -m 755 -t $(INSTALL_DIR) $(BUILD_DIR)/$(TARGET)
+	install -m 755 $(BUILD_DIR)/$(TARGET) $(INSTALL_DIR)
 endif
 else
 	@$(MAKE) --no-print-directory RELEASE=yes install
