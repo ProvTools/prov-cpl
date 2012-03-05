@@ -99,16 +99,10 @@ public class CPLObject {
 	private String type = null;
 
 	/// The object containter (cache)
-	private CPLObject container = null;
+	private CPLObjectVersion container = null;
 
-	/// Whether the container is known
+	/// Whether we know the container
 	private boolean knowContainer = false;
-
-	/// The version of the object containter (cache)
-	private int containerVersion = -1;
-
-	/// Whether the version of the container is known
-	private boolean knowContainerVersion = false;
 
 	/// The creation time (cache)
 	private long creationTime = 0;
@@ -145,8 +139,7 @@ public class CPLObject {
 		this.originator = originator;
 		this.name = name;
 		this.type = type;
-		this.container = container;
-		this.knowContainer = true;
+		this.knowContainer = container == null;
 
 		this.id = new cpl_id_t();
 		int r = CPLDirect.cpl_create_object(originator, name, type,
@@ -237,11 +230,6 @@ public class CPLObject {
 		o.name = name;
 		o.type = type;
 
-		if (r == CPLDirectConstants.CPL_S_OBJECT_CREATED) {
-			o.container = container;
-			o.knowContainer = true;
-		}
-
 		return o;
 	}
 
@@ -309,8 +297,8 @@ public class CPLObject {
 	 */
 	protected boolean fetchInfo() {
 
-		if (originator != null && knowContainer && knowContainerVersion
-				&& knowCreationInfo) return false;
+		if (originator != null && knowContainer && knowCreationInfo)
+			return false;
 
 
 		// Fetch the info from CPL
@@ -333,11 +321,10 @@ public class CPLObject {
 			cpl_id_t containerId = info.getContainer_id();
 			if (CPL.isNone(containerId)) {
 				container = null;
-				containerVersion = -1;
 			}
 			else {
-				container = new CPLObject(containerId);
-				containerVersion = info.getContainer_version();
+				container = new CPLObjectVersion(new CPLObject(containerId),
+						info.getContainer_version());
 			}
 
 			cpl_id_t creationSessionId = info.getCreation_session();
@@ -349,9 +336,8 @@ public class CPLObject {
 			}
 			creationTime = info.getCreation_time();
 
-			knowContainer = true;
-			knowContainerVersion = true;
 			knowCreationInfo = true;
+			knowContainer = true;
 
 			CPLDirect.cpl_free_object_info(info);
 		}
@@ -401,20 +387,9 @@ public class CPLObject {
 	 *
 	 * @return the container, or null if none
 	 */
-	public CPLObject getContainer() {
+	public CPLObjectVersion getContainer() {
 		if (!knowContainer) fetchInfo();
 		return container;
-	}
-
-
-	/**
-	 * Get the version of the container
-	 *
-	 * @return the version of the container, or -1 if none
-	 */
-	public int getContainerVersion() {
-		if (!knowContainerVersion) fetchInfo();
-		return containerVersion;
 	}
 
 
@@ -464,23 +439,23 @@ public class CPLObject {
 
 
 	/**
-	 * Get information about the given version of the object
+	 * Get a specific version of the object
 	 *
 	 * @param version the version number
-	 * @return the information
+	 * @return the specific version of the object
 	 */
-	public CPLVersionInfo getVersionInfo(int version) {
-		return new CPLVersionInfo(this, version);
+	public CPLObjectVersion getSpecificVersion(int version) {
+		return new CPLObjectVersion(this, version);
 	}
 
 
 	/**
-	 * Get information about the current version of the object
+	 * Get the latest version of an object
 	 *
-	 * @return the information
+	 * @return the latest version of the object
 	 */
-	public CPLVersionInfo getVersionInfo() {
-		return new CPLVersionInfo(this);
+	public CPLObjectVersion getLatestVersion() {
+		return new CPLObjectVersion(this, getVersion());
 	}
 
 
@@ -510,7 +485,7 @@ public class CPLObject {
 		sb.append("\n");
 
 		if (detail) {
-			CPLVersionInfo v = getVersionInfo();
+			CPLObjectVersion v = getLatestVersion();
 
 			sb.append("Current version     : ");
 			sb.append(v.getVersion());
@@ -518,10 +493,6 @@ public class CPLObject {
 
 			sb.append("Container ID        : ");
 			sb.append(getContainer());
-			sb.append("\n");
-
-			sb.append("Container version   : ");
-			sb.append(getContainerVersion());
 			sb.append("\n");
 
 			sb.append("Creation session    : ");
@@ -644,8 +615,8 @@ public class CPLObject {
 	 * @return a vector of results &ndash; instances of CPLAncestryEntry
 	 * @see CPLAncestryEntry
 	 */
-	public Vector<CPLAncestryEntry> getObjectAncestry(int version,
-			int direction, int flags) {
+	public Vector<CPLAncestryEntry> getAncestry(int version, int direction,
+			int flags) {
 
 		SWIGTYPE_p_std_vector_cpl_ancestry_entry_t pVector
 			= CPLDirect.new_std_vector_cpl_ancestry_entry_tp();
@@ -664,12 +635,12 @@ public class CPLObject {
 			result = new Vector<CPLAncestryEntry>((int) l);
 			for (long i = 0; i < l; i++) {
 				cpl_ancestry_entry_t e = v.get((int) i);
-				result.add(new CPLAncestryEntry(this,
-							e.getQuery_object_version(),
-							new CPLObject(e.getOther_object_id()),
-							e.getOther_object_version(),
-							e.getType(),
-							direction == D_ANCESTORS));
+				result.add(new CPLAncestryEntry(
+						new CPLObjectVersion(this, e.getQuery_object_version()),
+						new CPLObjectVersion(new CPLObject(e.getOther_object_id()),
+							e.getOther_object_version()),
+						e.getType(),
+						direction == D_ANCESTORS));
 			}
 		}
 		finally {

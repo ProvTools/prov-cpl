@@ -1,7 +1,7 @@
 package edu.harvard.pass.cpl;
 
 /*
- * CPLVersionInfo.java
+ * CPLObjectVersion.java
  * Core Provenance Library
  *
  * Copyright 2012
@@ -37,47 +37,43 @@ package edu.harvard.pass.cpl;
 
 import swig.direct.CPLDirect.*;
 
+import java.util.Vector;
+
 
 /**
- * An information about a specific version of a provenance object
+ * A specific version of a provenance object
  *
  * @author Peter Macko
  */
-public class CPLVersionInfo {
+public class CPLObjectVersion {
+
+	/// Specify all versions where supported
+	public static final int ALL_VERSIONS = CPLObject.ALL_VERSIONS;
 
 	/// The provenance object
 	private CPLObject object;
 
-	/// The version number
+	/// The version
 	private int version;
 
-	/// The session that created this version
+	/// The session that created this version (if known)
 	private CPLSession session;
 
-	/// The creation time of this version
+	/// The creation time of this version (if known)
 	private long creationTime;
 
 
 	/**
-	 * Create an instance of CPLVersionInfo
+	 * Create an instance of CPLObjectVersion
 	 *
 	 * @param object the provenance object
-	 * @param version the version number
+	 * @param version the provenance version
 	 */
-	CPLVersionInfo(CPLObject object, int version) {
+	CPLObjectVersion(CPLObject object, int version) {
 		this.object = object;
 		this.version = version;
-		fetchInfo();
-	}
-
-
-	/**
-	 * Create an instance of CPLVersionInfo
-	 *
-	 * @param object the provenance object
-	 */
-	CPLVersionInfo(CPLObject object) {
-		this(object, object.getVersion());
+		this.session = null;
+		this.creationTime = -1;
 	}
 
 
@@ -89,8 +85,8 @@ public class CPLVersionInfo {
 	 */
 	@Override
 	public boolean equals(Object other) {
-		if (other instanceof CPLVersionInfo) {
-			CPLVersionInfo o = (CPLVersionInfo) other;
+		if (other instanceof CPLObjectVersion) {
+			CPLObjectVersion o = (CPLObjectVersion) other;
 			return o.object.equals(object) && o.version == version;
 		}
 		else {
@@ -106,7 +102,7 @@ public class CPLVersionInfo {
 	 */
 	@Override
 	public int hashCode() {
-		return (object.hashCode() << 8) ^ version;
+		return (object.hashCode() * 31) ^ version;
 	}
 
 
@@ -140,7 +136,6 @@ public class CPLVersionInfo {
 			cpl_version_info_t info
 				= CPLDirect.cpl_dereference_pp_cpl_version_info_t(ppInfo);
 
-			version = info.getVersion();
 			session = new CPLSession(info.getSession());
 			creationTime = info.getCreation_time();
 
@@ -178,6 +173,7 @@ public class CPLVersionInfo {
 	 * @return the session
 	 */
 	public CPLSession getSession() {
+		if (session == null) fetchInfo();
 		return session;
 	}
 
@@ -188,7 +184,21 @@ public class CPLVersionInfo {
 	 * @return the time expressed as Unix time
 	 */
 	public long getCreationTime() {
+		if (session == null) fetchInfo();
 		return creationTime;
+	}
+
+
+	/**
+	 * Query the ancestry of this version of the object
+	 *
+	 * @param direction the direction, either D_ANCESTORS or D_DESCENDANTS
+	 * @param flags a combination of A_* flags, or 0 for defaults
+	 * @return a vector of results &ndash; instances of CPLAncestryEntry
+	 * @see CPLAncestryEntry
+	 */
+	public Vector<CPLAncestryEntry> getAncestry(int direction, int flags) {
+		return object.getAncestry(version, direction, flags);
 	}
 
 
@@ -202,15 +212,19 @@ public class CPLVersionInfo {
 
 		StringBuilder sb = new StringBuilder();
 
-		sb.append("Version number: ");
-		sb.append(getVersion());
-		sb.append("\n");
-
 		if (detail) {
-			sb.append("Session       : ");
-			sb.append(getSession());
+			sb.append("Object ID     : ");
+			sb.append(object);
+			sb.append("\n");
+
+			sb.append("Version number: ");
+			sb.append(getVersion());
 			sb.append("\n");
 		}
+
+		sb.append("Session       : ");
+		sb.append(getSession());
+		sb.append("\n");
 
 		sb.append("Creation time : ");
 		sb.append(new java.sql.Date(1000L * getCreationTime()));

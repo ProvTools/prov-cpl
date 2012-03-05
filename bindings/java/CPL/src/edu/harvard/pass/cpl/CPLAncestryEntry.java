@@ -46,16 +46,10 @@ import swig.direct.CPLDirect.*;
 public class CPLAncestryEntry {
 
 	/// The queried object
-	private CPLObject object;
-
-	/// The version of the queried object
-	private int version;
+	private CPLObjectVersion base;
 
 	/// The other object
-	private CPLObject other;
-
-	/// The version of the other object
-	private int otherVersion;
+	private CPLObjectVersion other;
 
 	/// The type of the dependency
 	private int type;
@@ -67,20 +61,16 @@ public class CPLAncestryEntry {
 	/**
 	 * Create an instance of CPLAncestryEntry
 	 *
-	 * @param object the queried object
-	 * @param version the version of the queried object
+	 * @param base the queried (base) object
 	 * @param other the other object
-	 * @param otherVersion the version of the other object
 	 * @param type the dependency type
 	 * @param otherIsAncestor the dependency direction
 	 */
-	CPLAncestryEntry(CPLObject object, int version, CPLObject other,
-			int otherVersion, int type, boolean otherIsAncestor) {
+	CPLAncestryEntry(CPLObjectVersion base, CPLObjectVersion other,
+			int type, boolean otherIsAncestor) {
 
-		this.object = object;
-		this.version = version;
+		this.base = base;
 		this.other = other;
-		this.otherVersion = otherVersion;
 		this.type = type;
 		this.otherIsAncestor = otherIsAncestor;
 	}
@@ -96,10 +86,8 @@ public class CPLAncestryEntry {
 	public boolean equals(Object other) {
 		if (other instanceof CPLAncestryEntry) {
 			CPLAncestryEntry o = (CPLAncestryEntry) other;
-			return object.equals(o.object)
-				&& version == o.version
+			return base.equals(o.base)
 				&& other.equals(o.other)
-				&& otherVersion == o.otherVersion
 				&& type == o.type
 				&& otherIsAncestor == o.otherIsAncestor;
 		}
@@ -116,10 +104,8 @@ public class CPLAncestryEntry {
 	 */
 	@Override
 	public int hashCode() {
-		return (object.hashCode() << 16)
-			 ^ (version << 12)
-			 ^ (other.hashCode() << 8)
-			 ^ (otherVersion << 4)
+		return (base.hashCode() << 8)
+			 ^ (other.hashCode() << 4)
 			 ^ (type << 2)
 			 ^ (otherIsAncestor ? 1 : 0);
 	}
@@ -133,89 +119,48 @@ public class CPLAncestryEntry {
 	@Override
 	public String toString() {
 		String arrow = otherIsAncestor ? " --> " : " <-- ";
-		return "" + object + "-" + version + arrow
-			 + other + "-" + otherVersion
+		return "" + base + arrow + other
 			 + " [type " + Integer.toHexString(type) + "]";
 	}
 
 
 	/**
-	 * Get the queried object
+	 * Get the queried (base) object
 	 *
-	 * @return the object
+	 * @return a specific version of that object
 	 */
-	public CPLObject getObject() {
-		return object;
-	}
-
-
-	/**
-	 * Get the version of the queried object
-	 *
-	 * @return the object version
-	 */
-	public int getVersion() {
-		return version;
+	public CPLObjectVersion getBase() {
+		return base;
 	}
 
 
 	/**
 	 * Get the other object
 	 *
-	 * @return the object
+	 * @return a specific version of that object
 	 */
-	public CPLObject getOtherObject() {
+	public CPLObjectVersion getOther() {
 		return other;
-	}
-
-
-	/**
-	 * Get the version of the other object
-	 *
-	 * @return the object version
-	 */
-	public int getOtherVersion() {
-		return otherVersion;
 	}
 
 
 	/**
 	 * Get the ancestor object
 	 *
-	 * @return the object
+	 * @return a specific version of that object
 	 */
-	public CPLObject getAncestorObject() {
-		return otherIsAncestor ? other : object;
-	}
-
-
-	/**
-	 * Get the version of the ancestor object
-	 *
-	 * @return the object version
-	 */
-	public int getAncestorVersion() {
-		return otherIsAncestor ? otherVersion : version;
+	public CPLObjectVersion getAncestor() {
+		return otherIsAncestor ? other : base;
 	}
 
 
 	/**
 	 * Get the descendant object
 	 *
-	 * @return the object
+	 * @return a specific version of that object
 	 */
-	public CPLObject getDescendantObject() {
-		return !otherIsAncestor ? other : object;
-	}
-
-
-	/**
-	 * Get the version of the descendant object
-	 *
-	 * @return the object version
-	 */
-	public int getDescendantVersion() {
-		return !otherIsAncestor ? otherVersion : version;
+	public CPLObjectVersion getDescendant() {
+		return !otherIsAncestor ? other : base;
 	}
 
 

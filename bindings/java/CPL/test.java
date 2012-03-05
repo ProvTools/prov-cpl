@@ -226,72 +226,72 @@ public class test {
 		 * Query ancestry
 		 */
 
-		System.out.print("obj1.getObjectAncestry(ALL_VERSIONS, D_ANCESTORS, 0)");
+		System.out.print("obj1.getAncestry(ALL_VERSIONS, D_ANCESTORS, 0)");
 		Vector<CPLAncestryEntry> anc1a
-			= obj1.getObjectAncestry(CPLObject.ALL_VERSIONS,
+			= obj1.getAncestry(CPLObject.ALL_VERSIONS,
 					CPLObject.D_ANCESTORS, 0);
 		System.out.println(":");
 		for (CPLAncestryEntry e : anc1a) System.out.println(e);
 		System.out.println();
 
-		System.out.print("obj1.getObjectAncestry(ALL_VERSIONS, D_DESCENDANTS, 0)");
+		System.out.print("obj1.getAncestry(ALL_VERSIONS, D_DESCENDANTS, 0)");
 		Vector<CPLAncestryEntry> anc1d
-			= obj1.getObjectAncestry(CPLObject.ALL_VERSIONS,
+			= obj1.getAncestry(CPLObject.ALL_VERSIONS,
 					CPLObject.D_DESCENDANTS, 0);
 		System.out.println(":");
 		for (CPLAncestryEntry e : anc1d) System.out.println(e);
 		System.out.println();
 
-		System.out.print("obj1.getObjectAncestry(0, D_ANCESTORS, 0)");
+		System.out.print("obj1.getAncestry(0, D_ANCESTORS, 0)");
 		Vector<CPLAncestryEntry> anc1v0a
-			= obj1.getObjectAncestry(0, CPLObject.D_ANCESTORS, 0);
+			= obj1.getAncestry(0, CPLObject.D_ANCESTORS, 0);
 		System.out.println(":");
 		for (CPLAncestryEntry e : anc1v0a) System.out.println(e);
 		System.out.println();
 
-		System.out.print("obj1.getObjectAncestry(0, D_DESCENDANTS, 0)");
+		System.out.print("obj1.getAncestry(0, D_DESCENDANTS, 0)");
 		Vector<CPLAncestryEntry> anc1v0d
-			= obj1.getObjectAncestry(0, CPLObject.D_DESCENDANTS, 0);
+			= obj1.getAncestry(0, CPLObject.D_DESCENDANTS, 0);
 		System.out.println(":");
 		for (CPLAncestryEntry e : anc1v0d) System.out.println(e);
 		System.out.println();
 
-		System.out.print("obj1.getObjectAncestry(1, D_ANCESTORS, 0)");
+		System.out.print("obj1.getAncestry(1, D_ANCESTORS, 0)");
 		Vector<CPLAncestryEntry> anc1v1a
-			= obj1.getObjectAncestry(1, CPLObject.D_ANCESTORS, 0);
+			= obj1.getAncestry(1, CPLObject.D_ANCESTORS, 0);
 		System.out.println(":");
 		for (CPLAncestryEntry e : anc1v1a) System.out.println(e);
 		System.out.println();
 
-		System.out.print("obj1.getObjectAncestry(1, D_DESCENDANTS, 0)");
+		System.out.print("obj1.getAncestry(1, D_DESCENDANTS, 0)");
 		Vector<CPLAncestryEntry> anc1v1d
-			= obj1.getObjectAncestry(1, CPLObject.D_DESCENDANTS, 0);
+			= obj1.getAncestry(1, CPLObject.D_DESCENDANTS, 0);
 		System.out.println(":");
 		for (CPLAncestryEntry e : anc1v1d) System.out.println(e);
 		System.out.println();
 
-		System.out.println("obj1.getObjectAncestry(0, D_DESCENDANTS,");
+		System.out.println("obj1.getAncestry(0, D_DESCENDANTS,");
 		System.out.print  ("                       A_NO_DATA_DEPENDENCIES)");
 		Vector<CPLAncestryEntry> anc1v0d_1
-			= obj1.getObjectAncestry(0, CPLObject.D_DESCENDANTS,
+			= obj1.getAncestry(0, CPLObject.D_DESCENDANTS,
 					CPLObject.A_NO_DATA_DEPENDENCIES);
 		System.out.println(":");
 		for (CPLAncestryEntry e : anc1v0d_1) System.out.println(e);
 		System.out.println();
 
-		System.out.println("obj1.getObjectAncestry(0, D_DESCENDANTS,");
+		System.out.println("obj1.getAncestry(0, D_DESCENDANTS,");
 		System.out.print  ("                       A_NO_CONTROL_DEPENDENCIES)");
 		Vector<CPLAncestryEntry> anc1v0d_2
-			= obj1.getObjectAncestry(0, CPLObject.D_DESCENDANTS,
+			= obj1.getAncestry(0, CPLObject.D_DESCENDANTS,
 					CPLObject.A_NO_CONTROL_DEPENDENCIES);
 		System.out.println(":");
 		for (CPLAncestryEntry e : anc1v0d_2) System.out.println(e);
 		System.out.println();
 
-		System.out.println("obj1.getObjectAncestry(0, D_DESCENDANTS,");
+		System.out.println("obj1.getAncestry(0, D_DESCENDANTS,");
 		System.out.print  ("  A_NO_DATA_DEPENDENCIES | A_NO_CONTROL_DEPENDENCIES)");
 		Vector<CPLAncestryEntry> anc1v0d_3
-			= obj1.getObjectAncestry(0, CPLObject.D_DESCENDANTS,
+			= obj1.getAncestry(0, CPLObject.D_DESCENDANTS,
 					CPLObject.A_NO_DATA_DEPENDENCIES
 					| CPLObject.A_NO_CONTROL_DEPENDENCIES);
 		System.out.println(":");
