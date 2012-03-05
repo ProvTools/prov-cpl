@@ -538,6 +538,36 @@ public class CPLObject {
 	/**
 	 * Disclose data flow
 	 *
+	 * @param source the data source object and version
+	 * @param type the data flow type (one of CPLObject.DATA_*)
+	 * @return true if the dependency was added, false if it is a duplicate
+	 */
+	public boolean dataFlowFrom(CPLObjectVersion source, int type){
+		int r = CPLDirect.cpl_data_flow_ext(id, source.getObject().id,
+				source.getVersion(), type);
+		CPLException.assertSuccess(r);
+		return r != CPLDirectConstants.CPL_S_DUPLICATE_IGNORED;
+	}
+
+
+	/**
+	 * Disclose data flow
+	 *
+	 * @param source the data source object and version
+	 * @param type the data flow type (one of CPLObject.DATA_*)
+	 * @return true if the dependency was added, false if it is a duplicate
+	 */
+	public boolean dataFlowFrom(CPLObjectVersion source){
+		int r = CPLDirect.cpl_data_flow_ext(id, source.getObject().id,
+				source.getVersion(), DATA_INPUT);
+		CPLException.assertSuccess(r);
+		return r != CPLDirectConstants.CPL_S_DUPLICATE_IGNORED;
+	}
+
+
+	/**
+	 * Disclose data flow
+	 *
 	 * @param source the data source object
 	 * @param type the data flow type (one of CPLObject.DATA_*)
 	 * @return true if the dependency was added, false if it is a duplicate
@@ -574,6 +604,35 @@ public class CPLObject {
 			int type) {
 		int r = CPLDirect.cpl_control_ext(id, controller.id, controller_version,
 				type);
+		CPLException.assertSuccess(r);
+		return r != CPLDirectConstants.CPL_S_DUPLICATE_IGNORED;
+	}
+
+
+	/**
+	 * Disclose control flow
+	 *
+	 * @param controller the controller object and version
+	 * @param type the data flow type (one of CPLObject.CONTROL_*)
+	 * @return true if the dependency was added, false if it is a duplicate
+	 */
+	public boolean controlledBy(CPLObjectVersion controller, int type) {
+		int r = CPLDirect.cpl_control_ext(id, controller.getObject().id,
+				controller.getVersion(), type);
+		CPLException.assertSuccess(r);
+		return r != CPLDirectConstants.CPL_S_DUPLICATE_IGNORED;
+	}
+
+
+	/**
+	 * Disclose control flow
+	 *
+	 * @param controller the controller object and version
+	 * @return true if the dependency was added, false if it is a duplicate
+	 */
+	public boolean controlledBy(CPLObjectVersion controller) {
+		int r = CPLDirect.cpl_control_ext(id, controller.getObject().id,
+				controller.getVersion(), CONTROL_OP);
 		CPLException.assertSuccess(r);
 		return r != CPLDirectConstants.CPL_S_DUPLICATE_IGNORED;
 	}
