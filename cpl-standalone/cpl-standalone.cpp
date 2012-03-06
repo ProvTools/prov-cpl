@@ -394,8 +394,8 @@ cpl_attach(struct _cpl_db_backend_t* backend)
 	if (_program == NULL) return CPL_E_PLATFORM_ERROR;
 	program = _program;
 
-#warning TODO cmdline
-	cmdline = "";
+#warning TODO Fetching the command line in OS X is not yet implemented.
+	cmdline = "???";
 
 #else
 	user = getenv("USER");

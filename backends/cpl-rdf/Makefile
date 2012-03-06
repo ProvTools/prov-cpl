@@ -6,6 +6,8 @@
 
 ROOT :=../..
 
+include $(ROOT)/make/header.mk
+
 
 #
 # Customize the build

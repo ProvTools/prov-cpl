@@ -6,6 +6,8 @@
 
 ROOT := ../..
 
+include $(ROOT)/make/header.mk
+
 
 #
 # Source files
@@ -23,41 +25,13 @@ INCLUDE_FLAGS := $(INCLUDE_FLAGS) -I$(ROOT)/include \
 
 
 #
-# Curl
-#
-
-ifeq ($(OSTYPE),darwin)
-	LIBRARIES_CURL := -lcurl
-else
-	LIBRARIES_CURL := `pkg-config --libs libcurl`
-endif
-
-
-#
-# libxml2
-#
-
-LIBRARIES_XML2 := $(shell xml2-config --libs)
-
-
-#
-# uuid
-#
-
-ifneq ($(OSTYPE),darwin)
-LIBRARIES_UUID := -luuid
-endif
-
-
-#
 # Flags and libraries
 #
 
 CXXFLAGS      := $(CXXFLAGS) -Wno-sign-compare
 INCLUDE_FLAGS := $(INCLUDE_FLAGS)
 LINKER_FLAGS  := $(LINKER_FLAGS)
-LIBRARIES     := $(LIBRARIES) -lodbc \
-						$(LIBRARIES_UUID) $(LIBRARIES_CURL) $(LIBRARIES_XML2)
+LIBRARIES     := $(LIBRARIES)
 
 
 #

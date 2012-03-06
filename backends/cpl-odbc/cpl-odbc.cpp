@@ -230,7 +230,7 @@ cpl_sql_fetch_single_timestamp_as_unix_time(SQLHSTMT stmt, unsigned long* out,
 	SQL_TIMESTAMP_STRUCT t;
 
 	cpl_return_t r = cpl_sql_fetch_single_value(stmt, SQL_C_TYPE_TIMESTAMP,
-			&t, 0, column, fetch, close_if_ok, handle_nulls);
+			&t, sizeof(t), column, fetch, close_if_ok, handle_nulls);
 	if (!CPL_IS_OK(r)) return r;
 
 	if (out != NULL) {

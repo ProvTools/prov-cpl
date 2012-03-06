@@ -58,6 +58,13 @@ endif
 
 
 #
+# Include the compile script
+#
+
+include $(ROOT)/make/compile.mk
+
+
+#
 # Platform-specific settings
 #
 
@@ -68,13 +75,6 @@ else
 	SONAME_OPTION := -Wl,-soname,
 	SHARED_OPTION := -shared
 endif
-
-
-#
-# Include the compile script
-#
-
-include $(ROOT)/make/compile.mk
 
 
 #
