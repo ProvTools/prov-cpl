@@ -50,13 +50,16 @@ import java.math.BigInteger;
 public class CPL {
 
     /// The major version number
-    public static final int VERSION_MAJOR = -1;
+    public static final int VERSION_MAJOR
+		= CPLDirectConstants.CPL_VERSION_MAJOR;
 
     /// The minor version number
-    public static final int VERSION_MINOR = -1;
+    public static final int VERSION_MINOR
+		= CPLDirectConstants.CPL_VERSION_MINOR;
 
     /// The version string
-    public static final String VERSION_STR = null;
+    public static final String VERSION_STR
+		= CPLDirectConstants.CPL_VERSION_STR;
 
 	/// The class instance
 	private static CPL cpl = null;
@@ -81,41 +84,6 @@ public class CPL {
         }
         catch (Throwable t) {
             cplInstalled = false;
-        }
-
-            
-        // Get the version -- hack!
-        // See: http://stackoverflow.com/questions/3301635/change-private-static-final-field-using-java-reflection
-
-        if (cplInstalled) try {
-            Field modifiersField = Field.class.getDeclaredField("modifiers");
-            modifiersField.setAccessible(true);
-
-            Field vMajor = CPL.class.getDeclaredField("VERSION_MAJOR");
-            vMajor.setAccessible(true);
-            modifiersField.setInt(vMajor, vMajor.getModifiers() & ~Modifier.FINAL);
-            vMajor.setInt(null, CPLDirectConstants.CPL_VERSION_MAJOR);
-            modifiersField.setInt(vMajor, vMajor.getModifiers() | Modifier.FINAL);
-            vMajor.setAccessible(false);
-            
-            Field vMinor = CPL.class.getDeclaredField("VERSION_MINOR");
-            vMinor.setAccessible(true);
-            modifiersField.setInt(vMinor, vMinor.getModifiers() & ~Modifier.FINAL);
-            vMinor.setInt(null, CPLDirectConstants.CPL_VERSION_MINOR);
-            modifiersField.setInt(vMinor, vMinor.getModifiers() | Modifier.FINAL);
-            vMinor.setAccessible(false);
-            
-            Field vStr = CPL.class.getDeclaredField("VERSION_STR");
-            vStr.setAccessible(true);
-            modifiersField.setInt(vStr, vStr.getModifiers() & ~Modifier.FINAL);
-            vStr.set(null, CPLDirectConstants.CPL_VERSION_STR);
-            modifiersField.setInt(vStr, vStr.getModifiers() | Modifier.FINAL);
-            vStr.setAccessible(false);
-
-            modifiersField.setAccessible(false);
-        }
-        catch (Throwable t) {
-            // Silent failover
         }
     }
 

@@ -32,5 +32,11 @@
  * Contributor(s): Peter Macko
  */
 
+%javaconst(1);
+%javaconst(0) bucket_size;
+%javaconst(0) min_buckets;
+%javaconst(0) cpl_cb_collect_ancestry_list;
+%javaconst(0) cpl_cb_collect_ancestry_vector;
+
 %include "../../cpl.i"
 

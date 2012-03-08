@@ -48,7 +48,7 @@ import java.util.Vector;
 public class CPLObject {
 
 	/// The null object
-	private static final cpl_id_t nullId = CPLDirect.getCPL_NONE();
+	private static cpl_id_t nullId = null;
 
 	/// Data flow type: Generic
 	public static final int DATA_INPUT = CPLDirectConstants.CPL_DATA_INPUT;
@@ -112,6 +112,16 @@ public class CPLObject {
 
 	/// Whether the object creation information is known
 	private boolean knowCreationInfo = false;
+
+
+	/**
+	 * Initialize
+	 */
+	static {
+		if (CPL.isInstalled()) {
+			nullId = CPLDirect.getCPL_NONE();
+		}
+	}
 
 
 	/**
