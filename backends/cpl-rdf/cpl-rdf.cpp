@@ -568,6 +568,45 @@ cpl_rdf_has_immediate_ancestor(struct _cpl_db_backend_t* backend,
 
 
 /**
+ * Add a property to the given object
+ *
+ * @param backend the pointer to the backend structure
+ * @param id the object ID
+ * @param version the version number
+ * @param key the key
+ * @param value the value
+ * @return CPL_OK or an error code
+ */
+extern "C" cpl_return_t
+cpl_rdf_add_property(struct _cpl_db_backend_t* backend,
+                     const cpl_id_t id,
+                     const cpl_version_t version,
+                     const char* key,
+                     const char* value)
+{
+    assert(backend != NULL);
+    cpl_rdf_t* rdf = (cpl_rdf_t*) backend;
+
+	char node_str[64];
+	sprintf(node_str, "n:%llx-%llx-%x", id.hi, id.lo, version);
+
+	std::ostringstream ss;
+
+	ss << "PREFIX n: <node:>\n";
+	ss << "PREFIX c: <custom:>\n";
+	ss << "INSERT DATA {";
+	ss << " " << node_str;
+    ss << " c:" << cpl_rdf_hex_string(key);
+    ss << " \"" << cpl_rdf_escape_string(value) << "\" }";
+
+	cpl_return_t ret = cpl_rdf_connection_execute_update(rdf->connection_update,
+			ss.str().c_str());
+	
+	return ret;
+}
+
+
+/**
  * Get information about the given provenance session.
  *
  * @param id the session ID
@@ -1068,6 +1107,7 @@ const cpl_db_backend_t CPL_RDF_BACKEND = {
 	cpl_rdf_get_version,
 	cpl_rdf_add_ancestry_edge,
 	cpl_rdf_has_immediate_ancestor,
+    cpl_rdf_add_property,
 	cpl_rdf_get_session_info,
 	cpl_rdf_get_object_info,
 	cpl_rdf_get_version_info,

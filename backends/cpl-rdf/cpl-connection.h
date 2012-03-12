@@ -117,6 +117,15 @@ std::string
 cpl_rdf_escape_string(const char* str);
 
 /**
+ * Hex-encode a string
+ *
+ * @param str the string
+ * @return the encoded string
+ */
+std::string
+cpl_rdf_hex_string(const char* str);
+
+/**
  * Execute a query
  *
  * @param connection the connection handle

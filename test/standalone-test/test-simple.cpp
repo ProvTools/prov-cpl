@@ -458,5 +458,34 @@ test_simple(void)
 		throw CPLException("Invalid ancestry");
 
 	print(L_DEBUG, " ");
+
+
+	// Properties
+
+	ret = cpl_add_property(obj, "LABEL", "Process A [Proc]");
+	print(L_DEBUG, "cpl_add_property --> %d", ret);
+	CPL_VERIFY(cpl_add_property, ret);
+
+	ret = cpl_add_property(obj2, "LABEL", "Object A [File]");
+	print(L_DEBUG, "cpl_add_property --> %d", ret);
+	CPL_VERIFY(cpl_add_property, ret);
+
+	ret = cpl_add_property(obj3, "LABEL", "Process B [Proc]");
+	print(L_DEBUG, "cpl_add_property --> %d", ret);
+	CPL_VERIFY(cpl_add_property, ret);
+
+	ret = cpl_add_property(obj4, "LABEL", "Process C [Proc]");
+	print(L_DEBUG, "cpl_add_property --> %d", ret);
+	CPL_VERIFY(cpl_add_property, ret);
+
+	ret = cpl_add_property(obj4, "LABEL", "Yay -- Process C [Proc]");
+	print(L_DEBUG, "cpl_add_property --> %d", ret);
+	CPL_VERIFY(cpl_add_property, ret);
+
+	ret = cpl_add_property(obj4, "TAG", "Hello");
+	print(L_DEBUG, "cpl_add_property --> %d", ret);
+	CPL_VERIFY(cpl_add_property, ret);
+
+	print(L_DEBUG, " ");
 }
 

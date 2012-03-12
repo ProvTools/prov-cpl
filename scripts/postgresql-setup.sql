@@ -82,11 +82,6 @@ CREATE TABLE IF NOT EXISTS cpl_sessions (
 
 CREATE TABLE IF NOT EXISTS cpl_versions (
        id_hi BIGINT,
-       initialization_time TIMESTAMP DEFAULT NOW(),
-       PRIMARY KEY (id_hi, id_lo));
-
-CREATE TABLE IF NOT EXISTS cpl_versions (
-       id_hi BIGINT,
        id_lo BIGINT,
        version INT,
        creation_time TIMESTAMP DEFAULT NOW(),
@@ -112,6 +107,14 @@ CREATE TABLE IF NOT EXISTS cpl_ancestry (
        FOREIGN KEY(to_id_hi, to_id_lo, to_version)
                    REFERENCES cpl_versions(id_hi, id_lo, version));
 
+CREATE TABLE IF NOT EXISTS cpl_properties (
+       id_hi BIGINT,
+       id_lo BIGINT,
+       name VARCHAR(255) NOT NULL,
+       value VARCHAR(4096) NOT NULL,
+       time TIMESTAMP DEFAULT NOW(),
+       FOREIGN KEY(id_hi, id_lo) REFERENCES cpl_objects(id_hi, id_lo));
+
 ALTER TABLE cpl_objects ADD CONSTRAINT cpl_objects_fk
       FOREIGN KEY (container_id_hi, container_id_lo, container_ver)
       REFERENCES cpl_versions(id_hi, id_lo, version);
@@ -125,3 +128,5 @@ GRANT ALL PRIVILEGES ON TABLE cpl_objects TO cpl WITH GRANT OPTION;
 GRANT ALL PRIVILEGES ON TABLE cpl_sessions TO cpl WITH GRANT OPTION;
 GRANT ALL PRIVILEGES ON TABLE cpl_versions TO cpl WITH GRANT OPTION;
 GRANT ALL PRIVILEGES ON TABLE cpl_ancestry TO cpl WITH GRANT OPTION;
+GRANT ALL PRIVILEGES ON TABLE cpl_properties TO cpl WITH GRANT OPTION;
+

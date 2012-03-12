@@ -734,6 +734,19 @@ cpl_control_ext(const cpl_id_t object_id,
 				const cpl_version_t controller_ver,
 				const int type);
 
+/**
+ * Add a property to the given object.
+ *
+ * @param id the object ID
+ * @param key the key
+ * @param value the value
+ * @return CPL_OK or an error code
+ */
+EXPORT cpl_return_t
+cpl_add_property(const cpl_id_t id,
+				 const char* key,
+                 const char* value);
+
 
 /***************************************************************************/
 /** Provenance Access API                                                 **/

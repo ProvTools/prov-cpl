@@ -218,6 +218,29 @@ cpl_rdf_escape_string(const char* str)
 }
 
 
+/**
+ * Hex-encode a string
+ *
+ * @param str the string
+ * @return the encoded string
+ */
+std::string
+cpl_rdf_hex_string(const char* str)
+{
+	if (str == NULL) return NULL;
+
+    size_t l = strlen(str);
+    size_t p = 0;
+    char r[4 + l * 2];
+    
+    for (p = 0; p < l; p++) {
+        sprintf(r + (2*p), "%02x", str[p]);
+    }
+
+    r[2*p] = '\0';
+    return r;
+}
+
 
 /***************************************************************************/
 /** Public API: Result Set                                                **/

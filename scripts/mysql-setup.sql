@@ -103,6 +103,17 @@ CREATE TABLE IF NOT EXISTS cpl_ancestry (
        FOREIGN KEY(to_id_hi, to_id_lo, to_version)
                    REFERENCES cpl_versions(id_hi, id_lo, version));
 
+CREATE TABLE IF NOT EXISTS cpl_properties (
+       id_hi BIGINT,
+       id_lo BIGINT,
+       version INT,
+       name VARCHAR(255) NOT NULL,
+       value VARCHAR(4096) NOT NULL,
+       time TIMESTAMP DEFAULT NOW(),
+       FOREIGN KEY(id_hi, id_lo, version)
+           REFERENCES cpl_versions(id_hi, id_lo, version));
+
 ALTER TABLE cpl_objects ADD CONSTRAINT cpl_objects_fk
       FOREIGN KEY (container_id_hi, container_id_lo, container_ver)
       REFERENCES cpl_versions(id_hi, id_lo, version);
+

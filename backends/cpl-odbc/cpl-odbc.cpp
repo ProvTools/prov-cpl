@@ -367,6 +367,7 @@ cpl_create_odbc_backend(const char* connection_string,
 	mutex_init(odbc->get_version_lock);
 	mutex_init(odbc->add_ancestry_edge_lock);
 	mutex_init(odbc->has_immediate_ancestor_lock);
+	mutex_init(odbc->add_property_lock);
 	mutex_init(odbc->get_session_info_lock);
 	mutex_init(odbc->get_object_info_lock);
 	mutex_init(odbc->get_version_info_lock);
@@ -430,6 +431,7 @@ cpl_create_odbc_backend(const char* connection_string,
 	ALLOC_STMT(add_ancestry_edge_stmt);
 	ALLOC_STMT(has_immediate_ancestor_stmt);
 	ALLOC_STMT(has_immediate_ancestor_with_ver_stmt);
+	ALLOC_STMT(add_property_stmt);
 	ALLOC_STMT(get_session_info_stmt);
 	ALLOC_STMT(get_object_info_stmt);
 	ALLOC_STMT(get_version_info_stmt);
@@ -510,6 +512,11 @@ cpl_create_odbc_backend(const char* connection_string,
 			"   AND from_id_hi = ? AND from_id_lo = ? AND from_version <= ?"
 			" LIMIT 1;");
 
+	PREPARE(add_property_stmt,
+			"INSERT INTO cpl_properties"
+			"            (id_hi, id_lo, version, name, value)"
+			"     VALUES (?, ?, ?, ?, ?);");
+
 	PREPARE(get_object_info_stmt,
 			"SELECT session_id_hi, session_id_lo,"
 			"       cpl_objects.creation_time, originator, name, type,"
@@ -579,6 +586,7 @@ err_stmts:
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->add_ancestry_edge_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->has_immediate_ancestor_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->has_immediate_ancestor_with_ver_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->add_property_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_session_info_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_info_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_version_info_stmt);
@@ -601,6 +609,7 @@ err_sync:
 	mutex_destroy(odbc->get_version_lock);
 	mutex_destroy(odbc->add_ancestry_edge_lock);
 	mutex_destroy(odbc->has_immediate_ancestor_lock);
+	mutex_destroy(odbc->add_property_lock);
 	mutex_destroy(odbc->get_session_info_lock);
 	mutex_destroy(odbc->get_object_info_lock);
 	mutex_destroy(odbc->get_version_info_lock);
@@ -636,6 +645,7 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->add_ancestry_edge_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->has_immediate_ancestor_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->has_immediate_ancestor_with_ver_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->add_property_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_session_info_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_info_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_version_info_stmt);
@@ -656,6 +666,7 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
 	mutex_destroy(odbc->get_version_lock);
 	mutex_destroy(odbc->add_ancestry_edge_lock);
 	mutex_destroy(odbc->has_immediate_ancestor_lock);
+	mutex_destroy(odbc->add_property_lock);
 	mutex_destroy(odbc->get_session_info_lock);
 	mutex_destroy(odbc->get_object_info_lock);
 	mutex_destroy(odbc->get_version_info_lock);
@@ -1229,6 +1240,64 @@ err:
 
 
 /**
+ * Add a property to the given object
+ *
+ * @param backend the pointer to the backend structure
+ * @param id the object ID
+ * @param version the version number
+ * @param key the key
+ * @param value the value
+ * @return CPL_OK or an error code
+ */
+extern "C" cpl_return_t
+cpl_odbc_add_property(struct _cpl_db_backend_t* backend,
+                      const cpl_id_t id,
+                      const cpl_version_t version,
+                      const char* key,
+                      const char* value)
+{
+    assert(backend != NULL);
+    cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
+
+	mutex_lock(odbc->add_property_lock);
+
+
+	// Prepare the statement
+
+	SQLRETURN ret;
+	SQLHSTMT stmt = odbc->add_property_stmt;
+
+	SQL_BIND_INTEGER(stmt, 1, id.hi);
+	SQL_BIND_INTEGER(stmt, 2, id.lo);
+	SQL_BIND_INTEGER(stmt, 3, version);
+	SQL_BIND_VARCHAR(stmt, 4, 255, key);
+	SQL_BIND_VARCHAR(stmt, 5, 4096, value);
+
+
+	// Execute
+	
+	ret = SQLExecute(stmt);
+	if (!SQL_SUCCEEDED(ret)) {
+		print_odbc_error("SQLExecute", stmt, SQL_HANDLE_STMT);
+		goto err;
+	}
+
+
+	// Cleanup
+
+	mutex_unlock(odbc->add_property_lock);
+	return CPL_OK;
+
+
+	// Error handling
+
+err:
+	mutex_unlock(odbc->add_property_lock);
+	return CPL_E_STATEMENT_ERROR;
+}
+
+
+/**
  * Get information about the given provenance session.
  *
  * @param id the session ID
@@ -1712,6 +1781,7 @@ const cpl_db_backend_t CPL_ODBC_BACKEND = {
 	cpl_odbc_get_version,
 	cpl_odbc_add_ancestry_edge,
 	cpl_odbc_has_immediate_ancestor,
+	cpl_odbc_add_property,
 	cpl_odbc_get_session_info,
 	cpl_odbc_get_object_info,
 	cpl_odbc_get_version_info,

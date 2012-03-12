@@ -199,6 +199,23 @@ typedef struct _cpl_db_backend_t {
 									 const cpl_version_t query_object_max_ver,
 									 int* out);
 
+    /**
+     * Add a property to the given object
+     *
+	 * @param backend the pointer to the backend structure
+     * @param id the object ID
+     * @param version the version number
+     * @param key the key
+     * @param value the value
+     * @return CPL_OK or an error code
+     */
+    cpl_return_t
+    (*cpl_db_add_property)(struct _cpl_db_backend_t* backend,
+                           const cpl_id_t id,
+                           const cpl_version_t version,
+                           const char* key,
+                           const char* value);
+
 	/**
 	 * Get information about the given provenance session.
 	 *

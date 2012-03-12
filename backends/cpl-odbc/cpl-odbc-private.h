@@ -171,6 +171,16 @@ typedef struct {
 	SQLHSTMT has_immediate_ancestor_with_ver_stmt;
 
 	/**
+	 * The lock for add_property
+	 */
+	mutex_t add_property_lock;
+
+	/**
+	 * The statement that adds a new property
+	 */
+	SQLHSTMT add_property_stmt;
+
+	/**
 	 * The lock for get_session_info
 	 */
 	mutex_t get_session_info_lock;

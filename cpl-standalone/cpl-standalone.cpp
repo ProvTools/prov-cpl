@@ -825,6 +825,48 @@ cpl_control_ext(const cpl_id_t object_id,
 }
 
 
+/**
+ * Add a property to the given object.
+ *
+ * @param id the object ID
+ * @param key the key
+ * @param value the value
+ * @return CPL_OK or an error code
+ */
+extern "C" EXPORT cpl_return_t
+cpl_add_property(const cpl_id_t id,
+				 const char* key,
+                 const char* value)
+{
+	CPL_ENSURE_INITALIZED;
+
+
+	// Check the arguments
+
+	CPL_ENSURE_NOT_NONE(id);
+	CPL_ENSURE_NOT_NULL(key);
+	CPL_ENSURE_NOT_NULL(value);
+
+
+    // Get the version of the object
+    
+    cpl_return_t ret;
+    cpl_version_t version;
+
+    ret = cpl_get_version(id, &version);
+    CPL_RUNTIME_VERIFY(ret);
+
+
+    // Call the backend
+
+	return cpl_db_backend->cpl_db_add_property(cpl_db_backend,
+											   id,
+                                               version,
+											   key,
+											   value);
+}
+
+
 
 /***************************************************************************/
 /** Advanced Private API: Helpers for the Disclosed Provenance API        **/
