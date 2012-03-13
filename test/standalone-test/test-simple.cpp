@@ -253,7 +253,7 @@ cb_lookup_by_property(const cpl_id_t id,
 static bool
 check_time(long t)
 {
-	long now = time(NULL);
+	time_t now = time(NULL);
 	return t - 5 <= now && t + 10 >= now;
 }
 

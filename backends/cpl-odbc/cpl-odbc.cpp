@@ -245,9 +245,15 @@ cpl_sql_fetch_single_timestamp_as_unix_time(SQLHSTMT stmt, unsigned long* out,
 		m.tm_yday = 0;
 		m.tm_isdst = 0;
 		time_t T = mktime(&m);
+#ifdef _WINDOWS
+		struct tm mx;
+		localtime_s(&mx, &T);
+		if (mx.tm_isdst) T -= 3600;
+#else
 		struct tm mx;
 		localtime_r(&T, &mx);
 		if (mx.tm_isdst) T -= 3600;
+#endif
 		*out = (unsigned long) T;
 	}
 	return CPL_OK;
@@ -2041,8 +2047,6 @@ cpl_odbc_lookup_by_property(struct _cpl_db_backend_t* backend,
 
 	std::list<__lookup_by_property__entry_t> entries;
 	__lookup_by_property__entry_t entry;
-	SQLLEN ind_type;
-	bool found = false;
 
 	mutex_lock(odbc->lookup_by_property_lock);
 
@@ -2088,7 +2092,6 @@ cpl_odbc_lookup_by_property(struct _cpl_db_backend_t* backend,
 			break;
 		}
 
-		found = true;
 		entries.push_back(entry);
 	}
 	
