@@ -247,6 +247,23 @@ typedef struct cpl_ancestry_entry {
 
 } cpl_ancestry_entry_t;
 
+/**
+ * The iterator callback function used by property accessors.
+ *
+ * @param id the object ID
+ * @param version the object version
+ * @param key the property name
+ * @param value the property value
+ * @param context the application-provided context
+ * @return CPL_OK or an error code (the caller should fail on this error)
+ */
+typedef cpl_return_t (*cpl_property_iterator_t)
+						(const cpl_id_t id,
+						 const cpl_version_t version,
+						 const char* key,
+						 const char* value,
+						 void* context);
+
 /*
  * Static assertions
  */
@@ -856,6 +873,39 @@ cpl_get_object_ancestry(const cpl_id_t id,
 						const int flags,
 						cpl_ancestry_iterator_t iterator,
 						void* context);
+
+/**
+ * Get the properties associated with the given provenance object.
+ *
+ * @param id the the object ID
+ * @param version the object version, or CPL_VERSION_NONE to access all
+ *                version nodes associated with the given object
+ * @param key the property to fetch - or NULL for all properties
+ * @param iterator the iterator callback function
+ * @param context the user context to be passed to the iterator function
+ * @return CPL_OK, CPL_S_NO_DATA, or an error code
+ */
+EXPORT cpl_return_t
+cpl_get_properties(const cpl_id_t id,
+				   const cpl_version_t version,
+				   const char* key,
+				   cpl_property_iterator_t iterator,
+				   void* context);
+
+/**
+ * Lookup an object based on a property value.
+ *
+ * @param key the property name
+ * @param value the property value
+ * @param iterator the iterator callback function
+ * @param context the user context to be passed to the iterator function
+ * @return CPL_OK, CPL_S_NO_DATA, or an error code
+ */
+EXPORT cpl_return_t
+cpl_lookup_by_property(const char* key,
+					   const char* value,
+					   cpl_property_iterator_t iterator,
+					   void* context);
 
 
 /***************************************************************************/

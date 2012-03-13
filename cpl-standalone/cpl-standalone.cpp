@@ -857,6 +857,37 @@ cpl_add_property(const cpl_id_t id,
     CPL_RUNTIME_VERIFY(ret);
 
 
+	// Freeze and create a new version
+
+	// TODO We should freeze only as necessary to make sure that the session
+	// information is correct. We need add a cache to note which versions
+	// were created by which sessions
+
+	cpl_return_t r = CPL_E_ALREADY_EXISTS;
+	version++;
+
+	do {
+		r = cpl_db_backend->cpl_db_create_version(cpl_db_backend,
+												  id,
+												  version,
+												  cpl_session);
+		if (r == CPL_E_ALREADY_EXISTS) {
+#ifdef _WINDOWS
+			Sleep(2 /* ms */);
+#else
+			usleep(2 * 1000 /* us */);
+#endif
+			version++;
+		}
+		else {
+			CPL_RUNTIME_VERIFY(r);
+		}
+	}
+	while (!CPL_IS_OK(r));
+
+	assert(version != CPL_VERSION_NONE);
+
+
     // Call the backend
 
 	return cpl_db_backend->cpl_db_add_property(cpl_db_backend,
@@ -1296,6 +1327,80 @@ cpl_get_object_ancestry(const cpl_id_t id,
 													  id, version, direction,
 													  flags, iterator,
 													  context);
+}
+
+
+/**
+ * Get the properties associated with the given provenance object.
+ *
+ * @param id the the object ID
+ * @param version the object version, or CPL_VERSION_NONE to access all
+ *                version nodes associated with the given object
+ * @param key the property to fetch - or NULL for all properties
+ * @param iterator the iterator callback function
+ * @param context the user context to be passed to the iterator function
+ * @return CPL_OK, CPL_S_NO_DATA, or an error code
+ */
+extern "C" EXPORT cpl_return_t
+cpl_get_properties(const cpl_id_t id,
+				   const cpl_version_t version,
+				   const char* key,
+				   cpl_property_iterator_t iterator,
+				   void* context)
+{
+	CPL_ENSURE_INITALIZED;
+	CPL_ENSURE_NOT_NONE(id);
+	CPL_ENSURE_NOT_NULL(iterator);
+
+
+	// Validate the object version
+
+	if (version != CPL_VERSION_NONE) {
+		CPL_ENSURE_NOT_NEGATIVE(version);
+
+		cpl_version_t current_version;
+		CPL_RUNTIME_VERIFY(cpl_get_version(id, &current_version));
+
+		if (version < 0 || version > current_version) {
+			return CPL_E_INVALID_VERSION;
+		}
+	}
+
+
+	// Call the database backend
+
+	return cpl_db_backend->cpl_db_get_properties(cpl_db_backend,
+												 id, version, key,
+												 iterator, context);
+}
+
+
+/**
+ * Lookup an object based on a property value.
+ *
+ * @param key the property name
+ * @param value the property value
+ * @param iterator the iterator callback function
+ * @param context the user context to be passed to the iterator function
+ * @return CPL_OK, CPL_S_NO_DATA, or an error code
+ */
+extern "C" EXPORT cpl_return_t
+cpl_lookup_by_property(const char* key,
+					   const char* value,
+					   cpl_property_iterator_t iterator,
+					   void* context)
+{
+	CPL_ENSURE_INITALIZED;
+	CPL_ENSURE_NOT_NULL(iterator);
+	CPL_ENSURE_NOT_NULL(key);
+	CPL_ENSURE_NOT_NULL(value);
+
+
+	// Call the database backend
+
+	return cpl_db_backend->cpl_db_lookup_by_property(cpl_db_backend,
+													 key, value,
+													 iterator, context);
 }
 
 

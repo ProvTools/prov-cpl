@@ -75,8 +75,8 @@ CREATE TABLE IF NOT EXISTS cpl_sessions (
        mac_address VARCHAR(18),
        username VARCHAR(255),
        pid INT,
-       program VARCHAR(4096),
-       cmdline VARCHAR(4096),
+       program VARCHAR(4095),
+       cmdline VARCHAR(4095),
        initialization_time TIMESTAMP DEFAULT NOW(),
        PRIMARY KEY (id_hi, id_lo));
 
@@ -110,10 +110,11 @@ CREATE TABLE IF NOT EXISTS cpl_ancestry (
 CREATE TABLE IF NOT EXISTS cpl_properties (
        id_hi BIGINT,
        id_lo BIGINT,
+       version INT,
        name VARCHAR(255) NOT NULL,
-       value VARCHAR(4096) NOT NULL,
-       time TIMESTAMP DEFAULT NOW(),
-       FOREIGN KEY(id_hi, id_lo) REFERENCES cpl_objects(id_hi, id_lo));
+       value VARCHAR(4095) NOT NULL,
+       FOREIGN KEY(id_hi, id_lo, version)
+           REFERENCES cpl_versions(id_hi, id_lo, version));
 
 ALTER TABLE cpl_objects ADD CONSTRAINT cpl_objects_fk
       FOREIGN KEY (container_id_hi, container_id_lo, container_ver)

@@ -35,7 +35,9 @@
 #include "stdafx.h"
 #include "standalone-test.h"
 
+#include <map>
 #include <vector>
+
 
 using namespace std;
 
@@ -189,6 +191,49 @@ cb_object_ancestry(const cpl_id_t query_object_id,
 
 
 /**
+ * The iterator callback function used by property accessors.
+ *
+ * @param id the object ID
+ * @param version the object version
+ * @param key the property name
+ * @param value the property value
+ * @param context the application-provided context
+ * @return CPL_OK or an error code (the caller should fail on this error)
+ */
+static cpl_return_t
+cb_get_properties(const cpl_id_t id,
+				  const cpl_version_t version,
+				  const char* key,
+				  const char* value,
+				  void* context)
+{
+	std::multimap<std::string, std::string>* m
+		= (std::multimap<std::string, std::string>*) context;
+	m->insert(std::pair<std::string, std::string>(std::string(key),
+				std::string(value)));
+	
+	print(L_DEBUG, "  %llx:%llx-%d %s = %s",
+			id.hi, id.lo, version, key, value);
+
+	return CPL_OK;
+}
+
+
+/**
+ * Check the time
+ *
+ * @param t the time
+ * @return true if t is within 10 seconds of now
+ */
+static bool
+check_time(long t) {
+
+	long now = time(NULL);
+	return t <= now && t + 10 >= now;
+}
+
+
+/**
  * The simplest possible test
  */
 void
@@ -288,8 +333,7 @@ test_simple(void)
 
 	print_session_info(sinfo);
 	if (sinfo->id != session
-			|| sinfo->start_time > time(NULL)
-			|| sinfo->start_time + 10 < time(NULL)) {
+			|| !check_time(sinfo->start_time)) {
 		throw CPLException("The returned session information is incorrect");
 	}
 
@@ -316,8 +360,7 @@ test_simple(void)
 	print_object_info(info);
 	if (info->id != obj || info->version != version
 			|| info->creation_session != session
-			|| info->creation_time > time(NULL)
-			|| info->creation_time + 10 < time(NULL)
+			|| !check_time(info->creation_time)
 			|| strcmp(info->originator, ORIGINATOR) != 0
 			|| strcmp(info->name, "Process A") != 0
 			|| strcmp(info->type, "Proc") != 0
@@ -343,8 +386,7 @@ test_simple(void)
 	print_object_info(info);
 	if (info->id != obj2 || info->version != version
 			|| info->creation_session != session
-			|| info->creation_time > time(NULL)
-			|| info->creation_time + 10 < time(NULL)
+			|| !check_time(info->creation_time)
 			|| strcmp(info->originator, ORIGINATOR) != 0
 			|| strcmp(info->name, "Object A") != 0
 			|| strcmp(info->type, "File") != 0
@@ -371,8 +413,7 @@ test_simple(void)
 	print_version_info(vinfo);
 	if (vinfo->id != obj || vinfo->version != version
 			|| vinfo->session != session
-			|| vinfo->creation_time > time(NULL)
-			|| vinfo->creation_time + 10 < time(NULL)) {
+			|| !check_time(vinfo->creation_time)) {
 		throw CPLException("The returned version information is incorrect");
 	}
 
@@ -389,8 +430,7 @@ test_simple(void)
 	print_version_info(vinfo);
 	if (vinfo->id != obj2 || vinfo->version != version
 			|| vinfo->session != session
-			|| vinfo->creation_time > time(NULL)
-			|| vinfo->creation_time + 10 < time(NULL)) {
+			|| !check_time(vinfo->creation_time)) {
 		throw CPLException("The returned version information is incorrect");
 	}
 
@@ -474,18 +514,60 @@ test_simple(void)
 	print(L_DEBUG, "cpl_add_property --> %d", ret);
 	CPL_VERIFY(cpl_add_property, ret);
 
-	ret = cpl_add_property(obj4, "LABEL", "Process C [Proc]");
+	ret = cpl_add_property(obj3, "LABEL", "Yay -- Process B [Proc]");
 	print(L_DEBUG, "cpl_add_property --> %d", ret);
 	CPL_VERIFY(cpl_add_property, ret);
 
-	ret = cpl_add_property(obj4, "LABEL", "Yay -- Process C [Proc]");
-	print(L_DEBUG, "cpl_add_property --> %d", ret);
-	CPL_VERIFY(cpl_add_property, ret);
-
-	ret = cpl_add_property(obj4, "TAG", "Hello");
+	ret = cpl_add_property(obj3, "TAG", "Hello");
 	print(L_DEBUG, "cpl_add_property --> %d", ret);
 	CPL_VERIFY(cpl_add_property, ret);
 
 	print(L_DEBUG, " ");
+
+	print(L_DEBUG, "Properties of object 3:");
+
+	std::multimap<std::string, std::string> pctx;
+
+	print(L_DEBUG, "All:");
+	pctx.clear();
+	ret = cpl_get_properties(obj3, CPL_VERSION_NONE, NULL,
+			cb_get_properties, &pctx);
+	print(L_DEBUG, "cpl_get_properties --> %d", ret);
+	CPL_VERIFY(cpl_get_properties, ret);
+
+	print(L_DEBUG, "All - version 1:");
+	pctx.clear();
+	ret = cpl_get_properties(obj3, 1, NULL,
+			cb_get_properties, &pctx);
+	print(L_DEBUG, "cpl_get_properties --> %d", ret);
+	CPL_VERIFY(cpl_get_properties, ret);
+
+	print(L_DEBUG, "LABEL:");
+	pctx.clear();
+	ret = cpl_get_properties(obj3, CPL_VERSION_NONE, "LABEL",
+			cb_get_properties, &pctx);
+	print(L_DEBUG, "cpl_get_properties --> %d", ret);
+	CPL_VERIFY(cpl_get_properties, ret);
+
+	print(L_DEBUG, "LABEL - version 2:");
+	pctx.clear();
+	ret = cpl_get_properties(obj3, 2, "LABEL",
+			cb_get_properties, &pctx);
+	print(L_DEBUG, "cpl_get_properties --> %d", ret);
+	CPL_VERIFY(cpl_get_properties, ret);
+
+	print(L_DEBUG, "HELLO:");
+	pctx.clear();
+	ret = cpl_get_properties(obj3, CPL_VERSION_NONE, "HELLO",
+			cb_get_properties, &pctx);
+	print(L_DEBUG, "cpl_get_properties --> %d", ret);
+	CPL_VERIFY(cpl_get_properties, ret);
+
+	print(L_DEBUG, "HELLO - version 1:");
+	pctx.clear();
+	ret = cpl_get_properties(obj3, 1, "HELLO",
+			cb_get_properties, &pctx);
+	print(L_DEBUG, "cpl_get_properties --> %d", ret);
+	CPL_VERIFY(cpl_get_properties, ret);
 }
 

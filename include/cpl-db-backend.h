@@ -284,6 +284,43 @@ typedef struct _cpl_db_backend_t {
 								  cpl_ancestry_iterator_t iterator,
 								  void* context);
 
+	/**
+	 * Get the properties associated with the given provenance object.
+	 *
+	 * @param backend the pointer to the backend structure
+	 * @param id the the object ID
+	 * @param version the object version, or CPL_VERSION_NONE to access all
+	 *                version nodes associated with the given object
+	 * @param key the property to fetch - or NULL for all properties
+	 * @param iterator the iterator callback function
+	 * @param context the user context to be passed to the iterator function
+	 * @return CPL_OK, CPL_S_NO_DATA, or an error code
+	 */
+	cpl_return_t
+	(*cpl_db_get_properties)(struct _cpl_db_backend_t* backend,
+							 const cpl_id_t id,
+							 const cpl_version_t version,
+							 const char* key,
+							 cpl_property_iterator_t iterator,
+							 void* context);
+
+	/**
+	 * Lookup an object based on a property value.
+	 *
+	 * @param backend the pointer to the backend structure
+	 * @param key the property name
+	 * @param value the property value
+	 * @param iterator the iterator callback function
+	 * @param context the user context to be passed to the iterator function
+	 * @return CPL_OK, CPL_S_NO_DATA, or an error code
+	 */
+	cpl_return_t
+	(*cpl_db_lookup_by_property)(struct _cpl_db_backend_t* backend,
+								 const char* key,
+								 const char* value,
+								 cpl_property_iterator_t iterator,
+								 void* context);
+
 } cpl_db_backend_t;
 
 
