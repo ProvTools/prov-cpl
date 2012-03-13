@@ -377,6 +377,7 @@ cpl_create_odbc_backend(const char* connection_string,
 	mutex_init(odbc->get_version_info_lock);
 	mutex_init(odbc->get_object_ancestry_lock);
 	mutex_init(odbc->get_properties_lock);
+	mutex_init(odbc->lookup_by_property_lock);
 
 
 	// Open the ODBC connection
@@ -448,6 +449,7 @@ cpl_create_odbc_backend(const char* connection_string,
 	ALLOC_STMT(get_properties_with_ver_stmt);
 	ALLOC_STMT(get_properties_with_key_stmt);
 	ALLOC_STMT(get_properties_with_key_ver_stmt);
+	ALLOC_STMT(lookup_by_property_stmt);
 
 #undef ALLOC_STMT
 
@@ -590,6 +592,11 @@ cpl_create_odbc_backend(const char* connection_string,
 			"  FROM cpl_properties"
 			" WHERE id_hi = ? AND id_lo = ? AND name = ? AND version = ?;");
 
+	PREPARE(lookup_by_property_stmt,
+			"SELECT id_hi, id_lo, version"
+			"  FROM cpl_properties"
+			" WHERE name = ? AND value = ?;");
+
 
 #undef PREPARE
 
@@ -627,6 +634,7 @@ err_stmts:
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_properties_with_ver_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_properties_with_key_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_properties_with_key_ver_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_by_property_stmt);
 
 	SQLDisconnect(odbc->db_connection);
 
@@ -648,6 +656,7 @@ err_sync:
 	mutex_destroy(odbc->get_version_info_lock);
 	mutex_destroy(odbc->get_object_ancestry_lock);
 	mutex_destroy(odbc->get_properties_lock);
+	mutex_destroy(odbc->lookup_by_property_lock);
 
 	delete odbc;
 	return r;
@@ -691,6 +700,7 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_properties_with_ver_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_properties_with_key_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_properties_with_key_ver_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_by_property_stmt);
 
 	ret = SQLDisconnect(odbc->db_connection);
 	if (!SQL_SUCCEEDED(ret)) {
@@ -710,6 +720,7 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
 	mutex_destroy(odbc->get_version_info_lock);
 	mutex_destroy(odbc->get_object_ancestry_lock);
 	mutex_destroy(odbc->get_properties_lock);
+	mutex_destroy(odbc->lookup_by_property_lock);
 
 	SQLFreeHandle(SQL_HANDLE_DBC, odbc->db_connection);
 	SQLFreeHandle(SQL_HANDLE_ENV, odbc->db_environment);
@@ -1996,6 +2007,16 @@ err:
 
 
 /**
+ * An entry in the result set of the queries issued by
+ * cpl_odbc_lookup_by_property().
+ */
+typedef struct __lookup_by_property__entry {
+	cpl_id_t id;
+	long version;
+} __lookup_by_property__entry_t;
+
+
+/**
  * Lookup an object based on a property value.
  *
  * @param backend the pointer to the backend structure
@@ -2003,7 +2024,7 @@ err:
  * @param value the property value
  * @param iterator the iterator callback function
  * @param context the user context to be passed to the iterator function
- * @return CPL_OK, CPL_S_NO_DATA, or an error code
+ * @return CPL_OK, CPL_E_NOT_FOUND, or an error code
  */
 cpl_return_t
 cpl_odbc_lookup_by_property(struct _cpl_db_backend_t* backend,
@@ -2012,7 +2033,107 @@ cpl_odbc_lookup_by_property(struct _cpl_db_backend_t* backend,
 							cpl_property_iterator_t iterator,
 							void* context)
 {
-	return CPL_E_NOT_IMPLEMENTED;
+	assert(backend != NULL);
+	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
+
+	SQLRETURN ret;
+	cpl_return_t r = CPL_E_INTERNAL_ERROR;
+
+	std::list<__lookup_by_property__entry_t> entries;
+	__lookup_by_property__entry_t entry;
+	SQLLEN ind_type;
+	bool found = false;
+
+	mutex_lock(odbc->lookup_by_property_lock);
+
+
+	// Prepare the statement
+
+	SQLHSTMT stmt = odbc->lookup_by_property_stmt;
+	SQL_BIND_VARCHAR(stmt, 1, 255, key);
+	SQL_BIND_VARCHAR(stmt, 2, 4095, value);
+
+
+	// Execute
+	
+	ret = SQLExecute(stmt);
+	if (!SQL_SUCCEEDED(ret)) {
+		print_odbc_error("SQLExecute", stmt, SQL_HANDLE_STMT);
+		goto err;
+	}
+
+
+	// Bind the columns
+
+	ret = SQLBindCol(stmt, 1, SQL_C_UBIGINT, &entry.id.hi, 0, NULL);
+	if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+	ret = SQLBindCol(stmt, 2, SQL_C_UBIGINT, &entry.id.lo, 0, NULL);
+	if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+	ret = SQLBindCol(stmt, 3, SQL_C_SLONG, &entry.version, 0, NULL);
+	if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+
+	// Fetch the result
+
+	while (true) {
+
+		ret = SQLFetch(stmt);
+		if (!SQL_SUCCEEDED(ret)) {
+			if (ret != SQL_NO_DATA) {
+				print_odbc_error("SQLFetch", stmt, SQL_HANDLE_STMT);
+				goto err_close;
+			}
+			break;
+		}
+
+		found = true;
+		entries.push_back(entry);
+	}
+	
+	ret = SQLCloseCursor(stmt);
+	if (!SQL_SUCCEEDED(ret)) {
+		print_odbc_error("SQLCloseCursor", stmt, SQL_HANDLE_STMT);
+		goto err;
+	}
+
+
+	// Unlock
+
+	mutex_unlock(odbc->lookup_by_property_lock);
+
+
+	// If we did not get any data back, terminate
+
+	if (entries.empty()) return CPL_E_NOT_FOUND;
+
+
+	// Call the user-provided callback function
+
+	if (iterator != NULL) {
+		std::list<__lookup_by_property__entry_t>::iterator i;
+		for (i = entries.begin(); i != entries.end(); i++) {
+			r = iterator(i->id, (cpl_version_t) i->version,
+						 key, value, context);
+			if (!CPL_IS_OK(r)) return r;
+		}
+	}
+
+	return CPL_OK;
+
+
+	// Error handling
+
+err_close:
+	ret = SQLCloseCursor(stmt);
+	if (!SQL_SUCCEEDED(ret)) {
+		print_odbc_error("SQLCloseCursor", stmt, SQL_HANDLE_STMT);
+	}
+
+err:
+	mutex_unlock(odbc->lookup_by_property_lock);
+	return CPL_E_STATEMENT_ERROR;
 }
 
 

@@ -1382,7 +1382,7 @@ cpl_get_properties(const cpl_id_t id,
  * @param value the property value
  * @param iterator the iterator callback function
  * @param context the user context to be passed to the iterator function
- * @return CPL_OK, CPL_S_NO_DATA, or an error code
+ * @return CPL_OK, CPL_E_NOT_FOUND, or an error code
  */
 extern "C" EXPORT cpl_return_t
 cpl_lookup_by_property(const char* key,

@@ -261,6 +261,16 @@ typedef struct {
 	 */
 	SQLHSTMT get_properties_with_key_ver_stmt;
 
+	/**
+	 * The mutex for lookup_by_property
+	 */
+	mutex_t lookup_by_property_lock;
+
+	/**
+	 * The statement for looking up by a property value
+	 */
+	SQLHSTMT lookup_by_property_stmt;
+
 } cpl_odbc_t;
 
 

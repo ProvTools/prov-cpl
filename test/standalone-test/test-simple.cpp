@@ -36,6 +36,7 @@
 #include "standalone-test.h"
 
 #include <map>
+#include <set>
 #include <vector>
 
 
@@ -220,16 +221,77 @@ cb_get_properties(const cpl_id_t id,
 
 
 /**
+ * The iterator callback function used by property accessors.
+ *
+ * @param id the object ID
+ * @param version the object version
+ * @param key the property name
+ * @param value the property value
+ * @param context the application-provided context
+ * @return CPL_OK or an error code (the caller should fail on this error)
+ */
+static cpl_return_t
+cb_lookup_by_property(const cpl_id_t id,
+				  	  const cpl_version_t version,
+					  const char* key,
+					  const char* value,
+					  void* context)
+{
+	std::set<std::pair<cpl_id_t, cpl_version_t> >* s
+		= (std::set<std::pair<cpl_id_t, cpl_version_t> >*) context;
+	s->insert(std::pair<cpl_id_t, cpl_version_t>(id, version));
+	return CPL_OK;
+}
+
+
+/**
  * Check the time
  *
  * @param t the time
  * @return true if t is within 10 seconds of now
  */
 static bool
-check_time(long t) {
-
+check_time(long t)
+{
 	long now = time(NULL);
-	return t <= now && t + 10 >= now;
+	return t - 5 <= now && t + 10 >= now;
+}
+
+
+/**
+ * Check whether the multimap contains the given pair
+ *
+ * @param m the multimap
+ * @param key the key
+ * @param value the value
+ * @return true if it contains the given pair
+ */
+static bool
+contains(std::multimap<std::string, std::string>& m, const char* key,
+		 const char* value)
+{
+	std::multimap<std::string, std::string>::iterator i;
+	for (i = m.find(std::string(key)); i != m.end(); i++) {
+		if (i->first != key) return false;
+		if (i->second == value) return true;
+	}
+	return false;
+}
+
+
+/**
+ * Check whether the set contains the given pair
+ *
+ * @param s the set
+ * @param id the ID
+ * @param version the version
+ * @return true if it contains the given pair
+ */
+static bool
+contains(std::set<std::pair<cpl_id_t, cpl_version_t> >& s, const cpl_id_t id,
+		 const cpl_version_t version)
+{
+	return s.find(std::pair<cpl_id_t, cpl_version_t>(id, version)) != s.end();
 }
 
 
@@ -514,6 +576,10 @@ test_simple(void)
 	print(L_DEBUG, "cpl_add_property --> %d", ret);
 	CPL_VERIFY(cpl_add_property, ret);
 
+	cpl_version_t obj3pv;
+	ret = cpl_get_version(obj3, &obj3pv);
+	CPL_VERIFY(cpl_get_version, ret);
+
 	ret = cpl_add_property(obj3, "LABEL", "Yay -- Process B [Proc]");
 	print(L_DEBUG, "cpl_add_property --> %d", ret);
 	CPL_VERIFY(cpl_add_property, ret);
@@ -534,13 +600,25 @@ test_simple(void)
 			cb_get_properties, &pctx);
 	print(L_DEBUG, "cpl_get_properties --> %d", ret);
 	CPL_VERIFY(cpl_get_properties, ret);
+	if (!contains(pctx, "LABEL", "Process B [Proc]"))
+		throw CPLException("The object is missing a property.");
+	if (!contains(pctx, "LABEL", "Yay -- Process B [Proc]"))
+		throw CPLException("The object is missing a property.");
+	if (!contains(pctx, "TAG", "Hello"))
+		throw CPLException("The object is missing a property.");
+	if (pctx.size() != 3)
+		throw CPLException("The object has unexpected properties.");
 
-	print(L_DEBUG, "All - version 1:");
+	print(L_DEBUG, "All - version 2:");
 	pctx.clear();
-	ret = cpl_get_properties(obj3, 1, NULL,
+	ret = cpl_get_properties(obj3, 2, NULL,
 			cb_get_properties, &pctx);
 	print(L_DEBUG, "cpl_get_properties --> %d", ret);
 	CPL_VERIFY(cpl_get_properties, ret);
+	if (!contains(pctx, "LABEL", "Process B [Proc]"))
+		throw CPLException("The object is missing a property.");
+	if (pctx.size() != 1) // Assumes freeze on every property add
+		throw CPLException("The object has unexpected properties.");
 
 	print(L_DEBUG, "LABEL:");
 	pctx.clear();
@@ -548,13 +626,23 @@ test_simple(void)
 			cb_get_properties, &pctx);
 	print(L_DEBUG, "cpl_get_properties --> %d", ret);
 	CPL_VERIFY(cpl_get_properties, ret);
+	if (!contains(pctx, "LABEL", "Process B [Proc]"))
+		throw CPLException("The object is missing a property.");
+	if (!contains(pctx, "LABEL", "Yay -- Process B [Proc]"))
+		throw CPLException("The object is missing a property.");
+	if (pctx.size() != 2)
+		throw CPLException("The object has unexpected properties.");
 
-	print(L_DEBUG, "LABEL - version 2:");
+	print(L_DEBUG, "LABEL - version %d:", obj3pv);
 	pctx.clear();
-	ret = cpl_get_properties(obj3, 2, "LABEL",
+	ret = cpl_get_properties(obj3, obj3pv, "LABEL",
 			cb_get_properties, &pctx);
 	print(L_DEBUG, "cpl_get_properties --> %d", ret);
 	CPL_VERIFY(cpl_get_properties, ret);
+	if (!contains(pctx, "LABEL", "Process B [Proc]"))
+		throw CPLException("The object is missing a property.");
+	if (pctx.size() != 1) // Assumes freeze on every property add
+		throw CPLException("The object has unexpected properties.");
 
 	print(L_DEBUG, "HELLO:");
 	pctx.clear();
@@ -562,12 +650,29 @@ test_simple(void)
 			cb_get_properties, &pctx);
 	print(L_DEBUG, "cpl_get_properties --> %d", ret);
 	CPL_VERIFY(cpl_get_properties, ret);
+	if (pctx.size() != 0)
+		throw CPLException("The object has unexpected properties.");
 
-	print(L_DEBUG, "HELLO - version 1:");
+	print(L_DEBUG, "HELLO - version %d:", obj3pv);
 	pctx.clear();
-	ret = cpl_get_properties(obj3, 1, "HELLO",
+	ret = cpl_get_properties(obj3, obj3pv, "HELLO",
 			cb_get_properties, &pctx);
 	print(L_DEBUG, "cpl_get_properties --> %d", ret);
 	CPL_VERIFY(cpl_get_properties, ret);
+	if (pctx.size() != 0)
+		throw CPLException("The object has unexpected properties.");
+
+
+	print(L_DEBUG, " ");
+
+	std::set<std::pair<cpl_id_t, cpl_version_t> > lctx;
+	ret = cpl_lookup_by_property("LABEL", "Process B [Proc]",
+			cb_lookup_by_property, &lctx);
+	print(L_DEBUG, "cpl_lookup_by_property --> %d", ret);
+	CPL_VERIFY(cpl_lookup_by_property, ret);
+	if (!contains(lctx, obj3, obj3pv))
+		throw CPLException("The object is missing in the result set.");
+
+	print(L_DEBUG, " ");
 }
 
