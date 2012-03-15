@@ -13,4 +13,5 @@ Contributor(s): Peter Macko
 
 Please make sure that the following packages are installed:
   uuid-dev
+  libssl-dev
 

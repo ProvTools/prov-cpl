@@ -112,6 +112,19 @@ typedef struct cpl_id {
 typedef int cpl_version_t;
 
 /**
+ * A combination of the ID and the version number.
+ */
+typedef struct cpl_id_version {
+
+	/// The ID
+	cpl_id_t id;
+
+	/// The version
+	cpl_version_t version;
+
+} cpl_id_version_t;
+
+/**
  * A session ID.
  */
 typedef cpl_id_t cpl_session_t;
@@ -578,22 +591,6 @@ WINDLL_API extern const cpl_id_t CPL_NONE;
  * Ignore control dependencies
  */
 #define CPL_A_NO_CONTROL_DEPENDENCIES	(1 << 2)
-
-
-
-/***************************************************************************/
-/** Standard Object Constants - Originators and Types                     **/
-/***************************************************************************/
-
-/**
- * The file system originator (use for files, set object name to real-path)
- */
-#define CPL_O_FILESYSTEM				"/fs"
-
-/**
- * The default file type
- */
-#define CPL_T_FILE						"FILE"
 
 
 

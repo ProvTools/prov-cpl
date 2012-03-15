@@ -56,7 +56,7 @@ endif
 # TODO Make the hard-coded "../../" to be dynamically computed
 
 $(BUILD_DIR)/dist/$(TARGET): $(BUILD_DIR)/Manifest $(BUILD_DIR)/build.xml \
-		$(SOURCE_FILES)
+		$(SOURCE_FILES) $(EXTERNAL_JARS)
 	@cd $(BUILD_DIR) && ln -fs ../../$(SOURCE_DIR) src
 	@mkdir -p $(BUILD_DIR)/lib
 ifneq ($(EXTERNAL_JARS),)

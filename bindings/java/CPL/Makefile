@@ -14,7 +14,6 @@ ROOT := ../../..
 INSTALL := yes
 JAVA_MODULE_DEPENDECIES := ../CPLDirect
 
-
 #
 # Include the magic script
 #

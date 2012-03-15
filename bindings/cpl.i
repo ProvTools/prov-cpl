@@ -46,6 +46,8 @@
 %{
 #include <cpl.h>
 #include <cplxx.h>
+#include <cpl-file.h>
+
 #include <backends/cpl-odbc.h>
 
 #if defined(__unix__) || defined(__APPLE__)
@@ -112,6 +114,20 @@ cpl_convert_p_std_vector_cpl_ancestry_entry_t_to_p_void(
     return (void*) p;
 }
 
+typedef std::vector<cpl_id_version_t> std_vector_cpl_id_version_t;
+
+inline std::vector<cpl_id_version_t>&
+cpl_dereference_p_std_vector_cpl_id_version_t(
+        std_vector_cpl_id_version_t* p) {
+    return *p;
+}
+
+inline void*
+cpl_convert_p_std_vector_cpl_id_version_t_to_p_void(
+        std_vector_cpl_id_version_t* p) {
+    return (void*) p;
+}
+
 %}
 
 
@@ -150,6 +166,8 @@ cpl_is_ok(cpl_return_t ret);
 
 %include "../../../include/cpl.h"
 %include "../../../include/cplxx.h"
+%include "../../../include/cpl-file.h"
+
 %include "../../../include/backends/cpl-odbc.h"
 
 /* XXX The RDF driver does not work on Windows, so this should be conditional */
@@ -170,6 +188,16 @@ cpl_dereference_p_std_vector_cpl_ancestry_entry_t(
 inline void*
 cpl_convert_p_std_vector_cpl_ancestry_entry_t_to_p_void(
         std_vector_cpl_ancestry_entry_t* p);
+
+%template (cpl_id_version_t_vector) std::vector<cpl_id_version_t>;
+
+inline std::vector<cpl_id_version_t>&
+cpl_dereference_p_std_vector_cpl_id_version_t(
+    std_vector_cpl_id_version_t* p);
+
+inline void*
+cpl_convert_p_std_vector_cpl_id_version_t_to_p_void(
+        std_vector_cpl_id_version_t* p);
 
 
 /*
@@ -193,4 +221,6 @@ cpl_convert_p_std_vector_cpl_ancestry_entry_t_to_p_void(
         std_list_cpl_ancestry_entry_tp);*/
 %pointer_functions(std_vector_cpl_ancestry_entry_t,
         std_vector_cpl_ancestry_entry_tp);
+%pointer_functions(std_vector_cpl_id_version_t,
+        std_vector_cpl_id_version_tp);
 

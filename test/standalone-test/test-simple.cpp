@@ -674,5 +674,30 @@ test_simple(void)
 		throw CPLException("The object is missing in the result set.");
 
 	print(L_DEBUG, " ");
+
+
+    /*
+     * File API
+     */
+
+    cpl_id_t f1id;
+    cpl_version_t f1v;
+    ret = cpl_open_file("Makefile",
+            CPL_F_OPEN_BY_CONTENT | CPL_F_CREATE_IF_DOES_NOT_EXIST,
+            &f1id, &f1v);
+	print(L_DEBUG, "cpl_open_file --> %llx:%llx-%d [%d]",
+            f1id.hi, f1id.lo, f1v, ret);
+	CPL_VERIFY(cpl_open_file, ret);
+
+    cpl_id_t f2id;
+    cpl_version_t f2v;
+    ret = cpl_open_file("INSTALL.Windows",
+            CPL_F_OPEN_BY_CONTENT | CPL_F_ALWAYS_CREATE,
+            &f2id, &f2v);
+	print(L_DEBUG, "cpl_open_file --> %llx:%llx-%d [%d]",
+            f2id.hi, f2id.lo, f1v, ret);
+	CPL_VERIFY(cpl_open_file, ret);
+
+	print(L_DEBUG, " ");
 }
 

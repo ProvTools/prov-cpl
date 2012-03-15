@@ -1487,5 +1487,41 @@ cpl_cb_collect_ancestry_vector(const cpl_id_t query_object_id,
 }
 
 
+/**
+ * The iterator callback for cpl_lookup_by_property() that collects
+ * the returned information in an instance of std::vector<cpl_id_version_t>.
+ *
+ * @param id the object ID
+ * @param version the object version
+ * @param key the property name
+ * @param value the property value
+ * @param context the pointer to an instance of the vector 
+ * @return CPL_OK or an error code
+ */
+#ifdef SWIG
+%constant
+#endif
+EXPORT cpl_return_t
+cpl_cb_collect_property_lookup_vector(const cpl_id_t id,
+									  const cpl_version_t version,
+									  const char* key,
+									  const char* value,
+									  void* context)
+{
+	if (context == NULL) return CPL_E_INVALID_ARGUMENT;
+
+	cpl_id_version_t e;
+	e.id = id;
+	e.version = version;
+
+	std::vector<cpl_id_version_t>& l =
+		*((std::vector<cpl_id_version_t>*) context);
+	l.push_back(e);
+
+	return CPL_OK;
+}
+
+
+
 #endif /* __cplusplus */
 
