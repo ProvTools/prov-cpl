@@ -20,6 +20,6 @@ directory). You might also want to copy the public header files and the
 generated static libraries (that accompany the .dll files) to the appropriate
 include and library directories.
 
-Note that the RDF/SPARQL driver and the Perl bindings have not yet been ported
-to Microsoft Windows.
+Note that the RDF/SPARQL driver, the Perl and Java bindings have not yet been
+ported to Microsoft Windows.
 

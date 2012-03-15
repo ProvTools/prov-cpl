@@ -1,0 +1,26 @@
+  The TODO List
+=================
+
+Core CPL:
+  - File support  
+
+Database Backends:
+  - Add support for querying properties to the RDF backend
+
+Language Bindings:
+  - Implement Python bindings
+  - Add support for properties to Perl bindings
+  - Add support for properties to Java bindings
+
+Documentation:
+  - Document the properties API in the design document
+
+Platform Compatibility:
+  - Implement getting the command line arguments on OS X in cpl_attach()
+  - Port Java bindings to OS X
+  - Port Java bindings to Windows
+  - Port Perl bindings to OS X
+  - Port Perl bindings to Windows
+  - Port the RDF backend to OS X
+  - Port the RDF backend to Windows
+

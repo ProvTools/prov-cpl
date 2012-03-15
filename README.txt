@@ -71,6 +71,7 @@ backends for CPL:
 
 To learn how to use CPL in your own programs, please refer to the design
 document doc/Design.docx and the simple tests:
-  test/standalone-test/*.cpp
+  test/standalone-test/test-simple.cpp
   bindings/perl/CPL/test.pl
+  bindings/java/CPL/test.java
 
