@@ -2,7 +2,9 @@
 =================
 
 Core CPL:
-  - File support  
+  - File support: Add new name to file if opened by content and the name differs
+  - File support: Add the ability to add or update the fingerprint
+  - Add the ability to load the backend configuration from a file
 
 Database Backends:
   - Add support for querying properties to the RDF backend
@@ -11,6 +13,8 @@ Language Bindings:
   - Implement Python bindings
   - Add support for properties to Perl bindings
   - Add support for properties to Java bindings
+  - Add support for files to Perl bindings
+  - Add support for files to Java bindings
 
 Documentation:
   - Document the properties API in the design document
