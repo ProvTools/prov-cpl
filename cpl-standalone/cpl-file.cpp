@@ -145,7 +145,12 @@ cpl_open_file(const char* name,
 	// Get the real path of the file
 
 	char* path = realpath(name, NULL);
-	if (path == NULL) return CPL_E_PLATFORM_ERROR;
+	if (path == NULL) {
+		FILE* f = fopen(name, "rb");
+		if (f == NULL) return CPL_E_NOT_FOUND;
+		fclose(f);
+		return CPL_E_PLATFORM_ERROR;
+	}
 
 
 	// If the user wants to always create the file, do so
@@ -187,6 +192,7 @@ cpl_open_file(const char* name,
 		if (out_id != NULL) *out_id = id;
 
 		free(path);
+		if (ret == CPL_S_OK) ret = CPL_S_OBJECT_CREATED;
 		return ret;
 	}
 
@@ -307,6 +313,7 @@ cpl_open_file(const char* name,
 			if (out_id != NULL) *out_id = id;
 
 			free(path);
+			if (ret == CPL_S_OK) ret = CPL_S_OBJECT_CREATED;
 			return ret;
 		}
 

@@ -205,12 +205,33 @@ test: all $(BUILD_DIR)/$(TEST_CLASS_FILE)
 # Install & unistall
 #
 
-.PHONY: install uninstall
+.PHONY: install uninstall maven-install maven-uninstall
 
 ifdef INSTALL
 INSTALL_DIR := $(INSTALL_PREFIX)/java
 else
+ifndef MAVEN_INSTALL
 INSTALL_DEPENDENCIES :=
+endif
+endif
+
+ifdef MAVEN_INSTALL
+ifndef MAVEN_GROUP_ID
+	MAVEN_GROUP_ID := $(shell whoami | tr A-Z a-z)
+endif
+ifndef MAVEN_ARTIFACT_ID
+	MAVEN_ARTIFACT_ID := $(shell echo $(PROJECT) | tr A-Z a-z)
+endif
+ifndef MAVEN_VERSION
+ifndef PROJECT_VERSION
+	MAVEN_VERSION := 1.00
+else
+	MAVEN_VERSION := $(PROJECT_VERSION)
+endif
+endif
+ifndef MAVEN_PACKAGING
+	MAVEN_PACKAGING := jar
+endif
 endif
 
 install:: release $(INSTALL_DEPENDENCIES)
@@ -237,6 +258,42 @@ ifeq ($(OUTPUT_TYPE),kernel)
 	@/bin/rm -f $(INSTALL_DIR)/$(TARGET)
 else
 	/bin/rm -f $(INSTALL_DIR)/$(TARGET)
+endif
+else
+	@true
+endif
+
+maven-install:: release $(INSTALL_DEPENDENCIES)
+ifdef MAVEN_INSTALL
+ifeq ($(OUTPUT_TYPE),kernel)
+	@echo '  MVNINST $(PWD_REL_SEP)$(BUILD_DIR)/$(TARGET)'
+	@mvn install:install-file -Dfile=$(BUILD_DIR)/$(TARGET) \
+		-DgroupId=$(MAVEN_GROUP_ID) \
+		-DartifactId=$(MAVEN_ARTIFACT_ID) \
+		-Dversion=$(MAVEN_VERSION) \
+		-Dpackaging=$(MAVEN_PACKAGING)
+else
+	mvn install:install-file -Dfile=$(BUILD_DIR)/$(TARGET) \
+		-DgroupId=$(MAVEN_GROUP_ID) \
+		-DartifactId=$(MAVEN_ARTIFACT_ID) \
+		-Dversion=$(MAVEN_VERSION) \
+		-Dpackaging=$(MAVEN_PACKAGING)
+endif
+else
+	@true
+endif
+
+maven-uninstall::
+ifdef MAVEN_INSTALL
+ifeq ($(OUTPUT_TYPE),kernel)
+	@echo '  MVNUNIN $(MAVEN_GROUP_ID).$(MAVEN_ARTIFACT_ID) ver. $(MAVEN_VERSION)'
+	@mvn uninstall:artifact -DgroupId=$(MAVEN_GROUP_ID) \
+		-DartifactId=$(MAVEN_ARTIFACT_ID) \
+		-Dversion=$(MAVEN_VERSION)
+else
+	@mvn uninstall:artifact -DgroupId=$(MAVEN_GROUP_ID) \
+		-DartifactId=$(MAVEN_ARTIFACT_ID) \
+		-Dversion=$(MAVEN_VERSION)
 endif
 else
 	@true

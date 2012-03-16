@@ -56,3 +56,5 @@
 #include <unistd.h>
 #endif
 
+#include <errno.h>
+

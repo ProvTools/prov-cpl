@@ -296,6 +296,45 @@ contains(std::set<std::pair<cpl_id_t, cpl_version_t> >& s, const cpl_id_t id,
 
 
 /**
+ * Create a random binary file
+ *
+ * @param size the file size
+ * @return the file name
+ */
+std::string
+create_random_file(size_t size=256)
+{
+	char _name[L_tmpnam + 4];
+	char* name = tmpnam(_name);
+	if (name == NULL) {
+		throw CPLException("Could not generate a new name for a temporary file.");
+	}
+
+	FILE* f = fopen(name, "wb");
+	if (f == NULL) {
+		throw CPLException("Could not create file: %s", strerror(errno));
+	}
+
+	size_t remaining = size;
+	char buffer[256];
+	while (remaining > 0) {
+		size_t l = remaining;
+		if (l > sizeof(buffer)) l = sizeof(buffer);
+		remaining -= l;
+
+		for (size_t i = 0; i < l; i++) buffer[i] = rand() & 0xff;
+		size_t r = fwrite(buffer, 1, l, f);
+		if (l != r) {
+			throw CPLException("Could not write to file: %s", strerror(errno));
+		}
+	}
+
+	fclose(f);
+	return std::string(name);
+}
+
+
+/**
  * The simplest possible test
  */
 void
@@ -682,7 +721,8 @@ test_simple(void)
 
     cpl_id_t f1id;
     cpl_version_t f1v;
-    ret = cpl_open_file("Makefile",
+	std::string f1n = create_random_file();
+    ret = cpl_open_file(f1n.c_str(),
             CPL_F_OPEN_BY_CONTENT | CPL_F_CREATE_IF_DOES_NOT_EXIST,
             &f1id, &f1v);
 	print(L_DEBUG, "cpl_open_file --> %llx:%llx-%d [%d]",
@@ -691,12 +731,49 @@ test_simple(void)
 
     cpl_id_t f2id;
     cpl_version_t f2v;
-    ret = cpl_open_file("INSTALL.Windows",
+	std::string f2n = create_random_file();
+    ret = cpl_open_file(f2n.c_str(),
             CPL_F_OPEN_BY_CONTENT | CPL_F_ALWAYS_CREATE,
             &f2id, &f2v);
 	print(L_DEBUG, "cpl_open_file --> %llx:%llx-%d [%d]",
             f2id.hi, f2id.lo, f1v, ret);
 	CPL_VERIFY(cpl_open_file, ret);
+
+    cpl_id_t f3id;
+    cpl_version_t f3v;
+	std::string f3n = create_random_file();
+    ret = cpl_open_file(f3n.c_str(),
+            CPL_F_CREATE_IF_DOES_NOT_EXIST,
+            &f3id, &f3v);
+	print(L_DEBUG, "cpl_open_file --> %llx:%llx-%d [%d]",
+            f3id.hi, f3id.lo, f1v, ret);
+	CPL_VERIFY(cpl_open_file, ret);
+
+	std::string f0n = "/tmp/*hello*!@#$%";
+    ret = cpl_open_file(f0n.c_str(), 0, NULL, NULL);
+	print(L_DEBUG, "cpl_open_file --> [%d] (should fail)", ret);
+	if (CPL_IS_OK(ret)) {
+		throw CPLException("The function call was expected to fail");
+	}
+	if (ret != CPL_E_NOT_FOUND) {
+		CPL_VERIFY(cpl_open_file, ret);
+	}
+
+	f0n = create_random_file();
+    ret = cpl_open_file(f0n.c_str(), 0, NULL, NULL);
+	print(L_DEBUG, "cpl_open_file --> [%d] (should fail)", ret);
+	unlink(f0n.c_str());
+	if (CPL_IS_OK(ret)) {
+		throw CPLException("The function call was expected to fail");
+	}
+	if (ret != CPL_E_NOT_FOUND) {
+		CPL_VERIFY(cpl_open_file, ret);
+	}
+
+
+	unlink(f1n.c_str());
+	unlink(f2n.c_str());
+	unlink(f3n.c_str());
 
 	print(L_DEBUG, " ");
 }

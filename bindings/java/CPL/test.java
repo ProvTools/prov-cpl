@@ -34,6 +34,7 @@
 
 import edu.harvard.pass.cpl.*;
 
+import java.io.File;
 import java.util.Vector;
 
 
@@ -67,7 +68,7 @@ public class test {
      *
      * @param args the command-line arguments
      */
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         (new test(args)).run();
     }
 
@@ -75,7 +76,7 @@ public class test {
     /**
      * The real main function
      */
-    public void run() {
+    public void run() throws Exception {
 
 		System.out.println("CPL ver. " + CPL.VERSION_STR);
 		System.out.println();
@@ -297,6 +298,33 @@ public class test {
 		System.out.println(":");
 		for (CPLAncestryEntry e : anc1v0d_3) System.out.println(e);
 		System.out.println();
+
+
+		/*
+		 * File API
+		 */
+
+		File f1 = File.createTempFile("cpljtest", ".dat");
+		f1.deleteOnExit();
+
+		File f2 = File.createTempFile("cpljtest", ".dat");
+		f2.deleteOnExit();
+
+		System.out.println("CPLFile.lookup(\"" + f1.getName() + "\",");
+		System.out.print  ("               CREATE_IF_DOES_NOT_EXIST)");
+		CPLObject f1o = CPLFile.lookup(f1,
+				CPLFile.CreationMode.CREATE_IF_DOES_NOT_EXIST);
+		System.out.println(": " + f1o);
+
+		System.out.print("CPLFile.create(\"" + f2.getName() + "\")");
+		CPLObject f2o = CPLFile.create(f2);
+		System.out.println(": " + f2o);
+
+		System.out.print("CPLFile.lookup(\"" + f1.getName() + "\")");
+		CPLObject f1x = CPLFile.lookup(f1);
+		System.out.println(": " + f1x);
+		if (!f1x.equals(f1o))
+			throw new RuntimeException("Object lookup returned the wrong object");
 	}
 }
 
