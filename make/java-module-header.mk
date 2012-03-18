@@ -185,9 +185,9 @@ TEST_CLASSPATH  := $(ABS_BUILD_DIR)/$(PROJECT).jar
 
 $(BUILD_DIR)/$(TEST_CLASS_FILE): $(TEST)
 ifeq ($(OUTPUT_TYPE),kernel)
-	@/bin/cp -fu $< $(BUILD_DIR)/
+	@/bin/cp -f $(CP_UPDATE_FLAG) $< $(BUILD_DIR)/
 else
-	/bin/cp -fu $< $(BUILD_DIR)/
+	/bin/cp -f $(CP_UPDATE_FLAG) $< $(BUILD_DIR)/
 endif
 ifeq ($(OUTPUT_TYPE),kernel)
 	@echo "  JAVAC   $(PWD_REL_SEP)$(TEST_CLASS_FILE)"

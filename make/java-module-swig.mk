@@ -99,9 +99,11 @@ endif
 $(BUILD_DIR)/$(JAVA_PACKAGE_DIR)/$(PROJECT).java: $(BUILD_DIR)/$(PROJECT).java
 	@mkdir -p $(BUILD_DIR)/$(JAVA_PACKAGE_DIR)
 ifeq ($(OUTPUT_TYPE),kernel)
-	@/bin/cp -fu $(BUILD_DIR)/*.java $(BUILD_DIR)/$(JAVA_PACKAGE_DIR)
+	@/bin/cp -f $(CP_UPDATE_FLAG) $(BUILD_DIR)/*.java \
+		$(BUILD_DIR)/$(JAVA_PACKAGE_DIR)
 else
-	/bin/cp -fu $(BUILD_DIR)/*.java $(BUILD_DIR)/$(JAVA_PACKAGE_DIR)
+	/bin/cp -f $(CP_UPDATE_FLAG) $(BUILD_DIR)/*.java \
+		$(BUILD_DIR)/$(JAVA_PACKAGE_DIR)
 endif
 
 $(BUILD_DIR)/$(JAVA_PACKAGE_DIR)/$(PROJECT).class: \

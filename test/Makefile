@@ -16,6 +16,15 @@ PROGRAMS := standalone-test
 
 
 #
+# The test target
+#
+
+.PHONY: test
+
+test: run
+
+
+#
 # Include the magic script
 #
 

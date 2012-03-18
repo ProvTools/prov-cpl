@@ -49,9 +49,9 @@ endif
 $(BUILD_DIR)/Makefile.PL: makemake.pl
 	@mkdir -p $(BUILD_DIR)
 ifeq ($(OUTPUT_TYPE),kernel)
-	@/bin/cp -f $< $@
+	@/bin/cp -f $(CP_UPDATE_FLAG) $< $@
 else
-	/bin/cp -f $< $@
+	/bin/cp -f $(CP_UPDATE_FLAG) $< $@
 endif
 
 # TODO Make the hard-coded "../../" to be dynamically computed

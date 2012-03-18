@@ -271,6 +271,17 @@ endif
 
 
 #
+# Copying
+#
+
+ifeq ($(OSTYPE),darwin)
+	CP_UPDATE_FLAG := 
+else
+	CP_UPDATE_FLAG := -u
+endif
+
+
+#
 # Add the build dir suffix
 #
 

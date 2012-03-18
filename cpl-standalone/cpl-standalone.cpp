@@ -394,8 +394,60 @@ cpl_attach(struct _cpl_db_backend_t* backend)
 	if (_program == NULL) return CPL_E_PLATFORM_ERROR;
 	program = _program;
 
-#warning TODO Fetching the command line in OS X is not yet implemented.
-	cmdline = "???";
+	char _ps[32];
+	sprintf(_ps, "/bin/ps -p %d -ww", pid);
+	FILE* f = popen(_ps, "r");
+	if (f == NULL) {
+		delete _program;
+		return CPL_E_PLATFORM_ERROR;
+	}
+
+	char ps_header[32];
+	if (fgets(ps_header, sizeof(ps_header), f) == NULL) {
+		delete _program;
+		fclose(f);
+		return CPL_E_PLATFORM_ERROR;
+	}
+
+	char* cmd_pos = strstr(ps_header, "CMD");
+	if (cmd_pos == NULL) {
+		delete _program;
+		fclose(f);
+		return CPL_E_PLATFORM_ERROR;
+	}
+
+	size_t cmd_offset = cmd_pos - ps_header;
+	if (cmd_offset >= strlen(ps_header)) {
+		delete _program;
+		fclose(f);
+		return CPL_E_PLATFORM_ERROR;
+	}
+
+	if (fgets(ps_header, cmd_offset + 1, f) == NULL) {
+		delete _program;
+		fclose(f);
+		return CPL_E_PLATFORM_ERROR;
+	}
+
+	std::string _cmdline = "";
+	char buf[256];
+	while (!feof(f)) {
+		if (fgets(buf, sizeof(buf), f) == NULL) {
+		delete _program;
+			fclose(f);
+			return CPL_E_PLATFORM_ERROR;
+		}
+		size_t l = strlen(buf);
+		if (l > 0) {
+			if (buf[l-1] == '\n' || buf[l-1] == '\r') {
+				buf[l-1] = '\0';
+				_cmdline += buf;
+				break;
+			}
+		}
+		_cmdline += buf;
+	}
+	cmdline = _cmdline.c_str();
 
 #else
 	user = getenv("USER");

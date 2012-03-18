@@ -41,6 +41,7 @@
 
 #ifdef _WINDOWS
 #elif defined(__APPLE__)
+#include <CommonCrypto/CommonDigest.h>
 #else
 #include <openssl/sha.h>
 #endif
@@ -71,7 +72,11 @@ cpl_file_sha1(const char* name, cpl_sha1_t* out)
 #ifdef _WINDOWS
 #error Not implemented
 #elif defined(__APPLE__)
-#error Not implemented
+	CC_SHA1_CTX ctx;
+	if (!CC_SHA1_Init(&ctx)) {
+		fclose(f);
+		return CPL_E_PLATFORM_ERROR;
+	}
 #else
 	SHA_CTX ctx;
 	if (!SHA1_Init(&ctx)) {
@@ -90,7 +95,10 @@ cpl_file_sha1(const char* name, cpl_sha1_t* out)
 #ifdef _WINDOWS
 #error Not implemented
 #elif defined(__APPLE__)
-#error Not implemented
+		if (!CC_SHA1_Update(&ctx, buffer, l)) {
+			fclose(f);
+			return CPL_E_PLATFORM_ERROR;
+		}
 #else
 		if (!SHA1_Update(&ctx, buffer, l)) {
 			fclose(f);
@@ -103,7 +111,9 @@ cpl_file_sha1(const char* name, cpl_sha1_t* out)
 #ifdef _WINDOWS
 #error Not implemented
 #elif defined(__APPLE__)
-#error Not implemented
+	if (!CC_SHA1_Final((unsigned char*) out->bytes, &ctx)) {
+		return CPL_E_PLATFORM_ERROR;
+	}
 #else
 	if (!SHA1_Final((unsigned char*) out->bytes, &ctx)) {
 		return CPL_E_PLATFORM_ERROR;

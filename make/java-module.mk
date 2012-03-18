@@ -48,9 +48,9 @@ $(BUILD_DIR)/Manifest: Manifest
 	@mkdir -p $(BUILD_DIR)
 ifeq ($(OUTPUT_TYPE),kernel)
 	@echo "  COPY    $(PWD_REL_SEP)$<"
-	@/bin/cp -fu $< $@
+	@/bin/cp -f $(CP_UPDATE_FLAG) $< $@
 else
-	/bin/cp -fu $< $@
+	/bin/cp -f $(CP_UPDATE_FLAG) $< $@
 endif
 
 # TODO Make the hard-coded "../../" to be dynamically computed
@@ -91,8 +91,8 @@ ifneq ($(SUBPROJECT_SO_FILES),)
 endif
 ifeq ($(OUTPUT_TYPE),kernel)
 	@echo "  COPY    $(PWD_REL_SEP)$<"
-	@/bin/cp -fu $< $@
+	@/bin/cp -f $(CP_UPDATE_FLAG) $< $@
 else
-	/bin/cp -fu $< $@
+	/bin/cp -f $(CP_UPDATE_FLAG) $< $@
 endif
 
