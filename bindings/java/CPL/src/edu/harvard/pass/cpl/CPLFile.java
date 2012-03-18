@@ -90,7 +90,7 @@ public class CPLFile extends CPLObject {
 
 		cpl_id_t id = new cpl_id_t();
 		SWIGTYPE_p_int vp = CPLDirect.new_cpl_version_tp();
-		int r = CPLDirect.cpl_open_file(file.getAbsolutePath(), m, id, vp);
+		int r = CPLDirect.cpl_lookup_file(file.getAbsolutePath(), m, id, vp);
 		int v = CPLDirect.cpl_version_tp_value(vp);
 		CPLDirect.delete_cpl_version_tp(vp);
 		CPLException.assertSuccess(r);

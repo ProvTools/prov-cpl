@@ -128,7 +128,7 @@ cpl_file_sha1(const char* name, cpl_sha1_t* out);
 /***************************************************************************/
 
 /**
- * Open or create a provenance object associated with the given file.
+ * Lookup or create a provenance object associated with the given file.
  *
  * @param name the file name, can be either an absolute or a relative path
  * @param type the object type
@@ -138,10 +138,10 @@ cpl_file_sha1(const char* name, cpl_sha1_t* out);
  * @return CPL_OK or an error code
  */
 EXPORT cpl_return_t
-cpl_open_file(const char* name,
-			  const int flags,
-			  cpl_id_t* out_id,
-			  cpl_version_t* out_version);
+cpl_lookup_file(const char* name,
+				const int flags,
+				cpl_id_t* out_id,
+				cpl_version_t* out_version);
 
 
 #ifdef __cplusplus

@@ -722,52 +722,52 @@ test_simple(void)
     cpl_id_t f1id;
     cpl_version_t f1v;
 	std::string f1n = create_random_file();
-    ret = cpl_open_file(f1n.c_str(),
+    ret = cpl_lookup_file(f1n.c_str(),
             CPL_F_OPEN_BY_CONTENT | CPL_F_CREATE_IF_DOES_NOT_EXIST,
             &f1id, &f1v);
-	print(L_DEBUG, "cpl_open_file --> %llx:%llx-%d [%d]",
+	print(L_DEBUG, "cpl_lookup_file --> %llx:%llx-%d [%d]",
             f1id.hi, f1id.lo, f1v, ret);
-	CPL_VERIFY(cpl_open_file, ret);
+	CPL_VERIFY(cpl_lookup_file, ret);
 
     cpl_id_t f2id;
     cpl_version_t f2v;
 	std::string f2n = create_random_file();
-    ret = cpl_open_file(f2n.c_str(),
+    ret = cpl_lookup_file(f2n.c_str(),
             CPL_F_OPEN_BY_CONTENT | CPL_F_ALWAYS_CREATE,
             &f2id, &f2v);
-	print(L_DEBUG, "cpl_open_file --> %llx:%llx-%d [%d]",
+	print(L_DEBUG, "cpl_lookup_file --> %llx:%llx-%d [%d]",
             f2id.hi, f2id.lo, f1v, ret);
-	CPL_VERIFY(cpl_open_file, ret);
+	CPL_VERIFY(cpl_lookup_file, ret);
 
     cpl_id_t f3id;
     cpl_version_t f3v;
 	std::string f3n = create_random_file();
-    ret = cpl_open_file(f3n.c_str(),
+    ret = cpl_lookup_file(f3n.c_str(),
             CPL_F_CREATE_IF_DOES_NOT_EXIST,
             &f3id, &f3v);
-	print(L_DEBUG, "cpl_open_file --> %llx:%llx-%d [%d]",
+	print(L_DEBUG, "cpl_lookup_file --> %llx:%llx-%d [%d]",
             f3id.hi, f3id.lo, f1v, ret);
-	CPL_VERIFY(cpl_open_file, ret);
+	CPL_VERIFY(cpl_lookup_file, ret);
 
 	std::string f0n = "/tmp/*hello*!@#$%";
-    ret = cpl_open_file(f0n.c_str(), 0, NULL, NULL);
-	print(L_DEBUG, "cpl_open_file --> [%d] (should fail)", ret);
+    ret = cpl_lookup_file(f0n.c_str(), 0, NULL, NULL);
+	print(L_DEBUG, "cpl_lookup_file --> [%d] (should fail)", ret);
 	if (CPL_IS_OK(ret)) {
 		throw CPLException("The function call was expected to fail");
 	}
 	if (ret != CPL_E_NOT_FOUND) {
-		CPL_VERIFY(cpl_open_file, ret);
+		CPL_VERIFY(cpl_lookup_file, ret);
 	}
 
 	f0n = create_random_file();
-    ret = cpl_open_file(f0n.c_str(), 0, NULL, NULL);
-	print(L_DEBUG, "cpl_open_file --> [%d] (should fail)", ret);
+    ret = cpl_lookup_file(f0n.c_str(), 0, NULL, NULL);
+	print(L_DEBUG, "cpl_lookup_file --> [%d] (should fail)", ret);
 	unlink(f0n.c_str());
 	if (CPL_IS_OK(ret)) {
 		throw CPLException("The function call was expected to fail");
 	}
 	if (ret != CPL_E_NOT_FOUND) {
-		CPL_VERIFY(cpl_open_file, ret);
+		CPL_VERIFY(cpl_lookup_file, ret);
 	}
 
 

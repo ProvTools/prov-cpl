@@ -12,7 +12,7 @@ ROOT := ../../..
 #
 
 INSTALL       := yes
-DEPENDENCIES  := ../../cpl.i $(ROOT)/include/cpl.h $(ROOT)/include/cplxx.h
+DEPENDENCIES  := ../../cpl.i $(ROOT)/include/cpl.h $(ROOT)/include/cpl*.h
 CXXFLAGS      := $(CXXFLAGS)
 INCLUDE_FLAGS := $(INCLUDE_FLAGS) -I$(ROOT)/include
 LINKER_FLAGS  := $(LINKER_FLAGS)

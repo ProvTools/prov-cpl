@@ -1,4 +1,4 @@
-  The TODO List
+The TODO List
 =================
 
 Core CPL:
@@ -14,7 +14,8 @@ Language Bindings:
   - Add support for properties to Perl bindings
   - Add support for properties to Java bindings
   - Add support for files to Perl bindings
-  - Add support for files to Java bindings
+  - R bindings
+  - Provenance-aware R, potentially implemented by analyzing session logs
 
 Documentation:
   - Document the properties API in the design document
