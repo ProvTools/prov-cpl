@@ -392,8 +392,9 @@ cpl_create_odbc_backend(const char* connection_string,
 	SQLCHAR outstr[1024];
 	SQLCHAR* connection_string_copy;
 	SQLSMALLINT outstrlen;
+	size_t l_connection_string = strlen(connection_string);
 
-	connection_string_copy = (SQLCHAR*) malloc(strlen(connection_string) + 1);
+	connection_string_copy = (SQLCHAR*) malloc(l_connection_string + 4);
 	if (connection_string_copy == NULL) {
 		r = CPL_E_INSUFFICIENT_RESOURCES;
 		goto err_sync;
@@ -406,6 +407,7 @@ cpl_create_odbc_backend(const char* connection_string,
 #else
 	strcpy((char*) connection_string_copy, connection_string);
 #endif
+	connection_string_copy[l_connection_string] = '\0';
 
 	SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &odbc->db_environment);
 	SQLSetEnvAttr(odbc->db_environment,
@@ -414,7 +416,7 @@ cpl_create_odbc_backend(const char* connection_string,
 	SQLAllocHandle(SQL_HANDLE_DBC, odbc->db_environment, &odbc->db_connection);
 	
 	ret = SQLDriverConnect(odbc->db_connection, NULL,
-						   connection_string_copy, SQL_NTS,
+						   connection_string_copy, l_connection_string,
 						   outstr, sizeof(outstr), &outstrlen,
 						   SQL_DRIVER_NOPROMPT /*SQL_DRIVER_COMPLETE*/);
 	free(connection_string_copy);

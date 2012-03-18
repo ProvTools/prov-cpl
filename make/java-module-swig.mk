@@ -37,9 +37,11 @@ include $(ROOT)/make/java-module-header.mk
 ifeq ($(OSTYPE),darwin)
 	SONAME_OPTION := -WL,-install_name,
 	SHARED_OPTION := -dynamiclib
+	SOLIBRARY_EXT := dylib
 else
 	SONAME_OPTION := -Wl,-soname,
 	SHARED_OPTION := -shared
+	SOLIBRARY_EXT := so
 endif
 
 
@@ -49,10 +51,10 @@ endif
 
 WRAP_SOURCE := $(patsubst %.i,%_wrap.cxx,$(notdir $(INTERFACE)))
 WRAP_OBJECT := $(patsubst %.cxx,%.o,$(WRAP_SOURCE))
-WRAP_LIBRARY := lib$(PROJECT)-java.so
+WRAP_LIBRARY := lib$(PROJECT)-java.$(SOLIBRARY_EXT)
 WRAP_CXX := $(CXX) $(CXXFLAGS)  -fno-strict-aliasing $(INCLUDE_FLAGS) \
 			-c -O3 -fPIC -I$(JAVA_INCLUDE)
-WRAP_LINK := $(CXX) $(LINKER_FLAGS) -L$(BUILD_DIR) $(SHARED_OPTION)
+WRAP_LINK := $(CXX) $(LINKER_FLAGS) -L. $(SHARED_OPTION)
 
 ifndef JAVA_PACKAGE
 	JAVA_PACKAGE := swig.direct.$(PROJECT)
@@ -91,9 +93,12 @@ ifneq ($(SUBPROJECT_SO_FILES),)
 endif
 ifeq ($(OUTPUT_TYPE),kernel)
 	@echo "  LD      $(PWD_REL_SEP)$@"
-	@$(WRAP_LINK) $(SONAME_OPTION)$(WRAP_LIBRARY) -o $@ $< $(LIBRARIES)
+	@cd $(BUILD_DIR) && $(WRAP_LINK) $(SONAME_OPTION)$(WRAP_LIBRARY) \
+		-o $(WRAP_LIBRARY) $(WRAP_OBJECT) $(LIBRARIES)
 else
-	$(WRAP_LINK) $(SONAME_OPTION)$(WRAP_LIBRARY) -o $@ $< $(LIBRARIES)
+	@#$(WRAP_LINK) $(SONAME_OPTION)$(WRAP_LIBRARY) -o $@ $< $(LIBRARIES)
+	cd $(BUILD_DIR) && $(WRAP_LINK) $(SONAME_OPTION)$(WRAP_LIBRARY) \
+		-o $(WRAP_LIBRARY) $(WRAP_OBJECT) $(LIBRARIES)
 endif
 
 $(BUILD_DIR)/$(JAVA_PACKAGE_DIR)/$(PROJECT).java: $(BUILD_DIR)/$(PROJECT).java
