@@ -32,7 +32,7 @@
 # Contributor(s): Peter Macko
 #
 
-use 5.012004;
+use 5.012003;
 use ExtUtils::MakeMaker;
 WriteMakefile(
     NAME              => 'CPL',

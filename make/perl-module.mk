@@ -55,9 +55,9 @@ $(BUILD_DIR)/%: $(MODULE_SOURCE_DIR)/%
 	@mkdir -p $(dir $@)
 ifeq ($(OUTPUT_TYPE),kernel)
 	@echo '  COPY    $(PWD_REL_SEP)$<'
-	@/bin/cp -fpu $< $@
+	@/bin/cp -fp $(CP_UPDATE_FLAG) $< $@
 else
-	/bin/cp -fpu $< $@
+	/bin/cp -fp $(CP_UPDATE_FLAG) $< $@
 endif
 
 # TODO Make the hard-coded "../../" to be dynamically computed

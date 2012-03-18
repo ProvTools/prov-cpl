@@ -15,6 +15,28 @@ endif
 
 
 #
+# Include the header script
+#
+
+include $(ROOT)/make/header.mk
+
+
+#
+# Platform-specific settings
+#
+
+ifeq ($(OSTYPE),darwin)
+	SONAME_OPTION := -WL,-install_name,
+	SHARED_OPTION := -dynamiclib
+	SOLIBRARY_EXT := dylib
+else
+	SONAME_OPTION := -Wl,-soname,
+	SHARED_OPTION := -shared
+	SOLIBRARY_EXT := so
+endif
+
+
+#
 # Configure the project
 #
 
@@ -24,7 +46,7 @@ endif
 
 ifndef TARGET
 ifdef SHARED
-	TARGET := lib$(PROJECT).so
+	TARGET := lib$(PROJECT).$(SOLIBRARY_EXT)
 else
 	TARGET := lib$(PROJECT).a
 endif
@@ -62,19 +84,6 @@ endif
 #
 
 include $(ROOT)/make/compile.mk
-
-
-#
-# Platform-specific settings
-#
-
-ifeq ($(OSTYPE),darwin)
-	SONAME_OPTION := -WL,-install_name,
-	SHARED_OPTION := -dynamiclib
-else
-	SONAME_OPTION := -Wl,-soname,
-	SHARED_OPTION := -shared
-endif
 
 
 #

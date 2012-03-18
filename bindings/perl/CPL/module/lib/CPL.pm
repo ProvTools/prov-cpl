@@ -34,7 +34,7 @@
 
 package CPL;
 
-use 5.012004;
+use 5.012003;
 use strict;
 use warnings;
 
