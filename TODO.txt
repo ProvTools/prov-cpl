@@ -21,11 +21,9 @@ Documentation:
   - Document the properties API in the design document
 
 Platform Compatibility:
-  - Implement getting the command line arguments on OS X in cpl_attach()
-  - Port Java bindings to OS X
+  - Test Java bindings on OS X
   - Port Java bindings to Windows
-  - Port Perl bindings to OS X
   - Port Perl bindings to Windows
-  - Port the RDF backend to OS X
+  - Test the RDF backend to OS X
   - Port the RDF backend to Windows
 
