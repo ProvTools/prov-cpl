@@ -20,7 +20,7 @@ Language Bindings:
   - Provenance-aware R, potentially implemented by analyzing session logs
 
 Documentation:
-  - Document the properties API in the design document
+  N/A
 
 Platform Compatibility:
   - Test Java bindings on OS X
