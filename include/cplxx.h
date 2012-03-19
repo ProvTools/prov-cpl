@@ -42,8 +42,17 @@
 #include <cpl.h>
 
 #ifdef __cplusplus
+
+
+
+/***************************************************************************/
+/** Header Files and Namespaces                                           **/
+/***************************************************************************/
+
 #include <cpl-exception.h>
+
 #include <list>
+#include <string>
 #include <vector>
 
 #ifdef __GNUC__
@@ -61,14 +70,12 @@ using namespace __gnu_cxx;
 #if defined _WIN32 || defined _WIN64
 using namespace stdext;
 #endif
-#endif
+
 
 
 /***************************************************************************/
-/** ID Manipulation in C++                                                **/
+/** ID Manipulation                                                       **/
 /***************************************************************************/
-
-#ifdef __cplusplus
 
 /**
  * Compare ID's
@@ -148,14 +155,11 @@ operator!=(const cpl_id_t& a, const cpl_id_t& b)
 	return a.hi != b.hi || a.lo != b.lo;
 }
 
-#endif /* __cplusplus */
 
 
 /***************************************************************************/
-/** Enhanced C++ Functionality                                            **/
+/** Templates                                                             **/
 /***************************************************************************/
-
-#ifdef __cplusplus
 
 /**
  * Traits
@@ -229,6 +233,11 @@ struct cpl_hash_map_id_t
 #endif
 
 
+
+/***************************************************************************/
+/** Special Classes                                                       **/
+/***************************************************************************/
+
 /**
  * The initialization & cleanup helper
  */
@@ -260,6 +269,37 @@ public:
 		cpl_detach();
 	}
 };
+
+
+
+/***************************************************************************/
+/** Special Data Types                                                    **/
+/***************************************************************************/
+
+/**
+ * An entry in the collection of properties
+ */
+typedef struct cplxx_property_entry {
+
+	/// The object ID
+	cpl_id_t id;
+
+	/// The object version
+	cpl_version_t version;
+
+	/// The property key (name)
+	std::string key;
+
+	/// The property value
+	std::string value;
+
+} cplxx_property_entry_t;
+
+
+
+/***************************************************************************/
+/** Callbacks                                                             **/
+/***************************************************************************/
 
 /**
  * The iterator callback for cpl_get_object_ancestry() that collects
@@ -308,6 +348,27 @@ cpl_cb_collect_ancestry_vector(const cpl_id_t query_object_id,
 							   const cpl_version_t other_object_version,
 							   const int type,
 							   void* context);
+
+/**
+ * The iterator callback for cpl_get_properties() that collects the returned
+ * information in an instance of std::vector<cplxx_property_entry_t>.
+ *
+ * @param id the object ID
+ * @param version the object version
+ * @param key the property name
+ * @param value the property value
+ * @param context the pointer to an instance of the vector 
+ * @return CPL_OK or an error code
+ */
+#ifdef SWIG
+%constant
+#endif
+EXPORT cpl_return_t
+cpl_cb_collect_properties_vector(const cpl_id_t id,
+								 const cpl_version_t version,
+								 const char* key,
+								 const char* value,
+								 void* context);
 
 /**
  * The iterator callback for cpl_lookup_by_property() that collects

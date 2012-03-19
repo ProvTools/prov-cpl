@@ -9,12 +9,14 @@ Core CPL:
 Database Backends:
   - Add support for querying properties to the RDF backend
 
+Tools:
+  - Implement the tools
+
 Language Bindings:
-  - Implement Python bindings
   - Add support for properties to Perl bindings
-  - Add support for properties to Java bindings
   - Add support for files to Perl bindings
-  - R bindings
+  - Implement Python bindings
+  - Implement R bindings
   - Provenance-aware R, potentially implemented by analyzing session logs
 
 Documentation:
@@ -24,6 +26,6 @@ Platform Compatibility:
   - Test Java bindings on OS X
   - Port Java bindings to Windows
   - Port Perl bindings to Windows
-  - Test the RDF backend to OS X
+  - Test the RDF backend on OS X
   - Port the RDF backend to Windows
 

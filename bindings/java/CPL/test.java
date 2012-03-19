@@ -301,6 +301,94 @@ public class test {
 
 
 		/*
+		 * Add properties
+		 */
+
+		System.out.print("obj1.addProperty(\"LABEL\", \"Process A [Proc]\")");
+		obj1.addProperty("LABEL", "Process A [Proc]");
+		System.out.println();
+
+		System.out.print("obj2.addProperty(\"LABEL\", \"Object A [File]\")");
+		obj2.addProperty("LABEL", "Object A [File]");
+		System.out.println();
+
+		System.out.print("obj3.addProperty(\"LABEL\", \"Process B [Proc]\")");
+		obj3.addProperty("LABEL", "Process B [Proc]");
+		System.out.println();
+
+		CPLObjectVersion obj3lv = obj3.getLatestVersion();
+
+		System.out.print("obj3.addProperty(\"LABEL\", \"Yay -- Process B [Proc]\")");
+		obj3.addProperty("LABEL", "Yay -- Process B [Proc]");
+		System.out.println();
+
+		System.out.print("obj3.addProperty(\"TAG\", \"Hello\")");
+		obj3.addProperty("TAG", "Hello");
+		System.out.println();
+
+		System.out.println();
+
+
+		/*
+		 * List properties
+		 */
+
+		System.out.println("Properties of object 3:");
+
+		System.out.println("obj3.getProperties():");
+		for (CPLPropertyEntry e : obj3.getProperties()) {
+			System.out.println("  " + e);
+		}
+
+		System.out.println("obj3.getSpecificVersion(2).getProperties():");
+		for (CPLPropertyEntry e : obj3.getSpecificVersion(2).getProperties()) {
+			System.out.println("  " + e);
+		}
+
+		System.out.println("obj3.getProperties(\"LABEL\"):");
+		for (CPLPropertyEntry e : obj3.getProperties("LABEL")) {
+			System.out.println("  " + e);
+		}
+
+		System.out.println("obj3lv.getProperties(\"LABEL\"):");
+		for (CPLPropertyEntry e : obj3lv.getProperties("LABEL")) {
+			System.out.println("  " + e);
+		}
+
+		System.out.println("obj3.getProperties(\"HELLO\"):");
+		for (CPLPropertyEntry e : obj3.getProperties("HELLO")) {
+			System.out.println("  " + e);
+		}
+
+		System.out.println("obj3lv.getProperties(\"HELLO\"):");
+		for (CPLPropertyEntry e : obj3lv.getProperties("HELLO")) {
+			System.out.println("  " + e);
+		}
+
+		System.out.println();
+
+
+
+		/*
+		 * Lookup by property
+		 */
+
+		System.out.print("CPLObject.lookupByProperty(\"LABEL\", \"Process B [Proc]\")");
+		Vector<CPLObjectVersion> lv = CPLObject.lookupByProperty("LABEL",
+				"Process B [Proc]");
+		System.out.print(": ");
+		if (lv.contains(obj3lv)) {
+			System.out.println("found");
+		}
+		else {
+			System.out.println("not found");
+			throw new RuntimeException("Lookup by property did not return the correct object");
+		}
+
+		System.out.println();
+
+
+		/*
 		 * File API
 		 */
 

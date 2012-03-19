@@ -203,6 +203,27 @@ public class CPLObjectVersion {
 
 
 	/**
+	 * Get all properties of this version of an object
+	 *
+	 * @return the vector of property entries
+	 */
+	public Vector<CPLPropertyEntry> getProperties() {
+		return object.getProperties(version, null);
+	}
+
+
+	/**
+	 * Get properties of this version of an object associated with the given key
+	 *
+	 * @param key the property name (key) or null for all keys
+	 * @return the vector of property entries
+	 */
+	public Vector<CPLPropertyEntry> getProperties(String key) {
+		return object.getProperties(version, key);
+	}
+
+
+	/**
 	 * Create a more detailed string representation of the object
 	 *
 	 * @param detail whether to provide even more detail

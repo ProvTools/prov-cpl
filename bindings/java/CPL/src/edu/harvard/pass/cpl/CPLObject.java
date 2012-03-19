@@ -718,5 +718,150 @@ public class CPLObject {
 
 		return result;
 	}
+
+
+	/**
+	 * Add a property
+	 *
+	 * @param key the key
+	 * @param value the value
+	 */
+	public void addProperty(String key, String value) {
+
+		int r = CPLDirect.cpl_add_property(id, key, value);
+		CPLException.assertSuccess(r);
+	}
+
+
+	/**
+	 * Lookup an object based on the property value
+	 *
+	 * @param key the key
+	 * @param value the value
+	 * @param failOnNotFound whether to fail if no matching objects were found
+	 * @return the vector of matching object-version pairs
+	 */
+	protected static Vector<CPLObjectVersion> lookupByProperty(String key,
+			String value, boolean failOnNotFound) {
+
+		SWIGTYPE_p_std_vector_cpl_id_version_t pVector
+			= CPLDirect.new_std_vector_cpl_id_version_tp();
+		SWIGTYPE_p_void pv = CPLDirect
+			.cpl_convert_p_std_vector_cpl_id_version_t_to_p_void(pVector);
+		Vector<CPLObjectVersion> result = null;
+
+		try {
+			int r = CPLDirect.cpl_lookup_by_property(key, value,
+					CPLDirect.cpl_cb_collect_property_lookup_vector, pv);
+			if (!failOnNotFound && r == CPLDirectConstants.CPL_E_NOT_FOUND) {
+				return new Vector<CPLObjectVersion>();
+			}
+			CPLException.assertSuccess(r);
+
+			cpl_id_version_t_vector v = CPLDirect
+				.cpl_dereference_p_std_vector_cpl_id_version_t(pVector);
+			long l = v.size();
+			result = new Vector<CPLObjectVersion>((int) l);
+			for (long i = 0; i < l; i++) {
+				cpl_id_version_t e = v.get((int) i);
+				result.add(new CPLObjectVersion(new CPLObject(e.getId()),
+							e.getVersion()));
+			}
+		}
+		finally {
+			CPLDirect.delete_std_vector_cpl_id_version_tp(pVector);
+		}
+
+		return result;
+	}
+
+
+	/**
+	 * Get the properties of an object
+	 *
+	 * @param version the project version or ALL_VERSIONS
+	 * @param key the property name or null for all entries
+	 * @return the vector of property entries
+	 */
+	Vector<CPLPropertyEntry> getProperties(int version, String key) {
+
+		SWIGTYPE_p_std_vector_cplxx_property_entry_t pVector
+			= CPLDirect.new_std_vector_cplxx_property_entry_tp();
+		SWIGTYPE_p_void pv = CPLDirect
+			.cpl_convert_p_std_vector_cplxx_property_entry_t_to_p_void(pVector);
+		Vector<CPLPropertyEntry> result = null;
+
+		try {
+			int r = CPLDirect.cpl_get_properties(id, version, key,
+					CPLDirect.cpl_cb_collect_properties_vector, pv);
+			CPLException.assertSuccess(r);
+
+			cplxx_property_entry_t_vector v = CPLDirect
+				.cpl_dereference_p_std_vector_cplxx_property_entry_t(pVector);
+			long l = v.size();
+			result = new Vector<CPLPropertyEntry>((int) l);
+			for (long i = 0; i < l; i++) {
+				cplxx_property_entry_t e = v.get((int) i);
+				result.add(new CPLPropertyEntry(this,
+							e.getVersion(),
+							e.getKey(),
+							e.getValue()));
+			}
+		}
+		finally {
+			CPLDirect.delete_std_vector_cplxx_property_entry_tp(pVector);
+		}
+
+		return result;
+	}
+
+
+	/**
+	 * Get all properties of an object
+	 *
+	 * @return the vector of property entries
+	 */
+	public Vector<CPLPropertyEntry> getProperties() {
+		return getProperties(ALL_VERSIONS, null);
+	}
+
+
+	/**
+	 * Get properties of an object associated with the given key
+	 *
+	 * @param key the property name (key) or null for all keys
+	 * @return the vector of property entries
+	 */
+	public Vector<CPLPropertyEntry> getProperties(String key) {
+		return getProperties(ALL_VERSIONS, key);
+	}
+
+
+	/**
+	 * Lookup an object based on the property value
+	 *
+	 * @param key the key
+	 * @param value the value
+	 * @return the vector of matching object-version pairs
+	 * @throws CPLException if no matching object is found
+	 */
+	public static Vector<CPLObjectVersion> lookupByProperty(String key,
+			String value) {
+		return lookupByProperty(key, value, true);
+	}
+
+
+	/**
+	 * Lookup an object based on the property value, but do not fail if no
+	 * objects are found
+	 *
+	 * @param key the key
+	 * @param value the value
+	 * @return the vector of matching object-version pairs (empty if not found)
+	 */
+	public static Vector<CPLObjectVersion> tryLookupByProperty(String key,
+			String value) {
+		return lookupByProperty(key, value, false);
+	}
 }
 

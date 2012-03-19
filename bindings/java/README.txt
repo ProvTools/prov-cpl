@@ -1,11 +1,12 @@
 
-  Perl Bindings Installation Notes
+  Java Bindings Installation Notes
 ====================================
 
 Contents:
   1. Required packages on Ubuntu
-  2. Limitations
-  3. Design
+  2. Compiling and installing the Java bindings
+  3. Limitations
+  4. Design
 
 Copyright 2012 The President and Fellows of Harvard College.
 Contributor(s): Peter Macko
@@ -19,7 +20,32 @@ Please make sure that the following packages are installed:
   swig
 
 
-  2. Limitations
+  2. Compiling and installing the Java bindings
+-------------------------------------------------
+
+If you plan to use the CPL bindings via Maven, please do the following:
+  cd bindings/java      (if necessary)
+  make release
+  sudo make -C CPLDirect install
+  make -C CPL maven-install
+
+The Maven group ID is edu.harvard.pass, and the artifact ID is cpl. You can
+find the most recent version of the project by examining CPL/Makefile.
+
+To use the bindings by manually including the .jar or to use with Ant:
+  cd bindings/java      (if necessary)
+  make release
+  sudo make install
+
+This will (among other things) create /usr/local/java/CPL.jar, which you can
+then include in your project. You do not need to include CPLDirect.jar, since
+it is statically included in CPL.jar.
+
+Note: If "make release" fails with the "Permission denied" error, please run
+"sudo make distclean" first.
+
+
+  3. Limitations
 ------------------
 
 The bindings have been tested only on Linux (more specifically, on Ubuntu).
@@ -27,7 +53,7 @@ They have not been tested on OS X, and they have not yet been ported to
 Microsoft Windows.
 
 
-  3. Design
+  4. Design
 -------------
 
 The Java language bindings are implemented as two separate packages:

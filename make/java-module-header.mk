@@ -270,6 +270,7 @@ endif
 
 maven-install:: release $(INSTALL_DEPENDENCIES)
 ifdef MAVEN_INSTALL
+ifdef RELEASE
 ifeq ($(OUTPUT_TYPE),kernel)
 	@echo '  MVNINST $(PWD_REL_SEP)$(BUILD_DIR)/$(TARGET)'
 	@mvn install:install-file -Dfile=$(BUILD_DIR)/$(TARGET) \
@@ -283,6 +284,9 @@ else
 		-DartifactId=$(MAVEN_ARTIFACT_ID) \
 		-Dversion=$(MAVEN_VERSION) \
 		-Dpackaging=$(MAVEN_PACKAGING)
+endif
+else
+	@$(MAKE) --no-print-directory RELEASE=yes maven-install
 endif
 else
 	@true
