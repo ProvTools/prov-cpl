@@ -248,13 +248,13 @@ cb_lookup_by_property(const cpl_id_t id,
  * Check the time
  *
  * @param t the time
- * @return true if t is within 10 seconds of now
+ * @return true if t is within 30 seconds of now
  */
 static bool
 check_time(long t)
 {
 	time_t now = time(NULL);
-	return t - 5 <= now && t + 10 >= now;
+	return t - 5 <= now && t + 30 >= now;
 }
 
 
@@ -304,16 +304,38 @@ contains(std::set<std::pair<cpl_id_t, cpl_version_t> >& s, const cpl_id_t id,
 std::string
 create_random_file(size_t size=256)
 {
+#ifdef _WINDOWS
+	char _dir[MAX_PATH];
+	DWORD r = GetTempPath(MAX_PATH, _dir);
+	if (r <= 0 || r > MAX_PATH) {
+		throw CPLException("Could not determine the directory for temporary files.");
+	}
+	char _name[MAX_PATH];
+	r = GetTempFileName(_dir, "cpltest", 0, _name);
+	char* name = r == 0 ? NULL : _name;
+#else
 	char _name[L_tmpnam + 4];
 	char* name = tmpnam(_name);
+#endif
 	if (name == NULL) {
 		throw CPLException("Could not generate a new name for a temporary file.");
 	}
 
+#ifdef _WINDOWS
+	FILE* f = NULL;
+	errno_t err = fopen_s(&f, name, "wb");
+	if (err != 0) f = NULL;
+	if (f == NULL) {
+		char msg[128];
+		strerror_s(msg, sizeof(msg), err);
+		throw CPLException("Could not create file %s: %s", name, msg);
+	}
+#else
 	FILE* f = fopen(name, "wb");
 	if (f == NULL) {
 		throw CPLException("Could not create file: %s", strerror(errno));
 	}
+#endif
 
 	size_t remaining = size;
 	char buffer[256];
@@ -323,13 +345,28 @@ create_random_file(size_t size=256)
 		remaining -= l;
 
 		for (size_t i = 0; i < l; i++) buffer[i] = rand() & 0xff;
+		buffer[l-1]=0;
 		size_t r = fwrite(buffer, 1, l, f);
-		if (l != r) {
+		if (l != r || ferror(f)) {
+#ifdef _WINDOWS
+			char msg[128];
+			strerror_s(msg, sizeof(msg), errno);
+			throw CPLException("Could not write to file: %s", msg);
+#else
 			throw CPLException("Could not write to file: %s", strerror(errno));
+#endif
 		}
 	}
 
-	fclose(f);
+	if (fclose(f) == EOF) {
+#ifdef _WINDOWS
+		char msg[128];
+		strerror_s(msg, sizeof(msg), errno);
+		throw CPLException("Could not close file: %s", msg);
+#else
+		throw CPLException("Could not close file: %s", strerror(errno));
+#endif
+	}
 	return std::string(name);
 }
 
@@ -762,7 +799,11 @@ test_simple(void)
 	f0n = create_random_file();
     ret = cpl_lookup_file(f0n.c_str(), 0, NULL, NULL);
 	print(L_DEBUG, "cpl_lookup_file --> [%d] (should fail)", ret);
+#ifdef _WINDOWS
+	_unlink(f0n.c_str());
+#else
 	unlink(f0n.c_str());
+#endif
 	if (CPL_IS_OK(ret)) {
 		throw CPLException("The function call was expected to fail");
 	}
@@ -771,9 +812,15 @@ test_simple(void)
 	}
 
 
+#ifdef _WINDOWS
+	_unlink(f1n.c_str());
+	_unlink(f2n.c_str());
+	_unlink(f3n.c_str());
+#else
 	unlink(f1n.c_str());
 	unlink(f2n.c_str());
 	unlink(f3n.c_str());
+#endif
 
 	print(L_DEBUG, " ");
 }

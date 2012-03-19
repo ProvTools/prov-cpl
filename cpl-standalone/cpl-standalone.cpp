@@ -342,6 +342,7 @@ cpl_attach(struct _cpl_db_backend_t* backend)
 	}
 
 	char* _program = new char[_program_size];
+	size_t _old_program_size = _program_size;
 	if (_program == NULL) {
 		cpl_db_backend = NULL;
 		delete[] _user;
@@ -349,19 +350,18 @@ cpl_attach(struct _cpl_db_backend_t* backend)
 	}
 
 	_program_size = GetModuleFileName(0, _program, _program_size);
-	if (_program_size <= 0) {
-		if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
-			delete[] _program;
-			_program = new char[_program_size];
-			if (_program == NULL) {
-				cpl_db_backend = NULL;
-				delete[] _user;
-				return CPL_E_INSUFFICIENT_RESOURCES;
-			}
-			_program_size = GetModuleFileName(0, _program, _program_size);
+	if (_program_size > _old_program_size) {
+		delete[] _program;
+		_program = new char[_program_size];
+		_old_program_size = _program_size;
+		if (_program == NULL) {
+			cpl_db_backend = NULL;
+			delete[] _user;
+			return CPL_E_INSUFFICIENT_RESOURCES;
 		}
+		_program_size = GetModuleFileName(0, _program, _program_size);
 	}
-	if (_program_size <= 0) {
+	if (_program_size <= 0 || _program_size > _old_program_size) {
 		cpl_db_backend = NULL;
 		delete[] _user;
 		delete[] _program;

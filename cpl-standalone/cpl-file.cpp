@@ -66,11 +66,59 @@ cpl_file_sha1(const char* name, cpl_sha1_t* out)
 	unsigned char* buffer = (unsigned char*) alloca(4096);
 	if (buffer == NULL) return CPL_E_INSUFFICIENT_RESOURCES;
 
+#ifdef _WINDOWS
+	FILE* f = NULL;
+	errno_t err = fopen_s(&f, name, "rb");
+	if (err != 0) f = NULL;
+#else
 	FILE* f = fopen(name, "rb");
+#endif
 	if (f == NULL) return CPL_E_NOT_FOUND;
 
 #ifdef _WINDOWS
-#error Not implemented
+	DWORD _user_size = 256;
+	DWORD _program_size = 4096;
+	char* _user = new char[_user_size];
+	if (_user == NULL) return CPL_E_INSUFFICIENT_RESOURCES;
+	BOOL _ok = GetUserName(_user, &_user_size);
+	if (!_ok) {
+		if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
+			delete[] _user;
+			_user = new char[_user_size];
+			if (_user == NULL) return CPL_E_INSUFFICIENT_RESOURCES;
+			_ok = GetUserName(_user, &_user_size);
+		}
+	}
+	if (!_ok) {
+		delete[] _user;
+		fclose(f);
+		return CPL_E_PLATFORM_ERROR;
+	}
+	HCRYPTPROV hCryptProv;
+	HCRYPTHASH hHash;
+	if (!CryptAcquireContext(&hCryptProv, _user,
+		NULL, PROV_RSA_FULL, 0)) {
+		if (GetLastError() == NTE_BAD_KEYSET) {
+			if (!CryptAcquireContext(&hCryptProv, _user,
+				NULL, PROV_RSA_FULL, CRYPT_NEWKEYSET)) {
+				fclose(f);
+				delete[] _user;
+				return CPL_E_PLATFORM_ERROR;
+			}
+		}
+		else {
+			fclose(f);
+			delete[] _user;
+			return CPL_E_PLATFORM_ERROR;
+		}
+	}
+	delete[] _user;
+	if (!CryptCreateHash(hCryptProv, CALG_SHA1,
+		0, 0, &hHash)) {
+		fclose(f);
+		CryptReleaseContext(hCryptProv, 0);
+		return CPL_E_PLATFORM_ERROR;
+	}
 #elif defined(__APPLE__)
 	CC_SHA1_CTX ctx;
 	if (!CC_SHA1_Init(&ctx)) {
@@ -89,11 +137,20 @@ cpl_file_sha1(const char* name, cpl_sha1_t* out)
 		size_t l = fread(buffer, 1, 4096, f);
 		if (ferror(f)) {
 			fclose(f);
+#ifdef _WINDOWS
+			CryptDestroyHash(hHash);
+			CryptReleaseContext(hCryptProv, 0);
+#endif
 			return CPL_E_PLATFORM_ERROR;
 		}
 
 #ifdef _WINDOWS
-#error Not implemented
+		if (!CryptHashData(hHash, buffer, l, 0)) {
+			fclose(f);
+			CryptDestroyHash(hHash);
+			CryptReleaseContext(hCryptProv, 0);
+			return CPL_E_PLATFORM_ERROR;
+		}
 #elif defined(__APPLE__)
 		if (!CC_SHA1_Update(&ctx, buffer, l)) {
 			fclose(f);
@@ -109,7 +166,12 @@ cpl_file_sha1(const char* name, cpl_sha1_t* out)
 	fclose(f);
 
 #ifdef _WINDOWS
-#error Not implemented
+	DWORD hl = sizeof(*out);
+	BOOL ok = CryptGetHashParam(hHash, HP_HASHVAL,
+		(BYTE*) out->bytes, &hl, 0);
+	CryptDestroyHash(hHash);
+	CryptReleaseContext(hCryptProv, 0);
+	if (!ok) return CPL_E_PLATFORM_ERROR;
 #elif defined(__APPLE__)
 	if (!CC_SHA1_Final((unsigned char*) out->bytes, &ctx)) {
 		return CPL_E_PLATFORM_ERROR;
@@ -124,13 +186,14 @@ cpl_file_sha1(const char* name, cpl_sha1_t* out)
 }
 
 
+
 /***************************************************************************/
 /** File Provenance API                                                   **/
 /***************************************************************************/
 
 /// Hex digits
-static const char _HEX[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-							  'A', 'B', 'C', 'D', 'E', 'F'};
+static const char __HEX[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+							   'A', 'B', 'C', 'D', 'E', 'F'};
 
 
 /**
@@ -154,9 +217,34 @@ cpl_lookup_file(const char* name,
 
 	// Get the real path of the file
 
+#ifdef _WINDOWS
+	DWORD bl = 1024;
+	DWORD old_bl = bl;
+	char* path = (char*) malloc(bl);
+	if (path == NULL) return CPL_E_INSUFFICIENT_RESOURCES;
+	bl = GetFullPathName(name, bl, path, NULL);
+	if (bl > old_bl) {
+		free(path);
+		bl += 4; old_bl = bl;
+		path = (char*) malloc(bl);
+		if (path == NULL) return CPL_E_INSUFFICIENT_RESOURCES;
+		bl = GetFullPathName(name, bl, path, NULL);
+	}
+	if (bl <= 0 || bl > old_bl) {
+		free(path);
+		path = NULL;
+	}
+#else
 	char* path = realpath(name, NULL);
+#endif
 	if (path == NULL) {
+#ifdef _WINDOWS
+		FILE* f = NULL;
+		errno_t err = fopen_s(&f, name, "rb");
+		if (err != 0) f = NULL;
+#else
 		FILE* f = fopen(name, "rb");
+#endif
 		if (f == NULL) return CPL_E_NOT_FOUND;
 		fclose(f);
 		return CPL_E_PLATFORM_ERROR;
@@ -179,8 +267,8 @@ cpl_lookup_file(const char* name,
 			}
 			char sha_str[sizeof(sha) * 2 + 8];
 			for (size_t i = 0; i < sizeof(sha); i++) {
-				sha_str[i*2    ] = _HEX[(sha.bytes[i] >> 4) & 0xF];
-				sha_str[i*2 + 1] = _HEX[(sha.bytes[i]     ) & 0xF];
+				sha_str[i*2    ] = __HEX[(sha.bytes[i] >> 4) & 0xF];
+				sha_str[i*2 + 1] = __HEX[(sha.bytes[i]     ) & 0xF];
 			}
 			sha_str[sizeof(sha)*2] = '\0';
 
@@ -218,8 +306,8 @@ cpl_lookup_file(const char* name,
 		}
 		char sha_str[sizeof(sha) * 2 + 8];
 		for (size_t i = 0; i < sizeof(sha); i++) {
-			sha_str[i*2    ] = _HEX[(sha.bytes[i] >> 4) & 0xF];
-			sha_str[i*2 + 1] = _HEX[(sha.bytes[i]     ) & 0xF];
+			sha_str[i*2    ] = __HEX[(sha.bytes[i] >> 4) & 0xF];
+			sha_str[i*2 + 1] = __HEX[(sha.bytes[i]     ) & 0xF];
 		}
 		sha_str[sizeof(sha)*2] = '\0';
 

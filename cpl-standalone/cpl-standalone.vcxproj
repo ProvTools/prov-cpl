@@ -70,11 +70,17 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="cpl-file.cpp" />
     <ClCompile Include="cpl-lock.cpp" />
     <ClCompile Include="cpl-platform.cpp" />
     <ClCompile Include="cpl-standalone.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\include\cpl-db-backend.h" />
+    <ClInclude Include="..\include\cpl-exception.h" />
+    <ClInclude Include="..\include\cpl-file.h" />
+    <ClInclude Include="..\include\cpl.h" />
+    <ClInclude Include="..\include\cplxx.h" />
     <ClInclude Include="cpl-lock.h" />
     <ClInclude Include="cpl-platform.h" />
     <ClInclude Include="cpl-private.h" />
