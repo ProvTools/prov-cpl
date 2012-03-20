@@ -193,7 +193,7 @@ main(int argc, char** argv)
 				}
 			}
 			else if (*(s + 1) != '\0') {
-				char* x = strchr(SHORT_OPTIONS, *(s+1));
+				const char* x = strchr(SHORT_OPTIONS, *(s+1));
 				if (x != NULL) if (*(x+1) == ':') cpl_argc++;
 			}
 		}
