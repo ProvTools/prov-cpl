@@ -11,16 +11,7 @@ ROOT := ..
 # Subprojects
 #
 
-PROGRAMS := standalone-test
-
-
-#
-# The test target
-#
-
-.PHONY: test
-
-test: run
+LIBRARIES := platform-compat
 
 
 #

@@ -154,7 +154,8 @@ Release: release
 
 lines:
 	@find . \( -name "*.cpp" -or -name "*.c" -or -name "*.h" -or -name "*.mk" \
-		-or -name "*.py" -or -name "Makefile" \) -exec cat \{} \; | wc -l
+		-or -name "*.py" -or -name "*.pl" -or -name "*.java" \
+		-or -name "Makefile" \) -exec cat \{} \; | wc -l
 
 list-subproject-libs list-subproject-shared-lib-files \
 		list-subproject-lib-files:

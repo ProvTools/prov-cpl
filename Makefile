@@ -11,10 +11,17 @@ ROOT := .
 # Subprojects
 #
 
-LIBRARIES := cpl-standalone backends
+LIBRARIES := cpl-standalone backends private-lib
 HEADERS := include
-PROGRAMS := test
+PROGRAMS := tools test
 OPTIONAL := bindings/perl bindings/java
+
+
+#
+# Project configuration
+#
+
+RUN_PROGRAM := test
 
 
 #

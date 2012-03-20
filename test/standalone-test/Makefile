@@ -13,7 +13,8 @@ include $(ROOT)/make/header.mk
 # Source files
 #
 
-DEPENDENCIES := $(ROOT)/include/*.h ../platform-compat/include/*.h
+PLATFORM_COMPAT := $(ROOT)/private-lib/platform-compat
+DEPENDENCIES := $(ROOT)/include/*.h $(PLATFORM_COMPAT)/include/*.h
 
 
 #
@@ -21,7 +22,7 @@ DEPENDENCIES := $(ROOT)/include/*.h ../platform-compat/include/*.h
 #
 
 INCLUDE_FLAGS := $(INCLUDE_FLAGS) -I$(ROOT)/include \
-	-I../platform-compat/include
+	-I$(PLATFORM_COMPAT)/include
 
 
 #
