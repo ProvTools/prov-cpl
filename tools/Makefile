@@ -11,7 +11,7 @@ ROOT := ..
 # Subprojects
 #
 
-#PROGRAMS := cpl
+PROGRAMS := cpl-tool
 
 
 #
