@@ -10,7 +10,8 @@ Database Backends:
   - Add support for querying properties to the RDF backend
 
 Tools:
-  - Implement the tools
+  - Implement the following cpl-tools: copy, move
+  - Port to Windows
 
 Language Bindings:
   - Add support for properties to Perl bindings
