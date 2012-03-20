@@ -15,7 +15,7 @@ INSTALL := yes
 
 MAVEN_INSTALL := yes
 MAVEN_GROUP_ID := edu.harvard.pass
-MAVEN_VERSION := 1.00
+MAVEN_VERSION := 1.0
 
 JAVA_MODULE_DEPENDECIES := ../CPLDirect
 
