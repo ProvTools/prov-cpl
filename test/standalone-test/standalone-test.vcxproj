@@ -34,11 +34,11 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(SolutionDir)\test\platform-compat\include;$(SolutionDir)\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)\private-lib\platform-compat\include;$(SolutionDir)\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(SolutionDir)\test\platform-compat\include;$(SolutionDir)\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)\private-lib\platform-compat\include;$(SolutionDir)\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -93,8 +93,8 @@
     <ProjectReference Include="..\..\cpl-standalone\cpl-standalone.vcxproj">
       <Project>{c7c1c6ee-1aff-d618-4387-7965dec52bd6}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\platform-compat\platform-compat.vcxproj">
-      <Project>{0ba1d1a7-0418-ffd5-f9b4-6f7676e8e468}</Project>
+    <ProjectReference Include="..\..\private-lib\platform-compat\platform-compat.vcxproj">
+      <Project>{eb585f7b-3d28-03c1-e066-31ee34e104e6}</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
