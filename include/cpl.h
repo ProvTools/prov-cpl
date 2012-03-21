@@ -354,6 +354,11 @@ WINDLL_API extern const cpl_id_t CPL_NONE;
  */
 #define CPL_DEPENDENCY_CATEGORY_CONTROL	2
 
+/**
+ * The version dependency category
+ */
+#define CPL_DEPENDENCY_CATEGORY_VERSION	3
+
 
 /**
  * Data dependency
@@ -368,6 +373,13 @@ WINDLL_API extern const cpl_id_t CPL_NONE;
  * @param n the dependency subtype
  */
 #define CPL_CONTROL_DEPENDENCY(n)	((CPL_DEPENDENCY_CATEGORY_CONTROL<<8) | (n))
+
+/**
+ * Version dependency
+ *
+ * @param n the dependency subtype
+ */
+#define CPL_VERSION_DEPENDENCY(n)	((CPL_DEPENDENCY_CATEGORY_VERSION<<8) | (n))
 
 
 /**
@@ -389,6 +401,7 @@ WINDLL_API extern const cpl_id_t CPL_NONE;
  * Generic data dependency
  */
 #define CPL_DATA_INPUT					CPL_DATA_DEPENDENCY(0)
+#define CPL_DATA_GENERIC				CPL_DATA_INPUT
 
 /**
  * Potential data dependency via an observed IPC
@@ -410,11 +423,18 @@ WINDLL_API extern const cpl_id_t CPL_NONE;
  * Generic control dependency
  */
 #define CPL_CONTROL_OP					CPL_CONTROL_DEPENDENCY(0)
+#define CPL_CONTROL_GENERIC				CPL_CONTROL_OP
 
 /**
  * Process start/fork
  */
 #define CPL_CONTROL_START				CPL_CONTROL_DEPENDENCY(1)
+
+/**
+ * Generic version dependency
+ */
+#define CPL_VERSION_PREV				CPL_VERSION_DEPENDENCY(0)
+#define CPL_VERSION_GENERIC				CPL_VERSION_PREV
 
 
 

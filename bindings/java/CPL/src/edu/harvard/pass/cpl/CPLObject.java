@@ -460,11 +460,11 @@ public class CPLObject {
 
 
 	/**
-	 * Get the latest version of an object
+	 * Get the current (most recent) version of an object
 	 *
 	 * @return the latest version of the object
 	 */
-	public CPLObjectVersion getLatestVersion() {
+	public CPLObjectVersion getCurrentVersion() {
 		return new CPLObjectVersion(this, getVersion());
 	}
 
@@ -495,7 +495,7 @@ public class CPLObject {
 		sb.append("\n");
 
 		if (detail) {
-			CPLObjectVersion v = getLatestVersion();
+			CPLObjectVersion v = getCurrentVersion();
 
 			sb.append("Current version     : ");
 			sb.append(v.getVersion());

@@ -316,7 +316,7 @@ public class test {
 		obj3.addProperty("LABEL", "Process B [Proc]");
 		System.out.println();
 
-		CPLObjectVersion obj3lv = obj3.getLatestVersion();
+		CPLObjectVersion obj3lv = obj3.getCurrentVersion();
 
 		System.out.print("obj3.addProperty(\"LABEL\", \"Yay -- Process B [Proc]\")");
 		obj3.addProperty("LABEL", "Yay -- Process B [Proc]");
