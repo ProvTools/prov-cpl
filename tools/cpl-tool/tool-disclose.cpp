@@ -94,78 +94,44 @@ usage(void)
 
 
 /**
- * Disclose data or control flow from the source to the target
+ * Private data for cb_disclose()
+ */
+typedef struct cb_disclose_private
+{
+	const char* target;
+	cpl_id_t target_id;
+} cb_disclose_private_t;
+
+
+/**
+ * Callback that discloses provenance
  *
- * @param source the source
- * @param target the target name
- * @param target_id the target object ID
+ * @param filename the file name
+ * @param directory the directory with a trailing / (empty string = current)
+ * @param depth the directory depth (0 = current)
+ * @param st the stat of the file
+ * @param context the caller-supplied context
  */
 static void
-process(const char* source, const char* target, const cpl_id_t target_id)
+cb_disclose(const char* filename, const char* directory, int depth,
+		struct stat* st, void* context)
 {
-	if (*source == '\0') return;
-
-
-	// Stat the source
-
-	struct stat st;
-	if (stat(source, &st) != 0) {
-		throw CPLException("Cannot stat \"%s\" -- %s", source, strerror(errno));
-	}
-
-
-	// Handle directories
-
-	if (S_ISDIR(st.st_mode)) {
-		if (!recursive) {
-			fprintf(stderr, "%s %s: \"%s\" is a directory (skipped).\n",
-					program_name, tool_name, source);
-			return;
-		}
-
-
-		// Process the directory recursively
-
-		DIR *dp;
-		struct dirent *dirp;
-		if ((dp = opendir(source)) == NULL) {
-			throw CPLException("Cannot list \"%s\" -- %s", source, strerror(errno));
-		}
-
-		std::list<std::string> files;
-		while ((dirp = readdir(dp)) != NULL) {
-			std::string s = std::string(dirp->d_name);
-			if (s == "." || s == "..") continue;
-			files.push_back(s);
-		}
-		closedir(dp);
-
-		std::string prefix = source;
-		if (source[strlen(source)-1] != '/') prefix += "/";
-
-		for (std::list<std::string>::iterator i = files.begin();
-				i != files.end(); i++) {
-			std::string s = prefix + *i;
-			process(s.c_str(), target, target_id);
-		}
-
-		return;
-	}
+	cb_disclose_private_t* p = (cb_disclose_private_t*) context;
 
 
 	// Get the file object
 
 	cpl_id_t source_id;
-	cpl_return_t ret = cpl_lookup_file(source, CPL_F_CREATE_IF_DOES_NOT_EXIST,
+	cpl_return_t ret = cpl_lookup_file(filename, CPL_F_CREATE_IF_DOES_NOT_EXIST,
 			&source_id, NULL);
 	if (!CPL_IS_OK(ret)) {
 		throw CPLException("Cannot lookup or create a provenance object for "
-				"\"%s\" -- %s", source, cpl_error_string(ret));
+				"\"%s\" -- %s", filename, cpl_error_string(ret));
 	}
 
-	if (source_id == target_id) {
+	if (source_id == p->target_id) {
 		fprintf(stderr, "%s %s: \"%s\" is the target (skipped).\n",
-				program_name, tool_name, source);
+				program_name, tool_name, filename);
 		return;
 	}
 
@@ -174,14 +140,14 @@ process(const char* source, const char* target, const cpl_id_t target_id)
 
 	if (verbose) {
 		// Note: The provenance edges are in the data flow direction
-		printf("\"%s\" --> \"%s\"\n", source, target);
+		printf("\"%s\" --> \"%s\"\n", filename, p->target);
 	}
 
 	// TODO The type should be configurable
-	ret = cpl_data_flow(target_id, source_id, CPL_DATA_INPUT);
+	ret = cpl_data_flow(p->target_id, source_id, CPL_DATA_INPUT);
 	if (!CPL_IS_OK(ret)) {
 		throw CPLException("Cannot disclose provenance for source "
-				"\"%s\" -- %s", source, cpl_error_string(ret));
+				"\"%s\" -- %s", filename, cpl_error_string(ret));
 	}
 }
 
@@ -270,8 +236,12 @@ tool_disclose(int argc, char** argv)
 
 	// Iterate over the source arguments and perform the operation
 
+	cb_disclose_private_t p;
+	p.target = target;
+	p.target_id = target_id;
+
 	for (int i = optind; i < argc-1; i++) {
-		process(argv[i], target, target_id);
+		process_recursively(argv[i], false, recursive, cb_disclose, &p);
 	}
 
 	return 0;

@@ -35,6 +35,10 @@
 #ifndef __CPL_TOOL_H__
 #define __CPL_TOOL_H__
 
+#include <cstddef>
+#include <list>
+#include <string>
+
 
 /***************************************************************************/
 /** Common Variables                                                      **/
@@ -45,6 +49,35 @@ extern const char* program_name;
 
 /// The tool name
 extern const char* tool_name;
+
+
+/***************************************************************************/
+/** Termcap Variables                                                     **/
+/***************************************************************************/
+
+/// Alternative character set start
+extern const char* termcap_ac_start;
+
+/// Alternative character set end
+extern const char* termcap_ac_end;
+
+/// Vertical line
+extern const char* termcap_vertical_line;
+
+/// Horizontal line
+extern const char* termcap_horizontal_line;
+
+/// Left tee
+extern const char* termcap_left_tee;
+
+/// Left bottom corner
+extern const char* termcap_left_bottom_corner;
+
+/// Right tee
+extern const char* termcap_right_tee;
+
+/// Right upper corner
+extern const char* termcap_right_upper_corner;
 
 
 /***************************************************************************/
@@ -71,9 +104,81 @@ struct tool_info
 };
 
 
+/**
+ * Callback for process_recursively()
+ *
+ * @param filename the file name
+ * @param directory the directory with a trailing / (empty string = current)
+ * @param depth the directory depth (0 = current)
+ * @param st the stat of the file
+ * @param context the caller-supplied context
+ */
+typedef void (*process_recursively_callback_t)(const char* filename,
+		const char* directory, int depth, struct stat* st, void* context);
+
+
+
+/***************************************************************************/
+/** Common Functions                                                      **/
+/***************************************************************************/
+
+/**
+ * Recursively traverse the given file or directory
+ *
+ * @param filename the file name (file or directory)
+ * @param include_dir whether to include directories in the result
+ * @param recursive whether to traverse recursively
+ * @param callback the callback
+ * @param context the caller-supplied context
+ */
+void
+process_recursively(const char* filename, bool include_dir, bool recursive,
+		process_recursively_callback_t callback, void* context);
+
+
+
+/***************************************************************************/
+/** Common Callbacks                                                      **/
+/***************************************************************************/
+
+/**
+ * Callback that collects file names into an instance of std::list<std::string>
+ *
+ * @param filename the file name
+ * @param directory the directory with a trailing / (empty string = current)
+ * @param depth the directory depth (0 = current)
+ * @param st the stat of the file
+ * @param context the caller-supplied context
+ */
+void
+cb_collect_file_names(const char* filename, const char* directory, int depth,
+		struct stat* st, void* context);
+
+
+
 /***************************************************************************/
 /** Tools (in their respective .cpp files)                                **/
 /***************************************************************************/
+
+/**
+ * List all ancestors of a file
+ *
+ * @param argc the number of command-line arguments
+ * @param argv the vector of command-line arguments
+ * @return the exit code
+ */
+int
+tool_ancestors(int argc, char** argv);
+
+/**
+ * List all descendants of a file
+ *
+ * @param argc the number of command-line arguments
+ * @param argv the vector of command-line arguments
+ * @return the exit code
+ */
+int
+tool_descendants(int argc, char** argv);
 
 /**
  * Disclose provenance

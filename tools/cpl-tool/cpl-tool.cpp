@@ -43,6 +43,10 @@
 #include <libgen.h>
 #endif
 
+#include <curses.h>
+#include <term.h>
+#include <termcap.h>
+
 
 /**
  * The program base name
@@ -70,7 +74,9 @@ const char* tool_name = NULL;
  */
 static struct tool_info TOOLS[] =
 {
+	{"ancestors",    "List all ancestors of a file",     tool_ancestors    },
 	//{"copy",         "Copy one or more files",           NULL              },
+	{"descendants",  "List all descendants of a file",   tool_descendants  },
 	{"disclose",     "Disclose data or control flow",    tool_disclose     },
 	//{"move",         "Move one or more files",           NULL              },
 	{0, 0, 0}
@@ -94,6 +100,35 @@ static struct option LONG_OPTIONS[] =
 	{"rdf",                  no_argument,       0,  0 },
 	{0, 0, 0, 0}
 };
+
+
+/**
+ * Termcap variables
+ */
+
+/// Alternative character set start
+const char* termcap_ac_start = "";
+
+/// Alternative character set end
+const char* termcap_ac_end = "";
+
+/// Vertical line
+const char* termcap_vertical_line = "|";
+
+/// Horizontal line
+const char* termcap_horizontal_line = "-";
+
+/// Left tee
+const char* termcap_left_tee = "+";
+
+/// Left bottom corner
+const char* termcap_left_bottom_corner = "`";
+
+/// Right tee
+const char* termcap_right_tee = "+";
+
+/// Right upper corner
+const char* termcap_right_upper_corner = "`";
 
 
 /**
@@ -157,6 +192,24 @@ main(int argc, char** argv)
 
 	set_program_name(argv[0]);
 	srand((unsigned int) time(NULL));
+
+
+	// Initialize the termcap
+	
+	char termcap_buf[4096];
+	char termcap_chr[256];
+
+	if (tgetent(termcap_buf, getenv("TERM")) >= 0) {
+		char* tp = termcap_chr;
+		termcap_ac_start = tgetstr("as", &tp);
+		termcap_ac_end = tgetstr("ae", &tp);
+		termcap_vertical_line = "x";
+		termcap_horizontal_line = "q";
+		termcap_left_tee = "t";
+		termcap_left_bottom_corner = "m";
+		termcap_right_tee = "u";
+		termcap_right_upper_corner = "k";
+	}
 
 
 	// Determine the number of CPL-specific arguments
