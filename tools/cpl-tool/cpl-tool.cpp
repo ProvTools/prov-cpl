@@ -202,7 +202,7 @@ main(int argc, char** argv)
 	if (tgetent(termcap_buf, getenv("TERM")) >= 0) {
 		char* tp = termcap_chr;
 		char s_as[8]; strcpy(s_as, "as");
-		char s_ae[8]; strcpy(s_as, "ae");
+		char s_ae[8]; strcpy(s_ae, "ae");
 		termcap_ac_start = tgetstr(s_as, &tp);
 		termcap_ac_end = tgetstr(s_ae, &tp);
 		termcap_vertical_line = "x";
