@@ -685,16 +685,14 @@ test_simple(void)
 	if (pctx.size() != 3)
 		throw CPLException("The object has unexpected properties.");
 
-	print(L_DEBUG, "All - version 2:");
+	print(L_DEBUG, "All - version %d:", obj3pv);
 	pctx.clear();
-	ret = cpl_get_properties(obj3, 2, NULL,
+	ret = cpl_get_properties(obj3, obj3pv, NULL,
 			cb_get_properties, &pctx);
 	print(L_DEBUG, "cpl_get_properties --> %d", ret);
 	CPL_VERIFY(cpl_get_properties, ret);
 	if (!contains(pctx, "LABEL", "Process B [Proc]"))
 		throw CPLException("The object is missing a property.");
-	if (pctx.size() != 1) // Assumes freeze on every property add
-		throw CPLException("The object has unexpected properties.");
 
 	print(L_DEBUG, "LABEL:");
 	pctx.clear();
@@ -717,8 +715,6 @@ test_simple(void)
 	CPL_VERIFY(cpl_get_properties, ret);
 	if (!contains(pctx, "LABEL", "Process B [Proc]"))
 		throw CPLException("The object is missing a property.");
-	if (pctx.size() != 1) // Assumes freeze on every property add
-		throw CPLException("The object has unexpected properties.");
 
 	print(L_DEBUG, "HELLO:");
 	pctx.clear();

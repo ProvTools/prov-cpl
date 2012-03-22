@@ -118,7 +118,13 @@ static bool cpl_initialized = false;
 /**
  * Flag for whether the library can use the object cache
  */
-static bool cpl_cache = false;
+static bool cpl_cache = true;
+
+/**
+ * Flag for whether the library should check the cache for staleness (this
+ * can be false if there is only a single running instance of CPL)
+ */
+static bool cpl_cache_check = true;
 
 /**
  * The cache of open objects
@@ -208,10 +214,12 @@ cpl_new_open_object(const cpl_version_t version)
  *
  * @param id the object ID
  * @param out the output
+ * @param is_new whether the object was just created in the cache
  * @return the error code
  */
 cpl_return_t
-cpl_get_open_object_handle(const cpl_id_t id, cpl_open_object_t** out)
+cpl_get_open_object_handle(const cpl_id_t id, cpl_open_object_t** out,
+		bool* is_new)
 {
 	assert(out != NULL);
 	cpl_hash_map_id_to_open_object_t::iterator i; 
@@ -227,9 +235,18 @@ cpl_get_open_object_handle(const cpl_id_t id, cpl_open_object_t** out)
 			*out = i->second;
 			cpl_lock(&(*out)->locked);
 			cpl_unlock(&cpl_open_objects_lock);
+			if (is_new != NULL) *is_new = false;
 			return CPL_OK;
 		}
 		cpl_unlock(&cpl_open_objects_lock);
+	}
+
+
+	// Periodically drop the cache if it gets too full
+	// TODO We can do much better than this
+	
+	if (cpl_cache && cpl_open_objects.size() > 1024 * 1024) {
+		cpl_drop_object_cache(false); /* keep locked objects */
 	}
 
 
@@ -252,6 +269,7 @@ cpl_get_open_object_handle(const cpl_id_t id, cpl_open_object_t** out)
 			*out = i->second;
 			cpl_lock(&(*out)->locked);
 			cpl_unlock(&cpl_open_objects_lock);
+			if (is_new != NULL) *is_new = false;
 			return CPL_OK;
 		}
 	}
@@ -269,6 +287,42 @@ cpl_get_open_object_handle(const cpl_id_t id, cpl_open_object_t** out)
 	// Return
 
 	*out = obj;
+	if (is_new != NULL) *is_new = true;
+	return CPL_OK;
+}
+
+
+/**
+ * Drop the cache
+ *
+ * @param force whether to force-close even the locked objects
+ * @return the error code
+ */
+cpl_return_t
+cpl_drop_object_cache(bool force)
+{
+	if (cpl_cache) return CPL_OK;
+
+	cpl_lock(&cpl_open_objects_lock);
+
+	cpl_hash_map_id_to_open_object_t::iterator i; 
+	cpl_hash_map_id_to_open_object_t in_use;
+	for (i = cpl_open_objects.begin(); i != cpl_open_objects.end(); i++) {
+		if (i->second->locked && !force) {
+			in_use[i->first] = i->second;
+		}
+		else {
+			delete i->second;
+		}
+	}
+	cpl_open_objects.clear();
+
+	for (i = in_use.begin(); i != in_use.end(); i++) {
+		cpl_open_objects[i->first] = i->second;
+	}
+		
+	cpl_unlock(&cpl_open_objects_lock);
+	
 	return CPL_OK;
 }
 
@@ -576,6 +630,8 @@ cpl_detach(void)
 	CPL_ENSURE_INITALIZED;
 	cpl_initialized = false;
 
+	cpl_drop_object_cache(true);
+
 	cpl_db_backend->cpl_db_destroy(cpl_db_backend);
 	cpl_db_backend = NULL;
 
@@ -677,6 +733,8 @@ cpl_create_object(const char* originator,
 	if (cpl_cache) {
 		cpl_open_object_t* obj = cpl_new_open_object(0);
 		if (obj == NULL) return CPL_E_INSUFFICIENT_RESOURCES;
+		obj->last_session = cpl_session;
+		obj->frozen = false;
 		cpl_unlock(&obj->locked);
 
 		cpl_lock(&cpl_open_objects_lock);
@@ -891,6 +949,9 @@ cpl_add_property(const cpl_id_t id,
                  const char* value)
 {
 	CPL_ENSURE_INITALIZED;
+    
+    cpl_return_t ret;
+    cpl_version_t version;
 
 
 	// Check the arguments
@@ -900,44 +961,99 @@ cpl_add_property(const cpl_id_t id,
 	CPL_ENSURE_NOT_NULL(value);
 
 
-    // Get the version of the object
-    
-    cpl_return_t ret;
-    cpl_version_t version;
+	// Freeze if necessary to make sure that the session information is correct
 
-    ret = cpl_get_version(id, &version);
-    CPL_RUNTIME_VERIFY(ret);
+	bool must_freeze = true;
+	bool is_new = false;
+	cpl_open_object_t* obj = NULL;
+
+	if (cpl_cache) {
+
+		// Get the handle of the fromination
+
+		CPL_RUNTIME_VERIFY(cpl_get_open_object_handle(id, &obj, &is_new));
 
 
-	// Freeze and create a new version
-
-	// TODO We should freeze only as necessary to make sure that the session
-	// information is correct. We need add a cache to note which versions
-	// were created by which sessions
-
-	cpl_return_t r = CPL_E_ALREADY_EXISTS;
-	version++;
-
-	do {
-		r = cpl_db_backend->cpl_db_create_version(cpl_db_backend,
-												  id,
-												  version,
-												  cpl_session);
-		if (r == CPL_E_ALREADY_EXISTS) {
-#ifdef _WINDOWS
-			Sleep(2 /* ms */);
-#else
-			usleep(2 * 1000 /* us */);
-#endif
-			version++;
+		// Get the version of the object and check to see if the entry is stale
+		
+		if (cpl_cache_check && !is_new) {
+			ret = cpl_db_backend->cpl_db_get_version(cpl_db_backend,
+					id, &version);
+			CPL_RUNTIME_VERIFY(ret);
 		}
 		else {
-			CPL_RUNTIME_VERIFY(r);
+			version = obj->version;
+		}
+
+
+		// Determine whether to freeze and create a new version (if not stale)
+
+		if (obj->version == version) {
+			must_freeze = obj->frozen || obj->last_session != cpl_session;
 		}
 	}
-	while (!CPL_IS_OK(r));
+	else {
 
-	assert(version != CPL_VERSION_NONE);
+		// Get the version of the object
+
+		ret = cpl_get_version(id, &version);
+		CPL_RUNTIME_VERIFY(ret);
+	}
+
+
+	// Automatically unlock the object if it is still locked by the time
+	// we hit end this block
+
+	CPL_AutoUnlock __au(obj != NULL ? &obj->locked : NULL);
+	(void) __au;
+
+
+	// Freeze and create a new version if we determined that we have to
+	
+	if (must_freeze) {
+
+		cpl_return_t r = CPL_E_ALREADY_EXISTS;
+		version++;
+
+		do {
+			r = cpl_db_backend->cpl_db_create_version(cpl_db_backend,
+													  id,
+													  version,
+													  cpl_session);
+			if (r == CPL_E_ALREADY_EXISTS) {
+#ifdef _WINDOWS
+				Sleep(2 /* ms */);
+#else
+				usleep(2 * 1000 /* us */);
+#endif
+				version++;
+			}
+			else {
+				CPL_RUNTIME_VERIFY(r);
+			}
+		}
+		while (!CPL_IS_OK(r));
+
+		assert(version != CPL_VERSION_NONE);
+	}
+	
+
+	// Update the cache
+	
+	if (obj != NULL) {
+
+		// Update the session and version info
+
+		obj->version = version;
+		obj->last_session = cpl_session;
+		obj->frozen = false;
+
+
+		// Finally, unlock (must be last)
+		
+		cpl_unlock(&obj->locked);
+		obj = NULL;
+	}
 
 
     // Call the backend
@@ -1012,32 +1128,57 @@ cpl_add_dependency(const cpl_id_t from_id,
 	bool dependency_exists = false;
 	cpl_version_t from_version = CPL_VERSION_NONE;
 	cpl_open_object_t* obj_from = NULL;
+	bool check_dependency_using_db = true;
+	bool is_new = false;
 
 	if (cpl_cache) {
 
-		// Get the handle of the fromination
+		// Get the handle of the from object
 
-		CPL_RUNTIME_VERIFY(cpl_get_open_object_handle(from_id, &obj_from));
-
-
-		// Get the version of the fromination object
-
-		from_version = obj_from->version;
+		CPL_RUNTIME_VERIFY(cpl_get_open_object_handle(from_id, &obj_from, &is_new));
 
 
-		// Check the ancestor list
-
-		cpl_hash_map_id_to_version_t::iterator i;
-		i = obj_from->ancestors.find(to_id);
-
-		if (i == obj_from->ancestors.end()) {
-			dependency_exists = false;
+		// Get the version of the object and check to see if the entry is stale
+		
+		if (cpl_cache_check && !is_new) {
+			cpl_return_t ret = cpl_db_backend->cpl_db_get_version(cpl_db_backend,
+					from_id, &from_version);
+			CPL_RUNTIME_VERIFY(ret);
 		}
 		else {
-			dependency_exists = i->second <= to_version;
+			from_version = obj_from->version;
+		}
+
+
+		// Check the ancestor list (if not stale)
+
+		if (from_version == obj_from->version) {
+
+			cpl_hash_map_id_to_version_t::iterator i;
+			i = obj_from->ancestors.find(to_id);
+
+			if (i == obj_from->ancestors.end()) {
+				dependency_exists = false;
+			}
+			else {
+				dependency_exists = i->second <= to_version;
+			}
+
+			check_dependency_using_db = false;
 		}
 	}
-	else {
+
+
+	// Automatically unlock the object if it is still locked by the time
+	// we hit end this block
+
+	CPL_AutoUnlock __au_from(obj_from != NULL ? &obj_from->locked : NULL);
+	(void) __au_from;
+
+
+	// Check the dependency using the database if we need to
+
+	if (check_dependency_using_db) {
 
 		// Call the backend to determine the dependency
 
@@ -1063,13 +1204,6 @@ cpl_add_dependency(const cpl_id_t from_id,
 	// we do not need to check whether the provenance object is already froxen
 	// or whether the last_session attribute matches the current session.
 	// Another bizarre consequence is that the FREEZE operation is a no-op.
-
-
-	// Automatically unlock the object if it is still locked by the time
-	// we hit end this block
-
-	CPL_AutoUnlock __au_from(obj_from != NULL ? &obj_from->locked : NULL);
-	(void) __au_from;
 
 
 	// Return if the dependency already exists - there is nothing to do
@@ -1160,7 +1294,7 @@ cpl_get_version(const cpl_id_t id,
 	CPL_ENSURE_INITALIZED;
 	cpl_version_t version;
 
-	if (cpl_cache) {
+	if (cpl_cache && !cpl_cache_check) {
 		cpl_open_object_t* obj = NULL;
 		CPL_RUNTIME_VERIFY(cpl_get_open_object_handle(id, &obj));
 		version = obj->version;
@@ -1255,7 +1389,7 @@ cpl_get_object_info(const cpl_id_t id,
 	// Get the latest version of the object, if available
 
 	cpl_version_t version_hint = CPL_VERSION_NONE;
-	if (cpl_cache) {
+	if (cpl_cache && !cpl_cache_check) {
 		cpl_open_object_t* obj = NULL;
 		CPL_RUNTIME_VERIFY(cpl_get_open_object_handle(id, &obj));
 		version_hint = obj->version;

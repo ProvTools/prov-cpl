@@ -109,10 +109,21 @@ cpl_new_open_object(const cpl_version_t version);
  *
  * @param id the object ID
  * @param out the output
+ * @param is_new whether the object was just created in the cache
  * @return the error code
  */
 cpl_return_t
-cpl_get_open_object_handle(const cpl_id_t id, cpl_open_object_t** out);
+cpl_get_open_object_handle(const cpl_id_t id, cpl_open_object_t** out,
+		bool* is_new = NULL);
+
+/**
+ * Drop the cache
+ *
+ * @param force whether to force-close even the locked objects
+ * @return the error code
+ */
+cpl_return_t
+cpl_drop_object_cache(bool force = false);
 
 
 /***************************************************************************/
