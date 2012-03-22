@@ -16,6 +16,7 @@ Contributor(s): Peter Macko
 Please make sure that the following packages are installed:
   uuid-dev
   libssl-dev
+  libncurses5-dev
   unixodbc
   unixodbc-dev
   odbcinst
