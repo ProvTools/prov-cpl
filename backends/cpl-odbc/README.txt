@@ -60,6 +60,8 @@ Port            =
 Socket          = 
 Option          = 
 Stmt            = 
+User            = cpl
+Password        = cplcplcpl
 
 You can verify that the data source is installed by running: odbcinst -q -s
 
