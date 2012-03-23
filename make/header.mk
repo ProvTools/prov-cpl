@@ -255,7 +255,7 @@ endif
 #
 
 ifndef INSTALL_PREFIX
-	INSTALL_PREFIX := /usr/local
+	INSTALL_PREFIX := /usr
 endif
 
 
