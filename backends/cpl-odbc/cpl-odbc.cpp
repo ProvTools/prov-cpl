@@ -1506,9 +1506,13 @@ cpl_odbc_get_object_info(struct _cpl_db_backend_t* backend,
 	CPL_SQL_SIMPLE_FETCH(llong, 2, (long long*) &p->creation_session.lo);
 	CPL_SQL_SIMPLE_FETCH(timestamp_as_unix_time, 3, &p->creation_time);
 
-	CPL_SQL_SIMPLE_FETCH(dynamically_allocated_string, 4, &p->originator);
-	CPL_SQL_SIMPLE_FETCH(dynamically_allocated_string, 5, &p->name);
-	CPL_SQL_SIMPLE_FETCH(dynamically_allocated_string, 6, &p->type);
+	CPL_SQL_SIMPLE_FETCH_EXT(dynamically_allocated_string, 4, &p->originator,
+							 true);
+	if (r == CPL_E_DB_NULL) p->originator = strdup("");
+	CPL_SQL_SIMPLE_FETCH_EXT(dynamically_allocated_string, 5, &p->name, true);
+	if (r == CPL_E_DB_NULL) p->name = strdup("");
+	CPL_SQL_SIMPLE_FETCH_EXT(dynamically_allocated_string, 6, &p->type, true);
+	if (r == CPL_E_DB_NULL) p->type = strdup("");
 
 	CPL_SQL_SIMPLE_FETCH_EXT(llong, 7, (long long*) &p->container_id.hi, true);
 	if (r == CPL_E_DB_NULL) p->container_id = CPL_NONE;
