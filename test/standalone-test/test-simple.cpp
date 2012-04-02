@@ -676,8 +676,9 @@ test_simple(void)
 
 	actx.direction = CPL_D_DESCENDANTS;
 	actx.results.clear();
-	print(L_DEBUG, "Descendants of version 0:");
-	ret = cpl_get_object_ancestry(obj, 0, actx.direction, 0,
+	print(L_DEBUG, "Descendants of version 0 (excluding the next version):");
+	ret = cpl_get_object_ancestry(obj, 0, actx.direction,
+                                  CPL_A_NO_PREV_NEXT_VERSION,
 								  cb_object_ancestry, &actx);
 	print(L_DEBUG, "cpl_get_object_ancestry --> %d", ret);
 	CPL_VERIFY(cpl_get_object_ancestry, ret);
@@ -686,6 +687,20 @@ test_simple(void)
 	if ((actx.results[0].id != obj3 || actx.results[1].id != obj2)
 			&& (actx.results[1].id != obj3 || actx.results[0].id != obj2))
 		throw CPLException("Invalid ancestry");
+
+	print(L_DEBUG, " ");
+
+	actx.direction = CPL_D_DESCENDANTS;
+	actx.results.clear();
+	print(L_DEBUG, "Descendants of version 0 (including the next version):");
+	ret = cpl_get_object_ancestry(obj, 0, actx.direction, 0,
+								  cb_object_ancestry, &actx);
+	print(L_DEBUG, "cpl_get_object_ancestry --> %d", ret);
+	CPL_VERIFY(cpl_get_object_ancestry, ret);
+
+	if (actx.results.size() != 3) throw CPLException("Invalid ancestry");
+	if (actx.results[0].id != obj && actx.results[1].id != obj
+            && actx.results[2].id != obj) throw CPLException("Invalid ancestry");
 
 	print(L_DEBUG, " ");
 

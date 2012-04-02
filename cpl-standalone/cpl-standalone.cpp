@@ -1544,14 +1544,28 @@ cpl_get_object_ancestry(const cpl_id_t id,
 
 	// Validate the object version
 
+	cpl_version_t current_version = CPL_VERSION_NONE;
 	if (version != CPL_VERSION_NONE) {
 		CPL_ENSURE_NOT_NEGATIVE(version);
 
-		cpl_version_t current_version;
 		CPL_RUNTIME_VERIFY(cpl_get_version(id, &current_version));
-
 		if (version < 0 || version > current_version) {
 			return CPL_E_INVALID_VERSION;
+		}
+	}
+
+
+	// Add the previous or the next version of the object to the result set
+	
+	int new_flags = flags | CPL_A_NO_PREV_NEXT_VERSION;
+	if (version != CPL_VERSION_NONE && (flags&CPL_A_NO_PREV_NEXT_VERSION) == 0){
+		if (version > 0 && direction == CPL_D_ANCESTORS) {
+			CPL_RUNTIME_VERIFY(iterator(id, version, id, version - 1,
+										CPL_VERSION_GENERIC, context));
+		}
+		else if (version < current_version && direction == CPL_D_DESCENDANTS) {
+			CPL_RUNTIME_VERIFY(iterator(id, version, id, version + 1,
+										CPL_VERSION_GENERIC, context));
 		}
 	}
 
@@ -1560,7 +1574,7 @@ cpl_get_object_ancestry(const cpl_id_t id,
 
 	return cpl_db_backend->cpl_db_get_object_ancestry(cpl_db_backend,
 													  id, version, direction,
-													  flags, iterator,
+													  new_flags, iterator,
 													  context);
 }
 

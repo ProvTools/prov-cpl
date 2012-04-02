@@ -634,6 +634,11 @@ WINDLL_API extern const cpl_id_t CPL_NONE;
 #define CPL_D_DESCENDANTS				1
 
 /**
+ * Do not add the previous or the next version of the object to the result set
+ */
+#define CPL_A_NO_PREV_NEXT_VERSION		(1 << 0)
+
+/**
  * Ignore data dependencies
  */
 #define CPL_A_NO_DATA_DEPENDENCIES		(1 << 1)
