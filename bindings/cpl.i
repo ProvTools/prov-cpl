@@ -100,6 +100,20 @@ cpl_is_ok(cpl_return_t ret) {
     return CPL_IS_OK(ret);
 }
 
+typedef std::vector<cpl_id_timestamp_t> std_vector_cpl_id_timestamp_t;
+
+inline std::vector<cpl_id_timestamp_t>&
+cpl_dereference_p_std_vector_cpl_id_timestamp_t(
+        std_vector_cpl_id_timestamp_t* p) {
+    return *p;
+}
+
+inline void*
+cpl_convert_p_std_vector_cpl_id_timestamp_t_to_p_void(
+        std_vector_cpl_id_timestamp_t* p) {
+    return (void*) p;
+}
+
 /*typedef std::list<cpl_ancestry_entry_t> std_list_cpl_ancestry_entry_t;*/
 typedef std::vector<cpl_ancestry_entry_t> std_vector_cpl_ancestry_entry_t;
 
@@ -193,6 +207,16 @@ cpl_is_ok(cpl_return_t ret);
  * STL containers
  */
 
+%template (cpl_id_timestamp_t_vector) std::vector<cpl_id_timestamp_t>;
+
+inline std::vector<cpl_id_timestamp_t>&
+cpl_dereference_p_std_vector_cpl_id_timestamp_t(
+    std_vector_cpl_id_timestamp_t* p);
+
+inline void*
+cpl_convert_p_std_vector_cpl_id_timestamp_t_to_p_void(
+        std_vector_cpl_id_timestamp_t* p);
+
 /*%template (cpl_ancestry_entry_t_list) std::list<cpl_ancestry_entry_t>;*/
 %template (cpl_ancestry_entry_t_vector) std::vector<cpl_ancestry_entry_t>;
 
@@ -242,6 +266,8 @@ cpl_convert_p_std_vector_cplxx_property_entry_t_to_p_void(
 %pointer_functions(cpl_object_info_t, cpl_object_info_tp);
 %pointer_functions(cpl_version_info_t, cpl_version_info_tp);
 
+%pointer_functions(std_vector_cpl_id_timestamp_t,
+        std_vector_cpl_id_timestamp_tp);
 /*%pointer_functions(std_list_cpl_ancestry_entry_t,
         std_list_cpl_ancestry_entry_tp);*/
 %pointer_functions(std_vector_cpl_ancestry_entry_t,

@@ -798,6 +798,55 @@ cpl_lookup_object(const char* originator,
 
 
 /**
+ * Look up an object by name. If multiple objects share the same name,
+ * return all of them.
+ *
+ * @param originator the object originator
+ * @param name the object name
+ * @param type the object type
+ * @param flags a logical combination of CPL_L_* flags
+ * @param iterator the iterator to be called for each matching object
+ * @param context the caller-provided iterator context
+ * @return CPL_OK or an error code
+ */
+extern "C" EXPORT cpl_return_t
+cpl_lookup_object_ext(const char* originator,
+					  const char* name,
+					  const char* type,
+					  const int flags,
+					  cpl_id_timestamp_iterator_t iterator,
+					  void* context)
+{
+	CPL_ENSURE_INITALIZED;
+
+
+	// Argument check
+
+	CPL_ENSURE_NOT_NULL(originator);
+	CPL_ENSURE_NOT_NULL(name);
+	CPL_ENSURE_NOT_NULL(type);
+	CPL_ENSURE_NOT_NULL(iterator);
+
+
+	// Call the backend
+
+	cpl_return_t ret;
+	ret = cpl_db_backend->cpl_db_lookup_object_ext(cpl_db_backend,
+												   originator,
+												   name,
+												   type,
+												   flags,
+												   iterator,
+												   context);
+
+	if (ret == CPL_E_NOT_FOUND && (flags & CPL_L_NO_FAIL) == CPL_L_NO_FAIL) {
+		ret = CPL_S_NO_DATA;
+	}
+	return ret;
+}
+
+
+/**
  * Lookup or create an object if it does not exist.
  *
  * @param originator the application responsible for creating the object
@@ -1596,6 +1645,36 @@ cpl_lookup_by_property(const char* key,
 /***************************************************************************/
 
 #ifdef __cplusplus
+
+/**
+ * The iterator callback for cpl_lookup_object_ext() that collects the returned
+ * information in an instance of std::vector<cpl_id_timestamp_t>.
+ *
+ * @param id the object ID
+ * @param version the object version
+ * @param key the property name
+ * @param value the property value
+ * @param context the pointer to an instance of the vector 
+ * @return CPL_OK or an error code
+ */
+EXPORT cpl_return_t
+cpl_cb_collect_id_timestamp_vector(const cpl_id_t id,
+								   const unsigned long timestamp,
+								   void* context)
+{
+	if (context == NULL) return CPL_E_INVALID_ARGUMENT;
+
+	cpl_id_timestamp_t e;
+	e.id = id;
+	e.timestamp = timestamp;
+
+	std::vector<cpl_id_timestamp_t>& l =
+		*((std::vector<cpl_id_timestamp_t>*) context);
+	l.push_back(e);
+
+	return CPL_OK;
+}
+
 
 /**
  * The iterator callback for cpl_get_object_ancestry() that collects

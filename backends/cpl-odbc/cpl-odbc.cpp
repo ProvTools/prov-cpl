@@ -209,6 +209,39 @@ cpl_sql_fetch_single_llong(SQLHSTMT stmt, long long* out, int column=1,
 
 
 /**
+ * Convert a SQL timestamp to UNIX time
+ *
+ * @param t the timestamp
+ * @return UNIX time
+ */
+static unsigned long
+cpl_sql_timestamp_to_unix_time(const SQL_TIMESTAMP_STRUCT& t)
+{
+	struct tm m;
+	m.tm_year = t.year - 1900;
+	m.tm_mon = t.month - 1;
+	m.tm_mday = t.day;
+	m.tm_hour = t.hour;
+	m.tm_min = t.minute;
+	m.tm_sec = t.second;
+	m.tm_wday = 0;
+	m.tm_yday = 0;
+	m.tm_isdst = 0;
+	time_t T = mktime(&m);
+#ifdef _WINDOWS
+	struct tm mx;
+	localtime_s(&mx, &T);
+	if (mx.tm_isdst) T -= 3600;
+#else
+	struct tm mx;
+	localtime_r(&T, &mx);
+	if (mx.tm_isdst) T -= 3600;
+#endif
+	return (unsigned long) T;
+}
+
+
+/**
  * Read a timestamp from the result set and return it as UNIX time. Close
  * the cursor on error, or if configured to do so (which is the default),
  * also on success
@@ -233,29 +266,7 @@ cpl_sql_fetch_single_timestamp_as_unix_time(SQLHSTMT stmt, unsigned long* out,
 			&t, sizeof(t), column, fetch, close_if_ok, handle_nulls);
 	if (!CPL_IS_OK(r)) return r;
 
-	if (out != NULL) {
-		struct tm m;
-		m.tm_year = t.year - 1900;
-		m.tm_mon = t.month - 1;
-		m.tm_mday = t.day;
-		m.tm_hour = t.hour;
-		m.tm_min = t.minute;
-		m.tm_sec = t.second;
-		m.tm_wday = 0;
-		m.tm_yday = 0;
-		m.tm_isdst = 0;
-		time_t T = mktime(&m);
-#ifdef _WINDOWS
-		struct tm mx;
-		localtime_s(&mx, &T);
-		if (mx.tm_isdst) T -= 3600;
-#else
-		struct tm mx;
-		localtime_r(&T, &mx);
-		if (mx.tm_isdst) T -= 3600;
-#endif
-		*out = (unsigned long) T;
-	}
+	if (out != NULL) *out = cpl_sql_timestamp_to_unix_time(t);
 	return CPL_OK;
 }
 
@@ -373,6 +384,7 @@ cpl_create_odbc_backend(const char* connection_string,
 	mutex_init(odbc->create_session_lock);
 	mutex_init(odbc->create_object_lock);
 	mutex_init(odbc->lookup_object_lock);
+	mutex_init(odbc->lookup_object_ext_lock);
 	mutex_init(odbc->create_version_lock);
 	mutex_init(odbc->get_version_lock);
 	mutex_init(odbc->add_ancestry_edge_lock);
@@ -440,6 +452,7 @@ cpl_create_odbc_backend(const char* connection_string,
 	ALLOC_STMT(create_object_insert_container_stmt);
 	ALLOC_STMT(create_object_insert_version_stmt);
 	ALLOC_STMT(lookup_object_stmt);
+	ALLOC_STMT(lookup_object_ext_stmt);
 	ALLOC_STMT(create_version_stmt);
 	ALLOC_STMT(get_version_stmt);
 	ALLOC_STMT(add_ancestry_edge_stmt);
@@ -500,6 +513,11 @@ cpl_create_odbc_backend(const char* connection_string,
 			" WHERE originator = ? AND name = ? AND type = ?"
 			" ORDER BY creation_time DESC"
 			" LIMIT 1;");
+
+	PREPARE(lookup_object_ext_stmt,
+			"SELECT id_hi, id_lo, creation_time"
+			"  FROM cpl_objects"
+			" WHERE originator = ? AND name = ? AND type = ?;");
 
 	PREPARE(create_version_stmt,
 			"INSERT INTO cpl_versions"
@@ -625,6 +643,7 @@ err_stmts:
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_object_insert_container_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_object_insert_version_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_object_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_object_ext_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_version_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_version_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->add_ancestry_edge_stmt);
@@ -654,6 +673,7 @@ err_sync:
 	mutex_destroy(odbc->create_session_lock);
 	mutex_destroy(odbc->create_object_lock);
 	mutex_destroy(odbc->lookup_object_lock);
+	mutex_destroy(odbc->lookup_object_ext_lock);
 	mutex_destroy(odbc->create_version_lock);
 	mutex_destroy(odbc->get_version_lock);
 	mutex_destroy(odbc->add_ancestry_edge_lock);
@@ -691,6 +711,7 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_object_insert_container_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_object_insert_version_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_object_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_object_ext_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_version_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_version_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->add_ancestry_edge_stmt);
@@ -718,6 +739,7 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
 	mutex_destroy(odbc->create_session_lock);
 	mutex_destroy(odbc->create_object_lock);
 	mutex_destroy(odbc->lookup_object_lock);
+	mutex_destroy(odbc->lookup_object_ext_lock);
 	mutex_destroy(odbc->create_version_lock);
 	mutex_destroy(odbc->get_version_lock);
 	mutex_destroy(odbc->add_ancestry_edge_lock);
@@ -1006,6 +1028,131 @@ cpl_odbc_lookup_object(struct _cpl_db_backend_t* backend,
 
 err:
 	mutex_unlock(odbc->lookup_object_lock);
+	return CPL_E_STATEMENT_ERROR;
+}
+
+
+/**
+ * Look up an object by name. If multiple objects share the same name,
+ * get the latest one.
+ *
+ * @param backend the pointer to the backend structure
+ * @param originator the object originator (namespace)
+ * @param name the object name
+ * @param type the object type
+ * @param flags a logical combination of CPL_L_* flags
+ * @param iterator the iterator to be called for each matching object
+ * @param context the caller-provided iterator context
+ * @return CPL_OK or an error code
+ */
+extern "C" cpl_return_t
+cpl_odbc_lookup_object_ext(struct _cpl_db_backend_t* backend,
+						   const char* originator,
+						   const char* name,
+						   const char* type,
+						   const int flags,
+						   cpl_id_timestamp_iterator_t iterator,
+						   void* context)
+{
+	assert(backend != NULL);
+	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
+
+	SQLRETURN ret;
+	cpl_return_t r = CPL_E_INTERNAL_ERROR;
+	cpl_id_timestamp_t entry;
+	std::list<cpl_id_timestamp_t> entries;
+	SQL_TIMESTAMP_STRUCT t;
+
+	mutex_lock(odbc->lookup_object_ext_lock);
+
+
+	// Prepare the statement
+
+	SQLHSTMT stmt = odbc->lookup_object_ext_stmt;
+
+	SQL_BIND_VARCHAR(stmt, 1, 255, originator);
+	SQL_BIND_VARCHAR(stmt, 2, 255, name);
+	SQL_BIND_VARCHAR(stmt, 3, 100, type);
+
+
+	// Execute
+	
+	ret = SQLExecute(stmt);
+	if (!SQL_SUCCEEDED(ret)) {
+		print_odbc_error("SQLExecute", stmt, SQL_HANDLE_STMT);
+		goto err;
+	}
+
+
+	// Bind the columns
+
+	ret = SQLBindCol(stmt, 1, SQL_C_UBIGINT, &entry.id.hi, 0, NULL);
+	if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+	ret = SQLBindCol(stmt, 2, SQL_C_UBIGINT, &entry.id.lo, 0, NULL);
+	if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+	ret = SQLBindCol(stmt, 3, SQL_C_TYPE_TIMESTAMP, &t, sizeof(t), NULL);
+	if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+
+	// Fetch the result
+
+	while (true) {
+
+		ret = SQLFetch(stmt);
+		if (!SQL_SUCCEEDED(ret)) {
+			if (ret != SQL_NO_DATA) {
+				print_odbc_error("SQLFetch", stmt, SQL_HANDLE_STMT);
+				goto err_close;
+			}
+			break;
+		}
+
+		entry.timestamp = cpl_sql_timestamp_to_unix_time(t);
+		entries.push_back(entry);
+	}
+	
+	ret = SQLCloseCursor(stmt);
+	if (!SQL_SUCCEEDED(ret)) {
+		print_odbc_error("SQLCloseCursor", stmt, SQL_HANDLE_STMT);
+		goto err;
+	}
+
+
+	// Unlock
+
+	mutex_unlock(odbc->lookup_object_ext_lock);
+
+
+	// If we did not get any data back, terminate
+
+	if (entries.empty()) return CPL_E_NOT_FOUND;
+
+
+	// Call the user-provided callback function
+
+	if (iterator != NULL) {
+		std::list<cpl_id_timestamp_t>::iterator i;
+		for (i = entries.begin(); i != entries.end(); i++) {
+			r = iterator(i->id, i->timestamp, context);
+			if (!CPL_IS_OK(r)) return r;
+		}
+	}
+
+	return CPL_OK;
+
+
+	// Error handling
+
+err_close:
+	ret = SQLCloseCursor(stmt);
+	if (!SQL_SUCCEEDED(ret)) {
+		print_odbc_error("SQLCloseCursor", stmt, SQL_HANDLE_STMT);
+	}
+
+err:
+	mutex_unlock(odbc->lookup_object_ext_lock);
 	return CPL_E_STATEMENT_ERROR;
 }
 
@@ -2159,6 +2306,7 @@ const cpl_db_backend_t CPL_ODBC_BACKEND = {
 	cpl_odbc_create_session,
 	cpl_odbc_create_object,
 	cpl_odbc_lookup_object,
+	cpl_odbc_lookup_object_ext,
 	cpl_odbc_create_version,
 	cpl_odbc_get_version,
 	cpl_odbc_add_ancestry_edge,

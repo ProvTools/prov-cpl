@@ -133,6 +133,26 @@ print_version_info(cpl_version_info_t* info)
 
 
 /**
+ * The iterator callback function used by cpl_lookup_object_ext()
+ *
+ * @param id the object ID
+ * @param timestamp the timestamp
+ * @param context the application-provided context
+ * @return CPL_OK or an error code (the caller should fail on this error)
+ */
+static cpl_return_t
+cb_lookup_object_ext(const cpl_id_t id,
+				  	 const unsigned long timestamp,
+					 void* context)
+{
+	std::map<cpl_id_t, unsigned long>* m
+		= (std::map<cpl_id_t, unsigned long>*) context;
+	(*m)[id] = timestamp;
+	return CPL_OK;
+}
+
+
+/**
  * A side of a dependecy edge + the dependency type
  */
 typedef struct cpl_id_ver_type {
@@ -255,6 +275,20 @@ check_time(long t)
 {
 	time_t now = time(NULL);
 	return t - 5 <= now && t + 30 >= now;
+}
+
+
+/**
+ * Check whether the map contains the given id
+ *
+ * @param m the map
+ * @param id the ID
+ * @return true if it contains the given id
+ */
+static bool
+contains(std::map<cpl_id_t, unsigned long>& m, const cpl_id_t id)
+{
+	return m.find(id) != m.end();
 }
 
 
@@ -436,6 +470,24 @@ test_simple(void)
 	print(L_DEBUG, "cpl_lookup_object --> %llx:%llx [%d]", objx.hi,objx.lo,ret);
 	CPL_VERIFY(cpl_lookup_object, ret);
 	if(obj3!=objx)throw CPLException("Object lookup returned the wrong object");
+
+    std::map<cpl_id_t, unsigned long> ectx;
+	ret = cpl_lookup_object_ext(ORIGINATOR, "Process B", "Proc", CPL_L_NO_FAIL,
+            cb_lookup_object_ext, &ectx);
+    if (!CPL_IS_OK(ret)) {
+        print(L_DEBUG, "cpl_lookup_object_ext --> [%d]", ret);
+        CPL_VERIFY(cpl_lookup_object, ret);
+    }
+    if (!contains(ectx, obj3)) {
+        print(L_DEBUG, "cpl_lookup_object_ext --> not found (%lu results) [%d]",
+                ectx.size(), ret);
+        throw CPLException("Object lookup result does not contain the object");
+    }
+    print(L_DEBUG, "cpl_lookup_object_ext --> found (%lu results) [%d]",
+            ectx.size(), ret);
+    if (!check_time(ectx[obj3])) {
+        throw CPLException("The returned timestamp information is incorrect");
+    }
 
 	print(L_DEBUG, " ");
 

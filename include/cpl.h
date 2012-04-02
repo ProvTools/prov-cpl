@@ -125,6 +125,19 @@ typedef struct cpl_id_version {
 } cpl_id_version_t;
 
 /**
+ * A combination of the ID and the UNIX timestamp.
+ */
+typedef struct cpl_id_timestamp {
+
+	/// The ID
+	cpl_id_t id;
+
+	/// The UNIX timestamp
+	unsigned long timestamp;
+
+} cpl_id_timestamp_t;
+
+/**
  * A session ID.
  */
 typedef cpl_id_t cpl_session_t;
@@ -216,6 +229,19 @@ typedef struct cpl_version_info {
 	unsigned long creation_time;
 
 } cpl_version_info_t;
+
+/**
+ * The iterator callback function used by cpl_lookup_object_ext().
+ *
+ * @param id the object ID
+ * @param timestamp the object creation time expressed as UNIX time
+ * @param context the application-provided context
+ * @return CPL_OK or an error code (the caller should fail on this error)
+ */
+typedef cpl_return_t (*cpl_id_timestamp_iterator_t)
+						(const cpl_id_t id,
+						 const unsigned long timestamp,
+						 void* context);
 
 /**
  * The iterator callback function used by cpl_get_object_ancestry().
@@ -589,8 +615,13 @@ WINDLL_API extern const cpl_id_t CPL_NONE;
 
 
 /***************************************************************************/
-/** Graph Traversal & Query Flags                                         **/
+/** Graph Traversal, Query, and Lookup Flags                              **/
 /***************************************************************************/
+
+/**
+ * Do not fail during lookup (return CPL_S_NO_DATA if not found)
+ */
+#define CPL_L_NO_FAIL					(1 << 0)
 
 /**
  * Get ancestors
@@ -690,6 +721,26 @@ cpl_lookup_object(const char* originator,
 				  const char* name,
 				  const char* type,
 				  cpl_id_t* out_id);
+
+/**
+ * Look up an object by name. If multiple objects share the same name,
+ * return all of them.
+ *
+ * @param originator the object originator
+ * @param name the object name
+ * @param type the object type
+ * @param flags a logical combination of CPL_L_* flags
+ * @param iterator the iterator to be called for each matching object
+ * @param context the caller-provided iterator context
+ * @return CPL_OK or an error code
+ */
+EXPORT cpl_return_t
+cpl_lookup_object_ext(const char* originator,
+					  const char* name,
+					  const char* type,
+					  const int flags,
+					  cpl_id_timestamp_iterator_t iterator,
+					  void* context);
 
 /**
  * Lookup or create an object if it does not exist.

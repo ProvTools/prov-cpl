@@ -215,6 +215,68 @@ public class CPLObject {
 
 
 	/**
+	 * Lookup an existing object
+	 *
+	 * @param originator the originator
+	 * @param name the object name
+	 * @param type the object type
+	 * @return the collection of objects, or an empty collection if not found
+	 */
+	public static Vector<CPLObject> tryLookupAll(String originator, String name,
+			String type) {
+
+		SWIGTYPE_p_std_vector_cpl_id_timestamp_t pVector
+			= CPLDirect.new_std_vector_cpl_id_timestamp_tp();
+		SWIGTYPE_p_void pv = CPLDirect
+			.cpl_convert_p_std_vector_cpl_id_timestamp_t_to_p_void(pVector);
+		Vector<CPLObject> result = new Vector<CPLObject>();
+
+		try {
+            int r = CPLDirect.cpl_lookup_object_ext(originator, name, type,
+                    CPLDirect.CPL_L_NO_FAIL,
+					CPLDirect.cpl_cb_collect_id_timestamp_vector, pv);
+			CPLException.assertSuccess(r);
+
+			cpl_id_timestamp_t_vector v = CPLDirect
+				.cpl_dereference_p_std_vector_cpl_id_timestamp_t(pVector);
+			long l = v.size();
+			for (long i = 0; i < l; i++) {
+				cpl_id_timestamp_t e = v.get((int) i);
+                cpl_id_t id = e.getId();
+
+                CPLObject o = new CPLObject(id);
+                o.originator = originator;
+                o.name = name;
+                o.type = type;
+
+				result.add(o);
+			}
+		}
+		finally {
+			CPLDirect.delete_std_vector_cpl_id_timestamp_tp(pVector);
+		}
+
+		return result;
+	}
+
+
+	/**
+	 * Lookup an existing object
+	 *
+	 * @param originator the originator
+	 * @param name the object name
+	 * @param type the object type
+	 * @return the collection of objects
+	 */
+	public static Vector<CPLObject> lookupAll(String originator, String name,
+			String type) {
+		Vector<CPLObject> r = tryLookupAll(originator, name, type);
+		if (r.isEmpty()) throw new CPLException(CPLDirect.CPL_E_NOT_FOUND);
+		return r;
+	}
+
+
+	/**
 	 * Lookup an object, or create it if it does not exist
 	 *
 	 * @param originator the originator

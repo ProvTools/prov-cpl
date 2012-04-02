@@ -85,19 +85,19 @@ REAL_BUILD_DIR := "$(realpath $(BUILD_DIR))"
 pre-run::
 
 run: all pre-run
-	@cd "$(RUN_DIR)" && $(LD_PATH_VAR)=$$$(LD_PATH_VAR):$(REAL_BUILD_DIR) \
+	@cd "$(RUN_DIR)" && $(LD_PATH_VAR)=$(REAL_BUILD_DIR):$$$(LD_PATH_VAR) \
 	$(EXECUTABLE)
 
 run-dev: all pre-run
-	@cd "$(RUN_DIR)" && $(LD_PATH_VAR)=$$$(LD_PATH_VAR):$(REAL_BUILD_DIR) \
+	@cd "$(RUN_DIR)" && $(LD_PATH_VAR)=$(REAL_BUILD_DIR):$$$(LD_PATH_VAR) \
 	$(EXECUTABLE) $(RUN_DEV_ARGS)
 
 time: all pre-run
-	@cd "$(RUN_DIR)" && $(LD_PATH_VAR)=$$$(LD_PATH_VAR):$(REAL_BUILD_DIR) \
+	@cd "$(RUN_DIR)" && $(LD_PATH_VAR)=$(REAL_BUILD_DIR):$$$(LD_PATH_VAR) \
 	/usr/bin/time -v $(EXECUTABLE)
 
 time-dev: all pre-run
-	@cd "$(RUN_DIR)" && $(LD_PATH_VAR)=$$$(LD_PATH_VAR):$(REAL_BUILD_DIR) \
+	@cd "$(RUN_DIR)" && $(LD_PATH_VAR)=$(REAL_BUILD_DIR):$$$(LD_PATH_VAR) \
 	/usr/bin/time -v $(EXECUTABLE) $(RUN_DEV_ARGS)
 
 
@@ -118,27 +118,27 @@ release-run:
 .PHONY: gdb valgrind vg vg-dev vg-all vg-dev-all
 
 gdb: all pre-run
-	@cd "$(RUN_DIR)" && $(LD_PATH_VAR)=$$$(LD_PATH_VAR):$(REAL_BUILD_DIR) \
+	@cd "$(RUN_DIR)" && $(LD_PATH_VAR)=$(REAL_BUILD_DIR):$$$(LD_PATH_VAR) \
 	gdb $(EXECUTABLE)
 
 vg valgrind: all pre-run
-	@cd "$(RUN_DIR)" && $(LD_PATH_VAR)=$$$(LD_PATH_VAR):$(REAL_BUILD_DIR) \
+	@cd "$(RUN_DIR)" && $(LD_PATH_VAR)=$(REAL_BUILD_DIR):$$$(LD_PATH_VAR) \
 	valgrind --tool=memcheck --leak-check=yes --num-callers=24 \
 	          $(EXECUTABLE)
 
 vg-dev: all pre-run
-	@cd "$(RUN_DIR)" && $(LD_PATH_VAR)=$$$(LD_PATH_VAR):$(REAL_BUILD_DIR) \
+	@cd "$(RUN_DIR)" && $(LD_PATH_VAR)=$(REAL_BUILD_DIR):$$$(LD_PATH_VAR) \
 	valgrind --tool=memcheck --leak-check=yes --num-callers=24 \
 	          $(EXECUTABLE) $(RUN_DEV_ARGS)
 
 vg-all: all pre-run
-	@cd "$(RUN_DIR)" && $(LD_PATH_VAR)=$$$(LD_PATH_VAR):$(REAL_BUILD_DIR) \
+	@cd "$(RUN_DIR)" && $(LD_PATH_VAR)=$(REAL_BUILD_DIR):$$$(LD_PATH_VAR) \
 	valgrind --tool=memcheck --leak-check=yes --num-callers=24 \
 	          --show-reachable=yes --track-origins=yes \
 	          $(EXECUTABLE) $(RUN_VG_ARGS)
 
 vg-dev-all: all pre-run
-	@cd "$(RUN_DIR)" && $(LD_PATH_VAR)=$$$(LD_PATH_VAR):$(REAL_BUILD_DIR) \
+	@cd "$(RUN_DIR)" && $(LD_PATH_VAR)=$(REAL_BUILD_DIR):$$$(LD_PATH_VAR) \
 	valgrind --tool=memcheck --leak-check=yes --num-callers=24 \
 	          --show-reachable=yes --track-origins=yes \
 	          $(EXECUTABLE) $(RUN_VG_ARGS) $(RUN_DEV_ARGS)

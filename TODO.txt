@@ -14,6 +14,7 @@ Tools:
   - Port to Windows
 
 Language Bindings:
+  - Add support for cpl_lookup_object_ext to Perl bindings
   - Add support for properties to Perl bindings
   - Add support for files to Perl bindings
   - Implement Python bindings

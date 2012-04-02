@@ -166,6 +166,14 @@ public class test {
 		if (objfx != null)
 			throw new RuntimeException("Object lookup did not fail as expected");
 
+		System.out.print("CPLObject.lookupAll(\"Object A\", \"File\")");
+		Vector<CPLObject> objv = CPLObject.lookupAll(ORIGINATOR, "Object A", "File");
+		System.out.println(": " + (objv.contains(obj2) ? "" : "not ") + "found "
+                + "(" + objv.size() + " result" + (objv.size() == 1 ? "" : "s")
+                + ")");
+		if (!objv.contains(obj2))
+			throw new RuntimeException("Object lookup did not return the right object");
+
 		System.out.println();
 
 
@@ -175,27 +183,27 @@ public class test {
 
 		System.out.print("obj2.dataFlowFrom(obj1)");
 		boolean r1 = obj2.dataFlowFrom(obj1);
-		if (!r1) { System.out.println(" [duplicate ignored]"); }
+		if (!r1) { System.out.print(" [duplicate ignored]"); }
 		System.out.println();
 
 		System.out.print("obj2.dataFlowFrom(obj1, DATA_INPUT)");
 		boolean r2 = obj2.dataFlowFrom(obj1, CPLObject.DATA_INPUT);
-		if (!r2) { System.out.println(" [duplicate ignored]"); }
+		if (!r2) { System.out.print(" [duplicate ignored]"); }
 		System.out.println();
 
 		System.out.print("obj3.dataFlowFrom(obj2, DATA_INPUT)");
 		boolean r3 = obj3.dataFlowFrom(obj2, CPLObject.DATA_INPUT);
-		if (!r3) { System.out.println(" [duplicate ignored]"); }
+		if (!r3) { System.out.print(" [duplicate ignored]"); }
 		System.out.println();
 
 		System.out.print("obj3.controlledBy(obj1, CONTROL_START)");
 		boolean r4 = obj3.controlledBy(obj1, CPLObject.CONTROL_START);
-		if (!r4) { System.out.println(" [duplicate ignored]"); }
+		if (!r4) { System.out.print(" [duplicate ignored]"); }
 		System.out.println();
 
 		System.out.print("obj1.dataFlowFrom(obj3, 0, DATA_TRANSLATION)");
 		boolean r5 = obj1.dataFlowFrom(obj3, 0, CPLObject.DATA_TRANSLATION);
-		if (!r5) { System.out.println(" [duplicate ignored]"); }
+		if (!r5) { System.out.print(" [duplicate ignored]"); }
 		System.out.println();
 
 		System.out.println();

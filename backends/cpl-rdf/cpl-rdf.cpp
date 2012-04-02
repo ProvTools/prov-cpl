@@ -329,6 +329,72 @@ cpl_rdf_lookup_object(struct _cpl_db_backend_t* backend,
 
 
 /**
+ * Look up an object by name. If multiple objects share the same name,
+ * return all of them.
+ *
+ * @param backend the pointer to the backend structure
+ * @param originator the object originator
+ * @param name the object name
+ * @param type the object type
+ * @param flags a logical combination of CPL_L_* flags
+ * @param iterator the iterator to be called for each matching object
+ * @param context the caller-provided iterator context
+ * @return CPL_OK or an error code
+ */
+cpl_return_t
+cpl_rdf_lookup_object_ext(struct _cpl_db_backend_t* backend,
+						  const char* originator,
+						  const char* name,
+						  const char* type,
+						  const int flags,
+						  cpl_id_timestamp_iterator_t iterator,
+						  void* context)
+{
+	assert(backend != NULL);
+	cpl_rdf_t* rdf = (cpl_rdf_t*) backend;
+
+	std::ostringstream ss;
+
+	ss << "PREFIX o: <object:>\n";
+	ss << "PREFIX p: <prop:>\n";
+	ss << "SELECT ?obj, ?t WHERE { ?obj";
+	ss << " p:originator \"" << cpl_rdf_escape_string(originator) << "\";";
+	ss << " p:name \"" << cpl_rdf_escape_string(name) << "\";";
+	ss << " p:type \"" << cpl_rdf_escape_string(type) << "\";";
+	ss << " p:creation_time ?t . }";
+
+	RDFResultSet rs;
+	cpl_return_t ret = cpl_rdf_connection_execute_query(rdf->connection_query,
+			ss.str().c_str(), &rs);
+
+	if (ret == CPL_S_NO_DATA) return CPL_E_NOT_FOUND;
+	if (!CPL_IS_OK(ret)) return ret;
+	if (rs.size() == 0) return CPL_E_BACKEND_INTERNAL_ERROR;
+
+	cpl_id_t id;
+	unsigned long t;
+
+	for (unsigned u = 0; u < rs.size(); u++) {
+
+		RDFValue* v;
+		ret = rs[u].get_s("obj", RDF_XSD_URI, &v);
+		if (!CPL_IS_OK(ret)) return ret;
+		int r = sscanf(v->v_uri, "object:%llx-%llx", &id.hi, &id.lo);
+		if (r != 2) return CPL_E_BACKEND_INTERNAL_ERROR;
+
+		ret = rs[u].get_s("t", RDF_XSD_INTEGER, &v);
+		if (!CPL_IS_OK(ret)) return ret;
+		t = v->v_integer;
+
+		ret = iterator(id, t, context);
+		if (!CPL_IS_OK(ret)) return ret;
+	}
+	
+	return CPL_OK;
+}
+
+
+/**
  * Create a new version of the given object
  *
  * @param backend the pointer to the backend structure
@@ -1148,6 +1214,7 @@ const cpl_db_backend_t CPL_RDF_BACKEND = {
 	cpl_rdf_create_session,
 	cpl_rdf_create_object,
 	cpl_rdf_lookup_object,
+	cpl_rdf_lookup_object_ext,
 	cpl_rdf_create_version,
 	cpl_rdf_get_version,
 	cpl_rdf_add_ancestry_edge,

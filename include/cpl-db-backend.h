@@ -131,6 +131,28 @@ typedef struct _cpl_db_backend_t {
 							cpl_id_t* out_id);
 
 	/**
+	 * Look up an object by name. If multiple objects share the same name,
+	 * return all of them.
+	 *
+	 * @param backend the pointer to the backend structure
+	 * @param originator the object originator
+	 * @param name the object name
+	 * @param type the object type
+	 * @param flags a logical combination of CPL_L_* flags
+	 * @param iterator the iterator to be called for each matching object
+	 * @param context the caller-provided iterator context
+	 * @return CPL_OK or an error code
+	 */
+	cpl_return_t
+	(*cpl_db_lookup_object_ext)(struct _cpl_db_backend_t* backend,
+								const char* originator,
+								const char* name,
+								const char* type,
+								const int flags,
+								cpl_id_timestamp_iterator_t iterator,
+								void* context);
+
+	/**
 	 * Create a new version of the given object
 	 *
 	 * @param backend the pointer to the backend structure

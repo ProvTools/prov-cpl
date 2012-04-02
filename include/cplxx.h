@@ -302,6 +302,25 @@ typedef struct cplxx_property_entry {
 /***************************************************************************/
 
 /**
+ * The iterator callback for cpl_lookup_object_ext() that collects the returned
+ * information in an instance of std::vector<cpl_id_timestamp_t>.
+ *
+ * @param id the object ID
+ * @param version the object version
+ * @param key the property name
+ * @param value the property value
+ * @param context the pointer to an instance of the vector 
+ * @return CPL_OK or an error code
+ */
+#ifdef SWIG
+%constant
+#endif
+EXPORT cpl_return_t
+cpl_cb_collect_id_timestamp_vector(const cpl_id_t id,
+								   const unsigned long timestamp,
+								   void* context);
+
+/**
  * The iterator callback for cpl_get_object_ancestry() that collects
  * the passed-in information in an instance of std::list<cpl_ancestry_entry_t>.
  *

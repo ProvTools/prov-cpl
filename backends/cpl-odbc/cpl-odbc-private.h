@@ -124,6 +124,17 @@ typedef struct {
 	SQLHSTMT lookup_object_stmt;
 
 	/**
+	 * The lock for lookup_object_ext
+	 */
+	mutex_t lookup_object_ext_lock;
+
+	/**
+	 * The statement for looking up an object by name (including originator
+	 * and type)
+	 */
+	SQLHSTMT lookup_object_ext_stmt;
+
+	/**
 	 * Lock for version creation
 	 */
 	mutex_t create_version_lock;
