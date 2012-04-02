@@ -81,6 +81,10 @@ public class CPLObject {
 	/// Traversal direction: Descendants
 	public static final int D_DESCENDANTS=CPLDirectConstants.CPL_D_DESCENDANTS;
 
+	/// Traversal option: No prev/next version edges
+	public static final int A_NO_PREV_NEXT_VERSION
+		= CPLDirectConstants.CPL_A_NO_PREV_NEXT_VERSION;
+
 	/// Traversal option: No data dependencies
 	public static final int A_NO_DATA_DEPENDENCIES
 		= CPLDirectConstants.CPL_A_NO_DATA_DEPENDENCIES;
