@@ -34,6 +34,7 @@
 
 #include "stdafx.h"
 #include <private/cpl-lock.h>
+#include <cpl-exception.h>
 #include "cpl-platform.h"
 
 #if defined(__unix__) || defined(__APPLE__)

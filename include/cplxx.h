@@ -139,7 +139,7 @@ operator>=(const cpl_id_t& a, const cpl_id_t& b)
 inline bool
 operator==(const cpl_id_t& a, const cpl_id_t& b)
 {
-	return a.hi == b.hi && a.lo == b.lo;
+	return a.hi == b.hi && a.lo == b.lo; 
 }
 
 /**
@@ -162,7 +162,7 @@ operator!=(const cpl_id_t& a, const cpl_id_t& b)
 /***************************************************************************/
 
 /**
- * Traits
+ * Traits for cpl_id_t
  */
 struct cpl_traits_id_t
 {
@@ -188,15 +188,19 @@ struct cpl_traits_id_t
 	}
 
 	/**
-	 * Determine whether the two parameters are equal
+	 * Determine whether the two parameters are equal on UNIX or a < b on Windows
 	 *
 	 * @param a the first argument
 	 * @param b the second argument
-	 * @return true if they are equal
+	 * @return true if they are equal on UNIX or a < b on Windows
 	 */
 	inline bool operator() (const cpl_id_t& a, const cpl_id_t& b) const
 	{
+#if defined _WIN64 || defined _WIN32
+		return a < b;
+#else
 		return a == b;
+#endif
 	}
 };
 

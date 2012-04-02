@@ -501,6 +501,9 @@ test_simple(void)
 	ret = cpl_data_flow(obj2, obj, CPL_DATA_INPUT);
 	print(L_DEBUG, "cpl_data_flow --> %d", ret);
 	CPL_VERIFY(cpl_data_flow, ret);
+	if (ret != CPL_S_DUPLICATE_IGNORED) {
+		throw CPLException("This is a duplicate, but it was not ignored");
+	}
 
 	ret = cpl_control(obj3, obj, CPL_CONTROL_START);
 	print(L_DEBUG, "cpl_control --> %d", ret);

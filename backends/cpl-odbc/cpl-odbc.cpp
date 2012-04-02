@@ -1655,11 +1655,23 @@ cpl_odbc_get_object_info(struct _cpl_db_backend_t* backend,
 
 	CPL_SQL_SIMPLE_FETCH_EXT(dynamically_allocated_string, 4, &p->originator,
 							 true);
+#ifdef _WINDOWS
+	if (r == CPL_E_DB_NULL) p->originator = _strdup("");
+#else
 	if (r == CPL_E_DB_NULL) p->originator = strdup("");
+#endif
 	CPL_SQL_SIMPLE_FETCH_EXT(dynamically_allocated_string, 5, &p->name, true);
+#ifdef _WINDOWS
+	if (r == CPL_E_DB_NULL) p->name = _strdup("");
+#else
 	if (r == CPL_E_DB_NULL) p->name = strdup("");
+#endif
 	CPL_SQL_SIMPLE_FETCH_EXT(dynamically_allocated_string, 6, &p->type, true);
+#ifdef _WINDOWS
+	if (r == CPL_E_DB_NULL) p->type = _strdup("");
+#else
 	if (r == CPL_E_DB_NULL) p->type = strdup("");
+#endif
 
 	CPL_SQL_SIMPLE_FETCH_EXT(llong, 7, (long long*) &p->container_id.hi, true);
 	if (r == CPL_E_DB_NULL) p->container_id = CPL_NONE;
