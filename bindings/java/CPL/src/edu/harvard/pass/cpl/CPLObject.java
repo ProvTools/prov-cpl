@@ -51,6 +51,9 @@ public class CPLObject {
 	private static cpl_id_t nullId = null;
 
 	/// Data flow type: Generic
+	public static final int DATA_GENERIC = CPLDirectConstants.CPL_DATA_GENERIC;
+
+	/// Data flow type: Generic
 	public static final int DATA_INPUT = CPLDirectConstants.CPL_DATA_INPUT;
 
 	/// Data flow type: IPC
@@ -62,6 +65,9 @@ public class CPLObject {
 
 	/// Data flow type: Copy
 	public static final int DATA_COPY = CPLDirectConstants.CPL_DATA_COPY;
+
+	/// Control flow type: Generic
+	public static final int CONTROL_GENERIC=CPLDirectConstants.CPL_CONTROL_GENERIC;
 
 	/// Control flow type: Generic
 	public static final int CONTROL_OP = CPLDirectConstants.CPL_CONTROL_OP;
@@ -631,7 +637,7 @@ public class CPLObject {
 	 */
 	public boolean dataFlowFrom(CPLObjectVersion source){
 		int r = CPLDirect.cpl_data_flow_ext(id, source.getObject().id,
-				source.getVersion(), DATA_INPUT);
+				source.getVersion(), DATA_GENERIC);
 		CPLException.assertSuccess(r);
 		return r != CPLDirectConstants.CPL_S_DUPLICATE_IGNORED;
 	}
@@ -658,7 +664,7 @@ public class CPLObject {
 	 * @return true if the dependency was added, false if it is a duplicate
 	 */
 	public boolean dataFlowFrom(CPLObject source) {
-		int r = CPLDirect.cpl_data_flow(id, source.id, DATA_INPUT);
+		int r = CPLDirect.cpl_data_flow(id, source.id, DATA_GENERIC);
 		CPLException.assertSuccess(r);
 		return r != CPLDirectConstants.CPL_S_DUPLICATE_IGNORED;
 	}
@@ -704,7 +710,7 @@ public class CPLObject {
 	 */
 	public boolean controlledBy(CPLObjectVersion controller) {
 		int r = CPLDirect.cpl_control_ext(id, controller.getObject().id,
-				controller.getVersion(), CONTROL_OP);
+				controller.getVersion(), CONTROL_GENERIC);
 		CPLException.assertSuccess(r);
 		return r != CPLDirectConstants.CPL_S_DUPLICATE_IGNORED;
 	}
@@ -731,7 +737,7 @@ public class CPLObject {
 	 * @return true if the dependency was added, false if it is a duplicate
 	 */
 	public boolean controlledBy(CPLObject controller) {
-		int r = CPLDirect.cpl_control(id, controller.id, CONTROL_OP);
+		int r = CPLDirect.cpl_control(id, controller.id, CONTROL_GENERIC);
 		CPLException.assertSuccess(r);
 		return r != CPLDirectConstants.CPL_S_DUPLICATE_IGNORED;
 	}
