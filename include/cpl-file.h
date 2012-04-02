@@ -89,18 +89,8 @@ typedef struct cpl_sha1 {
 
 
 /***************************************************************************/
-/** Standard Object Constants - Originators and Types                     **/
+/** Standard Property Names                                               **/
 /***************************************************************************/
-
-/**
- * The file system originator (use for files, set object name to real-path)
- */
-#define CPL_O_FILESYSTEM				"/fs"
-
-/**
- * The default file type
- */
-#define CPL_T_FILE						"FILE"
 
 /**
  * The SHA1 fingerprint property

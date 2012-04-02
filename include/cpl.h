@@ -615,6 +615,48 @@ WINDLL_API extern const cpl_id_t CPL_NONE;
 
 
 /***************************************************************************/
+/** Standard Object Originators                                           **/
+/***************************************************************************/
+
+/**
+ * The file system originator (use for files, set object name to real-path)
+ */
+#define CPL_O_FILESYSTEM				"/fs"
+
+/**
+ * The Internet originator (use for everything on the Internet)
+ */
+#define CPL_O_INTERNET					"/internet"
+
+
+
+/***************************************************************************/
+/** Standard Object Types                                                 **/
+/***************************************************************************/
+
+/**
+ * The default artifact type
+ */
+#define CPL_T_ARTIFACT					"ARTIFACT"
+
+/**
+ * The default file type
+ */
+#define CPL_T_FILE						"FILE"
+
+/**
+ * The default process type
+ */
+#define CPL_T_PROCESS					"PROCESS"
+
+/**
+ * The default URL type
+ */
+#define CPL_T_URL						"URL"
+
+
+
+/***************************************************************************/
 /** Graph Traversal, Query, and Lookup Flags                              **/
 /***************************************************************************/
 
