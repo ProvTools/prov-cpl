@@ -75,6 +75,12 @@ public class CPLObject {
 	/// Control flow type: Start
 	public static final int CONTROL_START=CPLDirectConstants.CPL_CONTROL_START;
 
+	/// Version dependency: Generic
+	public static final int VERSION_GENERIC=CPLDirectConstants.CPL_VERSION_GENERIC;
+
+	/// Version dependency: Previous version
+	public static final int VERSION_PREV = CPLDirectConstants.CPL_VERSION_PREV;
+
 	/// Traversal direction: Ancestors
 	public static final int D_ANCESTORS = CPLDirectConstants.CPL_D_ANCESTORS;
 

@@ -195,6 +195,16 @@ public class CPLAncestryEntry {
 
 
 	/**
+	 * Is this a version dependency?
+	 *
+	 * @return true if this is a version dependency
+	 */
+	public boolean isVersionDependency() {
+		return (type>>8) == CPLDirectConstants.CPL_DEPENDENCY_CATEGORY_VERSION;
+	}
+
+
+	/**
 	 * Get the direction of the dependency
 	 *
 	 * @return true if the other object is an ancestor
