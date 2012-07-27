@@ -330,12 +330,9 @@ main(int argc, char** argv)
 
 		if (strcasecmp(backend_type, "ODBC") == 0) {
 
-			std::string dsn;
-			std::string conn;
-			int type = CPL_ODBC_GENERIC;
-
-
 			// Determine the DB type
+
+			int type = CPL_ODBC_GENERIC;
 
 #define MATCH_DB_TYPE(x, c) if (strcasecmp(db_type, x) == 0) type = c;
 			
@@ -343,39 +340,33 @@ main(int argc, char** argv)
 			MATCH_DB_TYPE("PostgreSQL", CPL_ODBC_POSTGRESQL);
 			MATCH_DB_TYPE("Postgres", CPL_ODBC_POSTGRESQL);
 
-			if (strcmp(db_type, "") != 0 && type == CPL_ODBC_UNKNOWN) {
+			if (strcmp(db_type, "") != 0 && type == CPL_ODBC_GENERIC) {
 				throw CPLException("Unsupported relational database: %s",
 						db_type);
 			}
-			/*if (type == CPL_ODBC_UNKNOWN) {
-				fprintf(stderr, "%s: Warning: The database type is not set; "
-						"please use the --db-type option\n", program_name);
-			}*/
 
 
-			// Get the connection string
+			// Check the connection string to see if it is just DSN
 
 			if (strchr(odbc_connection_string, '=') == NULL) {
-				if (strchr(odbc_connection_string, ';') != NULL
-						|| strchr(odbc_connection_string, '{') != NULL
-						|| strchr(odbc_connection_string, '}') != NULL) {
-					throw CPLException("Invalid ODBC DSN");
-				}
 
-				dsn = odbc_connection_string;
-				conn = "DSN="; conn += dsn; conn += "";
+				// Open the ODBC connection
+
+				ret = cpl_create_odbc_backend_dsn(odbc_connection_string,
+						CPL_ODBC_GENERIC, &backend);
+				if (!CPL_IS_OK(ret)) {
+					throw CPLException("Could not open the ODBC connection");
+				}
 			}
 			else {
-				conn = odbc_connection_string;
-				dsn = "";
-			}
 
+				// Open the ODBC connection
 
-			// Open the ODBC connection
-
-			ret = cpl_create_odbc_backend(conn.c_str(), type, &backend);
-			if (!CPL_IS_OK(ret)) {
-				throw CPLException("Could not open the ODBC connection");
+				ret = cpl_create_odbc_backend(odbc_connection_string,
+						CPL_ODBC_GENERIC, &backend);
+				if (!CPL_IS_OK(ret)) {
+					throw CPLException("Could not open the ODBC connection");
+				}
 			}
 		}
 

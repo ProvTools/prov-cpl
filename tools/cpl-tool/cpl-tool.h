@@ -190,5 +190,15 @@ tool_descendants(int argc, char** argv);
 int
 tool_disclose(int argc, char** argv);
 
+/**
+ * Print information about the object
+ *
+ * @param argc the number of command-line arguments
+ * @param argv the vector of command-line arguments
+ * @return the exit code
+ */
+int
+tool_obj_info(int argc, char** argv);
+
 #endif
 

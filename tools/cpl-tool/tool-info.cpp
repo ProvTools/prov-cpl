@@ -1,5 +1,5 @@
 /*
- * tool-ancestry.cpp
+ * tool-session.cpp
  * Core Provenance Library
  *
  * Copyright 2012
@@ -55,12 +55,6 @@ static bool recursive = false;
  * Verbose mode
  */
 static bool verbose = false;
-
-
-/**
- * Whether to include session info
- */
-static bool include_session = false;
 
 
 /**
@@ -130,10 +124,9 @@ cb_atexit(void)
  * Print a single level of provenance for the given file
  * 
  * @param filename the file name
- * @param direction CPL_D_ANCESTORS or CPL_D_DESCENDANTS
  */
 static void
-print_provenance(const char* filename, int direction)
+print_info(const char* filename)
 {
 	printf("%s\n", filename);
 
@@ -148,106 +141,91 @@ print_provenance(const char* filename, int direction)
 				filename, cpl_error_string(ret));
 	}
 	
-	std::list<cpl_ancestry_entry_t> l;
-	ret = cpl_get_object_ancestry(id, CPL_VERSION_NONE, direction, 0,
-			cpl_cb_collect_ancestry_list, &l);
+	cpl_object_info_t* info = NULL;
+	ret = cpl_get_object_info(id, &info);
 	if (!CPL_IS_OK(ret)) {
-		throw CPLException("Could not look up the %s of \"%s\" -- %s",
-				direction == CPL_D_ANCESTORS ? "ancestors" : "descendants",
+		throw CPLException("Could not look up information about \"%s\" -- %s",
 				filename, cpl_error_string(ret));
 	}
 
-
-	// Process each ancestry entry
 	
-	for (std::list<cpl_ancestry_entry_t>::iterator next = l.begin();
-			next != l.end();) {
-		std::list<cpl_ancestry_entry_t>::iterator i = next++;
+	// Print
 
+	for (cpl_version_t v = verbose ? 0 : info->version;
+			v <= info->version; v++) {
 
-		// Get the object info
+		// Get the session info
 
-		cpl_object_info_t* info;
-		ret = cpl_get_object_info(i->other_object_id, &info);
+		cpl_session_info_t* session = NULL;
+
+		cpl_version_info_t* vinfo;
+		ret = cpl_get_version_info(id, v, &vinfo);
 		if (!CPL_IS_OK(ret)) {
-			throw CPLException("Could not lookup one of the %s of \"%s\" -- %s",
-					direction == CPL_D_ANCESTORS ? "ancestors" : "descendants",
-					filename, cpl_error_string(ret));
+			cpl_free_object_info(info);
+			throw CPLException("Could not lookup the version info of "
+					"\"%s\" -- %s", filename, cpl_error_string(ret));
+		}
+		cpl_session_t sid = vinfo->session;
+		cpl_free_version_info(vinfo);
+
+		session_map_t::iterator j = session_map.find(sid);
+		if (j != session_map.end()) {
+			session = j->second;
+		}
+		else {
+			ret = cpl_get_session_info(sid, &session);
+			if (!CPL_IS_OK(ret)) {
+				cpl_free_object_info(info);
+				throw CPLException("Could not lookup the session info of "
+						"\"%s\" -- %s", filename, cpl_error_string(ret));
+			}
+			session_map[sid] = session;
 		}
 
 
-		// Get the session info (if needed)
-
-		cpl_session_info_t* session = NULL;
-		if (include_session) {
-
-			cpl_version_info_t* vinfo;
-			ret = cpl_get_version_info(i->query_object_id,
-					i->query_object_version, &vinfo);
-			if (!CPL_IS_OK(ret)) {
-				cpl_free_object_info(info);
-				throw CPLException("Could not lookup the version info of "
-						"\"%s\" -- %s", info->name, cpl_error_string(ret));
-			}
-			cpl_session_t sid = vinfo->session;
-			cpl_free_version_info(vinfo);
-
-			session_map_t::iterator j = session_map.find(sid);
-			if (j != session_map.end()) {
-				session = j->second;
-			}
-			else {
-				ret = cpl_get_session_info(sid, &session);
-				if (!CPL_IS_OK(ret)) {
-					throw CPLException("Could not lookup the session info of "
-							"\"%s\" -- %s", info->name, cpl_error_string(ret));
-				}
-				session_map[sid] = session;
-			}
+		// Get the properties
+		
+		std::vector<cplxx_property_entry_t> properties;
+		ret = cpl_get_properties(id, verbose ? v : CPL_VERSION_NONE,
+				NULL, cpl_cb_collect_properties_vector, &properties);
+		if (!CPL_IS_OK(ret)) {
+			cpl_free_object_info(info);
+			throw CPLException("Could not lookup the properties of "
+					"\"%s\" -- %s", filename, cpl_error_string(ret));
 		}
 
 
 		// Print
 
-		printf(" %s%s%s%s ",
-				termcap_ac_start,
-				next == l.end() ? termcap_left_bottom_corner : termcap_left_tee,
-				termcap_horizontal_line,
-				termcap_ac_end);
+		printf("Version %d:%c", v, verbose ? '\n' : '\n');
+		if (verbose) {
+			printf("    Session: %s\n", session->cmdline);
+		}
 
-		if (strcmp(info->originator, CPL_O_FILESYSTEM) == 0) {
-			printf("%s", info->name);
-			if (strcmp(info->type, CPL_T_FILE) != 0) {
-				printf(" [%s]", info->type);
+		if (!properties.empty()) {
+			printf("%sProperties:\n", verbose ? "    " : "");
+			for (size_t i = 0; i < properties.size(); i++) {
+				printf("%s    %s = %s\n", verbose ? "    " : "",
+						properties[i].key.c_str(),
+						properties[i].value.c_str());
 			}
 		}
-		else {
-			printf("%s :: %s [%s]", info->originator, info->name, info->type);
-		}
-
-		printf(", ver. %d", i->other_object_version);
-
-		if (include_session) {
-			printf(", by %s", session->cmdline);
-		}
-
-		printf("\n");
-		
-		cpl_free_object_info(info);
 	}
+	
+	printf("\n");
+	cpl_free_object_info(info);
 }
 
 
 /**
- * List all ancestors or descendants of a file
+ * Print information about the object
  *
  * @param argc the number of command-line arguments
  * @param argv the vector of command-line arguments
- * @param direction CPL_D_ANCESTORS or CPL_D_DESCENDANTS
  * @return the exit code
  */
 int
-tool_ancestry(int argc, char** argv, int direction)
+tool_obj_info(int argc, char** argv)
 {
 	atexit(cb_atexit);
 
@@ -283,10 +261,6 @@ tool_ancestry(int argc, char** argv, int direction)
 		}
 	}
 
-	if (verbose) {
-		include_session = true;
-	}
-
 
 	// Check to see if we have input files
 
@@ -312,37 +286,9 @@ tool_ancestry(int argc, char** argv, int direction)
 	
 	for (std::list<std::string>::iterator i = files.begin();
 			i != files.end(); i++) {
-		print_provenance(i->c_str(), direction);
+		print_info(i->c_str());
 	}
 
 	return 0;
-}
-
-
-/**
- * List all ancestors of a file
- *
- * @param argc the number of command-line arguments
- * @param argv the vector of command-line arguments
- * @return the exit code
- */
-int
-tool_ancestors(int argc, char** argv)
-{
-	return tool_ancestry(argc, argv, CPL_D_ANCESTORS);
-}
-
-
-/**
- * List all descendants of a file
- *
- * @param argc the number of command-line arguments
- * @param argv the vector of command-line arguments
- * @return the exit code
- */
-int
-tool_descendants(int argc, char** argv)
-{
-	return tool_ancestry(argc, argv, CPL_D_DESCENDANTS);
 }
 

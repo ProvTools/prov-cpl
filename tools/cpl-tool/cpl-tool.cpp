@@ -74,11 +74,12 @@ const char* tool_name = NULL;
  */
 static struct tool_info TOOLS[] =
 {
-	{"ancestors",    "List all ancestors of a file",     tool_ancestors    },
-	//{"copy",         "Copy one or more files",           NULL              },
-	{"descendants",  "List all descendants of a file",   tool_descendants  },
-	{"disclose",     "Disclose data or control flow",    tool_disclose     },
+	{"ancestors"   , "List all ancestors of a file"       , tool_ancestors   },
+	{"descendants" , "List all descendants of a file"     , tool_descendants },
+	{"disclose"    , "Disclose data or control flow"      , tool_disclose    },
+	{"info"        , "Print information about the object" , tool_obj_info    },
 	//{"move",         "Move one or more files",           NULL              },
+	//{"copy",         "Copy one or more files",           NULL              },
 	{0, 0, 0}
 };
 
@@ -334,34 +335,27 @@ main(int argc, char** argv)
 
 		if (strcasecmp(backend_type, "ODBC") == 0) {
 
-			std::string dsn;
-			std::string conn;
-
-
-			// Get the connection string
+			// Check the connection string to see if it is just DSN
 
 			if (strchr(odbc_connection_string, '=') == NULL) {
-				if (strchr(odbc_connection_string, ';') != NULL
-						|| strchr(odbc_connection_string, '{') != NULL
-						|| strchr(odbc_connection_string, '}') != NULL) {
-					throw CPLException("Invalid ODBC DSN");
-				}
 
-				dsn = odbc_connection_string;
-				conn = "DSN="; conn += dsn; conn += "";
+				// Open the ODBC connection
+
+				ret = cpl_create_odbc_backend_dsn(odbc_connection_string,
+						CPL_ODBC_GENERIC, &backend);
+				if (!CPL_IS_OK(ret)) {
+					throw CPLException("Could not open the ODBC connection");
+				}
 			}
 			else {
-				conn = odbc_connection_string;
-				dsn = "";
-			}
 
+				// Open the ODBC connection
 
-			// Open the ODBC connection
-
-			ret = cpl_create_odbc_backend(conn.c_str(), CPL_ODBC_GENERIC,
-					&backend);
-			if (!CPL_IS_OK(ret)) {
-				throw CPLException("Could not open the ODBC connection");
+				ret = cpl_create_odbc_backend(odbc_connection_string,
+						CPL_ODBC_GENERIC, &backend);
+				if (!CPL_IS_OK(ret)) {
+					throw CPLException("Could not open the ODBC connection");
+				}
 			}
 		}
 

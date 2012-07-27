@@ -406,6 +406,22 @@ create_random_file(size_t size=256)
 
 
 /**
+ * Sleep for a small amount of time (on the order of seconds)
+ */
+void
+delay()
+{
+	int t = 2;
+
+#if defined(_WINDOWS)
+	Sleep(t * 1000);
+#else
+	usleep(t * 1000000);
+#endif
+}
+
+
+/**
  * The simplest possible test
  */
 void
@@ -413,6 +429,8 @@ test_simple(void)
 {
 	cpl_return_t ret;
 	cpl_session_t session;
+
+	bool with_delays = false;
 
 	cpl_id_t obj  = CPL_NONE;
 	cpl_id_t obj2 = CPL_NONE;
@@ -429,25 +447,31 @@ test_simple(void)
 
 	print(L_DEBUG, " ");
 
+	if (with_delays) delay();
+
 
 	// Object creation
 
 	ret = cpl_create_object(ORIGINATOR, "Process A", "Proc", CPL_NONE, &obj);
 	print(L_DEBUG, "cpl_create_object --> %llx:%llx [%d]", obj.hi, obj.lo, ret);
 	CPL_VERIFY(cpl_create_object, ret);
+	if (with_delays) delay();
 
 	ret = cpl_create_object(ORIGINATOR, "Object A", "File", obj, &obj2);
 	print(L_DEBUG, "cpl_create_object --> %llx:%llx [%d]", obj2.hi,obj2.lo,ret);
 	CPL_VERIFY(cpl_create_object, ret);
+	if (with_delays) delay();
 
 	ret = cpl_create_object(ORIGINATOR, "Process B", "Proc", obj, &obj3);
 	print(L_DEBUG, "cpl_create_object --> %llx:%llx [%d]", obj3.hi,obj3.lo,ret);
 	CPL_VERIFY(cpl_create_object, ret);
+	if (with_delays) delay();
 
 	ret = cpl_lookup_or_create_object(ORIGINATOR, "Process C", "Proc", CPL_NONE, &obj4);
 	print(L_DEBUG, "cpl_lookup_or_create_object --> %llx:%llx [%d]",
 			obj4.hi,obj4.lo,ret);
 	CPL_VERIFY(cpl_lookup_or_create_object, ret);
+	if (with_delays) delay();
 
 	print(L_DEBUG, " ");
 
@@ -460,16 +484,19 @@ test_simple(void)
 	print(L_DEBUG, "cpl_lookup_object --> %llx:%llx [%d]", objx.hi,objx.lo,ret);
 	CPL_VERIFY(cpl_lookup_object, ret);
 	if (obj!=objx)throw CPLException("Object lookup returned the wrong object");
+	if (with_delays) delay();
 
 	ret = cpl_lookup_object(ORIGINATOR, "Object A", "File", &objx);
 	print(L_DEBUG, "cpl_lookup_object --> %llx:%llx [%d]", objx.hi,objx.lo,ret);
 	CPL_VERIFY(cpl_lookup_object, ret);
 	if(obj2!=objx)throw CPLException("Object lookup returned the wrong object");
+	if (with_delays) delay();
 
 	ret = cpl_lookup_object(ORIGINATOR, "Process B", "Proc", &objx);
 	print(L_DEBUG, "cpl_lookup_object --> %llx:%llx [%d]", objx.hi,objx.lo,ret);
 	CPL_VERIFY(cpl_lookup_object, ret);
 	if(obj3!=objx)throw CPLException("Object lookup returned the wrong object");
+	if (with_delays) delay();
 
     std::map<cpl_id_t, unsigned long> ectx;
 	ret = cpl_lookup_object_ext(ORIGINATOR, "Process B", "Proc", CPL_L_NO_FAIL,
@@ -485,9 +512,10 @@ test_simple(void)
     }
     print(L_DEBUG, "cpl_lookup_object_ext --> found (%lu results) [%d]",
             ectx.size(), ret);
-    if (!check_time(ectx[obj3])) {
+    if (!with_delays && !check_time(ectx[obj3])) {
         throw CPLException("The returned timestamp information is incorrect");
     }
+	if (with_delays) delay();
 
 	print(L_DEBUG, " ");
 
@@ -497,6 +525,7 @@ test_simple(void)
 	ret = cpl_data_flow(obj2, obj, CPL_DATA_INPUT);
 	print(L_DEBUG, "cpl_data_flow --> %d", ret);
 	CPL_VERIFY(cpl_data_flow, ret);
+	if (with_delays) delay();
 
 	ret = cpl_data_flow(obj2, obj, CPL_DATA_INPUT);
 	print(L_DEBUG, "cpl_data_flow --> %d", ret);
@@ -504,14 +533,17 @@ test_simple(void)
 	if (ret != CPL_S_DUPLICATE_IGNORED) {
 		throw CPLException("This is a duplicate, but it was not ignored");
 	}
+	if (with_delays) delay();
 
 	ret = cpl_control(obj3, obj, CPL_CONTROL_START);
 	print(L_DEBUG, "cpl_control --> %d", ret);
 	CPL_VERIFY(cpl_control, ret);
+	if (with_delays) delay();
 
 	ret = cpl_data_flow_ext(obj, obj3, 0, CPL_DATA_TRANSLATION);
 	print(L_DEBUG, "cpl_data_flow_ext --> %d", ret);
 	CPL_VERIFY(cpl_data_flow, ret);
+	if (with_delays) delay();
 
 	print(L_DEBUG, " ");
 
@@ -526,12 +558,14 @@ test_simple(void)
 
 	print_session_info(sinfo);
 	if (sinfo->id != session
-			|| !check_time(sinfo->start_time)) {
+			|| (!with_delays && !check_time(sinfo->start_time))) {
 		throw CPLException("The returned session information is incorrect");
 	}
+	if (with_delays) delay();
 
 	ret = cpl_free_session_info(sinfo);
 	CPL_VERIFY(cpl_free_session_info, ret);
+	if (with_delays) delay();
 
 	print(L_DEBUG, " ");
 
@@ -544,16 +578,18 @@ test_simple(void)
 	ret = cpl_get_version(obj, &version);
 	print(L_DEBUG, "cpl_get_version --> %d [%d]", version, ret);
 	CPL_VERIFY(cpl_get_version, ret);
+	if (with_delays) delay();
 	cpl_version_t version1 = version;
 
 	ret = cpl_get_object_info(obj, &info);
 	print(L_DEBUG, "cpl_get_object_info --> %d", ret);
 	CPL_VERIFY(cpl_get_object_info, ret);
+	if (with_delays) delay();
 
 	print_object_info(info);
 	if (info->id != obj || info->version != version
 			|| info->creation_session != session
-			|| !check_time(info->creation_time)
+			|| (!with_delays && !check_time(info->creation_time))
 			|| strcmp(info->originator, ORIGINATOR) != 0
 			|| strcmp(info->name, "Process A") != 0
 			|| strcmp(info->type, "Proc") != 0
@@ -564,6 +600,7 @@ test_simple(void)
 
 	ret = cpl_free_object_info(info);
 	CPL_VERIFY(cpl_free_object_info, ret);
+	if (with_delays) delay();
 
 	print(L_DEBUG, " ");
 
@@ -571,15 +608,17 @@ test_simple(void)
 	print(L_DEBUG, "cpl_get_version --> %d [%d]", version, ret);
 	CPL_VERIFY(cpl_get_version, ret);
 	cpl_version_t version2 = version;
+	if (with_delays) delay();
 
 	ret = cpl_get_object_info(obj2, &info);
 	print(L_DEBUG, "cpl_get_object_info --> %d", ret);
 	CPL_VERIFY(cpl_get_object_info, ret);
+	if (with_delays) delay();
 
 	print_object_info(info);
 	if (info->id != obj2 || info->version != version
 			|| info->creation_session != session
-			|| !check_time(info->creation_time)
+			|| (!with_delays && !check_time(info->creation_time))
 			|| strcmp(info->originator, ORIGINATOR) != 0
 			|| strcmp(info->name, "Object A") != 0
 			|| strcmp(info->type, "File") != 0
@@ -590,6 +629,7 @@ test_simple(void)
 
 	ret = cpl_free_object_info(info);
 	CPL_VERIFY(cpl_free_object_info, ret);
+	if (with_delays) delay();
 
 	print(L_DEBUG, " ");
 
@@ -602,16 +642,18 @@ test_simple(void)
 	ret = cpl_get_version_info(obj, version, &vinfo);
 	print(L_DEBUG, "cpl_get_version_info --> %d", ret);
 	CPL_VERIFY(cpl_get_version_info, ret);
+	if (with_delays) delay();
 
 	print_version_info(vinfo);
 	if (vinfo->id != obj || vinfo->version != version
 			|| vinfo->session != session
-			|| !check_time(vinfo->creation_time)) {
+			|| (!with_delays && !check_time(vinfo->creation_time))) {
 		throw CPLException("The returned version information is incorrect");
 	}
 
 	ret = cpl_free_version_info(vinfo);
 	CPL_VERIFY(cpl_free_version_info, ret);
+	if (with_delays) delay();
 
 	print(L_DEBUG, " ");
 
@@ -619,16 +661,18 @@ test_simple(void)
 	ret = cpl_get_version_info(obj2, version, &vinfo);
 	print(L_DEBUG, "cpl_get_version_info --> %d", ret);
 	CPL_VERIFY(cpl_get_version_info, ret);
+	if (with_delays) delay();
 
 	print_version_info(vinfo);
 	if (vinfo->id != obj2 || vinfo->version != version
 			|| vinfo->session != session
-			|| !check_time(vinfo->creation_time)) {
+			|| (!with_delays && !check_time(vinfo->creation_time))) {
 		throw CPLException("The returned version information is incorrect");
 	}
 
 	ret = cpl_free_version_info(vinfo);
 	CPL_VERIFY(cpl_free_version_info, ret);
+	if (with_delays) delay();
 
 	print(L_DEBUG, " ");
 
@@ -644,6 +688,7 @@ test_simple(void)
 								  cb_object_ancestry, &actx);
 	print(L_DEBUG, "cpl_get_object_ancestry --> %d", ret);
 	CPL_VERIFY(cpl_get_object_ancestry, ret);
+	if (with_delays) delay();
 
 	if (actx.results.size() != 1) throw CPLException("Invalid ancestry");
 	if (actx.results[0].id != obj3) throw CPLException("Invalid ancestry");
@@ -657,6 +702,7 @@ test_simple(void)
 								  cb_object_ancestry, &actx);
 	print(L_DEBUG, "cpl_get_object_ancestry --> %d", ret);
 	CPL_VERIFY(cpl_get_object_ancestry, ret);
+	if (with_delays) delay();
 
 	if (actx.results.size() != 2) throw CPLException("Invalid ancestry");
 	if ((actx.results[0].id != obj3 || actx.results[1].id != obj2)
@@ -672,6 +718,7 @@ test_simple(void)
 								  cb_object_ancestry, &actx);
 	print(L_DEBUG, "cpl_get_object_ancestry --> %d", ret);
 	CPL_VERIFY(cpl_get_object_ancestry, ret);
+	if (with_delays) delay();
 
 	if (actx.results.size() != 0) throw CPLException("Invalid ancestry");
 
@@ -685,6 +732,7 @@ test_simple(void)
 								  cb_object_ancestry, &actx);
 	print(L_DEBUG, "cpl_get_object_ancestry --> %d", ret);
 	CPL_VERIFY(cpl_get_object_ancestry, ret);
+	if (with_delays) delay();
 
 	if (actx.results.size() != 2) throw CPLException("Invalid ancestry");
 	if ((actx.results[0].id != obj3 || actx.results[1].id != obj2)
@@ -700,6 +748,7 @@ test_simple(void)
 								  cb_object_ancestry, &actx);
 	print(L_DEBUG, "cpl_get_object_ancestry --> %d", ret);
 	CPL_VERIFY(cpl_get_object_ancestry, ret);
+	if (with_delays) delay();
 
 	if (actx.results.size() != 3) throw CPLException("Invalid ancestry");
 	if (actx.results[0].id != obj && actx.results[1].id != obj
@@ -713,26 +762,32 @@ test_simple(void)
 	ret = cpl_add_property(obj, "LABEL", "Process A [Proc]");
 	print(L_DEBUG, "cpl_add_property --> %d", ret);
 	CPL_VERIFY(cpl_add_property, ret);
+	if (with_delays) delay();
 
 	ret = cpl_add_property(obj2, "LABEL", "Object A [File]");
 	print(L_DEBUG, "cpl_add_property --> %d", ret);
 	CPL_VERIFY(cpl_add_property, ret);
+	if (with_delays) delay();
 
 	ret = cpl_add_property(obj3, "LABEL", "Process B [Proc]");
 	print(L_DEBUG, "cpl_add_property --> %d", ret);
 	CPL_VERIFY(cpl_add_property, ret);
+	if (with_delays) delay();
 
 	cpl_version_t obj3pv;
 	ret = cpl_get_version(obj3, &obj3pv);
 	CPL_VERIFY(cpl_get_version, ret);
+	if (with_delays) delay();
 
 	ret = cpl_add_property(obj3, "LABEL", "Yay -- Process B [Proc]");
 	print(L_DEBUG, "cpl_add_property --> %d", ret);
 	CPL_VERIFY(cpl_add_property, ret);
+	if (with_delays) delay();
 
 	ret = cpl_add_property(obj3, "TAG", "Hello");
 	print(L_DEBUG, "cpl_add_property --> %d", ret);
 	CPL_VERIFY(cpl_add_property, ret);
+	if (with_delays) delay();
 
 	print(L_DEBUG, " ");
 
@@ -763,6 +818,7 @@ test_simple(void)
 	CPL_VERIFY(cpl_get_properties, ret);
 	if (!contains(pctx, "LABEL", "Process B [Proc]"))
 		throw CPLException("The object is missing a property.");
+	if (with_delays) delay();
 
 	print(L_DEBUG, "LABEL:");
 	pctx.clear();
@@ -776,6 +832,7 @@ test_simple(void)
 		throw CPLException("The object is missing a property.");
 	if (pctx.size() != 2)
 		throw CPLException("The object has unexpected properties.");
+	if (with_delays) delay();
 
 	print(L_DEBUG, "LABEL - version %d:", obj3pv);
 	pctx.clear();
@@ -785,6 +842,7 @@ test_simple(void)
 	CPL_VERIFY(cpl_get_properties, ret);
 	if (!contains(pctx, "LABEL", "Process B [Proc]"))
 		throw CPLException("The object is missing a property.");
+	if (with_delays) delay();
 
 	print(L_DEBUG, "HELLO:");
 	pctx.clear();
@@ -794,6 +852,7 @@ test_simple(void)
 	CPL_VERIFY(cpl_get_properties, ret);
 	if (pctx.size() != 0)
 		throw CPLException("The object has unexpected properties.");
+	if (with_delays) delay();
 
 	print(L_DEBUG, "HELLO - version %d:", obj3pv);
 	pctx.clear();
@@ -803,6 +862,7 @@ test_simple(void)
 	CPL_VERIFY(cpl_get_properties, ret);
 	if (pctx.size() != 0)
 		throw CPLException("The object has unexpected properties.");
+	if (with_delays) delay();
 
 
 	print(L_DEBUG, " ");
@@ -814,6 +874,7 @@ test_simple(void)
 	CPL_VERIFY(cpl_lookup_by_property, ret);
 	if (!contains(lctx, obj3, obj3pv))
 		throw CPLException("The object is missing in the result set.");
+	if (with_delays) delay();
 
 	print(L_DEBUG, " ");
 
@@ -831,6 +892,7 @@ test_simple(void)
 	print(L_DEBUG, "cpl_lookup_file --> %llx:%llx-%d [%d]",
             f1id.hi, f1id.lo, f1v, ret);
 	CPL_VERIFY(cpl_lookup_file, ret);
+	if (with_delays) delay();
 
     cpl_id_t f2id;
     cpl_version_t f2v;
@@ -841,6 +903,7 @@ test_simple(void)
 	print(L_DEBUG, "cpl_lookup_file --> %llx:%llx-%d [%d]",
             f2id.hi, f2id.lo, f1v, ret);
 	CPL_VERIFY(cpl_lookup_file, ret);
+	if (with_delays) delay();
 
     cpl_id_t f3id;
     cpl_version_t f3v;
@@ -851,6 +914,7 @@ test_simple(void)
 	print(L_DEBUG, "cpl_lookup_file --> %llx:%llx-%d [%d]",
             f3id.hi, f3id.lo, f1v, ret);
 	CPL_VERIFY(cpl_lookup_file, ret);
+	if (with_delays) delay();
 
 	std::string f0n = "/tmp/*hello*!@#$%";
     ret = cpl_lookup_file(f0n.c_str(), 0, NULL, NULL);
@@ -861,6 +925,7 @@ test_simple(void)
 	if (ret != CPL_E_NOT_FOUND) {
 		CPL_VERIFY(cpl_lookup_file, ret);
 	}
+	if (with_delays) delay();
 
 	f0n = create_random_file();
     ret = cpl_lookup_file(f0n.c_str(), 0, NULL, NULL);
@@ -876,6 +941,7 @@ test_simple(void)
 	if (ret != CPL_E_NOT_FOUND) {
 		CPL_VERIFY(cpl_lookup_file, ret);
 	}
+	if (with_delays) delay();
 
 
 #ifdef _WINDOWS

@@ -42,13 +42,7 @@
 #include <sql.h>
 #include <sqlext.h>
 
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-#if 0
-}	/* Hack for editors that try to be too smart about indentation */
-#endif
+#include <string>
 
 
 
@@ -80,6 +74,11 @@ typedef struct {
 	 * The database type
 	 */
 	int db_type;
+
+	/**
+	 * The connection string
+	 */
+	std::string connection_string;
 
 	/**
 	 * Lock for session creation
@@ -291,9 +290,24 @@ typedef struct {
 extern const cpl_db_backend_t CPL_ODBC_BACKEND;
 
 
-#ifdef __cplusplus
-}
-#endif
+
+/***************************************************************************/
+/** Miscellaneous                                                         **/
+/***************************************************************************/
+
+/**
+ * ODBC error record
+ */
+typedef struct {
+
+	SQLSMALLINT index;
+	SQLINTEGER native;
+	SQLCHAR state[7];
+	SQLCHAR text[256];
+	SQLSMALLINT length;
+
+} cpl_odbc_error_record_t;
+
 
 #endif
 

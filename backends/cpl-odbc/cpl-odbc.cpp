@@ -50,6 +50,61 @@
 /***************************************************************************/
 
 /**
+ * Get the ODBC error
+ *
+ * @param handle the failed handle
+ * @param type the handle type
+ * @param errors the vector to which store the retrieved error records
+ */
+static void
+fetch_odbc_error(SQLHANDLE handle, SQLSMALLINT type,
+				 std::vector<cpl_odbc_error_record_t>& errors)
+{
+	SQLSMALLINT index = 0;
+	SQLRETURN ret;
+
+	do {
+		cpl_odbc_error_record_t r;
+		r.index = ++index;
+
+		ret = SQLGetDiagRec(type, handle, r.index, r.state, &r.native,
+							r.text, sizeof(r.text), &r.length);
+		
+		if (SQL_SUCCEEDED(ret)) {
+			errors.push_back(r);
+		}
+		else if (ret != SQL_NO_DATA) {
+			fprintf(stderr, "SQLGetDiagRec failed with error code %ld\n",
+					(long) ret);
+		}
+	}
+	while (ret == SQL_SUCCESS);
+}
+
+
+/**
+ * Print the ODBC error to stderr
+ *
+ * @param fn the function that failed
+ * @param errors the vector of error records to print
+ */
+static void
+print_odbc_error(const char *fn, std::vector<cpl_odbc_error_record_t>& errors)
+{
+	fprintf(stderr, "\nThe ODBC driver reported the following while running "
+			"%s:\n", fn);
+
+	for (size_t i = 0; i < errors.size(); i++) {
+		fprintf(stderr, "  %s:%ld:%ld:%s\n",
+				errors[i].state, (long) errors[i].index,
+				(long) errors[i].native, errors[i].text);
+	}
+
+	fprintf(stderr, "\n");
+}
+
+
+/**
  * Print the ODBC error to stderr
  *
  * @param fn the function that failed
@@ -59,37 +114,25 @@
 static void
 print_odbc_error(const char *fn, SQLHANDLE handle, SQLSMALLINT type)
 {
-	// From: http://www.easysoft.com/developer/languages/c/odbc_tutorial.html
+	std::vector<cpl_odbc_error_record_t> errors;
+	fetch_odbc_error(handle, type, errors);
+	print_odbc_error(fn, errors);
+}
 
-	SQLSMALLINT	 i = 0;
-	SQLINTEGER	 native;
-	SQLCHAR	 state[ 7 ];
-	SQLCHAR	 text[256];
-	SQLSMALLINT	 len;
-	SQLRETURN	 ret;
 
-	fprintf(stderr,
-			"\n"
-			"The ODBC driver reported the following while running "
-			"%s:\n",
-			fn);
-
-	do {
-		ret = SQLGetDiagRec(type, handle, ++i, state, &native,
-							text, sizeof(text), &len);
-		
-		if (SQL_SUCCEEDED(ret)) {
-			fprintf(stderr, "  %s:%ld:%ld:%s\n",
-					state, (long) i, (long) native, text);
-		}
-		else if (ret != SQL_NO_DATA) {
-			fprintf(stderr, "  SQLGetDiagRec failed with error code %ld\n",
-					(long) ret);
-		}
-	}
-	while (ret == SQL_SUCCESS);
-
-	fprintf(stderr, "\n");
+/**
+ * Print the ODBC error to stderr
+ *
+ * @param errors the vector of error records
+ * @return boolean if should reconnect
+ */
+static bool
+should_reconnect_due_to_odbc_error(std::vector<cpl_odbc_error_record_t>& errors)
+{
+	if (errors.empty()) return false;
+	if (errors.size() != 1) return false;
+	if (strcmp((const char*) errors[0].state, "08S01") == 0) return true;
+	return false;
 }
 
 
@@ -99,13 +142,53 @@ print_odbc_error(const char *fn, SQLHANDLE handle, SQLSMALLINT type)
  *
  * @param function the function for which the error is checked
  * @param handle the statement handle
- * @param label the label to jump to on error
+ * @param error the label to jump to on error
  */
-#define SQL_ASSERT_NO_ERROR(function, handle, label) { \
+#define SQL_ASSERT_NO_ERROR(function, handle, error) { \
 	if (!SQL_SUCCEEDED(ret)) { \
 		print_odbc_error(#function, handle, SQL_HANDLE_STMT); \
-		goto label; \
+		goto error; \
 	}}
+
+
+/**
+ * Start a block of code that uses SQL_EXECUTE and SQL_EXECUTE_EXT
+ */
+#define SQL_START \
+	SQLRETURN ret; \
+	int retries_left = 3;
+
+
+/**
+ * Execute the prepared statement and handle the error, if any
+ *
+ * @param handle the statement handle
+ * @param retry the label to jump to on retry
+ * @param error the label to jump to on error
+ */
+#define SQL_EXECUTE_EXT(handle, retry, error) { \
+	ret = SQLExecute(handle); \
+	if (!SQL_SUCCEEDED(ret)) { \
+		std::vector<cpl_odbc_error_record_t> errors; \
+		fetch_odbc_error(handle, SQL_HANDLE_STMT, errors); \
+		if (should_reconnect_due_to_odbc_error(errors)) { \
+			if (retries_left-- > 0) { \
+				cpl_return_t ____r = cpl_odbc_reconnect(odbc); \
+				if (CPL_IS_OK(____r)) goto retry; \
+			} \
+		} \
+		print_odbc_error("SQLExecute", errors); \
+		goto error; \
+	}}
+
+
+/**
+ * Execute the prepared statement and handle the error, if any
+ *
+ * @param handle the statement handle
+ */
+#define SQL_EXECUTE(handle) \
+	SQL_EXECUTE_EXT(handle, retry, err);
 
 
 /**
@@ -349,53 +432,19 @@ cpl_sql_fetch_single_dynamically_allocated_string(SQLHSTMT stmt, char** out,
 
 
 /***************************************************************************/
-/** Constructor and Destructor                                            **/
+/** Constructors and a Destructor: Helpers                                **/
 /***************************************************************************/
 
 /**
- * Create an ODBC backend
+ * Connect to a database using ODBC
  *
- * @param connection_string the ODBC connection string
- * @param db_type the database type
- * @param out the pointer to the database backend variable
+ * @param odbc an initialized backend structure
  * @return the error code
  */
-extern "C" EXPORT cpl_return_t
-cpl_create_odbc_backend(const char* connection_string,
-						int db_type,
-						cpl_db_backend_t** out)
+static cpl_return_t cpl_odbc_connect(cpl_odbc_t* odbc)
 {
 	cpl_return_t r = CPL_OK;
-
-	assert(out != NULL);
-	assert(connection_string != NULL);
-
-
-	// Allocate the backend struct
-
-	cpl_odbc_t* odbc = new cpl_odbc_t;
-	if (odbc == NULL) return CPL_E_INSUFFICIENT_RESOURCES;
-	memcpy(&odbc->backend, &CPL_ODBC_BACKEND, sizeof(odbc->backend));
-	odbc->db_type = db_type;
-
-
-	// Initialize the synchronization primitives
-
-	mutex_init(odbc->create_session_lock);
-	mutex_init(odbc->create_object_lock);
-	mutex_init(odbc->lookup_object_lock);
-	mutex_init(odbc->lookup_object_ext_lock);
-	mutex_init(odbc->create_version_lock);
-	mutex_init(odbc->get_version_lock);
-	mutex_init(odbc->add_ancestry_edge_lock);
-	mutex_init(odbc->has_immediate_ancestor_lock);
-	mutex_init(odbc->add_property_lock);
-	mutex_init(odbc->get_session_info_lock);
-	mutex_init(odbc->get_object_info_lock);
-	mutex_init(odbc->get_version_info_lock);
-	mutex_init(odbc->get_object_ancestry_lock);
-	mutex_init(odbc->get_properties_lock);
-	mutex_init(odbc->lookup_by_property_lock);
+	const char* connection_string = odbc->connection_string.c_str();
 
 
 	// Open the ODBC connection
@@ -408,8 +457,7 @@ cpl_create_odbc_backend(const char* connection_string,
 
 	connection_string_copy = (SQLCHAR*) malloc(l_connection_string + 4);
 	if (connection_string_copy == NULL) {
-		r = CPL_E_INSUFFICIENT_RESOURCES;
-		goto err_sync;
+		return CPL_E_INSUFFICIENT_RESOURCES;
 	}
 
 #ifdef _WINDOWS
@@ -629,13 +677,10 @@ cpl_create_odbc_backend(const char* connection_string,
 
 	// Return
 
-	*out = (cpl_db_backend_t*) odbc;
 	return CPL_OK;
 
 
 	// Error handling -- the variable r must be set
-
-	assert(!CPL_IS_OK(r));
 
 err_stmts:
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_session_insert_stmt);
@@ -669,42 +714,19 @@ err_handles:
 	SQLFreeHandle(SQL_HANDLE_DBC, odbc->db_connection);
 	SQLFreeHandle(SQL_HANDLE_ENV, odbc->db_environment);
 
-err_sync:
-	mutex_destroy(odbc->create_session_lock);
-	mutex_destroy(odbc->create_object_lock);
-	mutex_destroy(odbc->lookup_object_lock);
-	mutex_destroy(odbc->lookup_object_ext_lock);
-	mutex_destroy(odbc->create_version_lock);
-	mutex_destroy(odbc->get_version_lock);
-	mutex_destroy(odbc->add_ancestry_edge_lock);
-	mutex_destroy(odbc->has_immediate_ancestor_lock);
-	mutex_destroy(odbc->add_property_lock);
-	mutex_destroy(odbc->get_session_info_lock);
-	mutex_destroy(odbc->get_object_info_lock);
-	mutex_destroy(odbc->get_version_info_lock);
-	mutex_destroy(odbc->get_object_ancestry_lock);
-	mutex_destroy(odbc->get_properties_lock);
-	mutex_destroy(odbc->lookup_by_property_lock);
-
-	delete odbc;
 	return r;
 }
 
 
 /**
- * Destructor. If the constructor allocated the backend structure, it
- * should be freed by this function
+ * Disconnect from a database
  *
- * @param backend the pointer to the backend structure
- * @param the error code
+ * @param odbc the backend structure
+ * @return the error code
  */
-extern "C" cpl_return_t
-cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
+static cpl_return_t cpl_odbc_disconnect(cpl_odbc_t* odbc)
 {
-	assert(backend != NULL);
-	SQLRETURN ret;
-
-	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
+	cpl_return_t r = CPL_OK;
 
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_session_insert_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_object_insert_stmt);
@@ -731,11 +753,99 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_properties_with_key_ver_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_by_property_stmt);
 
-	ret = SQLDisconnect(odbc->db_connection);
+	SQLRETURN ret = SQLDisconnect(odbc->db_connection);
 	if (!SQL_SUCCEEDED(ret)) {
-		fprintf(stderr, "Warning: Could not terminate the ODBC connection.\n");
+		r = CPL_E_DB_CONNECTION_ERROR;
 	}
+
+	SQLFreeHandle(SQL_HANDLE_DBC, odbc->db_connection);
+	SQLFreeHandle(SQL_HANDLE_ENV, odbc->db_environment);
+
+	return r;
+}
+
+
+/**
+ * Reconnect
+ *
+ * @param odbc the backend structure
+ * @return the error code
+ */
+static cpl_return_t cpl_odbc_reconnect(cpl_odbc_t* odbc)
+{
+	cpl_odbc_disconnect(odbc);
+	return cpl_odbc_connect(odbc);
+}
+
+
+
+/***************************************************************************/
+/** Constructors and a Destructor                                         **/
+/***************************************************************************/
+
+
+/**
+ * Create an ODBC backend
+ *
+ * @param connection_string the ODBC connection string
+ * @param db_type the database type
+ * @param out the pointer to the database backend variable
+ * @return the error code
+ */
+extern "C" EXPORT cpl_return_t
+cpl_create_odbc_backend(const char* connection_string,
+						int db_type,
+						cpl_db_backend_t** out)
+{
+	cpl_return_t r = CPL_OK;
+
+	assert(out != NULL);
+	assert(connection_string != NULL);
+
+
+	// Allocate the backend struct
+
+	cpl_odbc_t* odbc = new cpl_odbc_t;
+	if (odbc == NULL) return CPL_E_INSUFFICIENT_RESOURCES;
+	memcpy(&odbc->backend, &CPL_ODBC_BACKEND, sizeof(odbc->backend));
+	odbc->db_type = db_type;
+	odbc->connection_string = connection_string;
+
+
+	// Initialize the synchronization primitives
+
+	mutex_init(odbc->create_session_lock);
+	mutex_init(odbc->create_object_lock);
+	mutex_init(odbc->lookup_object_lock);
+	mutex_init(odbc->lookup_object_ext_lock);
+	mutex_init(odbc->create_version_lock);
+	mutex_init(odbc->get_version_lock);
+	mutex_init(odbc->add_ancestry_edge_lock);
+	mutex_init(odbc->has_immediate_ancestor_lock);
+	mutex_init(odbc->add_property_lock);
+	mutex_init(odbc->get_session_info_lock);
+	mutex_init(odbc->get_object_info_lock);
+	mutex_init(odbc->get_version_info_lock);
+	mutex_init(odbc->get_object_ancestry_lock);
+	mutex_init(odbc->get_properties_lock);
+	mutex_init(odbc->lookup_by_property_lock);
+
+
+	// Open the database connection
 	
+	r = cpl_odbc_connect(odbc);
+	if (!CPL_IS_OK(r)) goto err_sync;
+
+
+	// Return
+
+	*out = (cpl_db_backend_t*) odbc;
+	return CPL_OK;
+
+
+	// Error handling -- the variable r must be set
+
+err_sync:
 	mutex_destroy(odbc->create_session_lock);
 	mutex_destroy(odbc->create_object_lock);
 	mutex_destroy(odbc->lookup_object_lock);
@@ -752,13 +862,96 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
 	mutex_destroy(odbc->get_properties_lock);
 	mutex_destroy(odbc->lookup_by_property_lock);
 
-	SQLFreeHandle(SQL_HANDLE_DBC, odbc->db_connection);
-	SQLFreeHandle(SQL_HANDLE_ENV, odbc->db_environment);
+	delete odbc;
+	return r;
+}
+
+
+/**
+ * Create an ODBC backend
+ *
+ * @param dsn the data source name
+ * @param db_type the database type
+ * @param out the pointer to the database backend variable
+ * @return the error code
+ */
+extern "C" EXPORT cpl_return_t
+cpl_create_odbc_backend_dsn(const char* dsn,
+							int db_type,
+							cpl_db_backend_t** out)
+{
+	assert(out != NULL);
+	assert(dsn != NULL);
+
+	*out = NULL;
+
+
+	// Check the DSN
+
+	if (strchr(dsn, ';') != NULL
+			|| strchr(dsn, '{') != NULL
+			|| strchr(dsn, '}') != NULL) {
+		return CPL_E_INVALID_ARGUMENT;
+	}
+
+
+	// Create the connection string
+
+	std::string conn = "DSN=";
+	conn += dsn;
+	conn += ";";
+
+
+	// Create the backend
+	
+	return cpl_create_odbc_backend(conn.c_str(), db_type, out);
+}
+
+
+/**
+ * Destructor. If the constructor allocated the backend structure, it
+ * should be freed by this function
+ *
+ * @param backend the pointer to the backend structure
+ * @param the error code
+ */
+extern "C" cpl_return_t
+cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
+{
+	assert(backend != NULL);
+	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
+
+	cpl_return_t r = cpl_odbc_disconnect(odbc);
+	if (!CPL_IS_OK(r)) {
+		fprintf(stderr, "Warning: Could not terminate the ODBC connection.\n");
+	}
+
+	mutex_destroy(odbc->create_session_lock);
+	mutex_destroy(odbc->create_object_lock);
+	mutex_destroy(odbc->lookup_object_lock);
+	mutex_destroy(odbc->lookup_object_ext_lock);
+	mutex_destroy(odbc->create_version_lock);
+	mutex_destroy(odbc->get_version_lock);
+	mutex_destroy(odbc->add_ancestry_edge_lock);
+	mutex_destroy(odbc->has_immediate_ancestor_lock);
+	mutex_destroy(odbc->add_property_lock);
+	mutex_destroy(odbc->get_session_info_lock);
+	mutex_destroy(odbc->get_object_info_lock);
+	mutex_destroy(odbc->get_version_info_lock);
+	mutex_destroy(odbc->get_object_ancestry_lock);
+	mutex_destroy(odbc->get_properties_lock);
+	mutex_destroy(odbc->lookup_by_property_lock);
 	
 	delete odbc;
 	
 	return CPL_OK;
 }
+
+
+
+/***************************************************************************/
+/** Helpers for Binding                                                   **/
+/***************************************************************************/
 
 
 /**
@@ -798,6 +991,7 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
 }
 
 
+
 /***************************************************************************/
 /** Public API                                                            **/
 /***************************************************************************/
@@ -832,7 +1026,9 @@ cpl_odbc_create_session(struct _cpl_db_backend_t* backend,
 	
 	// Bind the statement parameters
 
-	SQLRETURN ret;
+	SQL_START;
+
+retry:
 	SQLHSTMT stmt = odbc->create_session_insert_stmt;
 
 	SQL_BIND_INTEGER(stmt, 1, session.hi);
@@ -846,11 +1042,7 @@ cpl_odbc_create_session(struct _cpl_db_backend_t* backend,
 
 	// Insert the new row to the sessions table
 
-	ret = SQLExecute(stmt);
-	if (!SQL_SUCCEEDED(ret)) {
-		print_odbc_error("SQLExecute", stmt, SQL_HANDLE_STMT);
-		goto err;
-	}
+	SQL_EXECUTE(stmt);
 
 
 	// Finish
@@ -900,7 +1092,9 @@ cpl_odbc_create_object(struct _cpl_db_backend_t* backend,
 	
 	// Bind the statement parameters
 
-	SQLRETURN ret;
+	SQL_START;
+
+retry:
 	SQLHSTMT stmt = container == CPL_NONE
 		? odbc->create_object_insert_stmt
 		: odbc->create_object_insert_container_stmt;
@@ -920,25 +1114,19 @@ cpl_odbc_create_object(struct _cpl_db_backend_t* backend,
 
 	// Insert the new row to the objects table
 
-	ret = SQLExecute(stmt);
-	if (!SQL_SUCCEEDED(ret)) {
-		print_odbc_error("SQLExecute", stmt, SQL_HANDLE_STMT);
-		goto err;
-	}
+	SQL_EXECUTE(stmt);
 
 
 	// Insert the corresponding entry to the versions table
 
+retry2:
 	stmt = odbc->create_object_insert_version_stmt;
 	SQL_BIND_INTEGER(stmt, 1, id.hi);
 	SQL_BIND_INTEGER(stmt, 2, id.lo);
 	SQL_BIND_INTEGER(stmt, 3, session.hi);
 	SQL_BIND_INTEGER(stmt, 4, session.lo);
-	ret = SQLExecute(stmt);
-	if (!SQL_SUCCEEDED(ret)) {
-		print_odbc_error("SQLExecute", stmt, SQL_HANDLE_STMT);
-		goto err;
-	}
+
+	SQL_EXECUTE_EXT(stmt, retry2, err);
 
 	
 	// Finish
@@ -976,7 +1164,8 @@ cpl_odbc_lookup_object(struct _cpl_db_backend_t* backend,
 	assert(backend != NULL);
 	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
 	
-	SQLRETURN ret;
+	SQL_START;
+
 	cpl_id_t id = CPL_NONE;
 	cpl_return_t r = CPL_E_INTERNAL_ERROR;
 
@@ -985,6 +1174,7 @@ cpl_odbc_lookup_object(struct _cpl_db_backend_t* backend,
 
 	// Prepare the statement
 
+retry:
 	SQLHSTMT stmt = odbc->lookup_object_stmt;
 
 	SQL_BIND_VARCHAR(stmt, 1, 255, originator);
@@ -994,11 +1184,7 @@ cpl_odbc_lookup_object(struct _cpl_db_backend_t* backend,
 
 	// Execute
 	
-	ret = SQLExecute(stmt);
-	if (!SQL_SUCCEEDED(ret)) {
-		print_odbc_error("SQLExecute", stmt, SQL_HANDLE_STMT);
-		goto err;
-	}
+	SQL_EXECUTE(stmt);
 
 
 	// Fetch the result
@@ -1057,7 +1243,8 @@ cpl_odbc_lookup_object_ext(struct _cpl_db_backend_t* backend,
 	assert(backend != NULL);
 	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
 
-	SQLRETURN ret;
+	SQL_START;
+
 	cpl_return_t r = CPL_E_INTERNAL_ERROR;
 	cpl_id_timestamp_t entry;
 	std::list<cpl_id_timestamp_t> entries;
@@ -1068,6 +1255,7 @@ cpl_odbc_lookup_object_ext(struct _cpl_db_backend_t* backend,
 
 	// Prepare the statement
 
+retry:
 	SQLHSTMT stmt = odbc->lookup_object_ext_stmt;
 
 	SQL_BIND_VARCHAR(stmt, 1, 255, originator);
@@ -1077,11 +1265,7 @@ cpl_odbc_lookup_object_ext(struct _cpl_db_backend_t* backend,
 
 	// Execute
 	
-	ret = SQLExecute(stmt);
-	if (!SQL_SUCCEEDED(ret)) {
-		print_odbc_error("SQLExecute", stmt, SQL_HANDLE_STMT);
-		goto err;
-	}
+	SQL_EXECUTE(stmt);
 
 
 	// Bind the columns
@@ -1251,7 +1435,8 @@ cpl_odbc_get_version(struct _cpl_db_backend_t* backend,
 	assert(backend != NULL);
 	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
 	
-	SQLRETURN ret;
+	SQL_START;
+
 	long long l;
 	cpl_return_t r;
 
@@ -1260,6 +1445,7 @@ cpl_odbc_get_version(struct _cpl_db_backend_t* backend,
 
 	// Prepare the statement
 
+retry:
 	SQLHSTMT stmt = odbc->get_version_stmt;
 	SQL_BIND_INTEGER(stmt, 1, id.hi);
 	SQL_BIND_INTEGER(stmt, 2, id.lo);
@@ -1267,11 +1453,7 @@ cpl_odbc_get_version(struct _cpl_db_backend_t* backend,
 
 	// Execute
 	
-	ret = SQLExecute(stmt);
-	if (!SQL_SUCCEEDED(ret)) {
-		print_odbc_error("SQLExecute", stmt, SQL_HANDLE_STMT);
-		goto err;
-	}
+	SQL_EXECUTE(stmt);
 
 
 	// Fetch the result
@@ -1326,7 +1508,9 @@ cpl_odbc_add_ancestry_edge(struct _cpl_db_backend_t* backend,
 
 	// Prepare the statement
 
-	SQLRETURN ret;
+	SQL_START;
+
+retry:
 	SQLHSTMT stmt = odbc->add_ancestry_edge_stmt;
 
 	SQL_BIND_INTEGER(stmt, 1, from_id.hi);
@@ -1340,11 +1524,7 @@ cpl_odbc_add_ancestry_edge(struct _cpl_db_backend_t* backend,
 
 	// Execute
 	
-	ret = SQLExecute(stmt);
-	if (!SQL_SUCCEEDED(ret)) {
-		print_odbc_error("SQLExecute", stmt, SQL_HANDLE_STMT);
-		goto err;
-	}
+	SQL_EXECUTE(stmt);
 
 
 	// Cleanup
@@ -1386,7 +1566,8 @@ cpl_odbc_has_immediate_ancestor(struct _cpl_db_backend_t* backend,
 	assert(backend != NULL);
 	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
 	
-	SQLRETURN ret;
+	SQL_START;
+
 	cpl_return_t r = CPL_E_INTERNAL_ERROR;
 	int cr = CPL_E_INTERNAL_ERROR;
 
@@ -1395,6 +1576,7 @@ cpl_odbc_has_immediate_ancestor(struct _cpl_db_backend_t* backend,
 
 	// Prepare the statement
 
+retry:
 	SQLHSTMT stmt = version_hint == CPL_VERSION_NONE 
 		? odbc->has_immediate_ancestor_stmt
 		: odbc->has_immediate_ancestor_with_ver_stmt;
@@ -1410,11 +1592,7 @@ cpl_odbc_has_immediate_ancestor(struct _cpl_db_backend_t* backend,
 
 	// Execute
 	
-	ret = SQLExecute(stmt);
-	if (!SQL_SUCCEEDED(ret)) {
-		print_odbc_error("SQLExecute", stmt, SQL_HANDLE_STMT);
-		goto err;
-	}
+	SQL_EXECUTE(stmt);
 
 
 	// Fetch the data
@@ -1469,7 +1647,9 @@ cpl_odbc_add_property(struct _cpl_db_backend_t* backend,
 
 	// Prepare the statement
 
-	SQLRETURN ret;
+	SQL_START;
+
+retry:
 	SQLHSTMT stmt = odbc->add_property_stmt;
 
 	SQL_BIND_INTEGER(stmt, 1, id.hi);
@@ -1481,11 +1661,7 @@ cpl_odbc_add_property(struct _cpl_db_backend_t* backend,
 
 	// Execute
 	
-	ret = SQLExecute(stmt);
-	if (!SQL_SUCCEEDED(ret)) {
-		print_odbc_error("SQLExecute", stmt, SQL_HANDLE_STMT);
-		goto err;
-	}
+	SQL_EXECUTE(stmt);
 
 
 	// Cleanup
@@ -1517,7 +1693,8 @@ cpl_odbc_get_session_info(struct _cpl_db_backend_t* backend,
 	assert(backend != NULL);
 	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
 
-	SQLRETURN ret;
+	SQL_START;
+
 	cpl_return_t r = CPL_E_INTERNAL_ERROR;
 	long long l = 0;
 
@@ -1530,6 +1707,8 @@ cpl_odbc_get_session_info(struct _cpl_db_backend_t* backend,
 	// Prepare the statement
 
 	mutex_lock(odbc->get_session_info_lock);
+
+retry:
 	SQLHSTMT stmt = odbc->get_session_info_stmt;
 
 	SQL_BIND_INTEGER(stmt, 1, id.hi);
@@ -1538,11 +1717,7 @@ cpl_odbc_get_session_info(struct _cpl_db_backend_t* backend,
 
 	// Execute
 	
-	ret = SQLExecute(stmt);
-	if (!SQL_SUCCEEDED(ret)) {
-		print_odbc_error("SQLExecute", stmt, SQL_HANDLE_STMT);
-		goto err;
-	}
+	SQL_EXECUTE(stmt);
 
 
 	// Fetch the result
@@ -1605,7 +1780,8 @@ cpl_odbc_get_object_info(struct _cpl_db_backend_t* backend,
 	assert(backend != NULL);
 	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
 	
-	SQLRETURN ret;
+	SQL_START;
+
 	cpl_return_t r = CPL_E_INTERNAL_ERROR;
 	long long l;
 
@@ -1632,6 +1808,8 @@ cpl_odbc_get_object_info(struct _cpl_db_backend_t* backend,
 	// Prepare the statement
 
 	mutex_lock(odbc->get_object_info_lock);
+
+retry:
 	SQLHSTMT stmt = odbc->get_object_info_stmt;
 
 	SQL_BIND_INTEGER(stmt, 1, id.hi);
@@ -1640,11 +1818,7 @@ cpl_odbc_get_object_info(struct _cpl_db_backend_t* backend,
 
 	// Execute
 	
-	ret = SQLExecute(stmt);
-	if (!SQL_SUCCEEDED(ret)) {
-		print_odbc_error("SQLExecute", stmt, SQL_HANDLE_STMT);
-		goto err;
-	}
+	SQL_EXECUTE(stmt);
 
 
 	// Fetch the result
@@ -1730,7 +1904,8 @@ cpl_odbc_get_version_info(struct _cpl_db_backend_t* backend,
 	assert(backend != NULL);
 	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
 	
-	SQLRETURN ret;
+	SQL_START;
+
 	cpl_return_t r = CPL_E_INTERNAL_ERROR;
 
 	cpl_version_info_t* p = (cpl_version_info_t*) malloc(sizeof(*p));
@@ -1744,6 +1919,7 @@ cpl_odbc_get_version_info(struct _cpl_db_backend_t* backend,
 
 	// Prepare the statement
 
+retry:
 	SQLHSTMT stmt = odbc->get_version_info_stmt;
 
 	SQL_BIND_INTEGER(stmt, 1, id.hi);
@@ -1753,11 +1929,7 @@ cpl_odbc_get_version_info(struct _cpl_db_backend_t* backend,
 
 	// Execute
 	
-	ret = SQLExecute(stmt);
-	if (!SQL_SUCCEEDED(ret)) {
-		print_odbc_error("SQLExecute", stmt, SQL_HANDLE_STMT);
-		goto err;
-	}
+	SQL_EXECUTE(stmt);
 
 
 	// Fetch the result
@@ -1838,7 +2010,8 @@ cpl_odbc_get_object_ancestry(struct _cpl_db_backend_t* backend,
 		return CPL_E_NOT_IMPLEMENTED;
 	}
 	
-	SQLRETURN ret;
+	SQL_START;
+
 	cpl_return_t r = CPL_E_INTERNAL_ERROR;
 
 	std::list<__get_object_ancestry__entry_t> entries;
@@ -1851,6 +2024,7 @@ cpl_odbc_get_object_ancestry(struct _cpl_db_backend_t* backend,
 
 	// Prepare the statement
 
+retry:
 	SQLHSTMT stmt;
 	if (direction == CPL_D_ANCESTORS) {
 		stmt = version == CPL_VERSION_NONE
@@ -1873,11 +2047,7 @@ cpl_odbc_get_object_ancestry(struct _cpl_db_backend_t* backend,
 
 	// Execute
 	
-	ret = SQLExecute(stmt);
-	if (!SQL_SUCCEEDED(ret)) {
-		print_odbc_error("SQLExecute", stmt, SQL_HANDLE_STMT);
-		goto err;
-	}
+	SQL_EXECUTE(stmt);
 
 
 	// Bind the columns
@@ -2023,10 +2193,11 @@ cpl_odbc_get_properties(struct _cpl_db_backend_t* backend,
 	std::list<__get_properties__entry_t*> entries;
 	__get_properties__entry_t entry;
 	SQLLEN ind_key, ind_value;
-	SQLRETURN ret;
+
+	SQL_START;
+
 	cpl_return_t r = CPL_E_INTERNAL_ERROR;
 	bool found = false;
-	int column_i = 3;
 	std::list<__get_properties__entry_t*>::iterator i;
 
 	mutex_lock(odbc->get_properties_lock);
@@ -2034,7 +2205,9 @@ cpl_odbc_get_properties(struct _cpl_db_backend_t* backend,
 
 	// Prepare the statement
 
+retry:
 	SQLHSTMT stmt;
+	int column_i = 3;
 	if (key == NULL) {
 		stmt = version == CPL_VERSION_NONE
 			? odbc->get_properties_stmt
@@ -2061,11 +2234,7 @@ cpl_odbc_get_properties(struct _cpl_db_backend_t* backend,
 
 	// Execute
 	
-	ret = SQLExecute(stmt);
-	if (!SQL_SUCCEEDED(ret)) {
-		print_odbc_error("SQLExecute", stmt, SQL_HANDLE_STMT);
-		goto err;
-	}
+	SQL_EXECUTE(stmt);
 
 
 	// Bind the columns
@@ -2207,7 +2376,8 @@ cpl_odbc_lookup_by_property(struct _cpl_db_backend_t* backend,
 	assert(backend != NULL);
 	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
 
-	SQLRETURN ret;
+	SQL_START;
+
 	cpl_return_t r = CPL_E_INTERNAL_ERROR;
 
 	std::list<__lookup_by_property__entry_t> entries;
@@ -2218,6 +2388,7 @@ cpl_odbc_lookup_by_property(struct _cpl_db_backend_t* backend,
 
 	// Prepare the statement
 
+retry:
 	SQLHSTMT stmt = odbc->lookup_by_property_stmt;
 	SQL_BIND_VARCHAR(stmt, 1, 255, key);
 	SQL_BIND_VARCHAR(stmt, 2, 4095, value);
@@ -2225,11 +2396,7 @@ cpl_odbc_lookup_by_property(struct _cpl_db_backend_t* backend,
 
 	// Execute
 	
-	ret = SQLExecute(stmt);
-	if (!SQL_SUCCEEDED(ret)) {
-		print_odbc_error("SQLExecute", stmt, SQL_HANDLE_STMT);
-		goto err;
-	}
+	SQL_EXECUTE(stmt);
 
 
 	// Bind the columns

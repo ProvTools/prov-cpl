@@ -98,6 +98,20 @@ cpl_create_odbc_backend(const char* connection_string,
 						int db_type,
 						cpl_db_backend_t** out);
 
+
+/**
+ * Create an ODBC backend
+ *
+ * @param dsn the data source name
+ * @param db_type the database type
+ * @param out the pointer to the database backend variable
+ * @return the error code
+ */
+EXPORT cpl_return_t
+cpl_create_odbc_backend_dsn(const char* dsn,
+							int db_type,
+							cpl_db_backend_t** out);
+
 #ifdef __cplusplus
 }
 #endif
