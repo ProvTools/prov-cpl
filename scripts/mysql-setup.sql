@@ -53,6 +53,8 @@ USE cpl;
 -- Create the schema
 --
 
+SET FOREIGN_KEY_CHECKS = 0;
+
 CREATE TABLE IF NOT EXISTS cpl_objects (
        id_hi BIGINT,
        id_lo BIGINT,
@@ -63,7 +65,9 @@ CREATE TABLE IF NOT EXISTS cpl_objects (
        container_id_hi BIGINT,
        container_id_lo BIGINT,
        container_ver INT,
-       PRIMARY KEY (id_hi, id_lo));
+       PRIMARY KEY (id_hi, id_lo),
+       FOREIGN KEY (container_id_hi, container_id_lo, container_ver)
+                    REFERENCES cpl_versions(id_hi, id_lo, version));
 
 CREATE TABLE IF NOT EXISTS cpl_sessions (
        id_hi BIGINT,
@@ -112,7 +116,5 @@ CREATE TABLE IF NOT EXISTS cpl_properties (
        FOREIGN KEY(id_hi, id_lo, version)
            REFERENCES cpl_versions(id_hi, id_lo, version));
 
-ALTER TABLE cpl_objects ADD CONSTRAINT cpl_objects_fk
-      FOREIGN KEY (container_id_hi, container_id_lo, container_ver)
-      REFERENCES cpl_versions(id_hi, id_lo, version);
+SET FOREIGN_KEY_CHECKS = 1;
 

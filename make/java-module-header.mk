@@ -69,9 +69,11 @@ endif
 
 ifndef JAVA_HOME
 ifeq ($(OSTYPE),darwin)
+#XXX Should not use locate
 	JAVA_INCLUDE := $(shell dirname `locate Headers/jni.h | grep MacOSX | head -n 1`)
 #XXX Need to get JAVA_HOME, but how?
 else
+#XXX Should not use locate
 	JAVA_INCLUDE := $(shell dirname `locate include/jni.h | head -n 1`)
 	JAVA_HOME := $(shell dirname "$(JAVA_INCLUDE)")
 endif

@@ -42,7 +42,10 @@
 --
 
 USE cpl;
-ALTER TABLE cpl_objects DROP FOREIGN KEY cpl_objects_fk;
+SET FOREIGN_KEY_CHECKS = 0;
+
 DROP TABLE IF EXISTS cpl_objects, cpl_sessions, cpl_versions, cpl_ancestry,
                      cpl_properties;
+
+SET FOREIGN_KEY_CHECKS = 1;
 

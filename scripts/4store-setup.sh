@@ -36,6 +36,7 @@
 
 #
 # Global variables
+#
 
 # Database name
 DATABASE=cpl
@@ -66,7 +67,7 @@ while getopts ":hp:" opt; do
 			usage
 			exit 0
 			;;
-		o)
+		p)
 			PASSWORD="$OPTARG"
 			;;
 		\?)
@@ -89,19 +90,6 @@ fi
 
 
 #
-# Make sure that the proper packages are installed
-#
-
-which 4s-backend-setup 2>&1 | cat > /dev/null
-if [ ${PIPESTATUS[0]} != 0 ]; then
-	echo "`basename $0`: Package 4store is not installed" >&2
-	echo "`basename $0`: On Ubuntu, please run:" >&2
-	echo "`basename $0`:" '   "sudo apt-get install 4store"' >&2
-	exit 1
-fi
-
-
-#
 # Ensure that we have root privileges
 #
 
@@ -111,6 +99,30 @@ if [ `whoami` != "root" ]; then
 	sudo true
 	if [ $? != 0 ]; then
 		echo "`basename $0`: Failed to authenticate as root" >&2
+		exit 1
+	fi
+fi
+
+
+#
+# Make sure that the proper packages are installed
+#
+
+which 4s-backend-setup 2>&1 | cat > /dev/null
+if [ ${PIPESTATUS[0]} != 0 ]; then
+	if [ "`uname`" = Linux ]; then
+		if [ "`lsb_release -is`" = Ubuntu ]; then
+			sudo apt-get install 4store
+			if [ ${PIPESTATUS[0]} != 0 ]; then
+				echo "`basename $0`: Package installation faild" >&2
+				exit 1
+			fi
+		else
+			echo "`basename $0`: Package 4store is not installed" >&2
+			exit 1
+		fi
+	else
+		echo "`basename $0`: Package 4store is not installed" >&2
 		exit 1
 	fi
 fi

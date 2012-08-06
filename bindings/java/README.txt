@@ -42,7 +42,8 @@ then include in your project. You do not need to include CPLDirect.jar, since
 it is statically included in CPL.jar.
 
 Note: If "make release" fails with the "Permission denied" error, please run
-"sudo make distclean" first.
+"sudo make distclean" first. If "make release" fails mysteriously, perhaps
+"sudo updatedb" will help.
 
 
   3. Limitations
