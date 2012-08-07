@@ -7,9 +7,10 @@ Contents:
   2. Installing ODBC data sources on Ubuntu
   3. Installing ODBC data sources on Windows
   4. Installing ODBC on Mac OS X
-  5. Configuring PostgreSQL
+  5. Configuring MySQL
+  6. Configuring PostgreSQL
 
-Copyright 2011 The President and Fellows of Harvard College.
+Copyright 2012 The President and Fellows of Harvard College.
 Contributor(s): Peter Macko
 
 
@@ -74,15 +75,49 @@ an Ultimate edition of Microsoft Windows. To add a data source, please use the
 ODBC Data Source Administrator, located in Administrative Tools in the Control
 Panel.
 
+Then, create either "User DSN" or "System DSN" (depending if you are installing
+CPL just for yourself or also for other users) for the database that you plan
+to use, and enter the following properties:
+
+    Name    : CPL
+    Server  : localhost
+    User    : cpl
+    Password: cplcplcpl
+    Database: cpl
+
 
   4. Installing ODBC on Mac OS X
 ----------------------------------
 
 Please download and install the ODBC Administrator Tool for Mac OS X from:
-  http://support.apple.com/kb/dl895
+
+    http://support.apple.com/kb/dl895
+
+Then, create either "User DSN" or "System DSN" (depending if you are installing
+CPL just for yourself or also for other users) for the database that you plan
+to use, and enter the following properties:
+
+    Name    : CPL
+    Server  : localhost
+    User    : cpl
+    Password: cplcplcpl
+    Database: cpl
 
 
-  5. Configuring PostgreSQL
+  5. Configuring MySQL
+------------------------
+
+Please run the MySQL configuration script ../../scripts/mysql-setup.sql
+as the MySQL root. On Linux and Unix systems, this can be easily achieved
+by cd-ing into CPL's main project directory and running from the command line:
+
+    mysql -u root -p < scripts/mysql-setup.sql
+
+This will create user cpl with password "cplcplcpl", database cpl, and its
+corresponding schema.
+
+
+  6. Configuring PostgreSQL
 -----------------------------
 
 PostgreSQL might not work out of the box on Ubuntu. If you experience user
@@ -102,3 +137,13 @@ of the PostgreSQL socket to /tmp by setting the following property in your
 postgresql.conf file and restarting the PostgreSQL service:
 
 unix_socket_directory = '/tmp'
+
+
+Finally, run the configuration script ../../scripts/postgresql-setup.sql
+as the user postgres. On Linux and Unix systems, this can be easily achieved
+by cd-ing into CPL's main project directory and running from the command line:
+
+    sudo -u postgres psql postgres < scripts/postgresql-setup.sql
+
+This will create user cpl with password "cplcplcpl", database cpl, and its
+corresponding schema.

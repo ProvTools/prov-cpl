@@ -32,6 +32,12 @@
 -- Contributor(s): Peter Macko
 --
 
+
+-- ------------------------------------------------------------------------ --
+-- Instructions                                                             --
+-- ------------------------------------------------------------------------ --
+--
+-- Execute this script as the user postgres.
 --
 -- Usage on Linux:
 --   sudo -u postgres psql postgres < scripts/postgresql-setup.sql
