@@ -747,7 +747,7 @@ cpl_create_object(const char* originator,
 	// Finish
 
 	if (out_id != NULL) *out_id = id;
-	return CPL_OK;
+	return CPL_S_OBJECT_CREATED;
 }
 
 
@@ -1558,12 +1558,15 @@ cpl_get_object_ancestry(const cpl_id_t id,
 	// Add the previous or the next version of the object to the result set
 	
 	int new_flags = flags | CPL_A_NO_PREV_NEXT_VERSION;
+	bool has_version_dependency = false;
 	if (version != CPL_VERSION_NONE && (flags&CPL_A_NO_PREV_NEXT_VERSION) == 0){
 		if (version > 0 && direction == CPL_D_ANCESTORS) {
+			has_version_dependency = true;
 			CPL_RUNTIME_VERIFY(iterator(id, version, id, version - 1,
 										CPL_VERSION_GENERIC, context));
 		}
 		else if (version < current_version && direction == CPL_D_DESCENDANTS) {
+			has_version_dependency = true;
 			CPL_RUNTIME_VERIFY(iterator(id, version, id, version + 1,
 										CPL_VERSION_GENERIC, context));
 		}
@@ -1572,10 +1575,14 @@ cpl_get_object_ancestry(const cpl_id_t id,
 
 	// Call the database backend
 
-	return cpl_db_backend->cpl_db_get_object_ancestry(cpl_db_backend,
-													  id, version, direction,
-													  new_flags, iterator,
-													  context);
+	cpl_return_t r;
+	r = cpl_db_backend->cpl_db_get_object_ancestry(cpl_db_backend,
+												   id, version, direction,
+												   new_flags, iterator,
+												   context);
+	
+	if (r == CPL_S_NO_DATA && has_version_dependency) return CPL_OK;
+	return r;
 }
 
 
