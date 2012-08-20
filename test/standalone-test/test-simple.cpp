@@ -535,9 +535,9 @@ test_simple(void)
 	}
 	if (with_delays) delay();
 
-	ret = cpl_control(obj3, obj, CPL_CONTROL_START);
-	print(L_DEBUG, "cpl_control --> %d", ret);
-	CPL_VERIFY(cpl_control, ret);
+	ret = cpl_control_flow(obj3, obj, CPL_CONTROL_START);
+	print(L_DEBUG, "cpl_control_flow --> %d", ret);
+	CPL_VERIFY(cpl_control_flow, ret);
 	if (with_delays) delay();
 
 	ret = cpl_data_flow_ext(obj, obj3, 0, CPL_DATA_TRANSLATION);
@@ -548,7 +548,7 @@ test_simple(void)
 	print(L_DEBUG, " ");
 
 
-	// Session info (assume that the session started less than 10 sec. ago)
+	// Session info
 
 	cpl_session_info_t* sinfo = NULL;
 
@@ -570,7 +570,43 @@ test_simple(void)
 	print(L_DEBUG, " ");
 
 
-	// Object info (assume that the objects were created less than 10 sec. ago)
+    // Object listing
+    
+    std::vector<cplxx_object_info_t> oiv;
+    ret = cpl_get_all_objects(0, cpl_cb_collect_object_info_vector, &oiv);
+	print(L_DEBUG, "cpl_get_all_objects --> %d objects [%d]",
+          (int) oiv.size(), ret);
+	CPL_VERIFY(cpl_get_all_objects, ret);
+    bool found = false;
+    bool found2 = false;
+    bool found3 = false;
+    bool found4 = false;
+    for (size_t i = 0; i < oiv.size(); i++) {
+        cplxx_object_info_t& info = oiv[i];
+        if (info.id == obj ) found  = true;
+        if (info.id == obj2) found2 = true;
+        if (info.id == obj3) found3 = true;
+        if (info.id == obj4) found4 = true;
+        if (i < 10) {
+            print(L_DEBUG, "  %s : %s : %s, ver. %d", info.originator.c_str(),
+                  info.name.c_str(), info.type.c_str(), info.version);
+        }
+    }
+    if (oiv.size() > 10) print(L_DEBUG, "  ...");
+    if (!found )
+        throw CPLException("Object listing did not return a certain object");
+    if (!found2)
+        throw CPLException("Object listing did not return a certain object");
+    if (!found3)
+        throw CPLException("Object listing did not return a certain object");
+    if (!found4)
+        throw CPLException("Object listing did not return a certain object");
+	if (with_delays) delay();
+
+	print(L_DEBUG, " ");
+
+
+	// Object info
 
 	cpl_object_info_t* info = NULL;
 	cpl_version_t version = CPL_VERSION_NONE;

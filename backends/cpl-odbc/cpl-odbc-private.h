@@ -201,6 +201,22 @@ typedef struct {
 	SQLHSTMT get_session_info_stmt;
 
 	/**
+	 * The lock for get_all_objects
+	 */
+	mutex_t get_all_objects_lock;
+
+	/**
+	 * The statement that returns information about all provenance objects
+	 */
+	SQLHSTMT get_all_objects_stmt;
+
+	/**
+	 * The statement that returns information about all provenance objects,
+     * including the creation session
+	 */
+	SQLHSTMT get_all_objects_with_session_stmt;
+
+	/**
 	 * The lock for get_object_info
 	 */
 	mutex_t get_object_info_lock;

@@ -241,6 +241,7 @@ typedef struct _cpl_db_backend_t {
 	/**
 	 * Get information about the given provenance session.
 	 *
+	 * @param backend the pointer to the backend structure
 	 * @param id the session ID
 	 * @param out_info the pointer to store the session info structure
 	 * @return CPL_OK or an error code
@@ -249,6 +250,21 @@ typedef struct _cpl_db_backend_t {
 	(*cpl_db_get_session_info)(struct _cpl_db_backend_t* backend,
 							   const cpl_session_t id,
 							   cpl_session_info_t** out_info);
+
+    /**
+     * Get all objects in the database
+     *
+	 * @param backend the pointer to the backend structure
+     * @param flags a logical combination of CPL_I_* flags
+     * @param iterator the iterator to be called for each matching object
+     * @param context the caller-provided iterator context
+     * @return CPL_OK or an error code
+     */
+    cpl_return_t
+    (*cpl_db_get_all_objects)(struct _cpl_db_backend_t* backend,
+                              const int flags,
+                              cpl_object_info_iterator_t iterator,
+                              void* context);
 
 	/**
 	 * Get information about the given provenance object

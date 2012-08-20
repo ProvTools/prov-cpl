@@ -774,6 +774,25 @@ err:
 
 
 /**
+ * Get all objects in the database
+ *
+ * @param backend the pointer to the backend structure
+ * @param flags a logical combination of CPL_I_* flags
+ * @param iterator the iterator to be called for each matching object
+ * @param context the caller-provided iterator context
+ * @return CPL_OK or an error code
+ */
+cpl_return_t
+cpl_rdf_get_all_objects(struct _cpl_db_backend_t* backend,
+						 const int flags,
+						 cpl_object_info_iterator_t iterator,
+						 void* context)
+{
+	return CPL_E_NOT_IMPLEMENTED;
+}
+
+
+/**
  * Get information about the given provenance object
  *
  * @param id the object ID
@@ -1221,6 +1240,7 @@ const cpl_db_backend_t CPL_RDF_BACKEND = {
 	cpl_rdf_has_immediate_ancestor,
     cpl_rdf_add_property,
 	cpl_rdf_get_session_info,
+    cpl_rdf_get_all_objects,
 	cpl_rdf_get_object_info,
 	cpl_rdf_get_version_info,
 	cpl_rdf_get_object_ancestry,

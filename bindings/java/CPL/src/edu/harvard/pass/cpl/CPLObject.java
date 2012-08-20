@@ -690,8 +690,8 @@ public class CPLObject {
 	 */
 	public boolean controlledBy(CPLObject controller, int controller_version,
 			int type) {
-		int r = CPLDirect.cpl_control_ext(id, controller.id, controller_version,
-				type);
+		int r = CPLDirect.cpl_control_flow_ext(id, controller.id,
+                controller_version, type);
 		CPLException.assertSuccess(r);
 		return r != CPLDirectConstants.CPL_S_DUPLICATE_IGNORED;
 	}
@@ -705,7 +705,7 @@ public class CPLObject {
 	 * @return true if the dependency was added, false if it is a duplicate
 	 */
 	public boolean controlledBy(CPLObjectVersion controller, int type) {
-		int r = CPLDirect.cpl_control_ext(id, controller.getObject().id,
+		int r = CPLDirect.cpl_control_flow_ext(id, controller.getObject().id,
 				controller.getVersion(), type);
 		CPLException.assertSuccess(r);
 		return r != CPLDirectConstants.CPL_S_DUPLICATE_IGNORED;
@@ -719,7 +719,7 @@ public class CPLObject {
 	 * @return true if the dependency was added, false if it is a duplicate
 	 */
 	public boolean controlledBy(CPLObjectVersion controller) {
-		int r = CPLDirect.cpl_control_ext(id, controller.getObject().id,
+		int r = CPLDirect.cpl_control_flow_ext(id, controller.getObject().id,
 				controller.getVersion(), CONTROL_GENERIC);
 		CPLException.assertSuccess(r);
 		return r != CPLDirectConstants.CPL_S_DUPLICATE_IGNORED;
@@ -734,7 +734,7 @@ public class CPLObject {
 	 * @return true if the dependency was added, false if it is a duplicate
 	 */
 	public boolean controlledBy(CPLObject controller, int type) {
-		int r = CPLDirect.cpl_control(id, controller.id, type);
+		int r = CPLDirect.cpl_control_flow(id, controller.id, type);
 		CPLException.assertSuccess(r);
 		return r != CPLDirectConstants.CPL_S_DUPLICATE_IGNORED;
 	}
@@ -747,7 +747,7 @@ public class CPLObject {
 	 * @return true if the dependency was added, false if it is a duplicate
 	 */
 	public boolean controlledBy(CPLObject controller) {
-		int r = CPLDirect.cpl_control(id, controller.id, CONTROL_GENERIC);
+		int r = CPLDirect.cpl_control_flow(id, controller.id, CONTROL_GENERIC);
 		CPLException.assertSuccess(r);
 		return r != CPLDirectConstants.CPL_S_DUPLICATE_IGNORED;
 	}

@@ -215,8 +215,8 @@ my $r3 = CPL::data_flow($obj3, $obj2, $CPL::DATA_INPUT);
 if (!$r3) { print " [duplicate ignored]" }
 print "\n";
 
-print "CPL::control(obj3, obj1, CPL::CONTROL_START)";
-my $r4 = CPL::control($obj3, $obj1, $CPL::CONTROL_START);
+print "CPL::control_flow(obj3, obj1, CPL::CONTROL_START)";
+my $r4 = CPL::control_flow($obj3, $obj1, $CPL::CONTROL_START);
 if (!$r4) { print " [duplicate ignored]" }
 print "\n";
 

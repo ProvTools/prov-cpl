@@ -281,6 +281,42 @@ public:
 /***************************************************************************/
 
 /**
+ * Information about a provenance object.
+ */
+typedef struct cplxx_object_info {
+	
+	/// The object ID.
+	cpl_id_t id;
+	
+	/// The object version.
+	cpl_version_t version;
+
+	/// The session ID of the process that created the object (not necessarily
+	/// the latest version).
+	cpl_session_t creation_session;
+
+	/// The object creation time expressed as UNIX time.
+	unsigned long creation_time;
+
+	/// The string that uniquely identifies the application that created
+	/// the object in the first place (this string also acts as a namespace).
+    std::string originator;
+
+	/// The object name.
+    std::string name;
+
+	/// The object type.
+	std::string type;
+
+	/// The object ID of the container, or CPL_NONE if none.
+	cpl_id_t container_id;
+
+	/// The version number of the container, or CPL_VERSION_NONE if none.
+	cpl_version_t container_version;
+
+} cplxx_object_info_t;
+
+/**
  * An entry in the collection of properties
  */
 typedef struct cplxx_property_entry {
@@ -304,6 +340,21 @@ typedef struct cplxx_property_entry {
 /***************************************************************************/
 /** Callbacks                                                             **/
 /***************************************************************************/
+
+/**
+ * The iterator callback for cpl_get_all_objects() that collects the returned
+ * information in an instance of std::vector<cplxx_object_info_t>.
+ *
+ * @param info the object info
+ * @param context the pointer to an instance of the vector 
+ * @return CPL_OK or an error code
+ */
+#ifdef SWIG
+%constant
+#endif
+EXPORT cpl_return_t
+cpl_cb_collect_object_info_vector(const cpl_object_info_t* info,
+							      void* context);
 
 /**
  * The iterator callback for cpl_lookup_object_ext() that collects the returned

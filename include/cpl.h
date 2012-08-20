@@ -212,6 +212,18 @@ typedef struct cpl_object_info {
 } cpl_object_info_t;
 
 /**
+ * The iterator callback for getting multiple object infos. The caller will
+ * take care of destroying the passed-in info object.
+ *
+ * @param info the object info
+ * @param context the application-provided context
+ * @return CPL_OK or an error code (the caller should fail on this error)
+ */
+typedef cpl_return_t (*cpl_object_info_iterator_t)
+						(const cpl_object_info_t* info,
+						 void* context);
+
+/**
  * Information about a specific version of a provenance object.
  */
 typedef struct cpl_version_info {
@@ -666,6 +678,22 @@ WINDLL_API extern const cpl_id_t CPL_NONE;
 #define CPL_L_NO_FAIL					(1 << 0)
 
 /**
+ * Do not get the creation session information, if it is not readily available
+ */
+#define CPL_I_NO_CREATION_SESSION		(1 << 0)
+
+/**
+ * Do not get the version of the object, if it is not readily available
+ */
+#define CPL_I_NO_VERSION				(1 << 1)
+
+/**
+ * Do not get any information that is not readily available at the lookup time
+ */
+#define CPL_I_FAST						(CPL_I_NO_CREATION_SESSION \
+											| CPL_I_NO_VERSION)
+
+/**
  * Get ancestors
  */
 #define CPL_D_ANCESTORS					0
@@ -846,9 +874,9 @@ cpl_data_flow_ext(const cpl_id_t data_dest,
  * @return CPL_OK, CPL_S_DUPLICATE_IGNORED, or an error code
  */
 EXPORT cpl_return_t
-cpl_control(const cpl_id_t object_id,
-			const cpl_id_t controller,
-			const int type);
+cpl_control_flow(const cpl_id_t object_id,
+				 const cpl_id_t controller,
+				 const int type);
 
 /**
  * Disclose a control flow operation using a specific version of the controller.
@@ -861,10 +889,10 @@ cpl_control(const cpl_id_t object_id,
  * @return CPL_OK, CPL_S_DUPLICATE_IGNORED, or an error code
  */
 EXPORT cpl_return_t
-cpl_control_ext(const cpl_id_t object_id,
-				const cpl_id_t controller,
-				const cpl_version_t controller_ver,
-				const int type);
+cpl_control_flow_ext(const cpl_id_t object_id,
+					 const cpl_id_t controller,
+					 const cpl_version_t controller_ver,
+					 const int type);
 
 /**
  * Add a property to the given object.
@@ -878,6 +906,14 @@ EXPORT cpl_return_t
 cpl_add_property(const cpl_id_t id,
 				 const char* key,
                  const char* value);
+
+
+/***************************************************************************/
+/** Legacy                                                                **/
+/***************************************************************************/
+
+#define cpl_control			cpl_control_flow
+#define cpl_control_ext		cpl_control_flow_ext
 
 
 /***************************************************************************/
@@ -923,6 +959,19 @@ cpl_get_session_info(const cpl_session_t id,
  */
 EXPORT cpl_return_t
 cpl_free_session_info(cpl_session_info_t* info);
+
+/**
+ * Get all objects in the database
+ *
+ * @param flags a logical combination of CPL_I_* flags
+ * @param iterator the iterator to be called for each matching object
+ * @param context the caller-provided iterator context
+ * @return CPL_OK or an error code
+ */
+EXPORT cpl_return_t
+cpl_get_all_objects(const int flags,
+					cpl_object_info_iterator_t iterator,
+					void* context);
 
 /**
  * Get information about the given provenance object.

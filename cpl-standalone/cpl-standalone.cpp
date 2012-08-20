@@ -942,11 +942,11 @@ cpl_data_flow_ext(const cpl_id_t data_dest,
  * @return CPL_OK, CPL_S_DUPLICATE_IGNORED, or an error code
  */
 extern "C" EXPORT cpl_return_t
-cpl_control(const cpl_id_t object_id,
-			const cpl_id_t controller,
-			const int type)
+cpl_control_flow(const cpl_id_t object_id,
+		         const cpl_id_t controller,
+                 const int type)
 {
-	return cpl_control_ext(object_id, controller, CPL_VERSION_NONE, type);
+	return cpl_control_flow_ext(object_id, controller, CPL_VERSION_NONE, type);
 }
 
 
@@ -961,12 +961,12 @@ cpl_control(const cpl_id_t object_id,
  * @return CPL_OK, CPL_S_DUPLICATE_IGNORED, or an error code
  */
 extern "C" EXPORT cpl_return_t
-cpl_control_ext(const cpl_id_t object_id,
-				const cpl_id_t controller,
-				const cpl_version_t controller_ver,
-				const int type)
+cpl_control_flow_ext(const cpl_id_t object_id,
+			         const cpl_id_t controller,
+                     const cpl_version_t controller_ver,
+                     const int type)
 {
-	CPL_ENSURE_INITALIZED;
+    CPL_ENSURE_INITALIZED;
 
 
 	// Check the arguments
@@ -1388,6 +1388,7 @@ extern "C" EXPORT cpl_return_t
 cpl_get_session_info(const cpl_session_t id,
 					 cpl_session_info_t** out_info)
 {
+	CPL_ENSURE_INITALIZED;
 	CPL_ENSURE_NOT_NONE(id);
 	CPL_ENSURE_NOT_NULL(out_info);
 
@@ -1421,6 +1422,27 @@ cpl_free_session_info(cpl_session_info_t* info)
 
 
 /**
+ * Get all objects in the database
+ *
+ * @param flags a logical combination of CPL_I_* flags
+ * @param iterator the iterator to be called for each matching object
+ * @param context the caller-provided iterator context
+ * @return CPL_OK or an error code
+ */
+extern "C" EXPORT cpl_return_t
+cpl_get_all_objects(const int flags,
+					cpl_object_info_iterator_t iterator,
+					void* context)
+{
+	CPL_ENSURE_INITALIZED;
+	CPL_ENSURE_NOT_NULL(iterator);
+
+	return cpl_db_backend->cpl_db_get_all_objects(cpl_db_backend, flags,
+                                                  iterator, context);
+}
+
+
+/**
  * Get information about the given provenance object.
  *
  * @param id the object ID
@@ -1431,6 +1453,7 @@ extern "C" EXPORT cpl_return_t
 cpl_get_object_info(const cpl_id_t id,
 					cpl_object_info_t** out_info)
 {
+	CPL_ENSURE_INITALIZED;
 	CPL_ENSURE_NOT_NONE(id);
 	CPL_ENSURE_NOT_NULL(out_info);
 
@@ -1486,6 +1509,7 @@ cpl_get_version_info(const cpl_id_t id,
 					 const cpl_version_t version,
 					 cpl_version_info_t** out_info)
 {
+	CPL_ENSURE_INITALIZED;
 	CPL_ENSURE_NOT_NONE(id);
 	CPL_ENSURE_NOT_NULL(out_info);
 
@@ -1666,6 +1690,42 @@ cpl_lookup_by_property(const char* key,
 /***************************************************************************/
 
 #ifdef __cplusplus
+
+/**
+ * The iterator callback for cpl_get_all_objects() that collects the returned
+ * information in an instance of std::vector<cplxx_object_info_t>.
+ *
+ * @param info the object info
+ * @param context the pointer to an instance of the vector 
+ * @return CPL_OK or an error code
+ */
+#ifdef SWIG
+%constant
+#endif
+EXPORT cpl_return_t
+cpl_cb_collect_object_info_vector(const cpl_object_info_t* info,
+							      void* context)
+{
+	if (context == NULL) return CPL_E_INVALID_ARGUMENT;
+
+	cplxx_object_info_t e;
+	e.id = info->id;
+	e.version = info->version;
+	e.creation_session = info->creation_session;
+    e.creation_time = info->creation_time;
+    e.originator = info->originator;
+    e.name = info->name;
+    e.type = info->type;
+    e.container_id = info->container_id;
+    e.container_version = info->container_version;
+
+	std::vector<cplxx_object_info_t>& l =
+		*((std::vector<cplxx_object_info_t>*) context);
+	l.push_back(e);
+
+	return CPL_OK;
+}
+
 
 /**
  * The iterator callback for cpl_lookup_object_ext() that collects the returned

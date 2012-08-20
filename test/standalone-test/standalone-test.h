@@ -68,8 +68,8 @@ struct test_info
  */
 #define CPL_VERIFY(f, r) { \
 	if (!CPL_IS_OK(r)) { \
-		throw CPLException("Function %s() in file %s on or before line %d " \
-				"failed -- %s (%d)", \
+		throw CPLException("Function %s() failed in file %s on or before " \
+				"line %d -- %s (%d)", \
 				#f, __FILE__, __LINE__, cpl_error_string(r), (r)); \
 	} \
 }

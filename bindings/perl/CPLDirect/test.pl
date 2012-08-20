@@ -182,8 +182,8 @@ print "CPLDirect::cpl_data_flow(obj2, obj3, CPL_DATA_INPUT)";
 check_ret(CPLDirect::cpl_data_flow($obj2, $obj3, $CPLDirect::CPL_DATA_INPUT));
 print "\n";
 
-print "CPLDirect::cpl_control(obj3, obj1, CPL_CONTROL_START)";
-check_ret(CPLDirect::cpl_control($obj3, $obj1, $CPLDirect::CPL_CONTROL_START));
+print "CPLDirect::cpl_control_flow(obj3, obj1, CPL_CONTROL_START)";
+check_ret(CPLDirect::cpl_control_flow($obj3, $obj1, $CPLDirect::CPL_CONTROL_START));
 print "\n";
 
 print "CPLDirect::cpl_data_flow_ext(obj1, obj3, 0, CPL_DATA_TRANSLATION)";

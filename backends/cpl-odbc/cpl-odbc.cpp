@@ -74,8 +74,17 @@ fetch_odbc_error(SQLHANDLE handle, SQLSMALLINT type,
 			errors.push_back(r);
 		}
 		else if (ret != SQL_NO_DATA) {
-			fprintf(stderr, "SQLGetDiagRec failed with error code %ld\n",
-					(long) ret);
+			if (ret == SQL_ERROR) {
+				fprintf(stderr, "SQLGetDiagRec failed with error SQL_ERROR\n");
+			}
+			else if (ret == SQL_INVALID_HANDLE) {
+				fprintf(stderr, "SQLGetDiagRec failed with error "
+								"SQL_INVALID_HANDLE\n");
+			}
+			else {
+				fprintf(stderr, "SQLGetDiagRec failed with error code %ld\n",
+						(long) ret);
+			}
 		}
 	}
 	while (ret == SQL_SUCCESS);
@@ -98,6 +107,10 @@ print_odbc_error(const char *fn, std::vector<cpl_odbc_error_record_t>& errors)
 		fprintf(stderr, "  %s:%ld:%ld:%s\n",
 				errors[i].state, (long) errors[i].index,
 				(long) errors[i].native, errors[i].text);
+	}
+
+	if (errors.empty()) {
+		fprintf(stderr, "  (no errors returned)\n");
 	}
 
 	fprintf(stderr, "\n");
@@ -436,12 +449,50 @@ cpl_sql_fetch_single_dynamically_allocated_string(SQLHSTMT stmt, char** out,
 /***************************************************************************/
 
 /**
+ * Free the statement handles
+ *
+ * @param odbc an initialized backend structure
+ */
+static void
+cpl_odbc_free_statement_handles(cpl_odbc_t* odbc)
+{
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_session_insert_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_object_insert_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_object_insert_container_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_object_insert_version_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_object_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_object_ext_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_version_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_version_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->add_ancestry_edge_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->has_immediate_ancestor_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->has_immediate_ancestor_with_ver_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->add_property_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_session_info_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_all_objects_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_all_objects_with_session_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_info_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_version_info_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_ancestors_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_ancestors_with_ver_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_descendants_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_descendants_with_ver_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_properties_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_properties_with_ver_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_properties_with_key_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_properties_with_key_ver_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_by_property_stmt);
+}
+
+
+/**
  * Connect to a database using ODBC
  *
  * @param odbc an initialized backend structure
  * @return the error code
  */
-static cpl_return_t cpl_odbc_connect(cpl_odbc_t* odbc)
+static cpl_return_t
+cpl_odbc_connect(cpl_odbc_t* odbc)
 {
 	cpl_return_t r = CPL_OK;
 	const char* connection_string = odbc->connection_string.c_str();
@@ -508,6 +559,8 @@ static cpl_return_t cpl_odbc_connect(cpl_odbc_t* odbc)
 	ALLOC_STMT(has_immediate_ancestor_with_ver_stmt);
 	ALLOC_STMT(add_property_stmt);
 	ALLOC_STMT(get_session_info_stmt);
+	ALLOC_STMT(get_all_objects_stmt);
+	ALLOC_STMT(get_all_objects_with_session_stmt);
 	ALLOC_STMT(get_object_info_stmt);
 	ALLOC_STMT(get_version_info_stmt);
 	ALLOC_STMT(get_object_ancestors_stmt);
@@ -602,6 +655,21 @@ static cpl_return_t cpl_odbc_connect(cpl_odbc_t* odbc)
 			"            (id_hi, id_lo, version, name, value)"
 			"     VALUES (?, ?, ?, ?, ?);");
 
+	PREPARE(get_all_objects_stmt,
+			"SELECT id_hi, id_lo, creation_time, originator, name, type,"
+			"       container_id_hi, container_id_lo, container_ver"
+			"  FROM cpl_objects;");
+
+	PREPARE(get_all_objects_with_session_stmt,
+			"SELECT cpl_objects.id_hi, cpl_objects.id_lo,"
+			"       cpl_objects.creation_time, originator, name, type,"
+			"       container_id_hi, container_id_lo, container_ver,"
+			"       session_id_hi, session_id_lo"
+			"  FROM cpl_objects, cpl_versions"
+			" WHERE cpl_objects.id_hi = cpl_versions.id_hi"
+			"   AND cpl_objects.id_lo = cpl_versions.id_lo"
+			"   AND version = 0;");
+
 	PREPARE(get_object_info_stmt,
 			"SELECT session_id_hi, session_id_lo,"
 			"       cpl_objects.creation_time, originator, name, type,"
@@ -683,31 +751,7 @@ static cpl_return_t cpl_odbc_connect(cpl_odbc_t* odbc)
 	// Error handling -- the variable r must be set
 
 err_stmts:
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_session_insert_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_object_insert_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_object_insert_container_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_object_insert_version_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_object_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_object_ext_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_version_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_version_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->add_ancestry_edge_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->has_immediate_ancestor_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->has_immediate_ancestor_with_ver_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->add_property_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_session_info_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_info_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_version_info_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_ancestors_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_ancestors_with_ver_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_descendants_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_descendants_with_ver_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_properties_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_properties_with_ver_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_properties_with_key_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_properties_with_key_ver_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_by_property_stmt);
-
+	cpl_odbc_free_statement_handles(odbc);
 	SQLDisconnect(odbc->db_connection);
 
 err_handles:
@@ -728,30 +772,7 @@ static cpl_return_t cpl_odbc_disconnect(cpl_odbc_t* odbc)
 {
 	cpl_return_t r = CPL_OK;
 
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_session_insert_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_object_insert_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_object_insert_container_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_object_insert_version_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_object_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_object_ext_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_version_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_version_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->add_ancestry_edge_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->has_immediate_ancestor_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->has_immediate_ancestor_with_ver_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->add_property_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_session_info_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_info_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_version_info_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_ancestors_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_ancestors_with_ver_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_descendants_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_descendants_with_ver_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_properties_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_properties_with_ver_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_properties_with_key_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_properties_with_key_ver_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_by_property_stmt);
+	cpl_odbc_free_statement_handles(odbc);
 
 	SQLRETURN ret = SQLDisconnect(odbc->db_connection);
 	if (!SQL_SUCCEEDED(ret)) {
@@ -771,7 +792,8 @@ static cpl_return_t cpl_odbc_disconnect(cpl_odbc_t* odbc)
  * @param odbc the backend structure
  * @return the error code
  */
-static cpl_return_t cpl_odbc_reconnect(cpl_odbc_t* odbc)
+static cpl_return_t
+cpl_odbc_reconnect(cpl_odbc_t* odbc)
 {
 	cpl_odbc_disconnect(odbc);
 	return cpl_odbc_connect(odbc);
@@ -824,6 +846,7 @@ cpl_create_odbc_backend(const char* connection_string,
 	mutex_init(odbc->has_immediate_ancestor_lock);
 	mutex_init(odbc->add_property_lock);
 	mutex_init(odbc->get_session_info_lock);
+	mutex_init(odbc->get_all_objects_lock);
 	mutex_init(odbc->get_object_info_lock);
 	mutex_init(odbc->get_version_info_lock);
 	mutex_init(odbc->get_object_ancestry_lock);
@@ -856,6 +879,7 @@ err_sync:
 	mutex_destroy(odbc->has_immediate_ancestor_lock);
 	mutex_destroy(odbc->add_property_lock);
 	mutex_destroy(odbc->get_session_info_lock);
+	mutex_destroy(odbc->get_all_objects_lock);
 	mutex_destroy(odbc->get_object_info_lock);
 	mutex_destroy(odbc->get_version_info_lock);
 	mutex_destroy(odbc->get_object_ancestry_lock);
@@ -936,6 +960,7 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
 	mutex_destroy(odbc->has_immediate_ancestor_lock);
 	mutex_destroy(odbc->add_property_lock);
 	mutex_destroy(odbc->get_session_info_lock);
+	mutex_destroy(odbc->get_all_objects_lock);
 	mutex_destroy(odbc->get_object_info_lock);
 	mutex_destroy(odbc->get_version_info_lock);
 	mutex_destroy(odbc->get_object_ancestry_lock);
@@ -1681,6 +1706,7 @@ err:
 /**
  * Get information about the given provenance session.
  *
+ * @param backend the pointer to the backend structure
  * @param id the session ID
  * @param out_info the pointer to store the session info structure
  * @return CPL_OK or an error code
@@ -1763,8 +1789,212 @@ err_r:
 
 
 /**
+ * Get all objects in the database
+ *
+ * @param backend the pointer to the backend structure
+ * @param flags a logical combination of CPL_I_* flags
+ * @param iterator the iterator to be called for each matching object
+ * @param context the caller-provided iterator context
+ * @return CPL_OK or an error code
+ */
+cpl_return_t
+cpl_odbc_get_all_objects(struct _cpl_db_backend_t* backend,
+						 const int flags,
+						 cpl_object_info_iterator_t iterator,
+						 void* context)
+{
+	assert(backend != NULL);
+	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
+
+	SQL_START;
+
+	cpl_return_t r = CPL_E_INTERNAL_ERROR;
+	cplxx_object_info_t entry;
+	std::list<cplxx_object_info_t> entries;
+	SQL_TIMESTAMP_STRUCT t;
+
+	size_t originator_size = 4096;
+	size_t name_size = 4096;
+	size_t type_size = 256;
+
+	char* entry_originator = (char*) alloca(originator_size);
+	char* entry_name = (char*) alloca(name_size);
+	char* entry_type = (char*) alloca(type_size);
+
+	if (entry_originator == NULL || entry_name == NULL || entry_type == NULL) {
+		return CPL_E_INSUFFICIENT_RESOURCES;
+	}
+
+	SQLLEN cb_container_id_lo = 0;
+	SQLLEN cb_container_id_hi = 0;
+	SQLLEN cb_container_ver = 0;
+
+	mutex_lock(odbc->get_all_objects_lock);
+
+
+	// Get and execute the statement
+	
+retry:
+
+	entries.clear();
+
+	SQLHSTMT stmt = ((flags & CPL_I_NO_CREATION_SESSION) != 0)
+						? odbc->get_all_objects_stmt
+						: odbc->get_all_objects_with_session_stmt;
+
+
+	// Execute
+	
+	SQL_EXECUTE(stmt);
+
+
+	// Bind the columns
+
+	ret = SQLBindCol(stmt, 1, SQL_C_UBIGINT, &entry.id.hi, 0, NULL);
+	if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+	ret = SQLBindCol(stmt, 2, SQL_C_UBIGINT, &entry.id.lo, 0, NULL);
+	if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+	ret = SQLBindCol(stmt, 3, SQL_C_TYPE_TIMESTAMP, &t, sizeof(t), NULL);
+	if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+	ret = SQLBindCol(stmt, 4, SQL_C_CHAR, entry_originator, originator_size,
+					 NULL);
+	if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+	ret = SQLBindCol(stmt, 5, SQL_C_CHAR, entry_name, name_size, NULL);
+	if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+	ret = SQLBindCol(stmt, 6, SQL_C_CHAR, entry_type, type_size, NULL);
+	if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+
+	if ((flags & CPL_I_NO_CREATION_SESSION) == 0) {
+
+		ret = SQLBindCol(stmt, 7, SQL_C_UBIGINT, &entry.container_id.hi, 0,
+						 &cb_container_id_lo);
+		if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+		ret = SQLBindCol(stmt, 8, SQL_C_UBIGINT, &entry.container_id.lo, 0,
+						 &cb_container_id_hi);
+		if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+		ret = SQLBindCol(stmt, 9, SQL_C_SBIGINT, &entry.container_version, 0,
+						 &cb_container_ver);
+		if (!SQL_SUCCEEDED(ret)) goto err_close;
+	}
+
+
+	// Fetch the result
+
+	while (true) {
+
+		ret = SQLFetch(stmt);
+		if (!SQL_SUCCEEDED(ret)) {
+			if (ret == SQL_INVALID_HANDLE) {
+				fprintf(stderr, "\nThe ODBC driver failed while running "
+								"SQLFetch due to SQL_INVALID_HANDLE\n\n");
+				goto err_close;
+			}
+			else if (ret != SQL_NO_DATA) {
+				print_odbc_error("SQLFetch", stmt, SQL_HANDLE_STMT);
+				goto err_close;
+			}
+			break;
+		}
+
+		entry.creation_time = cpl_sql_timestamp_to_unix_time(t);
+		entry.originator = entry_originator;
+		entry.name = entry_name;
+		entry.type = entry_type;
+
+		if (cb_container_id_lo <= 0) entry.container_id = CPL_NONE;
+		if (cb_container_id_hi <= 0) entry.container_id = CPL_NONE;
+		if (cb_container_ver   <= 0) entry.container_version =CPL_VERSION_NONE;
+
+		entries.push_back(entry);
+	}
+	
+	ret = SQLCloseCursor(stmt);
+	if (!SQL_SUCCEEDED(ret)) {
+		print_odbc_error("SQLCloseCursor", stmt, SQL_HANDLE_STMT);
+		goto err;
+	}
+
+
+	// Unlock
+
+	mutex_unlock(odbc->get_all_objects_lock);
+
+
+	// If we did not get any data back, terminate
+
+	if (entries.empty()) return CPL_S_NO_DATA;
+
+
+	// Call the user-provided callback function
+
+	if (iterator != NULL) {
+		std::list<cplxx_object_info_t>::iterator i;
+		for (i = entries.begin(); i != entries.end(); i++) {
+
+#ifdef _WINDOWS
+			strcpy_s(entry_originator, originator_size, i->originator.c_str());
+			strcpy_s(entry_name, name_size, i->name.c_str());
+			strcpy_s(entry_type, type_size, i->type.c_str());
+#else
+			strncpy(entry_originator, i->originator.c_str(), originator_size);
+			strncpy(entry_name, i->name.c_str(), name_size);
+			strncpy(entry_type, i->type.c_str(), type_size);
+#endif
+			entry_originator[originator_size - 1] = '\0';
+			entry_name[name_size - 1] = '\0';
+			entry_type[type_size - 1] = '\0';
+
+			cpl_version_t version = CPL_VERSION_NONE;
+			if ((flags & CPL_I_NO_VERSION) == 0) {
+				cpl_return_t r = cpl_odbc_get_version(backend, i->id,&version);
+				if (!CPL_IS_OK(r)) return r;
+			}
+
+			cpl_object_info_t e;
+			e.id = i->id;
+			e.version = version;
+			e.creation_session = i->creation_session;
+			e.creation_time = i->creation_time;
+			e.originator = entry_originator;
+			e.name = entry_name;
+			e.type = entry_type;
+			e.container_id = i->container_id;
+			e.container_version = i->container_version;
+
+			r = iterator(&e, context);
+			if (!CPL_IS_OK(r)) return r;
+		}
+	}
+
+	return CPL_OK;
+
+
+	// Error handling
+
+err_close:
+	ret = SQLCloseCursor(stmt);
+	if (!SQL_SUCCEEDED(ret)) {
+		print_odbc_error("SQLCloseCursor", stmt, SQL_HANDLE_STMT);
+	}
+
+err:
+	mutex_unlock(odbc->get_all_objects_lock);
+	return CPL_E_STATEMENT_ERROR;
+}
+
+
+/**
  * Get information about the given provenance object
  *
+ * @param backend the pointer to the backend structure
  * @param id the object ID
  * @param version_hint the version of the given provenance object if known,
  *                     or CPL_VERSION_NONE if not
@@ -1778,6 +2008,7 @@ cpl_odbc_get_object_info(struct _cpl_db_backend_t* backend,
 						 cpl_object_info_t** out_info)
 {
 	assert(backend != NULL);
+	
 	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
 	
 	SQL_START;
@@ -1890,6 +2121,7 @@ err_r:
 /**
  * Get information about the specific version of a provenance object
  *
+ * @param backend the pointer to the backend structure
  * @param id the object ID
  * @param version the version of the given provenance object
  * @param out_info the pointer to store the version info structure
@@ -2492,6 +2724,7 @@ const cpl_db_backend_t CPL_ODBC_BACKEND = {
 	cpl_odbc_has_immediate_ancestor,
 	cpl_odbc_add_property,
 	cpl_odbc_get_session_info,
+	cpl_odbc_get_all_objects,
 	cpl_odbc_get_object_info,
 	cpl_odbc_get_version_info,
 	cpl_odbc_get_object_ancestry,

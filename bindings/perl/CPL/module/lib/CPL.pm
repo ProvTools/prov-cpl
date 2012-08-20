@@ -376,7 +376,7 @@ sub data_flow {
 #
 # Add a control dependency
 #
-sub control {
+sub control_flow {
 	my ($dest, $src, $type) = @_;
 
 	if (!$type) { $type = $CPL::CONTROL_OP }
@@ -391,7 +391,7 @@ sub control {
 	CPLDirect::cpl_id_t::swig_lo_set($s_ptr, $src->{lo});
 	my $s = CPLDirect::cpl_id_tp_value($s_ptr);
 
-	my $ret = CPLDirect::cpl_control($d, $s, $type);
+	my $ret = CPLDirect::cpl_control_flow($d, $s, $type);
 	CPLDirect::delete_cpl_id_tp($d_ptr);
 	CPLDirect::delete_cpl_id_tp($s_ptr);
 
@@ -438,7 +438,7 @@ sub data_flow_ext {
 #
 # Add a control dependency (specify the version number of the source)
 #
-sub control_ext {
+sub control_flow_ext {
 	my ($dest, $src, $src_version, $type) = @_;
 
 	if (!$type) { $type = $CPL::CONTROL_OP }
@@ -453,7 +453,7 @@ sub control_ext {
 	CPLDirect::cpl_id_t::swig_lo_set($s_ptr, $src->{lo});
 	my $s = CPLDirect::cpl_id_tp_value($s_ptr);
 
-	my $ret = CPLDirect::cpl_control_ext($d, $s, $src_version, $type);
+	my $ret = CPLDirect::cpl_control_flow_ext($d, $s, $src_version, $type);
 	CPLDirect::delete_cpl_id_tp($d_ptr);
 	CPLDirect::delete_cpl_id_tp($s_ptr);
 

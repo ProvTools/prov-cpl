@@ -143,6 +143,20 @@ cpl_convert_p_std_vector_cpl_id_version_t_to_p_void(
     return (void*) p;
 }
 
+typedef std::vector<cplxx_object_info_t> std_vector_cplxx_object_info_t;
+
+inline std::vector<cplxx_object_info_t>&
+cpl_dereference_p_std_vector_cplxx_object_info_t(
+        std_vector_cplxx_object_info_t* p) {
+    return *p;
+}
+
+inline void*
+cpl_convert_p_std_vector_cplxx_object_info_t_to_p_void(
+        std_vector_cplxx_object_info_t* p) {
+    return (void*) p;
+}
+
 typedef std::vector<cplxx_property_entry_t> std_vector_cplxx_property_entry_t;
 
 inline std::vector<cplxx_property_entry_t>&
@@ -238,6 +252,16 @@ inline void*
 cpl_convert_p_std_vector_cpl_id_version_t_to_p_void(
         std_vector_cpl_id_version_t* p);
 
+%template (cplxx_object_info_t_vector) std::vector<cplxx_object_info_t>;
+
+inline std::vector<cplxx_object_info_t>&
+cpl_dereference_p_std_vector_cplxx_object_info_t(
+    std_vector_cplxx_object_info_t* p);
+
+inline void*
+cpl_convert_p_std_vector_cplxx_object_info_t_to_p_void(
+        std_vector_cplxx_object_info_t* p);
+
 %template (cplxx_property_entry_t_vector) std::vector<cplxx_property_entry_t>;
 
 inline std::vector<cplxx_property_entry_t>&
@@ -274,6 +298,8 @@ cpl_convert_p_std_vector_cplxx_property_entry_t_to_p_void(
         std_vector_cpl_ancestry_entry_tp);
 %pointer_functions(std_vector_cpl_id_version_t,
         std_vector_cpl_id_version_tp);
+%pointer_functions(std_vector_cplxx_object_info_t,
+        std_vector_cplxx_object_info_tp);
 %pointer_functions(std_vector_cplxx_property_entry_t,
         std_vector_cplxx_property_entry_tp);
 
