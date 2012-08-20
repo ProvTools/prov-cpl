@@ -59,7 +59,7 @@ public class test {
      */
     public test(String[] args) {
         this.args = args;
-		CPL.attachODBC("DSN=cpl");
+		CPL.attachODBC("DSN=CPL");
     }
 
 

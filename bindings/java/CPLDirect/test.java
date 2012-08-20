@@ -69,7 +69,7 @@ public class test {
         // Open the database connection
 
         SWIGTYPE_p_p_cpl_db_backend_t outDb = CPLDirect.new_cpl_db_backend_tpp();
-        int r = CPLDirect.cpl_create_odbc_backend("DSN=cpl", 0, outDb);
+        int r = CPLDirect.cpl_create_odbc_backend("DSN=CPL", 0, outDb);
         //if (r != CPLDirectConstants.CPL_OK) {
         if (CPLDirect.cpl_is_ok(r) == 0) {
             throw new RuntimeException("Cannot initialize the database " +
