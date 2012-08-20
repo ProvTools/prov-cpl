@@ -93,6 +93,10 @@ Please download and install the ODBC Administrator Tool for Mac OS X from:
 
     http://support.apple.com/kb/dl895
 
+And install the appropriate ODBC drivers:
+
+	For MySQL: http://dev.mysql.com/downloads/connector/odbc/
+
 Then, create either "User DSN" or "System DSN" (depending if you are installing
 CPL just for yourself or also for other users) for the database that you plan
 to use, and enter the following properties:
