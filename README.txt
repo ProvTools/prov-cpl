@@ -145,6 +145,8 @@ include                      - C/C++ headers
 include/backends             - Public C/C++ headers for the database backends
 include/private              - Private headers used by libcpl, tools, and tests
 make                         - The build system
+misc                         - Miscellaneous
+misc/kepler                  - Kepler integration patch and instructions
 private-lib                  - Private libraries used by tools and tests
 private-lib/platform-compat  - Platform compatibility library for tools & tests
 scripts                      - Database setup/cleanup scripts

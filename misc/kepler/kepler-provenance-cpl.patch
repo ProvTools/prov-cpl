@@ -1,0 +1,491 @@
+Binary files ../provenance.original/lib/jar/CPL.jar and ./lib/jar/CPL.jar differ
+diff -Nru -x .svn ../provenance.original/resources/configurations/configuration.xml ./resources/configurations/configuration.xml
+--- ../provenance.original/resources/configurations/configuration.xml	2012-08-20 22:03:29.432714790 -0400
++++ ./resources/configurations/configuration.xml	2012-03-27 18:25:37.563395738 -0400
+@@ -133,6 +133,10 @@
+                 <name>OPM XML</name>
+                 <value>org.kepler.provenance.opm.OpenProvenanceModelXML</value>
+             </pair>
++            <pair>
++                <name>CPL</name>
++                <value>org.kepler.provenance.cpl.CoreProvenanceLibrary</value>
++            </pair>
+         </recordingTypes>
+     </provenance>
+ 
+diff -Nru -x .svn ../provenance.original/src/org/kepler/provenance/cpl/CoreProvenanceLibrary.java ./src/org/kepler/provenance/cpl/CoreProvenanceLibrary.java
+--- ../provenance.original/src/org/kepler/provenance/cpl/CoreProvenanceLibrary.java	1969-12-31 19:00:00.000000000 -0500
++++ ./src/org/kepler/provenance/cpl/CoreProvenanceLibrary.java	2012-08-20 22:18:11.728694498 -0400
+@@ -0,0 +1,472 @@
++
++package org.kepler.provenance.cpl;
++
++import java.io.File;
++import java.util.HashMap;
++import java.util.LinkedHashMap;
++import java.util.List;
++import java.util.Map;
++
++import org.kepler.provenance.FireState;
++import org.kepler.provenance.PortConnector;
++import org.kepler.provenance.Recording;
++import org.kepler.provenance.RecordingException;
++import org.kepler.provenance.RecordingParameters;
++
++import edu.harvard.pass.cpl.CPL;
++import edu.harvard.pass.cpl.CPLFile;
++import edu.harvard.pass.cpl.CPLObject;
++
++import ptolemy.actor.Actor;
++import ptolemy.actor.CompositeActor;
++import ptolemy.actor.FiringEvent;
++import ptolemy.actor.FiringsRecordable;
++import ptolemy.actor.IOPort;
++import ptolemy.actor.IOPortEvent;
++import ptolemy.actor.TypedIOPort;
++import ptolemy.actor.lib.io.FileReader;
++import ptolemy.data.StringToken;
++import ptolemy.data.Token;
++import ptolemy.data.expr.Parameter;
++import ptolemy.kernel.util.Attribute;
++import ptolemy.kernel.util.IllegalActionException;
++import ptolemy.kernel.util.NameDuplicationException;
++import ptolemy.kernel.util.NamedObj;
++
++/**
++ * A Recording for Core Provenance Library
++ *
++ * @author Peter Macko
++ */
++public class CoreProvenanceLibrary extends Recording
++{
++	public static final String ORIGINATOR = "org.kepler";
++	
++	static {
++		if (CPL.isInstalled()) {
++			CPL.attachODBC("DSN=CPL;");
++			System.err.println("Initialized the Core Provenance Library");
++		}
++		else {
++			System.err.println("Could not initialize the Core Provenance Library - not installed");
++			System.err.println("Please check your java.library.path: " + System.getProperty("java.library.path"));
++		}
++	}
++
++    /** Construct a new CoreProvenanceLibrary. */
++    public CoreProvenanceLibrary() throws RecordingException
++    {
++        _params = null;
++
++        _portConnector = new PortConnector<CPLObject>();
++
++        _fireStateTable = new LinkedHashMap<Actor, FireState<CPLObject>>();
++
++        _tokenToArtifactIdMap = new HashMap<Token,CPLObject>();
++        _artifactCounter = 0;
++        _processCounter = 0;
++
++        _compositePortToProcessMap = new HashMap<CompositeMapKey,CPLObject>();
++        _portFiringCounter = 0;
++
++        _needWorkflowContents(true);
++    }
++
++    /** React to a parameter change. */
++    public void attributeChanged(Attribute attribute)
++        throws IllegalActionException
++    {  
++        super.attributeChanged(attribute); 
++    }
++
++    /** Register an actor. */
++    public boolean regActor(Actor actor) throws RecordingException
++    {
++        if(actor instanceof FiringsRecordable)
++        {
++            FireState<CPLObject> fireState = new FireState<CPLObject>(actor, -1);
++            _fireStateTable.put(actor, fireState);
++        }
++
++        return true;
++    }
++
++    /** Register a port or portparameter.  */
++    public boolean regPort(TypedIOPort port) throws RecordingException
++    {
++        boolean retval = super.regPort(port);
++
++        _portConnector.createConnections(port);
++
++        return retval;
++    }
++
++    /** Record the starting of workflow execution. */
++    public void executionStart() throws RecordingException
++    {
++        _artifactCounter = 0;
++        _processCounter = 0;
++        _tokenToArtifactIdMap.clear();
++        _compositePortToProcessMap.clear();
++        _portFiringCounter = 0;
++    }
++
++    /** Record the stopping of workflow execution. */
++    public void executionStop() throws RecordingException
++    {
++    }
++
++    /** Record an actor firing. */
++    public void actorFire(FiringEvent event) throws RecordingException
++    {
++        Actor actor = event.getActor();
++        FiringEvent.FiringEventType curEventType = event.getType();
++        FireState<CPLObject> fireState = _fireStateTable.get(actor);
++        
++        if(fireState == null)
++        {
++            throw new RecordingException(
++                "Received actor fire event for unregistered actor: " +
++                actor.getFullName());
++        }
++
++        synchronized(fireState)
++        {
++            // get the last type of firing start
++            FiringEvent.FiringEventType lastStartType =
++                fireState.getLastStartFireType();
++
++            // see if current firing is new iteration:
++            // NOTE: PN does not report iterate firings so the iteration
++            // may begin with prefire if the last type of firing was not
++            // iterate.
++            if(curEventType == FiringEvent.BEFORE_ITERATE ||
++                (curEventType == FiringEvent.BEFORE_PREFIRE &&
++                lastStartType != FiringEvent.BEFORE_ITERATE))
++            {
++                
++                // create a new process for the new firing
++                String actorName = ((NamedObj)actor).getFullName();
++           	    CPLObject process = new CPLObject(ORIGINATOR, actorName /*"_p" + String.valueOf(_processCounter)*/, "PROC");
++                _processCounter++;
++
++                // set the process name to be the actor name and number of
++                // times it has fired.
++                //int firings = fireState.getNumberOfFirings();
++                //process.setValue(actorName + " fire " + firings);
++
++                // start the fire in the fire state.
++                fireState.fireStart(curEventType, process);
++
++                //_debug("adding process id " + actorName + " fire " + firings);
++                
++                // record the parameters used.
++
++                List<?> attributeList = ((NamedObj)actor).attributeList();
++                for(int i = 0; i < attributeList.size(); i++)
++                {
++                    Attribute attribute = (Attribute)attributeList.get(i);
++                    _createUsedForParameter(attribute, process);
++                }
++            	
++            	if (fireState.getActor() instanceof FileReader) {
++            		try {
++						process.dataFlowFrom(CPLFile.lookupOrCreate(((FileReader) fireState.getActor()).fileOrURL.asFile()));
++					} catch (IllegalActionException e) {
++						e.printStackTrace();
++					}
++            	}
++            }
++            // see if current firing is end of iteration:
++            else if(curEventType == FiringEvent.AFTER_ITERATE ||
++                (curEventType == FiringEvent.AFTER_POSTFIRE &&
++                lastStartType == FiringEvent.BEFORE_PREFIRE))
++            {
++                //_debug("end firing: " + type + " for " + actor.getFullName());
++            	
++            	String filename = "";
++            	if (fireState.getActor() instanceof ptolemy.actor.lib.FileWriter) {
++            		filename = ((ptolemy.actor.lib.FileWriter) fireState.getActor()).filename.getValueAsString();
++            	}            	
++            	if (fireState.getActor() instanceof org.geon.FileWrite) {
++            		filename = ((org.geon.FileWrite) fireState.getActor()).fileName.getValueAsString();
++            	}
++            	if (filename.startsWith("\"")) filename = filename.substring(1);
++            	if (filename.endsWith("\"")) filename = filename.substring(0, filename.length() - 1);
++        		if (!"".equals(filename) && !"System.out".equals(filename) && !"System.err".equals(filename)) {
++        			System.err.println(filename);
++        			CPLFile.create(new File(filename)).dataFlowFrom(fireState.getCurFireId());
++        		}
++        		
++                // NOTE: if the type is a AFTER_POSTFIRE and last start
++                // type is BEFORE_PREFIRE, we are running in PN.
++                // in this case, tell the fireState to stop firing using
++                // AFTER_PREFIRE instead of AFTER_POSTFIRE, since we never
++                // told the fireState about the BEFORE_POSTFIRE.
++                if(curEventType == FiringEvent.AFTER_POSTFIRE)
++                {
++                    fireState.fireStop(FiringEvent.AFTER_PREFIRE);
++                }
++                else
++                {
++                    fireState.fireStop(curEventType);
++                }
++            }
++        }
++    }
++    
++    /** Record a port event. */
++    public void portEvent(IOPortEvent event) throws RecordingException
++    {
++        TypedIOPort port = (TypedIOPort)event.getPort();
++        Actor actor = (Actor)port.getContainer();
++        FireState<CPLObject> fireState = _fireStateTable.get(actor);
++        
++        synchronized(fireState)
++        {
++            int eventType = event.getEventType();
++            boolean recordEvent = false;
++            boolean isRead = true;
++
++            if(eventType == IOPortEvent.SEND_BEGIN)
++            {
++                recordEvent = true;
++                isRead = false;
++            }   
++            else if(eventType == IOPortEvent.GET_END)
++            {
++                recordEvent = true;
++            }
++
++            if(recordEvent)
++            {
++            	CPLObject processId = fireState.getCurFireId();
++
++                if(actor instanceof CompositeActor)
++                {
++                    if(processId == null)
++                    {
++                        System.out.println("pid is null, actor = " + actor.getFullName());
++                    }
++
++                    CompositeMapKey key = new CompositeMapKey(processId, port);
++
++                    processId = _compositePortToProcessMap.get(key);
++                    if(processId == null)
++                    {
++                        // create a new process for the new firing
++                        String name = port.getFullName();
++                        CPLObject process = new CPLObject(ORIGINATOR, name /*"_p" + String.valueOf(_processCounter)*/, "PROC");
++                        _processCounter++;
++                        
++                        //int firings = _portFiringCounter++;
++                        // process.setValue(name + " fire " + firings);
++                        _compositePortToProcessMap.put(key, process);
++                    }
++                }
++
++                if(event.getVectorLength() == IOPortEvent.SINGLETOKEN)
++                {
++                    _recordPortEvent(port, processId, isRead, event.getChannel(), event.getToken());
++                }
++                else
++                {
++                    Token[] tokenArray = event.getTokenArray();
++                    for(int i = 0; i < tokenArray.length; i++)
++                    {
++                        _recordPortEvent(port, processId, isRead, event.getChannel(), tokenArray[i]);
++                    }
++                }
++            }
++        } 
++    }
++
++    /** Add Parameters for ProvenanceListener. */
++    public RecordingParameters generateParameters(NamedObj no)
++        throws IllegalActionException, NameDuplicationException
++    {
++        _params = new CPLRecordingParameters(no);
++        return _params;
++    }
++
++    ////////////////////////////////////////////////////////////////////////
++    //// protected methods                                              ////
++
++    /** Record a port read or write. */
++    protected void _recordPortEvent(IOPort port, CPLObject processId,
++        boolean isRead, int channel, Token token)
++        throws RecordingException
++    {
++        if(isRead)
++        {
++        	CPLObject artifactId = _portConnector.getNextId(port, channel);
++        	processId.dataFlowFrom(artifactId);
++        }
++        else
++        {
++        	CPLObject artifactId = _getArtifactId(token, true);
++        	
++        	artifactId.dataFlowFrom(processId);
++            _portConnector.sendIdToConnections(port, channel, artifactId);
++        }
++    }
++
++    ////////////////////////////////////////////////////////////////////////
++    //// private methods                                                ////
++
++
++    /** Get an existing or create a new ArtifactId for a token. */
++    private CPLObject _getArtifactId(Token token, boolean isNewToken)
++    {
++    	CPLObject retval = null;
++        
++        if(!isNewToken)
++        {
++            retval = _tokenToArtifactIdMap.get(token);
++        }
++
++        if(retval == null)
++        {          
++            String id = "_a" + String.valueOf(_artifactCounter);
++            _artifactCounter++;
++             
++            // if it's a string token, use stringValue so we don't
++            // get the quotes.
++       		String s;
++            if(token instanceof StringToken)
++            {
++                s = ((StringToken)token).stringValue();
++            }
++            else
++            {
++                s = token.toString();
++            }
++            
++            retval = new CPLObject(ORIGINATOR, id, "ARTIFACT");
++            retval.addProperty("Value", s);
++            _tokenToArtifactIdMap.put(token, retval);
++        }
++
++        return retval;
++    }
++
++
++    private void _createUsedForParameter(Attribute attribute, CPLObject processId)
++        throws RecordingException
++    {
++        if( (attribute instanceof Parameter) &&
++           !(attribute instanceof ptolemy.data.expr.ExpertParameter) &&
++           !(attribute instanceof ptolemy.actor.gui.WindowPropertiesAttribute) &&
++           !(attribute instanceof ptolemy.actor.gui.SizeAttribute) &&
++           !(attribute instanceof org.kepler.sms.SemanticType))
++        {
++            //_debug(attribute); 
++            Parameter parameter = (Parameter)attribute;
++            Token token = null;
++
++            try
++            {
++                token = parameter.getToken();
++            }
++            catch(IllegalActionException e)
++            {
++                throw new RecordingException("Error reading parameter token: ", e);
++            }
++            
++            if(token != null)
++            {
++                //CPLObject artifactId = _getArtifactId(token, false);
++            	String s;
++                if(token instanceof StringToken)
++                {
++                    s = ((StringToken)token).stringValue();
++                }
++                else
++                {
++                    s = token.toString();
++                }
++                processId.addProperty(parameter.getDisplayName(), s);
++            }
++        }
++    }
++
++    ////////////////////////////////////////////////////////////////////////
++    //// private classes                                                ////
++   
++    private static class CPLRecordingParameters extends RecordingParameters
++    {
++    	CPLRecordingParameters(NamedObj no) throws IllegalActionException, NameDuplicationException
++        {
++            super(no);
++        }
++    }
++
++    private static class CompositeMapKey
++    {
++        public CompositeMapKey(CPLObject processId, IOPort port)
++        {
++            this.processId = processId;
++            this.port = port;
++        }
++
++        public int hashCode()
++        {
++            return processId.hashCode() + port.hashCode();
++        }
++
++        public boolean equals(Object obj)
++        {
++            if(!(obj instanceof CompositeMapKey))
++            {
++                return false;
++            }
++            else
++            {
++                CompositeMapKey other = (CompositeMapKey)obj;
++                return processId.equals(other.processId) &&
++                    port.equals(other.port);
++            }
++        }
++
++        public CPLObject processId;
++        public IOPort port;
++    }
++
++    /*
++    private static class TokenInfo
++    {
++        public TokenInfo(ArtifactId artifactId)
++        {
++            _artifactId = artifactId;
++        }
++
++        public ArtifactId getArtifactId()
++        {
++            return _artifactId;
++        }
++
++        private ArtifactId _artifactId;
++    }
++    */
++
++    ////////////////////////////////////////////////////////////////////////
++    //// private variables                                              ////
++
++    /** A table to map actor to its firing state object. */
++    private Map<Actor, FireState<CPLObject>> _fireStateTable = null;
++
++    private PortConnector<CPLObject> _portConnector;
++
++    private CPLRecordingParameters _params;
++
++	private int _artifactCounter;
++    @SuppressWarnings("unused")
++	private int _processCounter;
++
++    private Map<Token,CPLObject> _tokenToArtifactIdMap;
++
++    private Map<CompositeMapKey,CPLObject> _compositePortToProcessMap;
++
++    @SuppressWarnings("unused")
++	private int _portFiringCounter;
++}
