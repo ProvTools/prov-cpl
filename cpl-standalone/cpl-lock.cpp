@@ -105,6 +105,7 @@ cpl_host_unique_id_generator_initialize(void)
 
 	cpl_unique_base = (((unsigned long long) (tv.tv_sec - 1000000000UL)) << 32)
 		| (((unsigned long) (tv.tv_usec / 1000)) << 22);
+	cpl_unique_base &= 0x7fffffffffffffffull;	// Ensure that it is positive
 	cpl_unique_counter = 0;
 
 	cpl_shared_semaphore_post(s);
@@ -144,6 +145,7 @@ cpl_lock_initialize(void)
 		// If we can't get the unique machine ID, get a random number
 		cpl_unique_machine_id = rand();
 	}
+	cpl_unique_machine_id &= 0x7fffffffffffffffull;	// Make it positive
 
 #endif
 
@@ -496,6 +498,13 @@ cpl_generate_unique_id(cpl_id_t* out)
 #else
 
 	cpl_platform_generate_uuid((cpl_uuid_t*) out);
+
+
+	// Ensure that the ID components are positive -- hopefully without
+	// breaking anything
+
+	out->hi &= 0x7fffffffffffffffull;
+	out->lo &= 0x7fffffffffffffffull;
 
 #endif
 }
