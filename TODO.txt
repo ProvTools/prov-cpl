@@ -12,6 +12,7 @@ Database Backends:
 
 Tools:
   - Implement the following cpl-tools: copy, move
+  - Finish implementing the following cpl-tool: info
   - Port to Windows
 
 Language Bindings:
@@ -28,9 +29,7 @@ Documentation:
   N/A
 
 Platform Compatibility:
-  - Test Java bindings on OS X
   - Port Java bindings to Windows
   - Port Perl bindings to Windows
-  - Test the RDF backend on OS X
   - Port the RDF backend to Windows
 
