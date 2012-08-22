@@ -82,7 +82,7 @@ public class CPLId implements Serializable {
 		for (int i = 0; i < s.length(); i++) {
 			char c = s.charAt(i);
 			if (!(Character.isDigit(c) || (c >= 'a' && c <= 'f')
-						|| (c >= 'a' && c <= 'f'))) {
+						|| (c >= 'A' && c <= 'F'))) {
 				throw new NumberFormatException();
 			}
 		}
