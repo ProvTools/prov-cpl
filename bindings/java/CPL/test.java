@@ -178,6 +178,43 @@ public class test {
 
 
 		/*
+		 * Check objects created back from their internal IDs
+		 */
+
+		System.out.print("new CPLObject(new CPLId(obj1.getId().toString()))");
+		obj1x = new CPLObject(new CPLId(obj1.getId().toString()));
+		System.out.println(": " + obj1x);
+		if (!obj1.equals(obj1x))
+			throw new RuntimeException("Object recreation from ID failed");
+
+		System.out.print("new CPLObject(new CPLId(obj2.getId().toString()))");
+		obj2x = new CPLObject(new CPLId(obj2.getId().toString()));
+		System.out.println(": " + obj2x);
+		if (!obj2.equals(obj2x))
+			throw new RuntimeException("Object recreation from ID failed");
+
+		System.out.print("new CPLObject(new CPLId(obj3.getId().toString()))");
+		obj3x = new CPLObject(new CPLId(obj3.getId().toString()));
+		System.out.println(": " + obj3x);
+		if (!obj3.equals(obj3x))
+			throw new RuntimeException("Object recreation from ID failed");
+
+		System.out.print("new CPLObject(new CPLId(obj4.getId().toString()))");
+		obj4x = new CPLObject(new CPLId(obj4.getId().toString()));
+		System.out.println(": " + obj4x);
+		if (!obj4.equals(obj4x))
+			throw new RuntimeException("Object recreation from ID failed");
+
+		System.out.print("new CPLObject(new CPLId(obj5.getId().toString()))");
+		obj5x = new CPLObject(new CPLId(obj5.getId().toString()));
+		System.out.println(": " + obj5x);
+		if (!obj5.equals(obj5x))
+			throw new RuntimeException("Object recreation from ID failed");
+
+		System.out.println();
+
+
+		/*
 		 * Data and control dependencies
 		 */
 

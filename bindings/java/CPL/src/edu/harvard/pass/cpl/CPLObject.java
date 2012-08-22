@@ -152,6 +152,29 @@ public class CPLObject {
 
 
 	/**
+	 * Create an instance of CPLObject from its ID
+	 *
+	 * @param id the internal CPL object ID
+	 */
+	public CPLObject(CPLId id) {
+		this.id = CPLDirect.new_cpl_id_tp();
+		this.id.setHi(id.getHi());
+		this.id.setLo(id.getLo());
+		getVersion();	// Check that the ID is a valid object ID (slow!)
+	}
+
+
+	/**
+	 * Get the ID of the object
+	 *
+	 * @return the internal ID of this object
+	 */
+	public CPLId getId() {
+		return new CPLId(id);
+	}
+
+
+	/**
 	 * Create a new CPLObject
 	 *
 	 * @param originator the originator
