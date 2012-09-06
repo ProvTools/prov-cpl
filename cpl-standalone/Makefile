@@ -18,6 +18,13 @@ PROJECT := cpl
 SHARED := yes
 INSTALL := yes
 
+SO_MAJOR_VERSION := $(shell cat "$(ROOT)/include/cpl.h" \
+	| grep 'define CPL_VERSION_MAJOR' \
+	| sed 's/^[^0-9]*//g' | head -n 1)
+SO_MINOR_VERSION := $(shell cat "$(ROOT)/include/cpl.h" \
+	| grep 'define CPL_VERSION_MINOR' \
+	| sed 's/^[^0-9]*//g' | head -n 1)
+
 DEPENDENCIES := $(ROOT)/include/*.h
 INCLUDE_FLAGS := $(INCLUDE_FLAGS) -I$(ROOT)/include
 
