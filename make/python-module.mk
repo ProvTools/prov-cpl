@@ -25,6 +25,8 @@ include $(ROOT)/make/python-module-header.mk
 # Compile Targets
 #
 
+# TODO Make the hard-coded "../../" to be dynamically computed
+
 $(BUILD_DIR)/$(PROJECT).py: $(PROJECT).py
 	@mkdir -p $(BUILD_DIR)
 ifneq ($(SUBPROJECT_SO_FILES),)
