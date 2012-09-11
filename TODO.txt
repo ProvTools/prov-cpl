@@ -24,6 +24,7 @@ Language Bindings:
   - Implement Python bindings
   - Implement R bindings
   - Provenance-aware R, potentially implemented by analyzing session logs
+  - Make the Perl bindings get the version number from include/cpl.h
 
 Documentation:
   N/A
