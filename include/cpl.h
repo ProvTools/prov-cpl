@@ -77,12 +77,12 @@ struct _cpl_db_backend_t;
 /**
  * The CPL version - minor number (two digits)
  */
-#define CPL_VERSION_MINOR		0
+#define CPL_VERSION_MINOR		1
 
 /**
  * The CPL version - as a string
  */
-#define CPL_VERSION_STR			"1.00"
+#define CPL_VERSION_STR			"1.01"
 
 
 /***************************************************************************/

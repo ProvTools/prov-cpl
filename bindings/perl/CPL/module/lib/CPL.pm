@@ -96,7 +96,7 @@ our @EXPORT = qw(
 	get_object_ancestry
 );
 
-our $VERSION = '1.00';
+our $VERSION = '1.01';
 
 
 
