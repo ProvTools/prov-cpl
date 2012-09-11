@@ -98,6 +98,14 @@ sub print_array_ref {
 
 
 #
+# Initialize
+#
+
+print "CPL ver. $CPL::VERSION\n";
+print "\n";
+
+
+#
 # Open an ODBC connection
 #
 
