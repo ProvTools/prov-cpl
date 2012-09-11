@@ -53,6 +53,9 @@ L_JAVA=yes
 # Build and install Perl bindings?
 L_PERL=yes
 
+# Build and install Python bindings?
+L_PYTHON=yes
+
 
 
 #
@@ -148,6 +151,7 @@ if [ "`uname`" = Linux ]; then
 			libcurl4-openssl-dev \
 			libxml2-dev \
 			libperl-dev \
+            python-dev \
 			swig
 
 		if [ ${PIPESTATUS[0]} != 0 ]; then
@@ -172,7 +176,7 @@ fi
 if [ $CORE = yes ]; then
 
 	echo "" >&2
-	echo "${P}Building CPL" >&2
+	echo "${P}Building the CPL" >&2
 	make release
 	if [ ${PIPESTATUS[0]} != 0 ]; then
 		echo "${P}Build failed" >&2
@@ -201,8 +205,12 @@ if [ $L_JAVA = yes ]; then
 		echo "" >&2
 		echo "${P}Building Java bindings " >&2
 		# XXX Should not need this
+		echo "" >&2
+        echo "${P}Running updatedb (potentially very slow)" >&2
 		ensure_root
 		sudo updatedb
+		echo "" >&2
+        echo "${P}Building" >&2
 		make -C bindings/java release
 		if [ ${PIPESTATUS[0]} != 0 ]; then
 			echo "${P}Build failed" >&2
@@ -252,6 +260,31 @@ if [ $L_JAVA = yes ]; then
 	echo "${P}Installing" >&2
 	ensure_root
 	sudo make -C bindings/perl install
+	if [ ${PIPESTATUS[0]} != 0 ]; then
+		echo "${P}Install failed" >&2
+		exit 1
+	fi
+fi
+
+
+#
+# Build and install Python bindings
+#
+
+if [ $L_PYTHON = yes ]; then
+
+	echo "" >&2
+	echo "${P}Building Python bindings " >&2
+	make -C bindings/python release
+	if [ ${PIPESTATUS[0]} != 0 ]; then
+		echo "${P}Build failed" >&2
+		exit 1
+	fi
+
+	echo "" >&2
+	echo "${P}Installing" >&2
+	ensure_root
+	sudo make -C bindings/python install
 	if [ ${PIPESTATUS[0]} != 0 ]; then
 		echo "${P}Install failed" >&2
 		exit 1
