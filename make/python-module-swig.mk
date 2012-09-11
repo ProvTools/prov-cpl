@@ -64,11 +64,11 @@ ifneq ($(SUBPROJECT_SO_FILES),)
 endif
 ifeq ($(OUTPUT_TYPE),kernel)
 	@echo '  PYTHON  $(PWD_REL_SEP)setup.py'
-	@cd $(BUILD_DIR) && python ../../setup.py build_py
-	@cd $(BUILD_DIR) && python ../../setup.py build_ext --inplace
+	@cd $(BUILD_DIR) && python $(abspath setup.py) build_py
+	@cd $(BUILD_DIR) && python $(abspath setup.py) build_ext --inplace
 else
-	cd $(BUILD_DIR) && python ../../setup.py build_py
-	cd $(BUILD_DIR) && python ../../setup.py build_ext --inplace
+	cd $(BUILD_DIR) && python $(abspath setup.py) build_py
+	cd $(BUILD_DIR) && python $(abspath setup.py) build_ext --inplace
 endif
 
 $(BUILD_DIR)/$(TARGET): $(BUILD_DIR)/$(WRAP_LIBRARY) \

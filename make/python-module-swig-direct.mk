@@ -31,21 +31,6 @@ include $(ROOT)/make/python-module-header.mk
 
 
 #
-# Platform-specific settings
-#
-
-ifeq ($(OSTYPE),darwin)
-	SONAME_OPTION := -WL,-install_name,
-	SHARED_OPTION := -dynamiclib
-	SOLIBRARY_EXT := dylib
-else
-	SONAME_OPTION := -Wl,-soname,
-	SHARED_OPTION := -shared
-	SOLIBRARY_EXT := so
-endif
-
-
-#
 # Compile Targets
 #
 
