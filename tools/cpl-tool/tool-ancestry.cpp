@@ -46,9 +46,15 @@ using namespace std;
 
 
 /**
- * Recursive mode
+ * Recursive mode - files and directories
  */
 static bool recursive = false;
+
+
+/**
+ * Recursive mode - ancestry
+ */
+static bool recursiveAncestry = false;
 
 
 /**
@@ -78,7 +84,7 @@ static session_map_t session_map;
 /**
  * Short command-line options
  */
-static const char* SHORT_OPTIONS = "hRrv";
+static const char* SHORT_OPTIONS = "ahRrv";
 
 
 /**
@@ -86,7 +92,9 @@ static const char* SHORT_OPTIONS = "hRrv";
  */
 static struct option LONG_OPTIONS[] =
 {
+	{"all",                  no_argument,       0, 'a'},
 	{"help",                 no_argument,       0, 'h'},
+	{"recursive-ancestry",   no_argument,       0, 'a'},
 	{"recursive",            no_argument,       0, 'R'},
 	{"verbose",              no_argument,       0, 'v'},
 	{0, 0, 0, 0}
@@ -104,6 +112,7 @@ usage(void)
 			program_name, tool_name);
 	P(" ");
 	P("Options:");
+	P("  -a, --all                Print all ancestry recursively");
 	P("  -h, --help               Print this message and exit");
 	P("  -R, -r, --recursive      Traverse the directories recursively");
 	P("  -v, --verbose            Enable verbose mode");
@@ -127,34 +136,40 @@ cb_atexit(void)
 
 
 /**
- * Print a single level of provenance for the given file
+ * Print a single level of provenance for the given object ID
  * 
- * @param filename the file name
+ * @param id the provenance object ID
+ * @param version the version of the provenance object or CPL_VERSION_NONE
  * @param direction CPL_D_ANCESTORS or CPL_D_DESCENDANTS
+ * @param levelEnds the vector with boolean values describing whether the
+ *                  list of ancestor has been finished at the given level
  */
 static void
-print_provenance(const char* filename, int direction)
+print_provenance(cpl_id_t id, cpl_version_t version, int direction,
+		std::vector<bool> levelEnds)
 {
-	printf("%s\n", filename);
+	cpl_return_t ret;
 
-
-	// Lookup the object and query the provenance
 	
-	cpl_id_t id;
-	cpl_return_t ret = cpl_lookup_file(filename, 0, &id, NULL);
-	if (ret == CPL_E_NOT_FOUND) return;
-	if (!CPL_IS_OK(ret)) {
-		throw CPLException("Could not look up the provenance of \"%s\" -- %s",
-				filename, cpl_error_string(ret));
-	}
+	// Query the provenance
 	
 	std::list<cpl_ancestry_entry_t> l;
 	ret = cpl_get_object_ancestry(id, CPL_VERSION_NONE, direction, 0,
 			cpl_cb_collect_ancestry_list, &l);
 	if (!CPL_IS_OK(ret)) {
+		
+		cpl_object_info_t* info;
+		cpl_return_t ret2 = cpl_get_object_info(id, &info);
+		if (!CPL_IS_OK(ret)) {
+			throw CPLException("Could not lookup provenance object %x:%x -- %s",
+					id.hi, id.lo, cpl_error_string(ret2));
+		}
+		std::string name = info->name;
+		cpl_free_object_info(info);
+
 		throw CPLException("Could not look up the %s of \"%s\" -- %s",
 				direction == CPL_D_ANCESTORS ? "ancestors" : "descendants",
-				filename, cpl_error_string(ret));
+				name.c_str(), cpl_error_string(ret));
 	}
 
 
@@ -170,9 +185,9 @@ print_provenance(const char* filename, int direction)
 		cpl_object_info_t* info;
 		ret = cpl_get_object_info(i->other_object_id, &info);
 		if (!CPL_IS_OK(ret)) {
-			throw CPLException("Could not lookup one of the %s of \"%s\" -- %s",
-					direction == CPL_D_ANCESTORS ? "ancestors" : "descendants",
-					filename, cpl_error_string(ret));
+			throw CPLException("Could not lookup provenance object %x:%x -- %s",
+					i->other_object_id.hi, i->other_object_id.lo,
+					cpl_error_string(ret));
 		}
 
 
@@ -209,6 +224,14 @@ print_provenance(const char* filename, int direction)
 
 		// Print
 
+		for (size_t j = 0; j < levelEnds.size(); j++) {
+
+			printf(" %s%s%s ",
+					termcap_ac_start,
+					levelEnds[j] ? " " : termcap_vertical_line,
+					termcap_ac_end);
+		}
+
 		printf(" %s%s%s%s ",
 				termcap_ac_start,
 				next == l.end() ? termcap_left_bottom_corner : termcap_left_tee,
@@ -228,13 +251,54 @@ print_provenance(const char* filename, int direction)
 		printf(", ver. %d", i->other_object_version);
 
 		if (include_session) {
-			printf(", by %s", session->cmdline);
+			printf(", by session command: %s", session->cmdline);
 		}
 
 		printf("\n");
 		
 		cpl_free_object_info(info);
+
+
+		// Call recursively
+		
+		if (recursiveAncestry) {
+
+			levelEnds.push_back(next == l.end());
+			print_provenance(i->other_object_id, i->other_object_version,
+					direction, levelEnds);
+			levelEnds.pop_back();
+		}
 	}
+}
+
+
+/**
+ * Print a single level of provenance for the given file
+ * 
+ * @param filename the file name
+ * @param direction CPL_D_ANCESTORS or CPL_D_DESCENDANTS
+ */
+static void
+print_file_provenance(const char* filename, int direction)
+{
+	printf("%s\n", filename);
+
+
+	// Lookup the object
+	
+	cpl_id_t id;
+	cpl_return_t ret = cpl_lookup_file(filename, 0, &id, NULL);
+	if (ret == CPL_E_NOT_FOUND) return;
+	if (!CPL_IS_OK(ret)) {
+		throw CPLException("Could not look up the provenance of \"%s\" -- %s",
+				filename, cpl_error_string(ret));
+	}
+	
+	
+	// Print the provenance
+	
+	std::vector<bool> levelEnds;
+	print_provenance(id, CPL_VERSION_NONE, direction, levelEnds);
 }
 
 
@@ -259,6 +323,10 @@ tool_ancestry(int argc, char** argv, int direction)
 							LONG_OPTIONS, &option_index)) >= 0) {
 
 		switch (c) {
+
+		case 'a':
+			recursiveAncestry = true;
+			break;
 
 		case 'h':
 			usage();
@@ -312,7 +380,7 @@ tool_ancestry(int argc, char** argv, int direction)
 	
 	for (std::list<std::string>::iterator i = files.begin();
 			i != files.end(); i++) {
-		print_provenance(i->c_str(), direction);
+		print_file_provenance(i->c_str(), direction);
 	}
 
 	return 0;
