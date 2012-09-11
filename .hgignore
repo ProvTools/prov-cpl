@@ -26,6 +26,8 @@ cscope.out
 *.ipch
 *.suo
 *.kate-swp
+*.pyc
+*.pyo
 .DS_Store
 *.exp
 *.dll

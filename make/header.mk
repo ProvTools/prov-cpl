@@ -45,7 +45,7 @@ SHELL := /bin/bash
 
 UNAME := $(shell uname)
 UNAME_ALL := $(shell uname -a)
-
+ 
 ifndef OSTYPE
 ifeq ($(UNAME),Darwin)
 	OSTYPE := darwin
@@ -56,6 +56,9 @@ endif
 endif
 endif
 
+EMPTY :=
+SPACE := $(EMPTY) $(EMPTY)
+ 
 
 #
 # Machine configuration
