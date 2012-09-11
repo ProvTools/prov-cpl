@@ -77,6 +77,9 @@ using namespace stdext;
 /** ID Manipulation                                                       **/
 /***************************************************************************/
 
+
+#ifndef SWIG
+
 /**
  * Compare ID's
  *
@@ -154,6 +157,8 @@ operator!=(const cpl_id_t& a, const cpl_id_t& b)
 {
 	return a.hi != b.hi || a.lo != b.lo;
 }
+
+#endif
 
 
 
