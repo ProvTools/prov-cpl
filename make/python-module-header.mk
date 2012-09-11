@@ -96,6 +96,7 @@ distclean:: messclean
 
 messclean::
 	@find . -name '*~' -delete 2> /dev/null || true
+	@rm -f *.pyc *.pyo || true
 
 $(BUILD_DIR):
 	@mkdir -p $(BUILD_DIR)
@@ -182,14 +183,14 @@ test: $(TEST) all
 
 .PHONY: install uninstall
 
-install:: release $(INSTALL_DEPENDENCIES)
+install:: release $(INSTALL_DEPENDENCIES) setup.py
 ifdef INSTALL
 ifdef RELEASE
 ifeq ($(OUTPUT_TYPE),kernel)
 	@echo '  INSTALL $(PWD_REL_SEP)$(BUILD_DIR)'
-	@make --no-print-directory -C "$(BUILD_DIR)" install
+	@cd "$(BUILD_DIR)" && python $(abspath setup.py) install --skip-build
 else
-	make -C "$(BUILD_DIR)" install
+	cd "$(BUILD_DIR)" && python $(abspath setup.py) install --skip-build
 endif
 else
 	@$(MAKE) --no-print-directory RELEASE=yes install
@@ -198,14 +199,10 @@ else
 	@true
 endif
 
-uninstall:: $(BUILD_DIR)/Makefile
+uninstall::
 ifdef INSTALL
-ifeq ($(OUTPUT_TYPE),kernel)
-	@echo '  UNINST  $(PWD_REL_SEP)$(BUILD_DIR)'
-	@make --no-print-directory -C "$(BUILD_DIR)" uninstall
-else
-	make -C "$(BUILD_DIR)" uninstall
-endif
+	@echo "Error: Uninstall of Python modules is currently not supported"
+	@exit 1
 else
 	@true
 endif

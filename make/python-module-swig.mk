@@ -64,11 +64,13 @@ ifneq ($(SUBPROJECT_SO_FILES),)
 endif
 ifeq ($(OUTPUT_TYPE),kernel)
 	@echo '  PYTHON  $(PWD_REL_SEP)setup.py'
-	@cd $(BUILD_DIR) && python $(abspath setup.py) build_py
-	@cd $(BUILD_DIR) && python $(abspath setup.py) build_ext --inplace
+	@cd $(BUILD_DIR) && python $(abspath setup.py) build
+	@cd $(BUILD_DIR) \
+		&& /bin/cp -f $(CP_UPDATE_FLAG) "`find build -name $(WRAP_LIBRARY)`" .
 else
-	cd $(BUILD_DIR) && python $(abspath setup.py) build_py
-	cd $(BUILD_DIR) && python $(abspath setup.py) build_ext --inplace
+	cd $(BUILD_DIR) && python $(abspath setup.py) build
+	cd $(BUILD_DIR) \
+		&& /bin/cp -f $(CP_UPDATE_FLAG) "`find build -name $(WRAP_LIBRARY)`" .
 endif
 
 $(BUILD_DIR)/$(TARGET): $(BUILD_DIR)/$(WRAP_LIBRARY) \

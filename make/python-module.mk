@@ -40,6 +40,12 @@ ifeq ($(OUTPUT_TYPE),kernel)
 else
 	/bin/cp -f $(CP_UPDATE_FLAG) $< $@
 endif
+ifeq ($(OUTPUT_TYPE),kernel)
+	@echo '  PYTHON  $(PWD_REL_SEP)setup.py'
+	@cd $(BUILD_DIR) && python $(abspath setup.py) build
+else
+	cd $(BUILD_DIR) && python $(abspath setup.py) build
+endif
 
 $(BUILD_DIR)/$(TARGET): $(BUILD_DIR)/$(PROJECT).py
 ifeq ($(OUTPUT_TYPE),kernel)

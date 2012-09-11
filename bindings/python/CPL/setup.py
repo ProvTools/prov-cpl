@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 #
-# test.py
+# setup.py
 # Core Provenance Library
 #
 # Copyright 2012
@@ -31,33 +31,15 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# Contributor(s): Peter Macko
+# Contributor(s): Margo Seltzer, Peter Macko
 #
 
-from CPLDirect import *
-import sys
+from distutils.core import setup
 
-print("CPL ver. " + CPL_VERSION_STR)
-print("")
-
-print("CPLDirect.cpl_create_odbc_backend");
-backend = new_cpl_db_backend_tpp()
-ret = cpl_create_odbc_backend("DSN=CPL",
-        CPL_ODBC_GENERIC, backend)
-if not cpl_is_ok(ret):
-    print ("Could not create ODBC connection" +
-            cpl_error_string(ret))
-    sys.exit(1)
-db = cpl_dereference_pp_cpl_db_backend_t(backend)
-
-print("CPLDirect.cpl_attach");
-ret = cpl_attach(db)
-delete_cpl_db_backend_tpp(backend)
-if not cpl_is_ok(ret):
-    print ("Could not open ODBC connection" +
-            cpl_error_string(ret))
-    sys.exit(1)
-
-print("CPLDirect.cpl_detach");
-cpl_detach()
+setup(name='CPL',
+	version = '1.01',
+	author = 'Peter Macko & Margo Seltzer',
+	description = """Python interface to CPL""",
+	py_modules = ["CPL"],
+	)
 

@@ -45,7 +45,7 @@ cpl = Extension('_CPLDirect',
 		libraries = ['cpl-odbc', 'cpl-rdf', 'cpl'],
 		)
 
-setup(name='cpl',
+setup(name='CPLDirect',
 	version = '1.01',
 	author = 'Peter Macko & Margo Seltzer',
 	description = """Python interface to CPL""",
