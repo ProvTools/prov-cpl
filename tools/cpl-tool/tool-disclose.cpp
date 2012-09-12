@@ -190,7 +190,7 @@ tool_disclose(int argc, char** argv)
 			return 0;
 
 		case 'p':
-			processName = argv[optional_argument];
+			processName = optarg;
 			break;
 
 		case 'r':

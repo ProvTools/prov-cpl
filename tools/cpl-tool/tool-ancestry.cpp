@@ -84,7 +84,7 @@ static session_map_t session_map;
 /**
  * Short command-line options
  */
-static const char* SHORT_OPTIONS = "ahRrv";
+static const char* SHORT_OPTIONS = "d:fhRrv";
 
 
 /**
@@ -92,9 +92,10 @@ static const char* SHORT_OPTIONS = "ahRrv";
  */
 static struct option LONG_OPTIONS[] =
 {
-	{"all",                  no_argument,       0, 'a'},
+	{"follow",               no_argument,       0, 'f'},
 	{"help",                 no_argument,       0, 'h'},
-	{"recursive-ancestry",   no_argument,       0, 'a'},
+	{"max-depth",            required_argument, 0, 'd'},
+	{"recursive-ancestry",   no_argument,       0, 'f'},
 	{"recursive",            no_argument,       0, 'R'},
 	{"verbose",              no_argument,       0, 'v'},
 	{0, 0, 0, 0}
@@ -112,7 +113,8 @@ usage(void)
 			program_name, tool_name);
 	P(" ");
 	P("Options:");
-	P("  -a, --all                Print all ancestry recursively");
+	P("  -d, --max-depth DEPTH    Set the max depth for the -f/--follow flag");
+	P("  -f, --follow             Follow the ancestry relationships recursively");
 	P("  -h, --help               Print this message and exit");
 	P("  -R, -r, --recursive      Traverse the directories recursively");
 	P("  -v, --verbose            Enable verbose mode");
@@ -143,10 +145,11 @@ cb_atexit(void)
  * @param direction CPL_D_ANCESTORS or CPL_D_DESCENDANTS
  * @param levelEnds the vector with boolean values describing whether the
  *                  list of ancestor has been finished at the given level
+ * @param maxDepth the maximum depth (-1 to disable)
  */
 static void
 print_provenance(cpl_id_t id, cpl_version_t version, int direction,
-		std::vector<bool> levelEnds)
+		std::vector<bool> levelEnds, int maxDepth)
 {
 	cpl_return_t ret;
 
@@ -261,11 +264,12 @@ print_provenance(cpl_id_t id, cpl_version_t version, int direction,
 
 		// Call recursively
 		
-		if (recursiveAncestry) {
+		if (recursiveAncestry && maxDepth != 0) {
 
 			levelEnds.push_back(next == l.end());
 			print_provenance(i->other_object_id, i->other_object_version,
-					direction, levelEnds);
+							 direction, levelEnds,
+							 maxDepth > 0 ? maxDepth - 1 : maxDepth);
 			levelEnds.pop_back();
 		}
 	}
@@ -277,9 +281,10 @@ print_provenance(cpl_id_t id, cpl_version_t version, int direction,
  * 
  * @param filename the file name
  * @param direction CPL_D_ANCESTORS or CPL_D_DESCENDANTS
+ * @param maxDepth the maximum depth (-1 to disable)
  */
 static void
-print_file_provenance(const char* filename, int direction)
+print_file_provenance(const char* filename, int direction, int maxDepth)
 {
 	printf("%s\n", filename);
 
@@ -297,8 +302,11 @@ print_file_provenance(const char* filename, int direction)
 	
 	// Print the provenance
 	
-	std::vector<bool> levelEnds;
-	print_provenance(id, CPL_VERSION_NONE, direction, levelEnds);
+	if (maxDepth != 0) {
+		std::vector<bool> levelEnds;
+		print_provenance(id, CPL_VERSION_NONE, direction, levelEnds,
+				maxDepth > 0 ? maxDepth - 1 : maxDepth);
+	}
 }
 
 
@@ -315,6 +323,8 @@ tool_ancestry(int argc, char** argv, int direction)
 {
 	atexit(cb_atexit);
 
+	int maxDepth = -1;
+
 
 	// Parse the command-line arguments
 
@@ -324,7 +334,11 @@ tool_ancestry(int argc, char** argv, int direction)
 
 		switch (c) {
 
-		case 'a':
+		case 'd':
+			maxDepth = atoi(optarg);
+			break;
+
+		case 'f':
 			recursiveAncestry = true;
 			break;
 
@@ -380,7 +394,7 @@ tool_ancestry(int argc, char** argv, int direction)
 	
 	for (std::list<std::string>::iterator i = files.begin();
 			i != files.end(); i++) {
-		print_file_provenance(i->c_str(), direction);
+		print_file_provenance(i->c_str(), direction, maxDepth);
 	}
 
 	return 0;
