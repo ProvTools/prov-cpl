@@ -153,11 +153,11 @@ print_provenance(cpl_id_t id, cpl_version_t version, int direction,
 {
 	cpl_return_t ret;
 
-	
+
 	// Query the provenance
 	
 	std::list<cpl_ancestry_entry_t> l;
-	ret = cpl_get_object_ancestry(id, CPL_VERSION_NONE, direction, 0,
+	ret = cpl_get_object_ancestry(id, version, direction, 0,
 			cpl_cb_collect_ancestry_list, &l);
 	if (!CPL_IS_OK(ret)) {
 		
@@ -286,15 +286,19 @@ print_provenance(cpl_id_t id, cpl_version_t version, int direction,
 static void
 print_file_provenance(const char* filename, int direction, int maxDepth)
 {
-	printf("%s\n", filename);
+	printf("%s", filename);
 
 
 	// Lookup the object
 	
 	cpl_id_t id;
 	cpl_return_t ret = cpl_lookup_file(filename, 0, &id, NULL);
-	if (ret == CPL_E_NOT_FOUND) return;
+	if (ret == CPL_E_NOT_FOUND) {
+		printf("\n");
+		return;
+	}
 	if (!CPL_IS_OK(ret)) {
+		printf("\n");
 		throw CPLException("Could not look up the provenance of \"%s\" -- %s",
 				filename, cpl_error_string(ret));
 	}
@@ -302,10 +306,33 @@ print_file_provenance(const char* filename, int direction, int maxDepth)
 	
 	// Print the provenance
 	
-	if (maxDepth != 0) {
+	if (!recursiveAncestry || maxDepth != 0) {
+
+		cpl_version_t version = CPL_VERSION_NONE;
+		if (recursiveAncestry) {
+			if (direction == CPL_D_ANCESTORS) {
+				ret = cpl_get_version(id, &version);
+				if (!CPL_IS_OK(ret)) {
+					printf("\n");
+					throw CPLException("Could not look up the version number "
+							"of \"%s\" -- %s", filename, cpl_error_string(ret));
+				}
+			}
+			else {
+				version = 0;
+			}
+			printf(", ver %d\n", version);
+		}
+		else {
+			printf("\n");
+		}
+
 		std::vector<bool> levelEnds;
-		print_provenance(id, CPL_VERSION_NONE, direction, levelEnds,
+		print_provenance(id, version, direction, levelEnds,
 				maxDepth > 0 ? maxDepth - 1 : maxDepth);
+	}
+	else {
+		printf("\n");
 	}
 }
 
