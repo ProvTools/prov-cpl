@@ -142,12 +142,29 @@ def __getSignedNumber(number, bitLength):
 #
 
 def __cpl_id_t__eq__(self, other):
+	'''
+	Compare this and another ID, and return true if they are equal
+	'''
 	return self.lo == other.lo and self.hi == other.hi
+
+
 def __cpl_id_t__ne__(self, other):
+	'''
+	Compare this and another ID, and return true if they are not equal
+	'''
 	return self.lo != other.lo  or self.hi != other.hi
+
+
+def __cpl_id_t__str__(self):
+	'''
+	Create and return a string representation of this object
+	'''
+	return "%x:%x" % (self.hi, self.lo)
+
 
 CPLDirect.cpl_id_t.__eq__ = __cpl_id_t__eq__
 CPLDirect.cpl_id_t.__ne__ = __cpl_id_t__ne__
+CPLDirect.cpl_id_t.__str__ = __cpl_id_t__str__
 
 
 
@@ -155,12 +172,12 @@ CPLDirect.cpl_id_t.__ne__ = __cpl_id_t__ne__
 # Public utility functions
 #
 
-def type_to_str(val):
+def dependency_type_to_str(val):
 	'''
-	Given an edge type, convert it to a string
+	Given a dependency (edge) type, convert it to a string
 
 	Method calls::
-		strval = type_to_str(val)
+		strval = dependency_type_to_str(val)
 	'''
 	which = val >> 8
 	if which == DEPENDENCY_CATEGORY_DATA:
@@ -170,7 +187,8 @@ def type_to_str(val):
 	elif which == DEPENDENCY_CATEGORY_VERSION:
 		return 'version'
 	else:
-		return ""
+		return 'unknown'
+
 
 def copy_id(idp):
 	'''
@@ -184,17 +202,6 @@ def copy_id(idp):
 	i.lo = idp.lo
 	return i
 
-def copy_idv(idvp):
-	'''
-	Copy a cpl identifier + version type into a local cpl_id_version_t
-
-	Method calls::
-		idv = copy_idv(idvp)
-	'''
-	i = CPLDirect.cpl_id_version_t()
-	i.id = copy_id(idvp.id)
-	i.version = idvp.version
-	return i
 
 def p_id(id, with_newline = False):
 	'''
@@ -203,10 +210,10 @@ def p_id(id, with_newline = False):
 	Method calls::
 		p_id(id, with_newline = False)
 	'''
-	sys.stdout.write('id: ' + str(__getSignedNumber(id.hi, 64)) +
-	    ':' + str(__getSignedNumber(id.lo, 64)))
+	sys.stdout.write('id: ' + str(id))
 	if with_newline:
 		sys.stdout.write('\n')
+
 
 def p_obj(obj, with_session = False):
 	'''
@@ -219,13 +226,18 @@ def p_obj(obj, with_session = False):
 	p_id(obj.id)
 	print(' version: ' + str(i.version))
 	sys.stdout.write('container_id: ')
-	p_id(i.container_id)
-	print(' container version: ' + str(i.container_version))
+	if i.container is not None:
+		p_id(i.container.object.id)
+		print(' container version: ' + str(i.container.version))
+	else:
+		sys.stdout.write('none')
+		print(' container version: none')
 	print('originator: ' + i.originator + ' name:' + i.name +
 	    ' type: ' + i.type)
 	if with_session:
 		print('creation_time: ' + i.creation_time)
 		p_session(i.creation_session())
+
 
 def p_session(si):
 	'''
@@ -242,30 +254,71 @@ def p_session(si):
 
 
 #
+# Object & version
+#
+
+class cpl_object_version:
+	'''
+	Stores a reference to a provenance object and a version number
+	'''
+
+
+	def __init__(self, object, version):
+		'''
+		Create an instance of this object
+		''',
+		self.object = object
+		self.version = version
+
+
+	def __eq__(self, other):
+		'''
+		Compare this and the other object, and return true if they are equal
+		'''
+		return self.id == other.id and self.version == other.version
+
+
+	def __ne__(self, other):
+		'''
+		Compare this and the other object, and return true if they are not equal
+		'''
+		return self.id != other.id or self.version != other.version
+
+
+	def __str__(self):
+		'''
+		Create and return a human-readable string representation of this object
+		'''
+		return str(self.object) + '-' + str(self.version)
+
+
+
+#
 # Provenance ancestry entry
 #
 
 class cpl_ancestor:
 	'''
-	Stores the same data as a cpl_ancestry_entry_t, but in a python
+	Stores the same data as a cpl_ancestry_entry_t, but in a Python
 	class that we manage.
 	'''
-	def __init__(self, fid, fversion, tid, tversion, type):
-		self.from_id = copy_id(fid)
-		self.from_version = fversion
-		self.to_id = copy_id(tid)
-		self.to_version = tversion
+
+
+	def __init__(self, aid, aversion, did, dversion, type):
+		self.ancestor = cpl_object_version(cpl_object(aid), aversion)
+		self.descendant = cpl_object_version(cpl_object(did), dversion)
 		self.type = type
+
 
 	def dump(self):
 		'''
-		Display cpl_ancestor object
+		Display the cpl_ancestor object
 		'''
-		sys.stdout.write(type_to_str(self.type) + ':')
-		p_id(self.from_id)
-		sys.stdout.write('(' + str(self.from_version) + ') to ')
-		p_id(self.to_id)
-		sys.stdout.write('(' + str(self.to_version) + ')\n')
+		sys.stdout.write(dependency_type_to_str(self.type) + ': ')
+		sys.stdout.write(str(self.ancestor))
+		sys.stdout.write(' -- ')
+		sys.stdout.write(str(self.descendant))
+		sys.stdout.write('\n')
 
 
 
@@ -278,7 +331,9 @@ class cpl_connection:
 	Core provenance library connection -- maintains state for the current
 	session and the current database backend.
 	'''
-	def __init__(self, cstring = "DSN=CPL;"):
+
+
+	def __init__(self, cstring="DSN=CPL;"):
 		'''
 		Constructor for CPL connection.
 
@@ -321,156 +376,10 @@ class cpl_connection:
 		self.session = get_current_session()
 
 
-	def obj_from_id(self, id):
+	def __create_or_lookup_cpl_object(self, originator,
+		     name, type, create=None, container=None):
 		'''
-		Given a CPL id, return a cpl_object
-		'''
-		ipp = CPLDirect.new_cpl_object_info_tpp()
-		ret = CPLDirect.cpl_get_object_info(id,
-					  CPLDirect.cpl_convert_pp_cpl_object_info_t(ipp))
-		if not CPLDirect.cpl_is_ok(ret):
-			print ("Unable to get object info " +
-			       CPLDirect.cpl_error_string(ret))
-			CPLDirect.delete_cpl_object_info_tpp(ipp)
-			# Exception
-			return None
-
-		ip = CPLDirect.cpl_dereference_pp_cpl_object_info_t(ipp)
-		o_info = CPLDirect.cpl_object_info_tp_value(ip)
-		o = self.lookup(o_info.originator, o_info.name, o_info.type)
-		CPLDirect.delete_cpl_object_info_tpp(ipp)
-		return o
-			
-
-	def get_obj(self, originator, name, type, container=NONE):
-		'''
-		Get the object, with the designated originator (string),
-		name (string), and type (string), creating it if necessary.
-
-		If you want an object in a specific container, set the container
-		parameter to the ID of the object in which you want this object
-		created.
-		'''
-		try:
-			o = cpl_object(originator, name,
-				  type, create = None, container=container)
-		except LookupError:
-			# Return None or propagate exception?
-			o = None
-
-		return o
-
-	def create_obj(self, originator, name, type, container=NONE):
-		'''
-		Create object, returns None if object already exists.
-		'''
-		try:
-			o = cpl_object(originator, name,
-				  type, create = True, container=container)
-		except LookupError:
-			# Return None or propagate exception?
-			o = None
-		return o
-
-	def lookup(self, originator, name, type):
-		'''
-		Look up object; returns None if object already exiss.
-		'''
-		try:
-			o = cpl_object(originator, name, type, create = False)
-		except LookupError:
-			# Return None or propagate exception?
-			o = None
-		return o
-
-	def lookup_by_property(self, key, value):
-		'''
-		Return all objects that have the key/value property specified.
-		'''
-		vp = CPLDirect.new_std_vector_cpl_id_version_tp()
-		ret = CPLDirect.cpl_lookup_by_property(key, value,
-			CPLDirect.cpl_cb_collect_property_lookup_vector, vp)
-
-		if not CPLDirect.cpl_is_ok(ret):
-			print ("Unable to lookup by property " +
-				CPLDirect.cpl_error_string(ret))
-			CPLDirect.delete_std_vector_cpl_id_version_tp(vp)
-			return None
-		v = CPLDirect.cpl_dereference_p_std_vector_cpl_id_version_t(vp)
-		l = []
-		for e in v:
-			p_id(e.id)
-			print ': ', e.version
-			l.append(copy_idv(e))
-
-		CPLDirect.delete_std_vector_cpl_id_version_tp(vp)
-		return l
-
-	def lookup_all(self, originator, name, type):
-		'''
-		Return all objects that have the specified originator, name,
-		and type (they might differ by container).
-		'''
-		vp = CPLDirect.new_std_vector_cpl_id_version_tp()
-		ret = CPLDirect.cpl_lookup_object_ext(originator, name, type,
-			L_NO_FAIL, CPLDirect.cpl_cb_collect_id_timestamp_vector, vp)
-
-		if not CPLDirect.cpl_is_ok(ret):
-			print ("Unable to lookup all objects " +
-				CPLDirect.cpl_error_string(ret))
-			CPLDirect.delete_std_vector_cpl_id_version_tp(vp)
-			return None
-		v = CPLDirect.cpl_dereference_p_std_vector_cpl_id_version_t(vp)
-		l = []
-		if v != S_NO_DATA :
-			for e in v:
-				l.append(copy_idv(e))
-
-		CPLDirect.delete_std_vector_cpl_id_version_tp(vp)
-		return l
-
-	def session_info(self):
-		'''
-		Return cpl_session_info_t object associated with this session.
-		'''
-
-		sessionpp = CPLDirect.new_cpl_session_info_tpp()
-		ret = CPLDirect.cpl_get_session_info(self.session,
-		    CPLDirect.cpl_convert_pp_cpl_session_info_t(sessionpp))
-		if not CPLDirect.cpl_is_ok(ret):
-			# Should throw an exception
-			CPLDirect.delete_cpl_session_info_tpp(sessionpp)
-			print ("Could not find session information " +
-				CPLDirect.cpl_error_string(ret))
-			return None
-
-		sessionp = CPLDirect.cpl_dereference_pp_cpl_session_info_t(sessionpp)
-		info = CPLDirect.cpl_session_info_tp_value(sessionp)
-		CPLDirect.delete_cpl_session_info_tpp(sessionpp)
-		return info
-
-	def close(self):
-		'''
-		Close database connection and session
-		'''
-		ret = CPLDirect.cpl_detach()
-		if not CPLDirect.cpl_is_ok(ret):
-			print "Could not detach ", CPLDirect.cpl_error_string(ret)
-
-
-
-#
-# CPL Provenance object
-#
-
-class cpl_object:
-	'''
-	CPL Provenance object
-	'''
-	def __init__(self, originator,
-		     name, type, create = None, container = NONE):
-		'''
-		Class constructor
+		Create or lookup a CPL object
 
 		** Parameters **
 			originator 
@@ -484,6 +393,8 @@ class cpl_object:
 				Id of container into which to place this object.
 				Only applies to create
 		'''
+		if container is None:
+			container = NONE
 		idp = CPLDirect.new_cpl_id_tp()
 		if create == None:
 			ret = CPLDirect.cpl_lookup_or_create_object(originator, name,
@@ -496,16 +407,213 @@ class cpl_object:
 		else:
 			ret = CPLDirect.cpl_lookup_object(originator, name, type, idp)
 
+		if ret == E_NOT_FOUND:
+			raise LookupError('Not found')
 		if not CPLDirect.cpl_is_ok(ret):
-			raise LookupError('Could not find/create' +
+			raise Exception('Could not find or create' +
 			    ' provenance object: ' + CPLDirect.cpl_error_string(ret))
 			
-		self.id = copy_id(idp)
+		r = cpl_object(idp)
 
 		CPLDirect.delete_cpl_id_tp(idp)
+		return r
+			
 
-	def control_flow_to(self, dest,
-			    type = CONTROL_OP, version = VERSION_NONE):
+	def get_obj(self, originator, name, type, container=None):
+		'''
+		Get the object, with the designated originator (string),
+		name (string), and type (string), creating it if necessary.
+
+		If you want an object in a specific container, set the container
+		parameter to the ID of the object in which you want this object
+		created.
+		'''
+		return self.__create_or_lookup_cpl_object(originator, name, type,
+				create=None, container=container)
+
+
+	def create_obj(self, originator, name, type, container=None):
+		'''
+		Create object, returns None if object already exists.
+		'''
+		return self.__create_or_lookup_cpl_object(originator, name, type,
+				create=True, container=container)
+
+
+	def lookup(self, originator, name, type):
+		'''
+		Look up object; returns None if object already exiss.
+		'''
+		try:
+			o = self.__create_or_lookup_cpl_object(originator, name, type,
+					create=False)
+		except LookupError:
+			# Return None or propagate exception?
+			o = None
+		return o
+
+
+	def lookup_by_property(self, key, value):
+		'''
+		Return all objects that have the key/value property specified.
+		'''
+		vp = CPLDirect.new_std_vector_cpl_id_version_tp()
+		ret = CPLDirect.cpl_lookup_by_property(key, value,
+			CPLDirect.cpl_cb_collect_property_lookup_vector, vp)
+
+		if ret == E_NOT_FOUND:
+			CPLDirect.delete_std_vector_cpl_id_version_tp(vp)
+			raise LookupError('Not found')
+		if not CPLDirect.cpl_is_ok(ret):
+			CPLDirect.delete_std_vector_cpl_id_version_tp(vp)
+			raise Exception('Unable to lookup by property ' +
+					CPLDirect.cpl_error_string(ret))
+
+		v = CPLDirect.cpl_dereference_p_std_vector_cpl_id_version_t(vp)
+		l = []
+		for e in v:
+			l.append(cpl_object_version(cpl_object(e.id), e.version))
+
+		CPLDirect.delete_std_vector_cpl_id_version_tp(vp)
+		return l
+
+
+	def lookup_all(self, originator, name, type):
+		'''
+		Return all objects that have the specified originator, name,
+		and type (they might differ by container).
+		'''
+		vp = CPLDirect.new_std_vector_cpl_id_version_tp()
+		ret = CPLDirect.cpl_lookup_object_ext(originator, name, type,
+			L_NO_FAIL, CPLDirect.cpl_cb_collect_id_timestamp_vector, vp)
+
+		if not CPLDirect.cpl_is_ok(ret):
+			CPLDirect.delete_std_vector_cpl_id_version_tp(vp)
+			raise Exception('Unable to lookup all objects: ' +
+					CPLDirect.cpl_error_string(ret))
+
+		v = CPLDirect.cpl_dereference_p_std_vector_cpl_id_version_t(vp)
+		l = []
+		if v != S_NO_DATA :
+			for e in v:
+				l.append(cpl_object(e))
+
+		CPLDirect.delete_std_vector_cpl_id_version_tp(vp)
+		return l
+
+
+	def session_info(self):
+		'''
+		Return cpl_session_info_t object associated with this session.
+		'''
+
+		sessionpp = CPLDirect.new_cpl_session_info_tpp()
+		ret = CPLDirect.cpl_get_session_info(self.session,
+		    CPLDirect.cpl_convert_pp_cpl_session_info_t(sessionpp))
+		if not CPLDirect.cpl_is_ok(ret):
+			CPLDirect.delete_cpl_session_info_tpp(sessionpp)
+			raise Exception('Could not find session information: ' +
+					CPLDirect.cpl_error_string(ret))
+
+		sessionp = CPLDirect.cpl_dereference_pp_cpl_session_info_t(sessionpp)
+		info = CPLDirect.cpl_session_info_tp_value(sessionp)
+		CPLDirect.delete_cpl_session_info_tpp(sessionpp)
+		return info
+
+
+	def close(self):
+		'''
+		Close database connection and session
+		'''
+		ret = CPLDirect.cpl_detach()
+		if not CPLDirect.cpl_is_ok(ret):
+			raise Exception('Could not detach ' +
+					CPLDirect.cpl_error_string(ret))
+
+
+
+#
+# Information about a provenance object
+#
+
+class cpl_object_info:
+	'''
+	Information about a provenance object
+	'''
+
+	def __init__(self, object, version, creation_session, creation_time,
+			originator, name, type, container):
+		'''
+		Create an instance of this object
+		'''
+
+		self.object = object
+		self.version = version
+		self.creation_session = creation_session
+		self.creation_time = creation_time
+		self.originator = originator
+		self.name = name
+		self.type = type
+		self.container = container
+
+
+
+#
+# CPL Provenance object
+#
+
+class cpl_object:
+	'''
+	CPL Provenance object
+	'''
+
+
+	def __init__(self, id):
+		'''
+		Create a new instance of a provenance object from its internal ID
+		'''
+		self.id = copy_id(id)
+
+
+	def __eq__(self, other):
+		'''
+		Compare this and the other object and return true if they are equal
+		'''
+		return self.id == other.id
+
+
+	def __ne__(self, other):
+		'''
+		Compare this and the other object and return true if they are not equal
+		'''
+		return self.id != other.id
+
+
+	def __str__(self):
+		'''
+		Return a string representation of this object
+		'''
+		return str(self.id)
+
+
+	def version(self):
+		'''
+		Determine the current version of this provenance object
+		'''
+		vp = CPLDirect.new_cpl_version_tp()
+
+		ret = CPLDirect.cpl_get_version(self.id, vp)
+		if not CPLDirect.cpl_is_ok(ret):
+			CPLDirect.delete_cpl_version_tp(vp)
+			raise Exception('Could not determine the version of an object: ' +
+					CPLDirect.cpl_error_string(ret))
+
+		v = CPLDirect.cpl_version_tp_value(vp)
+		CPLDirect.delete_cpl_version_tp(vp)
+		return v
+
+
+	def control_flow_to(self, dest, type=CONTROL_OP, version=None):
 		'''
 		Add control flow edge of type from self to dest. If version
 		is specified, then add flow to dest with explicit version,
@@ -516,50 +624,49 @@ class cpl_object:
 			CPL.CONTROL_START
 		'''
 
-		if version == VERSION_NONE:
-			version = self.info().version
+		if version is None or version == VERSION_NONE:
+			version = self.version()
 
 		ret = CPLDirect.cpl_control_flow_ext(dest.id, self.id, version, type)
 		if not CPLDirect.cpl_is_ok(ret):
-			print ("Could not add control dependency " +
-				CPLDirect.cpl_error_string(ret))
-			return 0
+			raise Exception('Could not add control dependency: ' +
+					CPLDirect.cpl_error_string(ret))
 		return not ret == S_DUPLICATE_IGNORED
 
-	def data_flow_to(self, dest,
-			 type = DATA_INPUT, version = VERSION_NONE):
+
+	def data_flow_to(self, dest, type=DATA_INPUT, version=None):
 		'''
 		Add data flow edge of type from self to dest. If version
 		is specified, then add flow to dest with explicit version,
 		else add to most recent version.
 
 		Allowed types:
-			CPL.DATA_INPUT
+			CPL.DATA_INPUT (default)
 			CPL.DATA_IPC
 			CPL.DATA_TRANSLATION
 			CPL.DATA_COPY
 		'''
 
-		if version == VERSION_NONE:
-			version = self.info().version
+		if version is None or version == VERSION_NONE:
+			version = self.version()
 
 		ret = CPLDirect.cpl_data_flow_ext(dest.id, self.id, version, type)
 		if not CPLDirect.cpl_is_ok(ret):
-			print ("Could not add data dependency " +
-				CPLDirect.cpl_error_string(ret))
-			return 0
+			raise Exception('Could not add data dependency ' +
+					CPLDirect.cpl_error_string(ret))
 		return not ret == S_DUPLICATE_IGNORED
 
-	def has_ancestor(self, id):
+
+	def has_ancestor(self, other):
 		'''
-		Return True if the object referenced by id is an ancestor
-		of the object.
+		Return True if the other object is an ancestor of the object.
 		'''
 		ancestors = self.ancestry()
 		for a in ancestors:
-			if CPLDirect.cpl_id_cmp(a.to_id, id) == 0:
+			if a.ancestor.object == other:
 				return True
 		return False
+
 
 	def add_property(self, name, value):
 		'''
@@ -567,51 +674,73 @@ class cpl_object:
 		'''
 		return CPLDirect.cpl_add_property(self.id, name, value)
 
-	def info(self, version=VERSION_NONE):
+
+	def info(self):
 		'''
-		Return cpl_object_info_t corresopnding to the current object.
-		By default returns info for the most recent version, but if
-		version is set, then returns info for the designated version.
+		Return cpl_object_info_t corresponding to the current object.
 		'''
 		objectpp = CPLDirect.new_cpl_object_info_tpp()
+
 		ret = CPLDirect.cpl_get_object_info(self.id,
 		    CPLDirect.cpl_convert_pp_cpl_object_info_t(objectpp))
 		if not CPLDirect.cpl_is_ok(ret):
-			# Exception?
-			print ("Unable to get object info " +
-				CPLDirect.cpl_error_string(ret))
-			object = None
-		else:
-			op = CPLDirect.cpl_dereference_pp_cpl_object_info_t(objectpp)
-			object = CPLDirect.cpl_object_info_tp_value(op)
+			CPLDirect.delete_cpl_object_info_tpp(objectpp)
+			raise Exception('Unable to get object info: ' +
+					CPLDirect.cpl_error_string(ret))
 
+		op = CPLDirect.cpl_dereference_pp_cpl_object_info_t(objectpp)
+		object = CPLDirect.cpl_object_info_tp_value(op)
 		CPLDirect.delete_cpl_object_info_tpp(objectpp)
-		return object
 
-	def ancestry(self, version = VERSION_NONE,
-		     direction = D_ANCESTORS, flags = 0):
+		if object.container_id == NONE or object.container_version < 0:
+			container = None
+		else:
+			container = cpl_object_version(cpl_object(object.container_id),
+					object.container_version)
+
+		return cpl_object_info(object, object.version, object.creation_session,
+				object.creation_time, object.originator, object.name,
+				object.type, container)
+
+
+	def ancestry(self, version=None, direction=D_ANCESTORS, flags=0):
 		'''
 		Return a list of cpl_ancestor objects
 		'''
+		if version is None:
+			version = VERSION_NONE
 		vp = CPLDirect.new_std_vector_cpl_ancestry_entry_tp()
+
 		ret = CPLDirect.cpl_get_object_ancestry(self.id, version,
 		    direction, flags, CPLDirect.cpl_cb_collect_ancestry_vector, vp)
 		if not CPLDirect.cpl_is_ok(ret):
-			print ("Error retrieving ancestry " +
-				CPLDirect.cpl_error_string(ret))
+			CPLDirect.delete_std_vector_cpl_ancestry_entry_tp(vp)
+			raise Exception('Error retrieving ancestry: ' +
+					CPLDirect.cpl_error_string(ret))
 			return None
+
 		v = CPLDirect.cpl_dereference_p_std_vector_cpl_ancestry_entry_t(vp)
 		l = []
-		for entry in v:
-			a = cpl_ancestor(entry.query_object_id,
-			    entry.query_object_version,
-			    entry.other_object_id,
-			    entry.other_object_version, entry.type)
-			l.append(a)
+		if direction == D_ANCESTORS:
+			for entry in v:
+				a = cpl_ancestor(entry.other_object_id,
+					entry.other_object_version,
+					entry.query_object_id,
+					entry.query_object_version, entry.type)
+				l.append(a)
+		else:
+			for entry in v:
+				a = cpl_ancestor(entry.query_object_id,
+					entry.query_object_version,
+					entry.other_object_id,
+					entry.other_object_version, entry.type)
+				l.append(a)
+
 		CPLDirect.delete_std_vector_cpl_ancestry_entry_tp(vp)
 		return l
 
-	def properties(self, key = None, version = VERSION_NONE):
+
+	def properties(self, key=None, version=None):
 		'''
 		Return all the properties associated with the current object.
 
@@ -622,13 +751,17 @@ class cpl_object:
 		the object, but if version is set to a value other than
 		CPL.VERSION_NONE, then will return properties for that version.
 		'''
+		if version is None:
+			version = VERSION_NONE
 		vp = CPLDirect.new_std_vector_cplxx_property_entry_tp()
+
 		ret = CPLDirect.cpl_get_properties(self.id, version,
 		    key, CPLDirect.cpl_cb_collect_properties_vector, vp)
 		if not CPLDirect.cpl_is_ok(ret):
-			print ("Error retrieving properties " +
-				CPLDirect.cpl_error_string(ret))
-			return None
+			CPLDirect.delete_std_vector_cplxx_property_entry_tp(vp)
+			raise Exception('Error retrieving properties: ' +
+					CPLDirect.cpl_error_string(ret))
+
 		v = CPLDirect.cpl_dereference_p_std_vector_cplxx_property_entry_t(vp)
 		l = []
 		for e in v:

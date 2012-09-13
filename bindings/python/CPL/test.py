@@ -22,9 +22,7 @@ are met:
 THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY AND CONTRIBUTORS ``AS IS'' AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-
-
-Test functionality of the python bindings of the Core Provenance LibraryRE DISCLAIMED.  IN NO EVENT SHALL THE UNIVERSITY OR CONTRIBUTORS BE LIABLE
+ARE DISCLAIMED.  IN NO EVENT SHALL THE UNIVERSITY OR CONTRIBUTORS BE LIABLE
 FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
 DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
 OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
@@ -86,7 +84,7 @@ o4 = c.create_obj(originator, obj4_name, obj4_type, CPL.NONE)
 CPL.p_obj(o4)
 
 print('Lookup or create object: ' + obj4_name + ' ' + obj4_type + ' NONE ')
-o4_check = c.get_obj(originator, obj4_name, obj4_type, container = CPL.NONE)
+o4_check = c.get_obj(originator, obj4_name, obj4_type, container = None)
 CPL.p_obj(o4_check)
 if o4.id != o4_check.id:
 	print "Lookup returned wrong object!"
@@ -263,8 +261,8 @@ print o3.properties()
 print 'Getting all objects with dog/fido property'
 tuples = c.lookup_by_property('dog', 'fido')
 for t in tuples:
-	CPL.p_id(t.id, with_newline = False)
-	print '(', t.version, ')\n'
+	CPL.p_id(t.object.id, with_newline = False)
+	print '(', t.version, ')'
 
 # Exit
 print "Closing connection"

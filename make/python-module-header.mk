@@ -176,6 +176,11 @@ test: $(TEST) all
 		PYTHONPATH=$(ABS_BUILD_DIR):$(subst $(SPACE),:,$(PYTHON_PATH_EXTRA)) \
 		$(PYTHON) "$(realpath $<)"
 
+ipython: all
+	@cd "$(BUILD_DIR)" && $(LD_PATH_VAR)=$$$(LD_PATH_VAR):$(EXTRA_LD_PATHS) \
+		PYTHONPATH=$(ABS_BUILD_DIR):$(subst $(SPACE),:,$(PYTHON_PATH_EXTRA)) \
+		ipython
+
 
 #
 # Install & unistall
