@@ -33,7 +33,7 @@ LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
 OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 SUCH DAMAGE.
 
-Contributor(s): Margo Seltzer
+Contributor(s): Margo Seltzer, Peter Macko
 """
 
 """
@@ -43,12 +43,14 @@ Currently, we only support ODBC, although we should add the RDF support and
 tests as well.
 """
 
-from CPL import *
+import CPL
+import sys
+
 originator = 'python_test'
-c = cpl_connection()
+c = CPL.cpl_connection()
 
 print "Session information: "
-p_session(c.session_info())
+CPL.p_session(c.session_info())
 
 # Create objects 
 print 'Create tests'
@@ -58,77 +60,83 @@ obj1_type = 'proc'
 print ('Create object name: ' +
 	obj1_name + ' type: ' + obj1_type + ' container: void')
 o1 = c.create_obj(originator, obj1_name, obj1_type)
-p_obj(o1)
+CPL.p_obj(o1)
 
 obj2_name = "File A"
 obj2_type = 'file'
 print ('Create object name: ' + obj2_name + ' type: ' + obj2_type +
     ' container: ')
-p_id(o1.id, with_newline=True)
+CPL.p_id(o1.id, with_newline=True)
 o2 = c.create_obj(originator, obj2_name, obj2_type, o1.id)
-p_obj(o2)
+CPL.p_obj(o2)
 
 obj3_name = "Process B"
 obj3_type = 'proc'
 print ('Create object name: ' +
 	obj3_name + ' type: ' + obj3_type + ' container: ')
-p_id(o1.id, with_newline=True)
+CPL.p_id(o1.id, with_newline=True)
 o3 = c.create_obj(originator, obj3_name, obj3_type, o1.id)
-p_obj(o3)
+CPL.p_obj(o3)
 
 obj4_name = "File B"
 obj4_type = 'file'
 print ('Create object name: ' +
 	obj4_name + ' type: ' + obj4_type + ' container: NONE')
-o4 = c.create_obj(originator, obj4_name, obj4_type, CPL_NONE)
-p_obj(o4)
+o4 = c.create_obj(originator, obj4_name, obj4_type, CPL.NONE)
+CPL.p_obj(o4)
 
 print('Lookup or create object: ' + obj4_name + ' ' + obj4_type + ' NONE ')
-o4_check = c.get_obj(originator, obj4_name, obj4_type, container = CPL_NONE)
-p_obj(o4_check)
-if cpl_id_cmp(o4.id, o4_check.id) != 0:
+o4_check = c.get_obj(originator, obj4_name, obj4_type, container = CPL.NONE)
+CPL.p_obj(o4_check)
+if o4.id != o4_check.id:
 	print "Lookup returned wrong object!"
+	sys.exit(1)
 
 obj5_name = "File C"
 obj5_type = 'file'
 print ('Create object name: ' +
 	obj5_name + ' type: ' + obj5_type + ' container: ')
-p_id(o1.id, with_newline = True)
+CPL.p_id(o1.id, with_newline = True)
 o5 = c.create_obj(originator, obj5_name, obj5_type, o1.id)
-p_obj(o5)
+CPL.p_obj(o5)
 
 # Lookup Objects
 print 'Lookup Tests'
 print ('Looking up object name: ' + obj1_name + ' type: ' + obj1_type)
 o1_check = c.lookup(originator, obj1_name, obj1_type)
-if cpl_id_cmp(o1.id, o1_check.id) != 0:
+if o1.id != o1_check.id:
 	sys.stdout.write('Lookup returned wrong object: ')
-	p_id(o1_check.id, with_newline = True)
+	CPL.p_id(o1_check.id, with_newline = True)
+	sys.exit(1)
 
 print ('Looking up object name: ' + obj2_name + ' type: ' + obj2_type)
 o2_check = c.lookup(originator, obj2_name, obj2_type)
-if cpl_id_cmp(o2.id, o2_check.id) != 0:
+if o2.id != o2_check.id:
 	sys.stdout.write('Lookup returned wrong object: ')
-	p_id(o2_check.id, with_newline = True)
+	CPL.p_id(o2_check.id, with_newline = True)
+	sys.exit(1)
 
 print ('Looking up object name: ' + obj3_name + ' type: ' + obj3_type)
 o3_check = c.lookup(originator, obj3_name, obj3_type)
-if cpl_id_cmp(o3.id, o3_check.id) != 0:
+if o3.id != o3_check.id:
 	sys.stdout.write('Lookup returned wrong object: ')
-	p_id(o3_check.id, with_newline = True)
+	CPL.p_id(o3_check.id, with_newline = True)
+	sys.exit(1)
 
 print ('Looking up object name: ' + obj4_name + ' type: ' + obj4_type)
 o4_check = c.lookup(originator, obj4_name, obj4_type)
-if cpl_id_cmp(o4.id, o4_check.id) != 0:
+if o4.id != o4_check.id:
 	sys.stdout.write('Lookup returned wrong object: ')
-	p_id(o4_check.id, with_newline = True)
+	CPL.p_id(o4_check.id, with_newline = True)
+	sys.exit(1)
 
 
 print ('Looking up object name: ' + obj5_name + ' type: ' + obj5_type)
 o5_check = c.lookup(originator, obj5_name, obj5_type)
-if cpl_id_cmp(o5.id, o5_check.id) != 0:
+if o5.id != o5_check.id:
 	sys.stdout.write('Lookup returned wrong object: ')
-	p_id(o4_check.id, with_newline = True)
+	CPL.p_id(o4_check.id, with_newline = True)
+	sys.exit(1)
 
 """
 Right now there is no way to do a lookup and specify a container
@@ -137,88 +145,96 @@ print ('Looking up object in wrong container name: ' +
 o5_fail = c.lookup(originator, obj5_name, obj5_type)
 if o5_fail != None:
  	sys.stdout.write('Lookup returned an object: ')
- 	p_id(o4_fail.id, with_newline = True)
+ 	CPL.p_id(o4_fail.id, with_newline = True)
 
 print ('Looking up object in wrong container name: ' +
 	obj4_name + ' type: ' + obj4_type + ' container: ')
 o4_fail = c.lookup(originator, obj4_name, obj4_type, o1.id)
 if o4_fail != None:
 	sys.stdout.write('Lookup returned an object: ')
-	p_id(o5_fail.id, with_newline = True)
+	CPL.p_id(o5_fail.id, with_newline = True)
 """
 print 'Look up non-existent object (type failure)'
 o_fail1 = c.lookup(originator, obj1_name, 'no-type')
 if o_fail1:
 	print 'Returned an object: '
-	p_obj(o_fail1)
+	CPL.p_obj(o_fail1)
+	sys.exit(1)
 
 print 'Look up non-existent object (name failure)'
 o_fail2 = c.lookup(originator, 'no-name', obj1_type)
 if o_fail2:
 	print 'Returned an object: '
-	p_obj(o_fail2)
+	CPL.p_obj(o_fail2)
+	sys.exit(1)
 
 print 'Look up non-existent object (originator failure)'
 o_fail3 = c.lookup('no-originator', obj1_name, obj1_type)
 if o_fail3:
 	print 'Returned an object: '
-	p_obj3(o_fail)
+	CPL.p_obj(o_fail3)
+	sys.exit(1)
 
 print 'Dependencies'
 print 'data flow DEFAULT from o2 to o1 (no dup)'
 r1 = o2.data_flow_to(o1)
 if not r1:
 	print 'ERROR: ignoring duplicate'
+	sys.exit(1)
 
 print 'data flow CPL_DATA_INPUT from o2 to o1 (w/dup)'
-r2 = o2.data_flow_to(o1, CPL_DATA_INPUT)
+r2 = o2.data_flow_to(o1, CPL.DATA_INPUT)
 if r2:
 	print 'ERROR: should have ignored duplicate'
+	sys.exit(1)
 
 print 'data flow CPL_DATA_INPUT from o3 to o2 (no dup)'
-r3 = o3.data_flow_to(o2, CPL_DATA_INPUT)
+r3 = o3.data_flow_to(o2, CPL.DATA_INPUT)
 if not r3:
 	print 'ERROR: ignoring duplicate'
+	sys.exit(1)
 
 print 'control flow CPL_CONTROL_START from o3 to o1 (no dup)'
-r4 = o3.control_flow_to(o1, CPL_CONTROL_START)
+r4 = o3.control_flow_to(o1, CPL.CONTROL_START)
 if not r4:
 	print 'ERROR: ignoring duplicate'
+	sys.exit(1)
 
 print 'data flow CPL_DATA_TRANSLATION from o1 to o3'
-r5 = o1.data_flow_to(o3, CPL_DATA_TRANSLATION)
+r5 = o1.data_flow_to(o3, CPL.DATA_TRANSLATION)
 if not r5:
 	print 'ERROR: ignoring duplicate'
+	sys.exit(1)
 
 print 'Object info'
 for o in [o1, o2, o3, o4, o5]:
-	p_obj(o)
+	CPL.p_obj(o)
 
 print 'Checking Ancestry'
 
 for o in [o1, o2, o3]:
-	p_obj(o)
+	CPL.p_obj(o)
 	print 'Data Ancestors: '
-	rda = o1.ancestry(direction = CPL_D_ANCESTORS,
-	    flags = CPL_A_NO_CONTROL_DEPENDENCIES)
+	rda = o1.ancestry(direction = CPL.D_ANCESTORS,
+	    flags = CPL.A_NO_CONTROL_DEPENDENCIES)
 	for i in rda:
 		i.dump()
 
 	print '\nData Descendants: '
-	rdd = o1.ancestry(direction = CPL_D_DESCENDANTS,
-	    flags = CPL_A_NO_CONTROL_DEPENDENCIES)
+	rdd = o1.ancestry(direction = CPL.D_DESCENDANTS,
+	    flags = CPL.A_NO_CONTROL_DEPENDENCIES)
 	for i in rdd:
 		i.dump()
 
 	print '\nControl Ancestors: '
-	rca = o1.ancestry(direction = CPL_D_ANCESTORS,
-	    flags = CPL_A_NO_DATA_DEPENDENCIES)
+	rca = o1.ancestry(direction = CPL.D_ANCESTORS,
+	    flags = CPL.A_NO_DATA_DEPENDENCIES)
 	for i in rca:
 		i.dump()
 
 	print '\nControl Descendants: '
-	rcd = o1.ancestry(direction = CPL_D_DESCENDANTS,
-	    flags = CPL_A_NO_DATA_DEPENDENCIES)
+	rcd = o1.ancestry(direction = CPL.D_DESCENDANTS,
+	    flags = CPL.A_NO_DATA_DEPENDENCIES)
 	for i in rcd:
 		i.dump()
 
@@ -247,7 +263,7 @@ print o3.properties()
 print 'Getting all objects with dog/fido property'
 tuples = c.lookup_by_property('dog', 'fido')
 for t in tuples:
-	p_id(t.id, with_newline = False)
+	CPL.p_id(t.id, with_newline = False)
 	print '(', t.version, ')\n'
 
 # Exit
