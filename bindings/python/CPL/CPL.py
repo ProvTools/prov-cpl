@@ -41,7 +41,9 @@ Library <http://http://code.google.com/p/core-provenance-library/>'_.
 This module contains:
 
 *	The cpl class.
+*	The cpl_ancestor class.
 *	The cpl_object class.
+*	The cpl_object_info class.
 *	Helper functions to print and construct cpl objects
 '''
 
@@ -106,6 +108,9 @@ D_DESCENDANTS = CPLDirect.CPL_D_DESCENDANTS
 A_NO_PREV_NEXT_VERSION = CPLDirect.CPL_A_NO_PREV_NEXT_VERSION
 A_NO_DATA_DEPENDENCIES = CPLDirect.CPL_A_NO_DATA_DEPENDENCIES
 A_NO_CONTROL_DEPENDENCIES = CPLDirect.CPL_A_NO_CONTROL_DEPENDENCIES
+F_LOOKUP_ONLY = 0
+F_ALWAYS_CREATE = CPLDirect.CPL_F_ALWAYS_CREATE
+F_CREATE_IF_DOES_NOT_EXIST = CPLDirect.CPL_F_CREATE_IF_DOES_NOT_EXIST
 
 
 
@@ -115,6 +120,13 @@ A_NO_CONTROL_DEPENDENCIES = CPLDirect.CPL_A_NO_CONTROL_DEPENDENCIES
 
 __data_dict = ['data input', 'data ipc', 'data translation', 'data copy']
 __control_dict = ['control op', 'control start']
+
+
+#
+# Global variables
+#
+
+_cpl_connection = None
 
 
 
@@ -172,6 +184,14 @@ CPLDirect.cpl_id_t.__str__ = __cpl_id_t__str__
 # Public utility functions
 #
 
+def current_connection():
+	'''
+	Return the current CPL connection object, or None if not connected
+	'''
+	global _cpl_connection
+	return _cpl_connection
+
+
 def dependency_type_to_str(val):
 	'''
 	Given a dependency (edge) type, convert it to a string
@@ -215,12 +235,12 @@ def p_id(id, with_newline = False):
 		sys.stdout.write('\n')
 
 
-def p_obj(obj, with_session = False):
+def p_object(obj, with_session = False):
 	'''
 	Print information about an object
 
 	Method calls:
-		p_obj(obj, with_session = False)
+		p_object(obj, with_session = False)
 	'''
 	i = obj.info()
 	p_id(obj.id)
@@ -345,6 +365,8 @@ class cpl_connection:
 		Currently the python bindings support only ODBC connection.
 		RDF connector coming soon.
 		'''
+		global _cpl_connection
+
 		self.connection_string = cstring
 
 		def get_current_session():
@@ -375,6 +397,8 @@ class cpl_connection:
 			       CPLDirect.cpl_error_string(ret))
 		self.session = get_current_session()
 
+		_cpl_connection = self
+
 
 	def __create_or_lookup_cpl_object(self, originator,
 		     name, type, create=None, container=None):
@@ -394,22 +418,27 @@ class cpl_connection:
 				Only applies to create
 		'''
 		if container is None:
-			container = NONE
+			container_id = NONE
+		else:
+			container_id = container.id
+
 		idp = CPLDirect.new_cpl_id_tp()
 		if create == None:
 			ret = CPLDirect.cpl_lookup_or_create_object(originator, name,
-							  type, container, idp)
+							  type, container_id, idp)
 			if ret == S_OBJECT_CREATED:
 				ret = S_OK
 		elif create:
 			ret = CPLDirect.cpl_create_object(originator,
-						name, type, container, idp)
+						name, type, container_id, idp)
 		else:
 			ret = CPLDirect.cpl_lookup_object(originator, name, type, idp)
 
 		if ret == E_NOT_FOUND:
+			CPLDirect.delete_cpl_id_tp(idp)
 			raise LookupError('Not found')
 		if not CPLDirect.cpl_is_ok(ret):
+			CPLDirect.delete_cpl_id_tp(idp)
 			raise Exception('Could not find or create' +
 			    ' provenance object: ' + CPLDirect.cpl_error_string(ret))
 			
@@ -419,7 +448,7 @@ class cpl_connection:
 		return r
 			
 
-	def get_obj(self, originator, name, type, container=None):
+	def get_object(self, originator, name, type, container=None):
 		'''
 		Get the object, with the designated originator (string),
 		name (string), and type (string), creating it if necessary.
@@ -432,7 +461,7 @@ class cpl_connection:
 				create=None, container=container)
 
 
-	def create_obj(self, originator, name, type, container=None):
+	def create_object(self, originator, name, type, container=None):
 		'''
 		Create object, returns None if object already exists.
 		'''
@@ -502,6 +531,54 @@ class cpl_connection:
 		return l
 
 
+	def get_object_for_file(self, file_name, mode=F_CREATE_IF_DOES_NOT_EXIST):
+		'''
+		Get or create (depending on the value of mode) a provenance object
+		that corresponds to the given file on the file system. The file must
+		already exist.
+
+		Please note that the CPL internally refers to the files using their
+		full path, so if you move the file by a utility that is not CPL-aware,
+		a subsequent call to this function with the same file (after it has
+		been moved or renamed) will not find the return back the same
+		provenance object. Furthermore, beware that if you use hard links,
+		you will get different provenance objects for different names/paths
+		of the file.
+		
+		The mode can be one of the following values:
+			* F_LOOKUP_ONLY: Perform only the lookup -- do not create the
+			  corresponding provenance object if it does not already exists.
+			* F_CREATE_IF_DOES_NOT_EXIST: Create the corresponding provenance
+			  object if it does not already exist (this is the default).
+			* F_ALWAYS_CREATE: Always create a new corresponding provenance
+			  object, even if it already exists. Use this if you completely
+			  overwrite the file.
+		'''
+
+		idp = CPLDirect.new_cpl_id_tp()
+		vp  = CPLDirect.new_cpl_version_tp()
+
+		ret = CPLDirect.cpl_lookup_file(file_name, mode, idp, vp)
+		if not CPLDirect.cpl_is_ok(ret):
+			raise Exception('Could not find or create provenance object' +
+			    ' for a file: ' + CPLDirect.cpl_error_string(ret))
+			
+		r = cpl_object(idp)
+
+		CPLDirect.delete_cpl_id_tp(idp)
+		CPLDirect.delete_cpl_version_tp(vp)
+		return r
+
+
+	def create_object_for_file(self, file_name):
+		'''
+		Create a provenance object that corresponds to the specified file.
+		This function is equivalent to calling get_object_for_file() with
+		mode = F_ALWAYS_CREATE.
+		'''
+		return self.get_object_for_file(file_name, F_ALWAYS_CREATE)
+
+
 	def session_info(self):
 		'''
 		Return cpl_session_info_t object associated with this session.
@@ -525,6 +602,9 @@ class cpl_connection:
 		'''
 		Close database connection and session
 		'''
+		global _cpl_connection
+		_cpl_connection = None
+		
 		ret = CPLDirect.cpl_detach()
 		if not CPLDirect.cpl_is_ok(ret):
 			raise Exception('Could not detach ' +

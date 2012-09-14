@@ -17,7 +17,6 @@ Tools:
 
 Language Bindings:
   - Add support for properties to Perl bindings
-  - Add support for files to Python bindings
   - Add support for cpl_get_all_objects to Java bindings
   - Add support for cpl_get_all_objects to Perl bindings
   - Add support for cpl_get_all_objects to Python bindings

@@ -43,6 +43,7 @@ tests as well.
 
 import CPL
 import sys
+import tempfile
 
 originator = 'python_test'
 c = CPL.cpl_connection()
@@ -57,35 +58,35 @@ obj1_name = "Process A"
 obj1_type = 'proc'
 print ('Create object name: ' +
 	obj1_name + ' type: ' + obj1_type + ' container: void')
-o1 = c.create_obj(originator, obj1_name, obj1_type)
-CPL.p_obj(o1)
+o1 = c.create_object(originator, obj1_name, obj1_type)
+CPL.p_object(o1)
 
 obj2_name = "File A"
 obj2_type = 'file'
 print ('Create object name: ' + obj2_name + ' type: ' + obj2_type +
     ' container: ')
 CPL.p_id(o1.id, with_newline=True)
-o2 = c.create_obj(originator, obj2_name, obj2_type, o1.id)
-CPL.p_obj(o2)
+o2 = c.create_object(originator, obj2_name, obj2_type, o1)
+CPL.p_object(o2)
 
 obj3_name = "Process B"
 obj3_type = 'proc'
 print ('Create object name: ' +
 	obj3_name + ' type: ' + obj3_type + ' container: ')
 CPL.p_id(o1.id, with_newline=True)
-o3 = c.create_obj(originator, obj3_name, obj3_type, o1.id)
-CPL.p_obj(o3)
+o3 = c.create_object(originator, obj3_name, obj3_type, o1)
+CPL.p_object(o3)
 
 obj4_name = "File B"
 obj4_type = 'file'
 print ('Create object name: ' +
 	obj4_name + ' type: ' + obj4_type + ' container: NONE')
-o4 = c.create_obj(originator, obj4_name, obj4_type, CPL.NONE)
-CPL.p_obj(o4)
+o4 = c.create_object(originator, obj4_name, obj4_type, None)
+CPL.p_object(o4)
 
 print('Lookup or create object: ' + obj4_name + ' ' + obj4_type + ' NONE ')
-o4_check = c.get_obj(originator, obj4_name, obj4_type, container = None)
-CPL.p_obj(o4_check)
+o4_check = c.get_object(originator, obj4_name, obj4_type, container = None)
+CPL.p_object(o4_check)
 if o4.id != o4_check.id:
 	print "Lookup returned wrong object!"
 	sys.exit(1)
@@ -95,8 +96,8 @@ obj5_type = 'file'
 print ('Create object name: ' +
 	obj5_name + ' type: ' + obj5_type + ' container: ')
 CPL.p_id(o1.id, with_newline = True)
-o5 = c.create_obj(originator, obj5_name, obj5_type, o1.id)
-CPL.p_obj(o5)
+o5 = c.create_object(originator, obj5_name, obj5_type, o1)
+CPL.p_object(o5)
 
 # Lookup Objects
 print 'Lookup Tests'
@@ -156,21 +157,21 @@ print 'Look up non-existent object (type failure)'
 o_fail1 = c.lookup(originator, obj1_name, 'no-type')
 if o_fail1:
 	print 'Returned an object: '
-	CPL.p_obj(o_fail1)
+	CPL.p_object(o_fail1)
 	sys.exit(1)
 
 print 'Look up non-existent object (name failure)'
 o_fail2 = c.lookup(originator, 'no-name', obj1_type)
 if o_fail2:
 	print 'Returned an object: '
-	CPL.p_obj(o_fail2)
+	CPL.p_object(o_fail2)
 	sys.exit(1)
 
 print 'Look up non-existent object (originator failure)'
 o_fail3 = c.lookup('no-originator', obj1_name, obj1_type)
 if o_fail3:
 	print 'Returned an object: '
-	CPL.p_obj(o_fail3)
+	CPL.p_object(o_fail3)
 	sys.exit(1)
 
 print 'Dependencies'
@@ -206,12 +207,12 @@ if not r5:
 
 print 'Object info'
 for o in [o1, o2, o3, o4, o5]:
-	CPL.p_obj(o)
+	CPL.p_object(o)
 
 print 'Checking Ancestry'
 
 for o in [o1, o2, o3]:
-	CPL.p_obj(o)
+	CPL.p_object(o)
 	print 'Data Ancestors: '
 	rda = o1.ancestry(direction = CPL.D_ANCESTORS,
 	    flags = CPL.A_NO_CONTROL_DEPENDENCIES)
@@ -270,6 +271,32 @@ print 'Version of o1: ' + str(o1.version())
 print 'New version of o1: ' + str(o1.new_version())
 print 'New version of o1: ' + str(o1.new_version())
 print 'New version of o1: ' + str(o1.new_version())
+print ''
+
+# File API
+
+fh1 = tempfile.NamedTemporaryFile()
+fh2 = tempfile.NamedTemporaryFile()
+
+print "create_object_for_file(" + fh1.name + ")";
+f1 = CPL.current_connection().create_object_for_file(fh1.name)
+CPL.p_id(f1.id, True)
+
+print "get_object_for_file(" + fh2.name + ")";
+f2 = c.get_object_for_file(fh2.name)
+CPL.p_id(f2.id, True)
+
+print "get_object_for_file(" + fh1.name + ", F_LOOKUP_ONLY)";
+f1x = c.get_object_for_file(fh1.name, CPL.F_LOOKUP_ONLY)
+CPL.p_id(f1.id, True)
+if f1 != f1x:
+	sys.stdout.write('Lookup returned wrong object: ')
+	CPL.p_id(f1x.id, with_newline = True)
+	sys.exit(1)
+
+fh1.close()
+fh2.close()
+
 
 # Exit
 print "Closing connection"
