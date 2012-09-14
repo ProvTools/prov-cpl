@@ -25,9 +25,8 @@ Please make sure that the following packages are installed:
   libcurl4-openssl-dev
   libxml2-dev
 
-These additional packages are required for the Perl bindings:
-  libperl-dev
-  swig
+Please refer to the individual README files for each language binding to
+learn which packages are required for which bindings.
 
 
   2. Compiling and installing CPL
@@ -42,6 +41,9 @@ The default installation directory is /usr.
 To compile and install the Perl bindings, please run the following:
   make -C bindings/perl release
   sudo make -C bindings/perl install
+
+For the other language bindings, please refer to the README files for each
+binding.
 
 To clean the compile, please use the "clean" or "distclean" make targets.
 To uninstall, please use the "uninstall" target - separately for the main

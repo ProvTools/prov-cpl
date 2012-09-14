@@ -97,8 +97,9 @@ To learn how to use the CPL in your own programs, please refer to the design
 document doc/Design.docx, the rest of this README, and the following simple
 tests:
   test/standalone-test/test-simple.cpp
-  bindings/perl/CPL/test.pl
   bindings/java/CPL/test.java
+  bindings/perl/CPL/test.pl
+  bindings/python/CPL/test.py
 
 
 Running tests:
@@ -139,6 +140,7 @@ backends/cpl-rdf             - The RDF/SPARQL backend for the CPL (libcpl-rdf)
 bindings                     - Language bindings
 bindings/java                - Java bindings (package edu.harvard.pass.cpl)
 bindings/perl                - Perl bindings (module CPL)
+bindings/python              - Python bindings (module CPL)
 cpl-standalone               - The main CPL library (libcpl)
 doc                          - Additional documentation
 include                      - C/C++ headers
