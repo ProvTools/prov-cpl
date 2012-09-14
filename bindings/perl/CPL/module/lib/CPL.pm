@@ -2,7 +2,7 @@
 # CPL.pm
 # Core Provenance Library
 #
-# Copyright 2011
+# Copyright 2012
 #      The President and Fellows of Harvard College.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -73,6 +73,8 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 	get_object_info
 	get_version_info
 	get_object_ancestry
+	get_object_for_file
+	create_object_for_file
 ) ] );
 
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
@@ -98,6 +100,8 @@ our @EXPORT = qw(
 	get_object_info
 	get_version_info
 	get_object_ancestry
+	get_object_for_file
+	create_object_for_file
 );
 
 our $VERSION = '1.01';
@@ -129,6 +133,10 @@ our $NONE = { hi => 0, lo => 0 };
 *A_NO_PREV_NEXT_VERSION = *CPLDirect::CPL_A_NO_PREV_NEXT_VERSION;
 *A_NO_DATA_DEPENDENCIES = *CPLDirect::CPL_A_NO_DATA_DEPENDENCIES;
 *A_NO_CONTROL_DEPENDENCIES = *CPLDirect::CPL_A_NO_CONTROL_DEPENDENCIES;
+
+our $F_LOOKUP_ONLY = 0;  # do not create if it does not already exist
+*F_ALWAYS_CREATE = *CPLDirect::CPL_F_ALWAYS_CREATE;
+*F_CREATE_IF_DOES_NOT_EXIST = *CPLDirect::CPL_F_CREATE_IF_DOES_NOT_EXIST;
 
 
 
@@ -857,6 +865,54 @@ sub get_object_ancestry {
 
 
 #############################################################################
+# Public API: File API                                                      #
+#############################################################################
+
+
+#
+# Get or create a provenance object for a file
+#
+sub get_object_for_file {
+	my ($file_name, $mode) = @_;
+
+	if (!defined($mode)) {
+		$mode = $CPLDirect::CPL_F_CREATE_IF_DOES_NOT_EXIST;
+	} 
+
+	my $obj_ptr = CPLDirect::new_cpl_id_tp();
+	my $v_ptr = CPLDirect::new_cpl_version_tp();
+	my $ret = CPLDirect::cpl_lookup_file($file_name, $mode, $obj_ptr, $v_ptr);
+	if (!CPLDirect::cpl_is_ok($ret)) {
+		CPLDirect::delete_cpl_id_tp($obj_ptr);
+		croak "Could not lookup or create a provenance object for a file: " .
+			CPLDirect::cpl_error_string($ret) . "\n";
+	}
+
+	my $obj = CPLDirect::cpl_id_tp_value($obj_ptr);
+	my $v = CPLDirect::cpl_version_tp_value($v_ptr);
+
+	my $id = {
+	   hi => CPLDirect::cpl_id_t::swig_hi_get($obj),
+	   lo => CPLDirect::cpl_id_t::swig_lo_get($obj)
+	};
+	CPLDirect::delete_cpl_id_tp($obj_ptr);
+	CPLDirect::delete_cpl_version_tp($v_ptr);
+
+	return $id;
+}
+
+
+#
+# Create a provenance object for a file
+#
+sub create_object_for_file {
+	my ($file_name) = @_;
+	return get_object_for_file($file_name, $CPLDirect::CPL_F_ALWAYS_CREATE);
+}
+
+
+
+#############################################################################
 # Finish                                                                    #
 #############################################################################
 
@@ -912,6 +968,10 @@ CPL - Perl bindings for Core Provenance Library
   my @ancestors  = CPL::get_object_ancestry($id, undef, $CPL::D_ANCESTORS);
   my @descenants = CPL::get_object_ancestry($id, undef, $CPL::D_DESCENDANTS);
   my @descenants_of_v0 = CPL::get_object_ancestry($id, 0, $CPL::D_DESCENDANTS);
+
+  my $f1 = CPL::create_object_for_file("hello.txt");
+  my $f2 = CPL::get_object_for_file("hello.txt");
+  my $f3 = CPL::get_object_for_file("hello.txt", $CPL::F_LOOKUP_ONLY);
 
   CPL::detach();
 
@@ -1164,6 +1224,49 @@ $CPL::VERSION_GENERIC.
 
 =back
 
+=head3 get_object_for_file
+
+  my $f1 = CPL::get_object_for_file($file_name);
+  my $f2 = CPL::get_object_for_file($file_name, $mode);
+
+Get a provenance object that corresponds to the given file on the file system
+(the file must already exist), and depending on the $mode, create it if not
+found.
+
+Please note that the CPL internally refers to the files using their full path,
+so if you move the file by a utility that is not CPL-aware, a subsequent call
+to this function with the same file (after it has been moved or renamed) will
+not find the return back the same provenance object. Furthermore, beware that
+if you use hard links, you will get different provenance objects for different
+names/paths of the file.
+
+The $mode can be one of the following values:
+
+=over 2
+
+=item $CPL::F_LOOKUP_ONLY
+
+Perform only the lookup -- do not create the corresponding provenance object
+if it does not already exists.
+
+=item $CPL::F_CREATE_IF_DOES_NOT_EXIST
+
+Create the corresponding provenance object if it does not already exist (this
+is the default behavior).
+
+=item $CPL::F_ALWAYS_CREATE
+
+Always create a new corresponding provenance object, even if it already exists.
+Use this if you completely overwrite the file.
+
+=back
+
+=head3 create_object_for_file
+
+  my $f = CPL::create_object_for_file($file_name);
+
+Create a new provenance object that corresponds to the specified file. This is
+equivalent to calling get_object_for_file() with $mode = $CPL::F_ALWAYS_CREATE.
 
 
 =head1 HISTORY
@@ -1172,7 +1275,8 @@ $CPL::VERSION_GENERIC.
 
 =item 1.01
 
-Added $CPL::new_version() and $CPL::lookup_all_objects().
+Added CPL::new_version(), CPL::lookup_all_objects(), CPL::get_object_for_file(),
+and CPL::create_object_for_file().
 Minor changes to reflect changes in the underlying C API.
 
 =item 1.00
@@ -1191,7 +1295,7 @@ Peter Macko <pmacko@eecs.harvard.edu>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright 2011
+Copyright 2012
      The President and Fellows of Harvard College.
 
 Redistribution and use in source and binary forms, with or without

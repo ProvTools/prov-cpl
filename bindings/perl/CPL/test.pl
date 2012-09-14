@@ -37,6 +37,7 @@ use strict;
 
 use CPL;
 use Error qw(:try);
+use File::Temp  qw/ tempfile /;
 
 my $ORIGINATOR = "edu.harvard.pass.cpl.perl.test";
 
@@ -395,6 +396,38 @@ printf "CPL::new_version(obj1): %d\n", CPL::new_version($obj1);
 printf "CPL::new_version(obj1): %d\n", CPL::new_version($obj1);
 
 print "\n";
+
+
+#
+# File API
+#
+
+my ($fh1, $filename1) = tempfile();
+print $fh1 "Hello1\n";
+
+my ($fh2, $filename2) = tempfile();
+print $fh2 "Hello2\n";
+
+print "CPL::create_object_for_file($filename1)";
+my $f1 = CPL::create_object_for_file($filename1);
+print ": " . str_hash_ref($f1) . "\n";
+
+print "CPL::get_object_for_file($filename2)";
+my $f2 = CPL::get_object_for_file($filename2);
+print ": " . str_hash_ref($f2) . "\n";
+
+print "CPL::get_object_for_file($filename1, F_LOOKUP_ONLY)";
+my $f1x = CPL::get_object_for_file($filename1, $CPL::F_LOOKUP_ONLY);
+print ": " . str_hash_ref($f1x) . "\n";
+if (%$f1 ne %$f1x) { die "Object lookup returned the wrong object"; }
+
+close($fh1);
+close($fh2);
+unlink($filename1);
+unlink($filename2);
+
+print "\n";
+
 
 
 #
