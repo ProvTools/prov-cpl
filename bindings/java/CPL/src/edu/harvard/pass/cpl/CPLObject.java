@@ -550,6 +550,29 @@ public class CPLObject {
 
 
 	/**
+	 * Create a new version of the object
+	 *
+	 * @return the new version number
+	 */
+	public int newVersion() {
+
+		int v = Integer.MIN_VALUE;
+		SWIGTYPE_p_int vp = CPLDirect.new_cpl_version_tp();
+
+		try {
+			int r = CPLDirect.cpl_new_version(id, vp);
+			CPLException.assertSuccess(r);
+			v = CPLDirect.cpl_version_tp_value(vp);
+		}
+		finally {
+			CPLDirect.delete_cpl_version_tp(vp);
+		}
+
+		return v;
+	}
+
+
+	/**
 	 * Get a specific version of the object
 	 *
 	 * @param version the version number

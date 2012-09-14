@@ -613,6 +613,23 @@ class cpl_object:
 		return v
 
 
+	def new_version(self):
+		'''
+		Create a new version of this object and return the new version.
+		'''
+		vp = CPLDirect.new_cpl_version_tp()
+
+		ret = CPLDirect.cpl_new_version(self.id, vp)
+		if not CPLDirect.cpl_is_ok(ret):
+			CPLDirect.delete_cpl_version_tp(vp)
+			raise Exception('Could not createa a new version of an object: ' +
+					CPLDirect.cpl_error_string(ret))
+
+		v = CPLDirect.cpl_version_tp_value(vp)
+		CPLDirect.delete_cpl_version_tp(vp)
+		return v
+
+
 	def control_flow_to(self, dest, type=CONTROL_OP, version=None):
 		'''
 		Add control flow edge of type from self to dest. If version

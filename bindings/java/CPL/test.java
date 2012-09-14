@@ -434,6 +434,18 @@ public class test {
 
 
 		/*
+		 * Create a new verson of an object
+		 */
+
+		System.out.println("obj1.getVersion(): " + obj1.getVersion());
+		System.out.println("obj1.newVersion(): " + obj1.newVersion());
+		System.out.println("obj1.newVersion(): " + obj1.newVersion());
+		System.out.println("obj1.newVersion(): " + obj1.newVersion());
+
+		System.out.println();
+
+
+		/*
 		 * File API
 		 */
 

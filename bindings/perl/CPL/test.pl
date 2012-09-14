@@ -96,6 +96,23 @@ sub print_array_ref {
 }
 
 
+#
+# Check whether the array contains the given ID
+#
+sub array_ref_contains_id {
+    my ($a, $find_id) = @_;
+    
+    foreach my $v (@$a) {
+		my $id = $v->{id};
+		if (%$id eq %$find_id) {
+			return 1;
+		}
+    }
+
+	return undef;
+}
+
+
 
 #
 # Initialize
@@ -200,6 +217,17 @@ print "CPL::try_lookup_object(...should fail...)";
 my $objfx = CPL::try_lookup_object($ORIGINATOR, "%%%%%%", "****");
 if (!defined($objfx)) { print ": OK\n"; }
 if (defined($objfx)) { die "Object lookup did not fail as expected"; }
+
+print "CPL::lookup_all_objects(\"Object A\", \"File\")";
+my @obj2all = CPL::lookup_all_objects($ORIGINATOR, "Object A", "File");
+my $obj2allok = array_ref_contains_id(\@obj2all, $obj2);
+if ($obj2allok) {
+	print ": " . ($#obj2all+1) . " elements, OK\n";
+}
+else {
+	print ": " . ($#obj2all+1) . " elements, Fail\n";
+	die "Object lookup did not find the requested object";
+}
 
 print "\n";
 
@@ -354,6 +382,18 @@ my @anc1v0d_3 = CPL::get_object_ancestry($obj1, 0, $CPL::D_DESCENDANTS,
         $CPL::A_NO_DATA_DEPENDENCIES | $CPL::A_NO_CONTROL_DEPENDENCIES);
 print ":\n";
 print_array_ref(\@anc1v0d_3);
+print "\n";
+
+
+#
+# Create a new version
+#
+
+printf "CPL::get_version(obj1): %d\n", CPL::get_version($obj1);
+printf "CPL::new_version(obj1): %d\n", CPL::new_version($obj1);
+printf "CPL::new_version(obj1): %d\n", CPL::new_version($obj1);
+printf "CPL::new_version(obj1): %d\n", CPL::new_version($obj1);
+
 print "\n";
 
 

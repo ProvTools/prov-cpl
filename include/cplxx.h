@@ -181,6 +181,8 @@ struct cpl_traits_id_t
 	 */
 	static const size_t min_buckets = (1 << 10);
 
+#ifndef SWIG
+
 	/**
 	 * Compute the hash value for the given argument
 	 *
@@ -207,6 +209,8 @@ struct cpl_traits_id_t
 		return a == b;
 #endif
 	}
+
+#endif
 };
 
 

@@ -264,6 +264,13 @@ for t in tuples:
 	CPL.p_id(t.object.id, with_newline = False)
 	print '(', t.version, ')'
 
+# Create new version
+
+print 'Version of o1: ' + str(o1.version())
+print 'New version of o1: ' + str(o1.new_version())
+print 'New version of o1: ' + str(o1.new_version())
+print 'New version of o1: ' + str(o1.new_version())
+
 # Exit
 print "Closing connection"
 c.close()

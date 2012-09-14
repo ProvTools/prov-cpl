@@ -61,10 +61,12 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 	lookup_object
 	lookup_or_create_object
 	try_lookup_object
+	lookup_all_objects
 	data_flow
 	control
 	data_flow_ext
 	control_ext
+	new_version
 	get_current_session
 	get_version
 	get_session_info
@@ -84,10 +86,12 @@ our @EXPORT = qw(
 	lookup_object
 	lookup_or_create_object
 	try_lookup_object
+	lookup_all_objects
 	data_flow
 	control
 	data_flow_ext
 	control_ext
+	new_version
 	get_current_session
 	get_version
 	get_session_info
@@ -116,6 +120,9 @@ our $NONE = { hi => 0, lo => 0 };
 *CONTROL_GENERIC = *CPLDirect::CPL_CONTROL_GENERIC;
 *CONTROL_OP = *CPLDirect::CPL_CONTROL_OP;
 *CONTROL_START = *CPLDirect::CPL_CONTROL_START;
+
+*VERSION_GENERIC = *CPLDirect::CPL_VERSION_GENERIC;
+*VERSION_PREV = *CPLDirect::CPL_VERSION_PREV;
 
 *D_ANCESTORS = *CPLDirect::CPL_D_ANCESTORS;
 *D_DESCENDANTS = *CPLDirect::CPL_D_DESCENDANTS;
@@ -304,6 +311,53 @@ sub try_lookup_object {
 
 
 #
+# Look up an object by name. If multiple objects share the same name,
+# return all of them.
+#
+sub lookup_all_objects {
+	my ($originator, $name, $type) = @_;
+
+	my $vector_ptr = CPLDirect::new_std_vector_cpl_id_timestamp_tp();
+	my $ret = CPLDirect::cpl_lookup_object_ext($originator, $name, $type,
+			$CPLDirect::CPL_L_NO_FAIL,
+			$CPLDirect::cpl_cb_collect_id_timestamp_vector, $vector_ptr);
+
+	if (!CPLDirect::cpl_is_ok($ret)) {
+		CPLDirect::delete_std_vector_cpl_id_timestamp_tp($vector_ptr);
+		croak "Could not lookup the given object: " .
+			CPLDirect::cpl_error_string($ret);
+	}
+
+	my $vector =
+		CPLDirect::cpl_dereference_p_std_vector_cpl_id_timestamp_t($vector_ptr);
+	my $vector_size = CPLDirect::cpl_id_timestamp_t_vector::size($vector);
+
+	my @r = ();
+	for (my $i = 0; $i < $vector_size; $i++) {
+		my $e = CPLDirect::cpl_id_timestamp_t_vector::get($vector, $i);
+
+		my $e_id = CPLDirect::cpl_id_timestamp_t::swig_id_get($e);
+		my $r_id = {
+			hi => CPLDirect::cpl_id_t::swig_hi_get($e_id),
+			lo => CPLDirect::cpl_id_t::swig_lo_get($e_id)
+		};
+
+		my $r_timestamp = CPLDirect::cpl_id_timestamp_t::swig_timestamp_get($e);
+
+		my $r_element = {
+			id        => $r_id,
+			timestamp => $r_timestamp,
+		};
+
+		push @r, $r_element;
+	}
+
+	CPLDirect::delete_std_vector_cpl_id_timestamp_tp($vector_ptr);
+	return @r;
+}
+
+
+#
 # Lookup or create a provenance object
 #
 sub lookup_or_create_object {
@@ -463,6 +517,34 @@ sub control_flow_ext {
 	}
 
 	return $ret == $CPLDirect::CPL_S_DUPLICATE_IGNORED ? 0 : 1;
+}
+
+
+#
+# Create a new version of a provenance object
+#
+sub new_version {
+	my ($id) = @_;
+
+	my $x_ptr = CPLDirect::new_cpl_id_tp();
+	CPLDirect::cpl_id_t::swig_hi_set($x_ptr, $id->{hi});
+	CPLDirect::cpl_id_t::swig_lo_set($x_ptr, $id->{lo});
+	my $x = CPLDirect::cpl_id_tp_value($x_ptr);
+
+	my $v_ptr = CPLDirect::new_cpl_version_tp();
+	my $ret = CPLDirect::cpl_new_version($x, $v_ptr);
+	CPLDirect::delete_cpl_id_tp($x_ptr);
+
+	if (!CPLDirect::cpl_is_ok($ret)) {
+		CPLDirect::delete_cpl_version_tp($v_ptr);
+		croak "Could not create a new version of an object: " .
+			CPLDirect::cpl_error_string($ret);
+	}
+
+	my $v = CPLDirect::cpl_version_tp_value($v_ptr);
+	CPLDirect::delete_cpl_version_tp($v_ptr);
+
+	return $v;
 }
 
 
@@ -804,12 +886,13 @@ CPL - Perl bindings for Core Provenance Library
   my $id  = CPL::create_object("com.example.myapp", "/bin/sh", "proc");
   my $id1 = CPL::create_object("com.example.myapp", "~/a.txt", "file", $id);
   my $id2 = CPL::lookup_object("com.example.myapp", "/bin/sh", "proc");
-  my $id3 = CPL::lookup_or_createobject("com.example.myapp", "/bin/sh", "proc");
+  my $id3 = CPL::lookup_or_create_object("com.example.myapp","/bin/sh","proc");
   my $id4 = CPL::lookup_or_create_object("com.example.myapp", "~/a.txt",
                                          "file", $id);
   my $id5 = CPL::try_lookup_object("com.example.myapp", "/bin/sh", "proc");
   if (!defined($id5)) { warn "The object was not found." }
   if (CPL::id_eq($id5, $id2)) { print "The two IDs are the same.\n" }
+  my @lst = CPL::lookup_all_objects("com.example.myapp", "/bin/sh", "proc");
 
   CPL::data_flow($id1, $id);
   CPL::data_flow($id1, $id, $CPL::DATA_INPUT);
@@ -822,6 +905,7 @@ CPL - Perl bindings for Core Provenance Library
   CPL::control_ext($id1, $id, 0, $CPL::CONTROL_OP);
 
   my $ver1 = CPL::get_version($id);
+  my $ver2 = CPL::new_version($id);
   my %info = CPL::get_object_info($id);
   my %version_info = CPL::get_version_info($id, 0);
 
@@ -909,6 +993,14 @@ Looks up a provenance object based on its $originator, $name, and $type
 and returns its $id if it exists. If not, create a new object that satisfies
 the given criteria and is optionally placed in the given $container.
 
+=head3 lookup_all_objects
+
+  my @lst = CPL::lookup_all_objects($originator, $name, $type);
+
+Looks up all provenance objects with the matching $originator, $name, and
+$type, and returns the list of hashes, where each hash containts the id of
+the matching object and its timestamp.
+
 =head3 data_flow
 
   my $r = CPL::data_flow($dest, $source);
@@ -927,9 +1019,13 @@ CPL recognizes the following types of data dependencies:
 
 =over 2
 
-=item $CPL::DATA_INPUT
+=item $CPL::DATA_GENERIC
 
 The most generic type of data dependency.
+
+=item $CPL::DATA_INPUT
+
+The most generic type of data dependency -- an alias for $CPL::DATA_GENERIC.
 
 =item $CPL::DATA_IPC
 
@@ -975,9 +1071,14 @@ CPL recognizes the following types of control dependencies:
 
 =over 2
 
-=item $CPL::CONTROL_OP
+=item $CPL::CONTROL_GENERIC
 
 The most generic type of control dependency.
+
+=item $CPL::CONTROL_OP
+
+The most generic type of control dependency -- an alias for
+$CPL::CONTROL_GENERIC.
 
 =item $CPL::CONTROL_START
 
@@ -1005,6 +1106,13 @@ Returns the ID of the current session of the provenance-aware application
   my $version = CPL::get_version($id);
 
 Determines the current version of an object identified by the specified $id.
+
+=head3 new_version
+
+  my $version = CPL::new_version($id);
+
+Create a new version of an object identified by the specified $id and return
+the new version number.
 
 =head3 get_object_info
 
@@ -1039,11 +1147,33 @@ combination of flags such as $CPL::A_NO_DATA_DEPENDENCIES for ignoring all
 data deoendencies or $CPL::A_NO_CONTROL_DEPENDENCIES for ignoring all control
 dependencies.
 
+In addition to the data and control dependencies described above, the function
+can also return version dependencies:
+
+=over 2
+
+=item $CPL::VERSION_GENERIC
+
+The most generic type of version dependency.
+
+=item $CPL::VERSION_PREV
+
+The most generic type of version dependency, which signifies that the ancestor
+is the previous version of the descendant -- also an alias for
+$CPL::VERSION_GENERIC.
+
+=back
+
 
 
 =head1 HISTORY
 
 =over 8
+
+=item 1.01
+
+Added $CPL::new_version() and $CPL::lookup_all_objects().
+Minor changes to reflect changes in the underlying C API.
 
 =item 1.00
 
