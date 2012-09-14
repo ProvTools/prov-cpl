@@ -915,6 +915,43 @@ test_simple(void)
 	print(L_DEBUG, " ");
 
 
+	/*
+	 * Creating new versions
+	 */
+
+	cpl_version_t objv, vx;
+
+	ret = cpl_get_version(obj, &objv);
+	CPL_VERIFY(cpl_get_version, ret);
+	if (with_delays) delay();
+
+	ret = cpl_new_version(obj, &vx);
+	print(L_DEBUG, "cpl_new_version --> %d", ret);
+	CPL_VERIFY(cpl_add_property, ret);
+	if (objv + 1 != vx)
+		throw CPLException("The version number did not increase by 1.");
+	objv = vx;
+	if (with_delays) delay();
+
+	ret = cpl_new_version(obj, &vx);
+	print(L_DEBUG, "cpl_new_version --> %d", ret);
+	CPL_VERIFY(cpl_add_property, ret);
+	if (objv + 1 != vx)
+		throw CPLException("The version number did not increase by 1.");
+	objv = vx;
+	if (with_delays) delay();
+
+	ret = cpl_new_version(obj, &vx);
+	print(L_DEBUG, "cpl_new_version --> %d", ret);
+	CPL_VERIFY(cpl_add_property, ret);
+	if (objv + 1 != vx)
+		throw CPLException("The version number did not increase by 1.");
+	objv = vx;
+	if (with_delays) delay();
+
+	print(L_DEBUG, " ");
+
+
     /*
      * File API
      */

@@ -327,6 +327,129 @@ cpl_drop_object_cache(bool force)
 }
 
 
+/**
+ * Create (thaw) a new version of the given provenance object if necessary
+ *
+ * @param id the object ID
+ * @param force_thaw if we have to create the new version
+ * @param out_version the version number (can be NULL)
+ * @return CPL_OK or an error code
+ */
+cpl_return_t
+cpl_thaw(const cpl_id_t id,
+		 const bool force_thaw,
+		 cpl_version_t* out_version)
+{
+    cpl_return_t ret;
+    cpl_version_t version;
+
+
+	// Check the arguments
+
+	CPL_ENSURE_NOT_NONE(id);
+
+
+	// Get the current version of the object
+
+	bool must_freeze = true;
+	bool is_new = false;
+	cpl_open_object_t* obj = NULL;
+
+	if (cpl_cache) {
+
+		// Get the handle of the fromination
+
+		CPL_RUNTIME_VERIFY(cpl_get_open_object_handle(id, &obj, &is_new));
+
+
+		// Get the version of the object and check to see if the entry is stale
+		
+		if (cpl_cache_check && !is_new) {
+			ret = cpl_db_backend->cpl_db_get_version(cpl_db_backend,
+					id, &version);
+			CPL_RUNTIME_VERIFY(ret);
+		}
+		else {
+			version = obj->version;
+		}
+
+
+		// Determine whether to freeze and create a new version (if not stale)
+
+		if (obj->version == version) {
+			must_freeze = obj->frozen || obj->last_session != cpl_session;
+		}
+	}
+	else {
+
+		// Get the version of the object
+
+		ret = cpl_get_version(id, &version);
+		CPL_RUNTIME_VERIFY(ret);
+	}
+
+
+	// Automatically unlock the object if it is still locked by the time
+	// we hit end this block
+
+	CPL_AutoUnlock __au(obj != NULL ? &obj->locked : NULL);
+	(void) __au;
+
+
+	// Create a new version, if necessary
+	
+	if (must_freeze || force_thaw) {
+
+		cpl_return_t r = CPL_E_ALREADY_EXISTS;
+		version++;
+
+		do {
+			r = cpl_db_backend->cpl_db_create_version(cpl_db_backend,
+													  id,
+													  version,
+													  cpl_session);
+			if (r == CPL_E_ALREADY_EXISTS) {
+#ifdef _WINDOWS
+				Sleep(2 /* ms */);
+#else
+				usleep(2 * 1000 /* us */);
+#endif
+				version++;
+			}
+			else {
+				CPL_RUNTIME_VERIFY(r);
+			}
+		}
+		while (!CPL_IS_OK(r));
+
+		assert(version != CPL_VERSION_NONE);
+	}
+	
+
+	// Update the cache
+	
+	if (obj != NULL) {
+
+		// Update the session and version info
+
+		obj->version = version;
+		obj->last_session = cpl_session;
+		obj->frozen = false;
+
+
+		// Finally, unlock (must be last)
+		
+		cpl_unlock(&obj->locked);
+		obj = NULL;
+	}
+
+
+    // Finish
+
+	if (out_version != NULL) *out_version = version;
+	return CPL_OK;
+}
+
 
 /***************************************************************************/
 /** Initialization and Cleanup                                            **/
@@ -1012,97 +1135,8 @@ cpl_add_property(const cpl_id_t id,
 
 	// Freeze if necessary to make sure that the session information is correct
 
-	bool must_freeze = true;
-	bool is_new = false;
-	cpl_open_object_t* obj = NULL;
-
-	if (cpl_cache) {
-
-		// Get the handle of the fromination
-
-		CPL_RUNTIME_VERIFY(cpl_get_open_object_handle(id, &obj, &is_new));
-
-
-		// Get the version of the object and check to see if the entry is stale
-		
-		if (cpl_cache_check && !is_new) {
-			ret = cpl_db_backend->cpl_db_get_version(cpl_db_backend,
-					id, &version);
-			CPL_RUNTIME_VERIFY(ret);
-		}
-		else {
-			version = obj->version;
-		}
-
-
-		// Determine whether to freeze and create a new version (if not stale)
-
-		if (obj->version == version) {
-			must_freeze = obj->frozen || obj->last_session != cpl_session;
-		}
-	}
-	else {
-
-		// Get the version of the object
-
-		ret = cpl_get_version(id, &version);
-		CPL_RUNTIME_VERIFY(ret);
-	}
-
-
-	// Automatically unlock the object if it is still locked by the time
-	// we hit end this block
-
-	CPL_AutoUnlock __au(obj != NULL ? &obj->locked : NULL);
-	(void) __au;
-
-
-	// Freeze and create a new version if we determined that we have to
-	
-	if (must_freeze) {
-
-		cpl_return_t r = CPL_E_ALREADY_EXISTS;
-		version++;
-
-		do {
-			r = cpl_db_backend->cpl_db_create_version(cpl_db_backend,
-													  id,
-													  version,
-													  cpl_session);
-			if (r == CPL_E_ALREADY_EXISTS) {
-#ifdef _WINDOWS
-				Sleep(2 /* ms */);
-#else
-				usleep(2 * 1000 /* us */);
-#endif
-				version++;
-			}
-			else {
-				CPL_RUNTIME_VERIFY(r);
-			}
-		}
-		while (!CPL_IS_OK(r));
-
-		assert(version != CPL_VERSION_NONE);
-	}
-	
-
-	// Update the cache
-	
-	if (obj != NULL) {
-
-		// Update the session and version info
-
-		obj->version = version;
-		obj->last_session = cpl_session;
-		obj->frozen = false;
-
-
-		// Finally, unlock (must be last)
-		
-		cpl_unlock(&obj->locked);
-		obj = NULL;
-	}
+	ret = cpl_thaw(id, false, &version);
+	if (!CPL_IS_OK(ret)) return ret;
 
 
     // Call the backend
@@ -1112,6 +1146,23 @@ cpl_add_property(const cpl_id_t id,
                                                version,
 											   key,
 											   value);
+}
+
+
+/**
+ * Create a new version of the given provenance object.
+ *
+ * @param id the object ID
+ * @param new_version the new version number (can be NULL)
+ * @return CPL_OK or an error code
+ */
+extern "C" EXPORT cpl_return_t
+cpl_new_version(const cpl_id_t id,
+				cpl_version_t* new_version)
+{
+	CPL_ENSURE_INITALIZED;
+    
+	return cpl_thaw(id, true, new_version);
 }
 
 

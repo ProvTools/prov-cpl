@@ -907,6 +907,18 @@ cpl_add_property(const cpl_id_t id,
 				 const char* key,
                  const char* value);
 
+/**
+ * Create a new version of the given provenance object.
+ *
+ * @param id the object ID
+ * @param new_version the new version number (can be NULL)
+ * @return CPL_OK or an error code
+ */
+EXPORT cpl_return_t
+cpl_new_version(const cpl_id_t id,
+				cpl_version_t* new_version);
+
+
 
 /***************************************************************************/
 /** Legacy                                                                **/
