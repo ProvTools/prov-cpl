@@ -160,21 +160,21 @@ if o4_fail != None:
 	CPL.p_id(o5_fail.id, with_newline = True)
 """
 print 'Look up non-existent object (type failure)'
-o_fail1 = c.lookup_object(originator, obj1_name, 'no-type')
+o_fail1 = c.try_lookup_object(originator, obj1_name, 'no-type')
 if o_fail1:
 	print 'Returned an object: '
 	CPL.p_object(o_fail1)
 	sys.exit(1)
 
 print 'Look up non-existent object (name failure)'
-o_fail2 = c.lookup_object(originator, 'no-name', obj1_type)
+o_fail2 = c.try_lookup_object(originator, 'no-name', obj1_type)
 if o_fail2:
 	print 'Returned an object: '
 	CPL.p_object(o_fail2)
 	sys.exit(1)
 
 print 'Look up non-existent object (originator failure)'
-o_fail3 = c.lookup_object('no-originator', obj1_name, obj1_type)
+o_fail3 = c.try_lookup_object('no-originator', obj1_name, obj1_type)
 if o_fail3:
 	print 'Returned an object: '
 	CPL.p_object(o_fail3)

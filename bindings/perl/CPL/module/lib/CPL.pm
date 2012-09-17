@@ -67,12 +67,18 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 	data_flow_ext
 	control_ext
 	new_version
+    add_property
 	get_current_session
 	get_version
 	get_session_info
 	get_object_info
 	get_version_info
+    get_all_objects
+    get_all_objects_fast
 	get_object_ancestry
+    get_properties
+    lookup_by_property
+    try_lookup_by_property
 	get_object_for_file
 	create_object_for_file
 ) ] );
@@ -94,12 +100,18 @@ our @EXPORT = qw(
 	data_flow_ext
 	control_ext
 	new_version
+    add_property
 	get_current_session
 	get_version
 	get_session_info
 	get_object_info
 	get_version_info
+    get_all_objects
+    get_all_objects_fast
 	get_object_ancestry
+    get_properties
+    lookup_by_property
+    try_lookup_by_property
 	get_object_for_file
 	create_object_for_file
 );
@@ -556,6 +568,27 @@ sub new_version {
 }
 
 
+#
+# Add a property
+#
+sub add_property {
+	my ($id, $key, $value) = @_;
+
+	my $x_ptr = CPLDirect::new_cpl_id_tp();
+	CPLDirect::cpl_id_t::swig_hi_set($x_ptr, $id->{hi});
+	CPLDirect::cpl_id_t::swig_lo_set($x_ptr, $id->{lo});
+	my $x = CPLDirect::cpl_id_tp_value($x_ptr);
+
+	my $ret = CPLDirect::cpl_add_property($x, $key, $value);
+	CPLDirect::delete_cpl_id_tp($x_ptr);
+
+	if (!CPLDirect::cpl_is_ok($ret)) {
+		croak "Could not add property to an object: " .
+			CPLDirect::cpl_error_string($ret);
+	}
+}
+
+
 
 #############################################################################
 # Public API: Provenance Access API                                         #
@@ -843,29 +876,57 @@ sub get_all_objects {
            lo => CPLDirect::cpl_id_t::swig_lo_get($info_container)
         };
 
-		my $r_element = {
-            id                => $r_id,
-            version           => 
-                CPLDirect::cplxx_object_info_t::swig_version_get($info),
-            creation_session  => $r_session,
-            creation_time     => 
-                CPLDirect::cplxx_object_info_t::swig_creation_time_get($info),
-            originator        => 
-                CPLDirect::cplxx_object_info_t::swig_originator_get($info),
-            name              => 
-                CPLDirect::cplxx_object_info_t::swig_name_get($info),
-            type              => 
-                CPLDirect::cplxx_object_info_t::swig_type_get($info),
-            container_id      => $r_container,
-            container_version =>
-                CPLDirect::cplxx_object_info_t::swig_container_version_get($info),
-		};
+        my $r_element;
+        if ($fast) {
+            $r_element = {
+                id                => $r_id,
+                creation_time     => 
+                    CPLDirect::cplxx_object_info_t::swig_creation_time_get($info),
+                originator        => 
+                    CPLDirect::cplxx_object_info_t::swig_originator_get($info),
+                name              => 
+                    CPLDirect::cplxx_object_info_t::swig_name_get($info),
+                type              => 
+                    CPLDirect::cplxx_object_info_t::swig_type_get($info),
+                container_id      => $r_container,
+                container_version =>
+                    CPLDirect::cplxx_object_info_t::swig_container_version_get($info),
+            };
+        }
+        else {
+            $r_element = {
+                id                => $r_id,
+                version           => 
+                    CPLDirect::cplxx_object_info_t::swig_version_get($info),
+                creation_session  => $r_session,
+                creation_time     => 
+                    CPLDirect::cplxx_object_info_t::swig_creation_time_get($info),
+                originator        => 
+                    CPLDirect::cplxx_object_info_t::swig_originator_get($info),
+                name              => 
+                    CPLDirect::cplxx_object_info_t::swig_name_get($info),
+                type              => 
+                    CPLDirect::cplxx_object_info_t::swig_type_get($info),
+                container_id      => $r_container,
+                container_version =>
+                    CPLDirect::cplxx_object_info_t::swig_container_version_get($info),
+            };
+        }
 
 		push @r, $r_element;
 	}
 
     CPLDirect::delete_std_vector_cplxx_object_info_tp($vector_ptr);
 	return @r;
+}
+
+
+#
+# Get all objects in the database. This function runs faster, but it returns
+# less information.
+#
+sub get_all_objects_fast {
+    return get_all_objects(@_, 1);
 }
 
 
@@ -936,6 +997,112 @@ sub get_object_ancestry {
 
 	CPLDirect::delete_std_vector_cpl_ancestry_entry_tp($vector_ptr);
 	return @r;
+}
+
+
+#
+# Get properties of an object
+#
+sub get_properties {
+	my ($id, $key, $version) = @_;
+
+	if (!defined($version)) { $version = $CPL::VERSION_NONE }
+
+	my $x_ptr = CPLDirect::new_cpl_id_tp();
+	CPLDirect::cpl_id_t::swig_hi_set($x_ptr, $id->{hi});
+	CPLDirect::cpl_id_t::swig_lo_set($x_ptr, $id->{lo});
+	my $x = CPLDirect::cpl_id_tp_value($x_ptr);
+
+	my $vector_ptr = CPLDirect::new_std_vector_cplxx_property_entry_tp();
+	my $ret = CPLDirect::cpl_get_properties($x, $version, $key,
+			$CPLDirect::cpl_cb_collect_properties_vector, $vector_ptr);
+	CPLDirect::delete_cpl_id_tp($x_ptr);
+
+	if (!CPLDirect::cpl_is_ok($ret)) {
+		CPLDirect::delete_std_vector_cplxx_property_entry_tp($vector_ptr);
+		croak "Could not get the properties of an object: " .
+			CPLDirect::cpl_error_string($ret);
+	}
+
+	my $vector =
+		CPLDirect::cpl_dereference_p_std_vector_cplxx_property_entry_t(
+				$vector_ptr);
+	my $vector_size = CPLDirect::cplxx_property_entry_t_vector::size($vector);
+
+	my @r = ();
+	for (my $i = 0; $i < $vector_size; $i++) {
+		my $e = CPLDirect::cplxx_property_entry_t_vector::get($vector, $i);
+
+		my $r_element = {
+            id      => $id,
+			version => CPLDirect::cplxx_property_entry_t::swig_version_get($e),
+			key     => CPLDirect::cplxx_property_entry_t::swig_key_get($e),
+			value   => CPLDirect::cplxx_property_entry_t::swig_value_get($e),
+		};
+
+		push @r, $r_element;
+	}
+
+    CPLDirect::delete_std_vector_cplxx_property_entry_tp($vector_ptr);
+	return @r;
+}
+
+
+#
+# Look up objects by property
+#
+sub lookup_by_property {
+	my ($key, $value, $ok_if_not_found) = @_;
+
+	my $vector_ptr = CPLDirect::new_std_vector_cplxx_property_entry_tp();
+	my $ret = CPLDirect::cpl_lookup_by_property($key, $value,
+			$CPLDirect::cpl_cb_collect_properties_vector, $vector_ptr);
+
+	if (!CPLDirect::cpl_is_ok($ret)) {
+		CPLDirect::delete_std_vector_cplxx_property_entry_tp($vector_ptr);
+
+		if ($ok_if_not_found) {
+            my @r = ();
+			return @r;
+		}
+
+		croak "Could not lookup objects by property: " .
+			CPLDirect::cpl_error_string($ret);
+	}
+
+	my $vector =
+		CPLDirect::cpl_dereference_p_std_vector_cplxx_property_entry_t(
+				$vector_ptr);
+	my $vector_size = CPLDirect::cplxx_property_entry_t_vector::size($vector);
+
+	my @r = ();
+	for (my $i = 0; $i < $vector_size; $i++) {
+		my $e = CPLDirect::cplxx_property_entry_t_vector::get($vector, $i);
+
+		my $e_id = CPLDirect::cplxx_property_entry_t::swig_id_get($e);
+		my $r_id = {
+			hi => CPLDirect::cpl_id_t::swig_hi_get($e_id),
+			lo => CPLDirect::cpl_id_t::swig_lo_get($e_id)
+		};
+
+		my $r_element = {
+            id      => $r_id,
+			version => CPLDirect::cplxx_property_entry_t::swig_version_get($e),
+		};
+
+		push @r, $r_element;
+	}
+
+    CPLDirect::delete_std_vector_cplxx_property_entry_tp($vector_ptr);
+	return @r;
+}
+
+
+#
+# Look up objects by property, but do not fail if no such object is found
+#
+sub try_lookup_by_property {
+	return lookup_by_property(@_, 1);
 }
 
 
@@ -1022,9 +1189,12 @@ CPL - Perl bindings for Core Provenance Library
   my $id4 = CPL::lookup_or_create_object("com.example.myapp", "~/a.txt",
                                          "file", $id);
   my $id5 = CPL::try_lookup_object("com.example.myapp", "/bin/sh", "proc");
-  if (!defined($id5)) { warn "The object was not found." }
-  if (CPL::id_eq($id5, $id2)) { print "The two IDs are the same.\n" }
+  if (!defined($id5)) { warn "The object was not found."; }
+  if (CPL::id_eq($id5, $id2)) { print "The two IDs are the same.\n"; }
   my @lst = CPL::lookup_all_objects("com.example.myapp", "/bin/sh", "proc");
+
+  my @all_objs  = CPL::get_all_objects();
+  my @all_objs2 = CPL::get_all_objects_fast();
 
   CPL::data_flow($id1, $id);
   CPL::data_flow($id1, $id, $CPL::DATA_INPUT);
@@ -1045,9 +1215,40 @@ CPL - Perl bindings for Core Provenance Library
   my @descenants = CPL::get_object_ancestry($id, undef, $CPL::D_DESCENDANTS);
   my @descenants_of_v0 = CPL::get_object_ancestry($id, 0, $CPL::D_DESCENDANTS);
 
+  CPL::add_property($id, "dog", "fido");
+  my @props    = CPL::get_properties($id);
+  my @props_v0 = CPL::get_properties($id, undef, 0);
+  my @dogs     = CPL::get_properties($id, "dog");
+  my @dogs_v0  = CPL::get_properties($id, "dog", 0);
+  my @fidos    = CPL::lookup_by_property("dog", "fido");
+  my @fidos2   = CPL::try_lookup_by_property("dog", "fido");
+  if ($#fidos2 == -1) { warn "No objects with dogs named \"fido\"."; }
+
   my $f1 = CPL::create_object_for_file("hello.txt");
   my $f2 = CPL::get_object_for_file("hello.txt");
   my $f3 = CPL::get_object_for_file("hello.txt", $CPL::F_LOOKUP_ONLY);
+
+  # Error handling
+  
+  eval {
+    my $x = CPL::lookup_object("com.example.myapp", "/bin/sh", "proc");
+  };
+  if ($@) {
+    print "Error\n";
+  }
+
+  # Error handling using the Error module
+  
+  use Error qw(:try);
+  try {
+    my $x = CPL::lookup_object("com.example.myapp", "/bin/sh", "proc");
+  }
+  catch Error with {
+    my $ex = shift;
+    print "Error: $ex\n";
+  };
+
+  # Detach
 
   CPL::detach();
 
@@ -1136,6 +1337,19 @@ the given criteria and is optionally placed in the given $container.
 Looks up all provenance objects with the matching $originator, $name, and
 $type, and returns the list of hashes, where each hash containts the id of
 the matching object and its timestamp.
+
+=head3 get_all_objects
+
+  my @lst = CPL::get_all_objects();
+
+Returns an array of hashes with information about all provenance objects.
+
+=head3 get_all_objects_fast
+
+  my @lst = CPL::get_all_objects_fast();
+
+Returns an array of hashes with information about all provenance objects with
+less information than get_all_objects(), but faster.
 
 =head3 data_flow
 
@@ -1300,13 +1514,46 @@ $CPL::VERSION_GENERIC.
 
 =back
 
+=head3 add_property
+
+  CPL::add_property($id, $key, $value);
+
+Adds a property with the specified $key and $value to the most recent version
+of the object identified by the supplied $id.
+
+=head3 get_properties
+
+  my @lst = CPL::get_properties($id);
+  my @lst = CPL::get_properties($id, $key);
+  my @lst = CPL::get_properties($id, $key, $version);
+
+Gets all properties of the given provenance object with the matching $key, if
+it is specified; otherwise return all properties regardless of the key. If the
+$version is specified, returns the properties associated with the given version
+instead of returning the properties of all versions.
+
+=head3 lookup_by_property
+
+  my @lst = CPL::lookup_by_property($key, $value);
+
+Finds and returns an array of provenance objects and their versions that have
+a property with the matching $key and $value. Fails if no such objects are
+found.
+
+=head3 try_lookup_by_property
+
+  my @lst = CPL::try_lookup_by_property($key, $value);
+
+Just like lookup_by_property(), except that it returns an empty list instead of
+failing if no such objects are found.
+
 =head3 get_object_for_file
 
   my $f1 = CPL::get_object_for_file($file_name);
   my $f2 = CPL::get_object_for_file($file_name, $mode);
 
-Get a provenance object that corresponds to the given file on the file system
-(the file must already exist), and depending on the $mode, create it if not
+Gets a provenance object that corresponds to the given file on the file system
+(the file must already exist), and depending on the $mode, creates it if not
 found.
 
 Please note that the CPL internally refers to the files using their full path,
@@ -1341,7 +1588,7 @@ Use this if you completely overwrite the file.
 
   my $f = CPL::create_object_for_file($file_name);
 
-Create a new provenance object that corresponds to the specified file. This is
+Creates a new provenance object that corresponds to the specified file. This is
 equivalent to calling get_object_for_file() with $mode = $CPL::F_ALWAYS_CREATE.
 
 
@@ -1351,8 +1598,8 @@ equivalent to calling get_object_for_file() with $mode = $CPL::F_ALWAYS_CREATE.
 
 =item 1.01
 
-Added CPL::new_version(), CPL::lookup_all_objects(), CPL::get_object_for_file(),
-and CPL::create_object_for_file().
+Added CPL::new_version(), CPL::lookup_all_objects(), support for the file API,
+and support for properties.
 Minor changes to reflect changes in the underlying C API.
 
 =item 1.00

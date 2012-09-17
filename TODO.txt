@@ -16,7 +16,6 @@ Tools:
   - Port to Windows
 
 Language Bindings:
-  - Add support for properties to Perl bindings
   - Implement R bindings
   - Provenance-aware R, potentially implemented by analyzing session logs
   - Make Perl and Python bindings get the version number from include/cpl.h

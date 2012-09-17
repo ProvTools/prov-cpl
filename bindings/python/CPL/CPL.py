@@ -621,20 +621,29 @@ class cpl_connection:
 
 	def lookup_object(self, originator, name, type):
 		'''
-		Look up object; returns None if object already exiss.
+		Look up object; raise LookupError if the object does not exist.
+		'''
+		o = self.__create_or_lookup_cpl_object(originator, name, type,
+				create=False)
+		return o
+
+
+	def try_lookup_object(self, originator, name, type):
+		'''
+		Look up object; returns None if the object does not exist.
 		'''
 		try:
 			o = self.__create_or_lookup_cpl_object(originator, name, type,
 					create=False)
 		except LookupError:
-			# Return None or propagate exception?
 			o = None
 		return o
 
 
 	def lookup_by_property(self, key, value):
 		'''
-		Return all objects that have the key/value property specified.
+		Return all objects that have the key/value property specified; raise
+		LookupError if no such object is found.
 		'''
 		vp = CPLDirect.new_std_vector_cpl_id_version_tp()
 		ret = CPLDirect.cpl_lookup_by_property(key, value,
@@ -655,6 +664,18 @@ class cpl_connection:
 
 		CPLDirect.delete_std_vector_cpl_id_version_tp(vp)
 		return l
+
+
+	def try_lookup_by_property(self, key, value):
+		'''
+		Return all objects that have the key/value property specified, but do
+		not fail if no such object is found -- return an empty list instead.
+		'''
+		try:
+			o = self.lookup_by_property(key, value)
+		except LookupError:
+			o = []
+		return o
 
 
 	def lookup_all(self, originator, name, type):

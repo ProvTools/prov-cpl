@@ -114,6 +114,23 @@ sub array_ref_contains_id {
 }
 
 
+#
+# Finds the associated array entry with the given id
+#
+sub array_ref_find_id {
+    my ($a, $find_id) = @_;
+    
+    foreach my $v (@$a) {
+		my $id = $v->{id};
+		if (%$id eq %$find_id) {
+			return $v;
+		}
+    }
+
+	return undef;
+}
+
+
 
 #
 # Initialize
@@ -240,8 +257,8 @@ print "  object 2:\n";
 print_hash_ref($objall[2]);
 print "  ... (" . ($#objall+1) . " elements)\n";
 
-print "CPL::get_all_objects(1):\n";
-my @objall_fast = CPL::get_all_objects(1);
+print "CPL::get_all_objects_fast():\n";
+my @objall_fast = CPL::get_all_objects_fast();
 print "  object 0:\n";
 print_hash_ref($objall_fast[0]);
 print "  object 1:\n";
@@ -403,6 +420,91 @@ my @anc1v0d_3 = CPL::get_object_ancestry($obj1, 0, $CPL::D_DESCENDANTS,
         $CPL::A_NO_DATA_DEPENDENCIES | $CPL::A_NO_CONTROL_DEPENDENCIES);
 print ":\n";
 print_array_ref(\@anc1v0d_3);
+print "\n";
+
+
+#
+# Properties
+#
+
+print "CPL::add_property(obj1, \"dog\", \"fido\")";
+CPL::add_property($obj1, "dog", "fido");
+print ": OK\n";
+
+print "CPL::add_property(obj1, \"dog\", \"bowser\")";
+CPL::add_property($obj1, "dog", "bowser");
+print ": OK\n";
+
+print "CPL::add_property(obj1, \"cat\", \"kimi\")";
+CPL::add_property($obj1, "cat", "kimi");
+print ": OK\n";
+
+print "CPL::new_version(obj1)";
+my $obj1v_prop = CPL::new_version($obj1);
+
+print "CPL::add_property(obj1, \"dog\", \"gazda\")";
+CPL::add_property($obj1, "dog", "gazda");
+print ": OK\n";
+
+print "CPL::get_properties(obj1)";
+my @prop1 = CPL::get_properties($obj1);
+print ":\n";
+print_array_ref(\@prop1);
+print "\n";
+
+print "CPL::get_properties(obj1, \"dog\")";
+my @prop1a = CPL::get_properties($obj1, "dog");
+print ":\n";
+print_array_ref(\@prop1a);
+print "\n";
+
+print "CPL::get_properties(obj1, \"dog\", $obj1v_prop)";
+my @prop1b = CPL::get_properties($obj1, "dog", $obj1v_prop);
+print ":\n";
+print_array_ref(\@prop1b);
+print "\n";
+
+my $obj1v_prop_b = $obj1v_prop-1;
+print "CPL::get_properties(obj1, undef, $obj1v_prop_b)";
+my @prop1c = CPL::get_properties($obj1, undef, $obj1v_prop_b);
+print ":\n";
+print_array_ref(\@prop1c);
+print "\n";
+
+print "CPL::lookup_by_property(\"dog\", \"gazda\")";
+my @prop1check = CPL::lookup_by_property("dog", "gazda");
+my $prop1check_ok = array_ref_contains_id(\@prop1check, $obj1);
+if ($prop1check_ok) {
+    my $v = array_ref_find_id(\@prop1check, $obj1);
+	print ": " . ($#prop1check+1) . " elements, OK, version = $v->{version}\n";
+}
+else {
+	print ": " . ($#prop1check+1) . " elements, Fail\n";
+	die "The object lookup did not find the requested object";
+}
+
+print "CPL::try_lookup_by_property(\"cat\", \"kimi\")";
+my @prop1check_a = CPL::try_lookup_by_property("cat", "kimi");
+my $prop1check_a_ok = array_ref_contains_id(\@prop1check_a, $obj1);
+if ($prop1check_a_ok) {
+    my $v = array_ref_find_id(\@prop1check_a, $obj1);
+	print ": " . ($#prop1check_a+1)." elements, OK, version = $v->{version}\n";
+}
+else {
+	print ": " . ($#prop1check_a+1)." elements, Fail\n";
+	die "The object lookup did not find the requested object";
+}
+
+print "CPL::try_lookup_by_property(\"dog\", \"---> cat <---\")";
+my @prop1check_b = CPL::try_lookup_by_property("dog", "---> cat <---");
+if ($#prop1check_b == -1) {
+	print ": OK\n";
+}
+else {
+	print ": " . ($#prop1check_b+1)." elements, Fail\n";
+	die "The object lookup was not supposed to find any mathing objects";
+}
+
 print "\n";
 
 
