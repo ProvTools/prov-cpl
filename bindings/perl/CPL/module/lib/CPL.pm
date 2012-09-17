@@ -794,6 +794,82 @@ sub get_version_info {
 
 
 #
+# Get all objects in the database. If $fast is true, return incomplete
+# information, but do so faster
+#
+sub get_all_objects {
+	my ($fast) = @_;
+
+    my $flags = 0;
+    if ($fast) {
+        $flags = $CPLDirect::CPL_I_FAST;
+    }
+
+	my $vector_ptr = CPLDirect::new_std_vector_cplxx_object_info_tp();
+	my $ret = CPLDirect::cpl_get_all_objects($flags,
+			$CPLDirect::cpl_cb_collect_object_info_vector, $vector_ptr);
+
+	if (!CPLDirect::cpl_is_ok($ret)) {
+		CPLDirect::delete_std_vector_cplxx_object_info_tp($vector_ptr);
+		croak "Could not get all objects in the database: " .
+			CPLDirect::cpl_error_string($ret);
+	}
+
+	my $vector =
+		CPLDirect::cpl_dereference_p_std_vector_cplxx_object_info_t($vector_ptr);
+	my $vector_size = CPLDirect::cplxx_object_info_t_vector::size($vector);
+
+	my @r = ();
+	for (my $i = 0; $i < $vector_size; $i++) {
+		my $info = CPLDirect::cplxx_object_info_t_vector::get($vector, $i);
+
+		my $info_id = CPLDirect::cplxx_object_info_t::swig_id_get($info);
+		my $r_id = {
+			hi => CPLDirect::cpl_id_t::swig_hi_get($info_id),
+			lo => CPLDirect::cpl_id_t::swig_lo_get($info_id)
+		};
+
+        my $info_session =
+            CPLDirect::cplxx_object_info_t::swig_creation_session_get($info);
+        my $r_session = {
+           hi => CPLDirect::cpl_id_t::swig_hi_get($info_session),
+           lo => CPLDirect::cpl_id_t::swig_lo_get($info_session)
+        };
+
+        my $info_container =
+            CPLDirect::cplxx_object_info_t::swig_container_id_get($info);
+        my $r_container = {
+           hi => CPLDirect::cpl_id_t::swig_hi_get($info_container),
+           lo => CPLDirect::cpl_id_t::swig_lo_get($info_container)
+        };
+
+		my $r_element = {
+            id                => $r_id,
+            version           => 
+                CPLDirect::cplxx_object_info_t::swig_version_get($info),
+            creation_session  => $r_session,
+            creation_time     => 
+                CPLDirect::cplxx_object_info_t::swig_creation_time_get($info),
+            originator        => 
+                CPLDirect::cplxx_object_info_t::swig_originator_get($info),
+            name              => 
+                CPLDirect::cplxx_object_info_t::swig_name_get($info),
+            type              => 
+                CPLDirect::cplxx_object_info_t::swig_type_get($info),
+            container_id      => $r_container,
+            container_version =>
+                CPLDirect::cplxx_object_info_t::swig_container_version_get($info),
+		};
+
+		push @r, $r_element;
+	}
+
+    CPLDirect::delete_std_vector_cplxx_object_info_tp($vector_ptr);
+	return @r;
+}
+
+
+#
 # Get the object ancestry
 #
 sub get_object_ancestry {

@@ -230,6 +230,26 @@ else {
 	die "Object lookup did not find the requested object";
 }
 
+print "CPL::get_all_objects():\n";
+my @objall = CPL::get_all_objects();
+print "  object 0:\n";
+print_hash_ref($objall[0]);
+print "  object 1:\n";
+print_hash_ref($objall[1]);
+print "  object 2:\n";
+print_hash_ref($objall[2]);
+print "  ... (" . ($#objall+1) . " elements)\n";
+
+print "CPL::get_all_objects(1):\n";
+my @objall_fast = CPL::get_all_objects(1);
+print "  object 0:\n";
+print_hash_ref($objall_fast[0]);
+print "  object 1:\n";
+print_hash_ref($objall_fast[1]);
+print "  object 2:\n";
+print_hash_ref($objall_fast[2]);
+print "  ... (" . ($#objall_fast+1) . " elements)\n";
+
 print "\n";
 
 

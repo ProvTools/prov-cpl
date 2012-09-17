@@ -1869,21 +1869,35 @@ retry:
 	ret = SQLBindCol(stmt, 6, SQL_C_CHAR, entry_type, type_size, NULL);
 	if (!SQL_SUCCEEDED(ret)) goto err_close;
 
+    ret = SQLBindCol(stmt, 7, SQL_C_UBIGINT, &entry.container_id.hi, 0,
+                     &cb_container_id_lo);
+    if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+    ret = SQLBindCol(stmt, 8, SQL_C_UBIGINT, &entry.container_id.lo, 0,
+                     &cb_container_id_hi);
+    if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+    ret = SQLBindCol(stmt, 9, SQL_C_SBIGINT, &entry.container_version, 0,
+                     &cb_container_ver);
+    if (!SQL_SUCCEEDED(ret)) goto err_close;
+
 
 	if ((flags & CPL_I_NO_CREATION_SESSION) == 0) {
 
-		ret = SQLBindCol(stmt, 7, SQL_C_UBIGINT, &entry.container_id.hi, 0,
+		ret = SQLBindCol(stmt, 10, SQL_C_UBIGINT, &entry.creation_session.hi,0,
 						 &cb_container_id_lo);
 		if (!SQL_SUCCEEDED(ret)) goto err_close;
 
-		ret = SQLBindCol(stmt, 8, SQL_C_UBIGINT, &entry.container_id.lo, 0,
+		ret = SQLBindCol(stmt, 11, SQL_C_UBIGINT, &entry.creation_session.lo,0,
 						 &cb_container_id_hi);
 		if (!SQL_SUCCEEDED(ret)) goto err_close;
-
-		ret = SQLBindCol(stmt, 9, SQL_C_SBIGINT, &entry.container_version, 0,
-						 &cb_container_ver);
-		if (!SQL_SUCCEEDED(ret)) goto err_close;
 	}
+    else {
+        
+        entry.creation_session = CPL_NONE;
+    }
+
+    entry.version = CPL_VERSION_NONE;
 
 
 	// Fetch the result
