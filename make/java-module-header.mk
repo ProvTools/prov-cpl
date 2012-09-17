@@ -91,7 +91,7 @@ ifndef JAVA
 endif
 
 ifndef JAVAC
-	JAVAC := javac
+	JAVAC := javac -Xlint
 endif
 
 ifndef JAR

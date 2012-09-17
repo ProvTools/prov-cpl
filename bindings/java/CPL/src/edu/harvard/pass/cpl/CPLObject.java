@@ -165,30 +165,22 @@ public class CPLObject {
 
 
 	/**
-	 * Get the ID of the object
-	 *
-	 * @return the internal ID of this object
-	 */
-	public CPLId getId() {
-		return new CPLId(id);
-	}
-
-
-	/**
 	 * Create a new CPLObject
 	 *
 	 * @param originator the originator
 	 * @param name the object name
 	 * @param type the object type
 	 * @param container the object container
+     *
+	 * @deprecated Please use create() instead
 	 */
+    @Deprecated
 	public CPLObject(String originator, String name, String type,
 			CPLObject container) {
 
 		this.originator = originator;
 		this.name = name;
 		this.type = type;
-		this.knowContainer = container == null;
 
 		this.id = new cpl_id_t();
 		int r = CPLDirect.cpl_create_object(originator, name, type,
@@ -203,9 +195,52 @@ public class CPLObject {
 	 * @param originator the originator
 	 * @param name the object name
 	 * @param type the object type
+     *
+	 * @deprecated Please use create() instead
 	 */
+    @Deprecated
 	public CPLObject(String originator, String name, String type) {
 		this(originator, name, type, null);
+	}
+
+
+	/**
+	 * Create a new CPLObject
+	 *
+	 * @param originator the originator
+	 * @param name the object name
+	 * @param type the object type
+	 * @param container the object container
+     * @return the new object
+	 */
+	public static CPLObject create(String originator, String name, String type,
+			CPLObject container) {
+
+		cpl_id_t id = new cpl_id_t();
+		int r = CPLDirect.cpl_create_object(originator, name, type,
+				container == null ? nullId : container.id, id);
+		CPLException.assertSuccess(r);
+
+		CPLObject o = new CPLObject(id);
+		o.originator = originator;
+		o.name = name;
+		o.type = type;
+
+		return o;
+	}
+
+
+	/**
+	 * Create a new CPLObject
+	 *
+	 * @param originator the originator
+	 * @param name the object name
+	 * @param type the object type
+     * @return the new object
+	 */
+	public static CPLObject create(String originator, String name,
+            String type) {
+		return create(originator, name, type, null);
 	}
 
 
@@ -359,6 +394,60 @@ public class CPLObject {
 	}
 
 
+    /**
+     * Get a collection of all provenance objects
+     *
+     * @return a vector of all provenance objects
+     */
+    public static Vector<CPLObject> getAllObjects() {
+
+		SWIGTYPE_p_std_vector_cplxx_object_info_t pVector
+			= CPLDirect.new_std_vector_cplxx_object_info_tp();
+		SWIGTYPE_p_void pv = CPLDirect
+			.cpl_convert_p_std_vector_cplxx_object_info_t_to_p_void(pVector);
+		Vector<CPLObject> result = new Vector<CPLObject>();
+
+		try {
+            int r = CPLDirect.cpl_get_all_objects(CPLDirect.CPL_I_FAST,
+					CPLDirect.cpl_cb_collect_object_info_vector, pv);
+			CPLException.assertSuccess(r);
+
+			cplxx_object_info_t_vector v = CPLDirect
+				.cpl_dereference_p_std_vector_cplxx_object_info_t(pVector);
+			long l = v.size();
+			for (long i = 0; i < l; i++) {
+				cplxx_object_info_t e = v.get((int) i);
+                cpl_id_t id = e.getId();
+
+                CPLObject o = new CPLObject(id);
+                o.originator = e.getOriginator();
+                o.name = e.getName();
+                o.type = e.getType();
+                
+                CPLObjectVersion container;
+                cpl_id_t containerId = e.getContainer_id();
+                if (CPL.isNone(containerId)) {
+                    container = null;
+                }
+                else {
+                    container = new CPLObjectVersion(new CPLObject(containerId),
+                            e.getContainer_version());
+                }
+                o.container = container;
+                o.knowContainer = true;
+
+				result.add(o);
+			}
+		}
+		finally {
+			CPLDirect.delete_std_vector_cplxx_object_info_tp(pVector);
+		}
+
+		return result;
+
+    }
+
+
 	/**
 	 * Determine whether this and the other object are equal
 	 *
@@ -457,6 +546,16 @@ public class CPLObject {
 		}
 
 		return true;
+	}
+
+
+	/**
+	 * Get the ID of the object
+	 *
+	 * @return the internal ID of this object
+	 */
+	public CPLId getId() {
+		return new CPLId(id);
 	}
 
 

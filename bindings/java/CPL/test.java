@@ -97,20 +97,20 @@ public class test {
 		 * Create objects
 		 */
 
-		System.out.print("new CPLObject(\"Process A\", \"Proc\")");
-		CPLObject obj1 = new CPLObject(ORIGINATOR, "Process A", "Proc");
+		System.out.print("CPLObject.create(\"Process A\", \"Proc\")");
+		CPLObject obj1 = CPLObject.create(ORIGINATOR, "Process A", "Proc");
 		System.out.println(": " + obj1);
 
-		System.out.print("new CPLObject(\"Object A\", \"File\", obj1)");
-		CPLObject obj2 = new CPLObject(ORIGINATOR, "Object A", "File", obj1);
+		System.out.print("CPLObject.create(\"Object A\", \"File\", obj1)");
+		CPLObject obj2 = CPLObject.create(ORIGINATOR, "Object A","File",obj1);
 		System.out.println(": " + obj2);
 
-		System.out.print("new CPLObject(\"Process B\", \"Proc\", obj1)");
-		CPLObject obj3 = new CPLObject(ORIGINATOR, "Process B", "Proc", obj1);
+		System.out.print("CPLObject.create(\"Process B\", \"Proc\", obj1)");
+		CPLObject obj3 = CPLObject.create(ORIGINATOR, "Process B","Proc",obj1);
 		System.out.println(": " + obj3);
 
-		System.out.print("new CPLObject(\"Object B\", \"File\", null)");
-		CPLObject obj4 = new CPLObject(ORIGINATOR, "Object B", "File", null);
+		System.out.print("CPLObject.create(\"Object B\", \"File\", null)");
+		CPLObject obj4 = CPLObject.create(ORIGINATOR, "Object B", "File",null);
 		System.out.println(": " + obj4);
 
 		System.out.print("CPLObject.lookupOrCreate(\"Object B\", \"File\")");
@@ -173,6 +173,12 @@ public class test {
                 + ")");
 		if (!objv.contains(obj2))
 			throw new RuntimeException("Object lookup did not return the right object");
+
+        System.out.print("CPLObject.getAllObjects()");
+        Vector<CPLObject> objall = CPLObject.getAllObjects();
+		System.out.println(": " + objall.size() + " results");
+		if (!objall.contains(obj2))
+			throw new RuntimeException("getAllObjects() is missing an object");
 
 		System.out.println();
 
