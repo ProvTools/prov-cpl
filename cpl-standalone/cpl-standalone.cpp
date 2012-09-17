@@ -1261,7 +1261,12 @@ cpl_add_dependency(const cpl_id_t from_id,
 				dependency_exists = false;
 			}
 			else {
-				dependency_exists = i->second <= to_version;
+
+                // The dependency exists if the version of the immediate
+                // ancestor is equal to or greater than the version of the
+                // ancestor that we are adding (to_version)
+
+				dependency_exists = i->second >= to_version;
 			}
 
 			check_dependency_using_db = false;
@@ -1288,7 +1293,12 @@ cpl_add_dependency(const cpl_id_t from_id,
 				to_id, to_version, &b);
 		CPL_RUNTIME_VERIFY(r);
 
-		dependency_exists = b > 0;
+
+        // The dependency exists if the version of the immediate ancestor is
+        // equal to or greater than the version of the ancestor that we are
+        // adding (to_version)
+
+		dependency_exists = b >= to_version;
 
 
 		// If the dependency exists, get the object version

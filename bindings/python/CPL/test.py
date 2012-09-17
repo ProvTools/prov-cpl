@@ -49,17 +49,20 @@ originator = 'python_test'
 c = CPL.cpl_connection()
 
 print "Session information: "
-CPL.p_session(c.session_info())
+CPL.p_session(c.session)
 
 # Create objects 
-print 'Create tests'
+print
+print '----- Create tests -----'
+print
 
 obj1_name = "Process A"
 obj1_type = 'proc'
 print ('Create object name: ' +
 	obj1_name + ' type: ' + obj1_type + ' container: void')
 o1 = c.create_object(originator, obj1_name, obj1_type)
-CPL.p_object(o1)
+CPL.p_object(o1, True)
+CPL.p_object_version(o1.current_version(), True)
 
 obj2_name = "File A"
 obj2_type = 'file'
@@ -100,30 +103,33 @@ o5 = c.create_object(originator, obj5_name, obj5_type, o1)
 CPL.p_object(o5)
 
 # Lookup Objects
-print 'Lookup Tests'
+print
+print '----- Lookup Tests -----'
+print
+
 print ('Looking up object name: ' + obj1_name + ' type: ' + obj1_type)
-o1_check = c.lookup(originator, obj1_name, obj1_type)
+o1_check = c.lookup_object(originator, obj1_name, obj1_type)
 if o1.id != o1_check.id:
 	sys.stdout.write('Lookup returned wrong object: ')
 	CPL.p_id(o1_check.id, with_newline = True)
 	sys.exit(1)
 
 print ('Looking up object name: ' + obj2_name + ' type: ' + obj2_type)
-o2_check = c.lookup(originator, obj2_name, obj2_type)
+o2_check = c.lookup_object(originator, obj2_name, obj2_type)
 if o2.id != o2_check.id:
 	sys.stdout.write('Lookup returned wrong object: ')
 	CPL.p_id(o2_check.id, with_newline = True)
 	sys.exit(1)
 
 print ('Looking up object name: ' + obj3_name + ' type: ' + obj3_type)
-o3_check = c.lookup(originator, obj3_name, obj3_type)
+o3_check = c.lookup_object(originator, obj3_name, obj3_type)
 if o3.id != o3_check.id:
 	sys.stdout.write('Lookup returned wrong object: ')
 	CPL.p_id(o3_check.id, with_newline = True)
 	sys.exit(1)
 
 print ('Looking up object name: ' + obj4_name + ' type: ' + obj4_type)
-o4_check = c.lookup(originator, obj4_name, obj4_type)
+o4_check = c.lookup_object(originator, obj4_name, obj4_type)
 if o4.id != o4_check.id:
 	sys.stdout.write('Lookup returned wrong object: ')
 	CPL.p_id(o4_check.id, with_newline = True)
@@ -131,7 +137,7 @@ if o4.id != o4_check.id:
 
 
 print ('Looking up object name: ' + obj5_name + ' type: ' + obj5_type)
-o5_check = c.lookup(originator, obj5_name, obj5_type)
+o5_check = c.lookup_object(originator, obj5_name, obj5_type)
 if o5.id != o5_check.id:
 	sys.stdout.write('Lookup returned wrong object: ')
 	CPL.p_id(o4_check.id, with_newline = True)
@@ -141,75 +147,142 @@ if o5.id != o5_check.id:
 Right now there is no way to do a lookup and specify a container
 print ('Looking up object in wrong container name: ' +
  	obj5_name + ' type: ' + obj5_type + ' container: NONE')
-o5_fail = c.lookup(originator, obj5_name, obj5_type)
+o5_fail = c.lookup_object(originator, obj5_name, obj5_type)
 if o5_fail != None:
  	sys.stdout.write('Lookup returned an object: ')
  	CPL.p_id(o4_fail.id, with_newline = True)
 
 print ('Looking up object in wrong container name: ' +
 	obj4_name + ' type: ' + obj4_type + ' container: ')
-o4_fail = c.lookup(originator, obj4_name, obj4_type, o1.id)
+o4_fail = c.lookup_object(originator, obj4_name, obj4_type, o1.id)
 if o4_fail != None:
 	sys.stdout.write('Lookup returned an object: ')
 	CPL.p_id(o5_fail.id, with_newline = True)
 """
 print 'Look up non-existent object (type failure)'
-o_fail1 = c.lookup(originator, obj1_name, 'no-type')
+o_fail1 = c.lookup_object(originator, obj1_name, 'no-type')
 if o_fail1:
 	print 'Returned an object: '
 	CPL.p_object(o_fail1)
 	sys.exit(1)
 
 print 'Look up non-existent object (name failure)'
-o_fail2 = c.lookup(originator, 'no-name', obj1_type)
+o_fail2 = c.lookup_object(originator, 'no-name', obj1_type)
 if o_fail2:
 	print 'Returned an object: '
 	CPL.p_object(o_fail2)
 	sys.exit(1)
 
 print 'Look up non-existent object (originator failure)'
-o_fail3 = c.lookup('no-originator', obj1_name, obj1_type)
+o_fail3 = c.lookup_object('no-originator', obj1_name, obj1_type)
 if o_fail3:
 	print 'Returned an object: '
 	CPL.p_object(o_fail3)
 	sys.exit(1)
 
-print 'Dependencies'
+print 'Look up all objects with name: ' + obj1_name + ' type: ' + obj1_type
+o1_all = c.lookup_all(originator, obj1_name, obj1_type)
+i = 0
+for t in o1_all:
+	CPL.p_id(t.id, with_newline = True)
+	i += 1
+	if i >= 10 and len(o1_all) > 10:
+		print '  ... (' + str(len(o1_all)) + ' objects total)'
+		break
+
+print 'All objects'
+all_objects = c.get_all_objects(True)
+i = 0
+for t in all_objects:
+	CPL.p_id(t.object.id, with_newline = False)
+	print ' originator: ' + t.originator + ' name: ' + t.name +' type: '+t.type
+	i += 1
+	if i >= 10 and len(all_objects) > 10:
+		print '  ... (' + str(len(all_objects)) + ' objects total)'
+		break
+
+
+# Dependencies
+print
+print '----- Dependencies -----'
+print
 print 'data flow DEFAULT from o2 to o1 (no dup)'
 r1 = o2.data_flow_to(o1)
 if not r1:
 	print 'ERROR: ignoring duplicate'
 	sys.exit(1)
 
-print 'data flow CPL_DATA_INPUT from o2 to o1 (w/dup)'
+print 'data flow CPL.DATA_INPUT from o2 to o1 (w/dup)'
 r2 = o2.data_flow_to(o1, CPL.DATA_INPUT)
 if r2:
 	print 'ERROR: should have ignored duplicate'
 	sys.exit(1)
 
-print 'data flow CPL_DATA_INPUT from o3 to o2 (no dup)'
+print 'data flow CPL.DATA_INPUT from o3 to o2 (no dup)'
 r3 = o3.data_flow_to(o2, CPL.DATA_INPUT)
 if not r3:
 	print 'ERROR: ignoring duplicate'
 	sys.exit(1)
 
-print 'control flow CPL_CONTROL_START from o3 to o1 (no dup)'
+print 'control flow CPL.CONTROL_START from o3 to o1 (no dup)'
 r4 = o3.control_flow_to(o1, CPL.CONTROL_START)
 if not r4:
 	print 'ERROR: ignoring duplicate'
 	sys.exit(1)
 
-print 'data flow CPL_DATA_TRANSLATION from o1 to o3'
+print 'data flow CPL.DATA_TRANSLATION from o1 to o3'
 r5 = o1.data_flow_to(o3, CPL.DATA_TRANSLATION)
 if not r5:
 	print 'ERROR: ignoring duplicate'
 	sys.exit(1)
 
+print 'data flow DEFAULT from o1 ver. 0 to o5 (no dup)'
+print o1.specific_version(0)
+r6 = o1.specific_version(0).data_flow_to(o5)
+if not r6:
+	print 'ERROR: ignoring duplicate'
+	sys.exit(1)
+
+print 'data flow DEFAULT from o1 ver. 0 to o5 (w/dup)'
+print o5
+r7 = o5.data_flow_from(o1.specific_version(0))
+if r7:
+	print 'ERROR: not ignoring duplicate'
+	sys.exit(1)
+
+print 'data flow DEFAULT from o1 ver. 0 to o5 (w/dup)'
+r8 = o5.data_flow_from(o1, version=0)
+if r8:
+	print 'ERROR: not ignoring duplicate'
+	sys.exit(1)
+
+print 'control flow DEFAULT from o1 to o5 (no dup)'
+r9 = o5.control_flow_from(o1)
+if not r9:
+	print 'ERROR: ignoring duplicate'
+	print '       the current version of o1 is ' + str(o1.version())
+	print '       ancestors of o5:'
+	a = o5.ancestry()
+	for e in a:
+		print '         ' + str(e.ancestor)
+	sys.exit(1)
+
+
+#Object info
+print
+print '----- Object Info -----'
+print
+
 print 'Object info'
 for o in [o1, o2, o3, o4, o5]:
 	CPL.p_object(o)
 
-print 'Checking Ancestry'
+
+
+#Ancestry
+print
+print '----- Ancestry -----'
+print
 
 for o in [o1, o2, o3]:
 	CPL.p_object(o)
@@ -217,27 +290,32 @@ for o in [o1, o2, o3]:
 	rda = o1.ancestry(direction = CPL.D_ANCESTORS,
 	    flags = CPL.A_NO_CONTROL_DEPENDENCIES)
 	for i in rda:
-		i.dump()
+		print str(i)
 
 	print '\nData Descendants: '
 	rdd = o1.ancestry(direction = CPL.D_DESCENDANTS,
 	    flags = CPL.A_NO_CONTROL_DEPENDENCIES)
 	for i in rdd:
-		i.dump()
+		print str(i)
 
 	print '\nControl Ancestors: '
 	rca = o1.ancestry(direction = CPL.D_ANCESTORS,
 	    flags = CPL.A_NO_DATA_DEPENDENCIES)
 	for i in rca:
-		i.dump()
+		print str(i)
 
 	print '\nControl Descendants: '
 	rcd = o1.ancestry(direction = CPL.D_DESCENDANTS,
 	    flags = CPL.A_NO_DATA_DEPENDENCIES)
 	for i in rcd:
-		i.dump()
+		print str(i)
 
-print 'Checking Properties'
+
+#Properties
+print
+print '----- Properties -----'
+print
+
 print 'Adding dog/fido to o1'
 o1.add_property('dog', 'fido')
 
@@ -261,11 +339,19 @@ print o3.properties()
 
 print 'Getting all objects with dog/fido property'
 tuples = c.lookup_by_property('dog', 'fido')
+i = 0
 for t in tuples:
-	CPL.p_id(t.object.id, with_newline = False)
-	print '(', t.version, ')'
+	print str(t)
+	i += 1
+	if i >= 10 and len(tuples) > 10:
+		print '  ... (' + str(len(tuples)) + ' tuples total)'
+		break
+
 
 # Create new version
+print
+print '----- New Version -----'
+print
 
 print 'Version of o1: ' + str(o1.version())
 print 'New version of o1: ' + str(o1.new_version())
@@ -274,6 +360,9 @@ print 'New version of o1: ' + str(o1.new_version())
 print ''
 
 # File API
+print
+print '----- File API -----'
+print
 
 fh1 = tempfile.NamedTemporaryFile()
 fh2 = tempfile.NamedTemporaryFile()
@@ -299,5 +388,6 @@ fh2.close()
 
 
 # Exit
+print
 print "Closing connection"
 c.close()

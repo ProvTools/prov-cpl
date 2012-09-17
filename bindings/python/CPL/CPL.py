@@ -42,8 +42,12 @@ This module contains:
 
 *	The cpl class.
 *	The cpl_ancestor class.
+*	The cpl_session class.
+*	The cpl_session_info class.
 *	The cpl_object class.
 *	The cpl_object_info class.
+*	The cpl_object_version class.
+*	The cpl_object_version_info class.
 *	Helper functions to print and construct cpl objects
 '''
 
@@ -201,9 +205,15 @@ def dependency_type_to_str(val):
 	'''
 	which = val >> 8
 	if which == DEPENDENCY_CATEGORY_DATA:
-		return __data_dict[val & 7]
+		if (val & 7) < len(__data_dict):
+			return __data_dict[val & 7]
+		else:
+			return 'data unknown'
 	elif which == DEPENDENCY_CATEGORY_CONTROL:
-		return __control_dict[val & 7]
+		if (val & 7) < len(__control_dict):
+			return __control_dict[val & 7]
+		else:
+			return 'control unknown'
 	elif which == DEPENDENCY_CATEGORY_VERSION:
 		return 'version'
 	else:
@@ -243,7 +253,7 @@ def p_object(obj, with_session = False):
 		p_object(obj, with_session = False)
 	'''
 	i = obj.info()
-	p_id(obj.id)
+	p_id(i.object.id)
 	print(' version: ' + str(i.version))
 	sys.stdout.write('container_id: ')
 	if i.container is not None:
@@ -255,21 +265,57 @@ def p_object(obj, with_session = False):
 	print('originator: ' + i.originator + ' name:' + i.name +
 	    ' type: ' + i.type)
 	if with_session:
-		print('creation_time: ' + i.creation_time)
-		p_session(i.creation_session())
+		print('creation_time: ' + str(i.creation_time))
+		p_session(i.creation_session)
 
 
-def p_session(si):
+def p_object_version(obj_ver, with_session = False):
+	'''
+	Print information about a version of an object
+
+	Method calls:
+		p_object_version(obj_ver, with_session = False)
+	'''
+	print(str(obj_ver))
+	i = obj_ver.info()
+	if with_session:
+		print('creation_time: ' + str(i.creation_time))
+		p_session(i.session)
+
+
+def p_session(session):
 	'''
 	Print information about a session
 
 	Method calls:
-		p_session(si)
+		p_session(session)
 	'''
-	p_id(si.id, with_newline = True)
+	si = session.info()
+	sys.stdout.write('session ')
+	p_id(si.session.id, with_newline = True)
 	print(' mac_address: ' + si.mac_address + ' pid: ' + str(si.pid))
 	print('\t(' + str(si.start_time) + ')' + ' user: ' +
 	    si.user + ' cmdline: ' + si.cmdline + ' program: ' + si.program)
+
+
+
+#
+# Information about a specific version of a provenance object
+#
+
+class cpl_object_version_info:
+	'''
+	Information about a specific version of a provenance object
+	'''
+
+	def __init__(self, object_version, session, creation_time):
+		'''
+		Create an instance of this object
+		'''
+
+		self.object_version = object_version
+		self.session = session
+		self.creation_time = creation_time
 
 
 
@@ -295,14 +341,14 @@ class cpl_object_version:
 		'''
 		Compare this and the other object, and return true if they are equal
 		'''
-		return self.id == other.id and self.version == other.version
+		return self.object.id==other.object.id and self.version==other.version
 
 
 	def __ne__(self, other):
 		'''
 		Compare this and the other object, and return true if they are not equal
 		'''
-		return self.id != other.id or self.version != other.version
+		return self.object.id!=other.object.id or self.version!=other.version
 
 
 	def __str__(self):
@@ -311,6 +357,46 @@ class cpl_object_version:
 		'''
 		return str(self.object) + '-' + str(self.version)
 
+
+	def info(self):
+		'''
+		Return the corresponding cpl_object_version_info for this specific
+		version of the object.
+		'''
+
+		infopp = CPLDirect.new_cpl_version_info_tpp()
+
+		ret = CPLDirect.cpl_get_version_info(self.object.id, self.version,
+		    CPLDirect.cpl_convert_pp_cpl_version_info_t(infopp))
+		if not CPLDirect.cpl_is_ok(ret):
+			CPLDirect.delete_cpl_version_info_tpp(infopp)
+			raise Exception('Unable to get object version info: ' +
+					CPLDirect.cpl_error_string(ret))
+
+		op = CPLDirect.cpl_dereference_pp_cpl_version_info_t(infopp)
+		info = CPLDirect.cpl_version_info_tp_value(op)
+
+		_info = cpl_object_version_info(self, cpl_session(info.session),
+				info.creation_time)
+
+		CPLDirect.cpl_free_version_info(op)
+		CPLDirect.delete_cpl_version_info_tpp(infopp)
+
+		return _info
+
+
+	def control_flow_to(self, dest, type=CONTROL_OP):
+		'''
+		Add a control flow edge of type from self to dest.
+		'''
+		return self.object.control_flow_to(dest, type, self.version)
+
+
+	def data_flow_to(self, dest, type=DATA_INPUT):
+		'''
+		Add a data flow edge of type from self to dest.
+		'''
+		return self.object.data_flow_to(dest, type, self.version)
 
 
 #
@@ -324,21 +410,34 @@ class cpl_ancestor:
 	'''
 
 
-	def __init__(self, aid, aversion, did, dversion, type):
+	def __init__(self, aid, aversion, did, dversion, type, direction):
+		'''
+		Create an instance of cpl_ancestor
+		'''
 		self.ancestor = cpl_object_version(cpl_object(aid), aversion)
 		self.descendant = cpl_object_version(cpl_object(did), dversion)
 		self.type = type
 
+		if direction == D_ANCESTORS:
+			self.base  = self.descendant
+			self.other = self.ancestor
+		else:
+			self.base  = self.ancestor
+			self.other = self.descendant
 
-	def dump(self):
+
+	def __str__(self):
 		'''
-		Display the cpl_ancestor object
+		Create a printable string representation of this object
 		'''
-		sys.stdout.write(dependency_type_to_str(self.type) + ': ')
-		sys.stdout.write(str(self.ancestor))
-		sys.stdout.write(' -- ')
-		sys.stdout.write(str(self.descendant))
-		sys.stdout.write('\n')
+		
+		arrow = ' -- '
+		if self.other == self.ancestor:
+			arrow = ' --> '
+		else:
+			arrow = ' <-- '
+		return (str(self.base) + arrow + str(self.other) +
+			' type:' + dependency_type_to_str(self.type))
 
 
 
@@ -368,6 +467,7 @@ class cpl_connection:
 		global _cpl_connection
 
 		self.connection_string = cstring
+		self.closed = False
 
 		def get_current_session():
 			idp = CPLDirect.new_cpl_id_tp()
@@ -375,7 +475,7 @@ class cpl_connection:
 
 			if not CPLDirect.cpl_is_ok(ret):
 				CPLDirect.delete_cpl_id_tp(idp)
-				print ("Could not get current session" +
+				raise Exception("Could not get current session" +
 				       CPLDirect.cpl_error_string(ret))
 
 			s = CPLDirect.cpl_id_tp_value(idp)
@@ -387,17 +487,25 @@ class cpl_connection:
 		ret = CPLDirect.cpl_create_odbc_backend(cstring,
 		    CPLDirect.CPL_ODBC_GENERIC, backend)
 		if not CPLDirect.cpl_is_ok(ret):
-			print ("Could not create ODBC connection" +
+			raise Exception("Could not create ODBC connection" +
 			       CPLDirect.cpl_error_string(ret))
 		self.db = CPLDirect.cpl_dereference_pp_cpl_db_backend_t(backend)
 		ret = CPLDirect.cpl_attach(self.db)
 		CPLDirect.delete_cpl_db_backend_tpp(backend)
 		if not CPLDirect.cpl_is_ok(ret):
-			print ("Could not open ODBC connection" +
+			raise Exception("Could not open ODBC connection" +
 			       CPLDirect.cpl_error_string(ret))
-		self.session = get_current_session()
+		self.session = cpl_session(get_current_session())
 
 		_cpl_connection = self
+
+
+	def __del__(self):
+		'''
+		Destructor - automatically closes the connection.
+		'''
+		if self == _cpl_connection and not self.closed:
+			self.close()
 
 
 	def __create_or_lookup_cpl_object(self, originator,
@@ -446,6 +554,48 @@ class cpl_connection:
 
 		CPLDirect.delete_cpl_id_tp(idp)
 		return r
+
+
+	def get_all_objects(self, fast=False):
+		'''
+		Return all objects in the provenance database. If fast = True, then
+		fetch only incomplete information about each object, so that it is
+		faster.
+		'''
+
+		if fast:
+			flags = CPLDirect.CPL_I_FAST
+		else:
+			flags = 0
+
+		vp = CPLDirect.new_std_vector_cplxx_object_info_tp()
+		ret = CPLDirect.cpl_get_all_objects(flags,
+			CPLDirect.cpl_cb_collect_object_info_vector, vp)
+
+		if not CPLDirect.cpl_is_ok(ret):
+			CPLDirect.delete_std_vector_cplxx_object_info_tp(vp)
+			raise Exception('Unable to get all objects: ' +
+					CPLDirect.cpl_error_string(ret))
+
+		v = CPLDirect.cpl_dereference_p_std_vector_cplxx_object_info_t(vp)
+		l = []
+		if v != S_NO_DATA :
+			for e in v:
+				if e.container_id == NONE or e.container_version < 0:
+					container = None
+				else:
+					container = cpl_object_version(cpl_object(e.container_id),
+							e.container_version)
+				if e.creation_session == NONE:
+					creation_session = None
+				else:
+					creation_session = cpl_session(e.creation_session)
+				l.append(cpl_object_info(cpl_object(e.id), e.version,
+					creation_session, e.creation_time, e.originator, e.name,
+					e.type, container))
+
+		CPLDirect.delete_std_vector_cplxx_object_info_tp(vp)
+		return l
 			
 
 	def get_object(self, originator, name, type, container=None):
@@ -469,7 +619,7 @@ class cpl_connection:
 				create=True, container=container)
 
 
-	def lookup(self, originator, name, type):
+	def lookup_object(self, originator, name, type):
 		'''
 		Look up object; returns None if object already exiss.
 		'''
@@ -512,22 +662,22 @@ class cpl_connection:
 		Return all objects that have the specified originator, name,
 		and type (they might differ by container).
 		'''
-		vp = CPLDirect.new_std_vector_cpl_id_version_tp()
+		vp = CPLDirect.new_std_vector_cpl_id_timestamp_tp()
 		ret = CPLDirect.cpl_lookup_object_ext(originator, name, type,
 			L_NO_FAIL, CPLDirect.cpl_cb_collect_id_timestamp_vector, vp)
 
 		if not CPLDirect.cpl_is_ok(ret):
-			CPLDirect.delete_std_vector_cpl_id_version_tp(vp)
+			CPLDirect.delete_std_vector_cpl_id_timestamp_tp(vp)
 			raise Exception('Unable to lookup all objects: ' +
 					CPLDirect.cpl_error_string(ret))
 
-		v = CPLDirect.cpl_dereference_p_std_vector_cpl_id_version_t(vp)
+		v = CPLDirect.cpl_dereference_p_std_vector_cpl_id_timestamp_t(vp)
 		l = []
 		if v != S_NO_DATA :
 			for e in v:
-				l.append(cpl_object(e))
+				l.append(cpl_object(e.id))
 
-		CPLDirect.delete_std_vector_cpl_id_version_tp(vp)
+		CPLDirect.delete_std_vector_cpl_id_timestamp_tp(vp)
 		return l
 
 
@@ -579,13 +729,95 @@ class cpl_connection:
 		return self.get_object_for_file(file_name, F_ALWAYS_CREATE)
 
 
-	def session_info(self):
+	def close(self):
 		'''
-		Return cpl_session_info_t object associated with this session.
+		Close database connection and session
+		'''
+		global _cpl_connection
+		
+		if self != _cpl_connection or self.closed:
+			return
+
+		ret = CPLDirect.cpl_detach()
+		if not CPLDirect.cpl_is_ok(ret):
+			raise Exception('Could not detach ' +
+					CPLDirect.cpl_error_string(ret))
+
+		_cpl_connection = None
+		self.closed = True
+
+
+
+#
+# Information about a provenance session
+#
+
+class cpl_session_info:
+	'''
+	Information about a provenance session
+	'''
+
+	def __init__(self, session, mac_address, user, pid, program, cmdline,
+			start_time):
+		'''
+		Create an instance of this object
+		'''
+
+		self.session = session
+		self.mac_address = mac_address
+		self.user = user
+		self.pid = pid
+		self.program = program
+		self.cmdline = cmdline
+		self.start_time = start_time
+
+
+
+#
+# CPL Session
+#
+
+class cpl_session:
+	'''
+	CPL Session
+	'''
+
+
+	def __init__(self, id):
+		'''
+		Initialize an instance of cpl_session
+		'''
+		self.id = copy_id(id)
+
+
+	def __eq__(self, other):
+		'''
+		Compare this and the other object and return true if they are equal
+		'''
+		return self.id == other.id
+
+
+	def __ne__(self, other):
+		'''
+		Compare this and the other object and return true if they are not equal
+		'''
+		return self.id != other.id
+
+
+	def __str__(self):
+		'''
+		Return a string representation of this object
+		'''
+		return str(self.id)
+
+
+	def info(self):
+		'''
+		Return the cpl_session_info object associated with this session.
 		'''
 
 		sessionpp = CPLDirect.new_cpl_session_info_tpp()
-		ret = CPLDirect.cpl_get_session_info(self.session,
+		ret = CPLDirect.cpl_get_session_info(self.id,
 		    CPLDirect.cpl_convert_pp_cpl_session_info_t(sessionpp))
 		if not CPLDirect.cpl_is_ok(ret):
 			CPLDirect.delete_cpl_session_info_tpp(sessionpp)
@@ -594,21 +826,14 @@ class cpl_connection:
 
 		sessionp = CPLDirect.cpl_dereference_pp_cpl_session_info_t(sessionpp)
 		info = CPLDirect.cpl_session_info_tp_value(sessionp)
-		CPLDirect.delete_cpl_session_info_tpp(sessionpp)
-		return info
 
-
-	def close(self):
-		'''
-		Close database connection and session
-		'''
-		global _cpl_connection
-		_cpl_connection = None
+		_info = cpl_session_info(self, info.mac_address, info.user,
+				info.pid, info.program, info.cmdline, info.start_time)
 		
-		ret = CPLDirect.cpl_detach()
-		if not CPLDirect.cpl_is_ok(ret):
-			raise Exception('Could not detach ' +
-					CPLDirect.cpl_error_string(ret))
+		CPLDirect.cpl_free_session_info(sessionp)
+		CPLDirect.delete_cpl_session_info_tpp(sessionpp)
+		
+		return _info
 
 
 
@@ -710,6 +935,22 @@ class cpl_object:
 		return v
 
 
+	def current_version(self):
+		'''
+		Get a cpl_object_version object for the current version.
+		'''
+		return cpl_object_version(self, self.version())
+
+
+	def specific_version(self, version):
+		'''
+		Get a cpl_object_version object for the specified version. Note that
+		the specified version number does not get validated until info() is
+		called.
+		'''
+		return cpl_object_version(self, version)
+
+
 	def control_flow_to(self, dest, type=CONTROL_OP, version=None):
 		'''
 		Add control flow edge of type from self to dest. If version
@@ -719,6 +960,8 @@ class cpl_object:
 		Allowed types:
 			CPL.CONTROL_OP (default)
 			CPL.CONTROL_START
+
+		CPL.CONTROL_GENERIC is an alias for CPL.CONTROL_OP.
 		'''
 
 		if version is None or version == VERSION_NONE:
@@ -742,12 +985,82 @@ class cpl_object:
 			CPL.DATA_IPC
 			CPL.DATA_TRANSLATION
 			CPL.DATA_COPY
+
+		CPL.DATA_GENERIC is an alias for CPL.DATA_INPUT.
 		'''
 
 		if version is None or version == VERSION_NONE:
 			version = self.version()
 
 		ret = CPLDirect.cpl_data_flow_ext(dest.id, self.id, version, type)
+		if not CPLDirect.cpl_is_ok(ret):
+			raise Exception('Could not add data dependency ' +
+					CPLDirect.cpl_error_string(ret))
+		return not ret == S_DUPLICATE_IGNORED
+
+
+	def control_flow_from(self, src, type=CONTROL_OP, version=None):
+		'''
+		Add control flow edge of the given type from src to self. If version
+		is specified, then add flow to dest with explicit version, else add
+		to most recent version.
+
+		Allowed types:
+			CPL.CONTROL_OP (default)
+			CPL.CONTROL_START
+
+		CPL.CONTROL_GENERIC is an alias for CPL.CONTROL_OP.
+		'''
+
+		if isinstance(src, cpl_object_version):
+			if version is not None and version != VERSION_NONE:
+				raise Exception('The version argument must be None if ' +
+					'src is of type cpl_object_version')
+			_version = src.version
+			_src = src.object
+		elif version is None or version == VERSION_NONE:
+			_version = src.version()
+			_src = src
+		else:
+			_version = version
+			_src = src
+
+		ret = CPLDirect.cpl_control_flow_ext(self.id, _src.id, _version, type)
+		if not CPLDirect.cpl_is_ok(ret):
+			raise Exception('Could not add control dependency: ' +
+					CPLDirect.cpl_error_string(ret))
+		return not ret == S_DUPLICATE_IGNORED
+
+
+	def data_flow_from(self, src, type=DATA_INPUT, version=None):
+		'''
+		Add data flow edge of the given type from src to self. If version
+		is specified, then add flow to dest with explicit version, else add
+		to most recent version.
+
+		Allowed types:
+			CPL.DATA_INPUT (default)
+			CPL.DATA_IPC
+			CPL.DATA_TRANSLATION
+			CPL.DATA_COPY
+
+		CPL.DATA_GENERIC is an alias for CPL.DATA_INPUT.
+		'''
+
+		if isinstance(src, cpl_object_version):
+			if version is not None and version != VERSION_NONE:
+				raise Exception('The version argument must be None if ' +
+					'src is of type cpl_object_version')
+			_version = src.version
+			_src = src.object
+		elif version is None or version == VERSION_NONE:
+			_version = src.version()
+			_src = src
+		else:
+			_version = version
+			_src = src
+
+		ret = CPLDirect.cpl_data_flow_ext(self.id, _src.id, _version, type)
 		if not CPLDirect.cpl_is_ok(ret):
 			raise Exception('Could not add data dependency ' +
 					CPLDirect.cpl_error_string(ret))
@@ -787,7 +1100,6 @@ class cpl_object:
 
 		op = CPLDirect.cpl_dereference_pp_cpl_object_info_t(objectpp)
 		object = CPLDirect.cpl_object_info_tp_value(op)
-		CPLDirect.delete_cpl_object_info_tpp(objectpp)
 
 		if object.container_id == NONE or object.container_version < 0:
 			container = None
@@ -795,9 +1107,14 @@ class cpl_object:
 			container = cpl_object_version(cpl_object(object.container_id),
 					object.container_version)
 
-		return cpl_object_info(object, object.version, object.creation_session,
-				object.creation_time, object.originator, object.name,
-				object.type, container)
+		_info = cpl_object_info(self, object.version,
+				cpl_session(object.creation_session), object.creation_time,
+				object.originator, object.name, object.type, container)
+
+		CPLDirect.cpl_free_object_info(op)
+		CPLDirect.delete_cpl_object_info_tpp(objectpp)
+
+		return _info
 
 
 	def ancestry(self, version=None, direction=D_ANCESTORS, flags=0):
@@ -823,14 +1140,14 @@ class cpl_object:
 				a = cpl_ancestor(entry.other_object_id,
 					entry.other_object_version,
 					entry.query_object_id,
-					entry.query_object_version, entry.type)
+					entry.query_object_version, entry.type, direction)
 				l.append(a)
 		else:
 			for entry in v:
 				a = cpl_ancestor(entry.query_object_id,
 					entry.query_object_version,
 					entry.other_object_id,
-					entry.other_object_version, entry.type)
+					entry.other_object_version, entry.type, direction)
 				l.append(a)
 
 		CPLDirect.delete_std_vector_cpl_ancestry_entry_tp(vp)
