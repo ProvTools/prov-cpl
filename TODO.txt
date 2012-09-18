@@ -2,6 +2,7 @@
 =================
 
 Core CPL:
+  - File support: Add the ability to store file's CPL ID in extended attributes
   - File support: Add new name to file if opened by content and the name differs
   - File support: Add the ability to add or update the fingerprint
   - Add the ability to load the backend configuration from a file
