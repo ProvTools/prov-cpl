@@ -67,6 +67,7 @@ usage() {
 	echo "Options:" >&2
 	echo "  -d DATABASE   Database to use (MySQL, PostgreSQL, 4store)" >&2
 	echo "  -h            Show this help and exit" >&2
+	echo "  -n            Do not setup a database" >&2
 }
 
 
@@ -99,7 +100,7 @@ echo "${P}Installer -- Core Provenance Library" >&2
 # Check the command-line arguments
 #
 
-while getopts ":d:h" opt; do
+while getopts ":d:hn" opt; do
 	case $opt in
 		d)
 			DATABASE="$OPTARG"
@@ -107,6 +108,9 @@ while getopts ":d:h" opt; do
 		h)
 			usage
 			exit 0
+			;;
+		n)
+			DATABASE="none"
 			;;
 		\?)
 			echo "`basename $0`: Invalid option: -$OPTARG" >&2
@@ -408,6 +412,9 @@ case $DATABASE in
 			echo "${P}4store configuration or installation failed." >&2
 			exit 1
 		fi
+		;;
+	none)
+		echo "${P}Skipping setting up a database" >&2
 		;;
 	*)
 		echo "${P}Invalid or unsupported database \"$DATABASE\"" >&2
