@@ -107,7 +107,10 @@ public class CPL {
      * Destructor
      */
     @Override
-    protected void finalize() {
+    protected void finalize() throws Throwable {
+
+		super.finalize();
+
 
         // Detach from the CPL
 
