@@ -100,7 +100,7 @@ else
 		if [[ $${PIPESTATUS[0]} -ne 0 ]]; then exit 1; fi; \
 	done
 endif
-	@rm -rf core core.* vgcore vgcore.* 2> /dev/null || true
+	@rm -f core core.* vgcore vgcore.* 2> /dev/null || true
 	@find . \( -name "*~" -or -name "*.bak" -or -name "__db.*" \) -delete 2> /dev/null || true
 
 $(SUBPROJECTS) $(OPTIONAL):

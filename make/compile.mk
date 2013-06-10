@@ -127,8 +127,8 @@ distclean:: messclean
 
 messclean::
 	@find . -name '*~' -delete 2> /dev/null || true
-	@rm -rf core core.* vgcore vgcore.* 2> /dev/null || true
-	@rm -rf __db.* log.* 2> /dev/null || true
+	@rm -f core core.* vgcore vgcore.* 2> /dev/null || true
+	@rm -f __db.* log.* 2> /dev/null || true
 
 $(BUILD_DIR):
 	@mkdir -p $(BUILD_DIR)
