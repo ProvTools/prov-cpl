@@ -46,7 +46,7 @@ cpl = Extension('_CPLDirect',
 		)
 
 setup(name='CPLDirect',
-	version = '1.01',
+	version = '1.02',
 	author = 'Peter Macko & Margo Seltzer',
 	description = """Python interface to CPL""",
 	ext_modules = [cpl],

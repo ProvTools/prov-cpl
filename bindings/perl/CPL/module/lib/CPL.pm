@@ -116,7 +116,7 @@ our @EXPORT = qw(
 	create_object_for_file
 );
 
-our $VERSION = '1.01';
+our $VERSION = '1.02';
 
 
 

@@ -38,7 +38,7 @@ WriteMakefile(
     NAME              => 'CPL',
     VERSION_FROM      => 'lib/CPL.pm', # finds $VERSION
     PREREQ_PM         => {
-	   CPLDirect => 1.01
+	   CPLDirect => 1.02
 	},
     ($] >= 5.005 ?
       (ABSTRACT_FROM  => 'lib/CPL.pm', # retrieve abstract from module

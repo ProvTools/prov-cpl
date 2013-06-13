@@ -14,7 +14,7 @@ ROOT := .
 LIBRARIES := cpl-standalone backends private-lib
 HEADERS := include
 PROGRAMS := tools test
-OPTIONAL := bindings/perl bindings/java
+OPTIONAL := bindings/perl bindings/java bindings/python
 
 
 #
