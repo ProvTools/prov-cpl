@@ -199,7 +199,7 @@ $(BUILD_DIR)/project.mk: $(ALL_SOURCES) $(shell ls *.h 2>/dev/null) \
 	@for S in $(ALL_SOURCES); do \
 		if [[ `echo $$S | grep -c \.c$$` = "1" ]]; then \
 			$(DEPEND_C) $$S -o $(BUILD_DIR)/$$S.dep 2>&1 $(PROCESS_GCC_OUTPUT); \
-			if [[ $${PIPESTATUS[0]} -ne 0 ]]; then exit 1; fi; \
+			if [[ $${PIPESTATUS[0]} -ne 0 ]]; then /bin/rm -f $@; exit 1; fi; \
 			cat $(BUILD_DIR)/$$S.dep | sed 's|^[a-zA-Z0-9_\-]*\.o|$(BUILD_DIR)\/&|' >> $@; \
 			if [[ $(OUTPUT_TYPE) = "kernel" ]]; then \
 				echo '	@echo "  CC      $(PWD_REL_SEP)$$@"' >> $@; \
@@ -210,7 +210,7 @@ $(BUILD_DIR)/project.mk: $(ALL_SOURCES) $(shell ls *.h 2>/dev/null) \
 			echo >> $@; \
 		else \
 			$(DEPEND_CXX) $$S -o $(BUILD_DIR)/$$S.dep 2>&1 $(PROCESS_GCC_OUTPUT); \
-			if [[ $${PIPESTATUS[0]} -ne 0 ]]; then exit 1; fi; \
+			if [[ $${PIPESTATUS[0]} -ne 0 ]]; then /bin/rm -f $@; exit 1; fi; \
 			cat $(BUILD_DIR)/$$S.dep | sed 's|^[a-zA-Z0-9_\-]*\.o|$(BUILD_DIR)\/&|' >> $@; \
 			if [[ $(OUTPUT_TYPE) = "kernel" ]]; then \
 				echo '	@echo "  CXX     $(PWD_REL_SEP)$$@"' >> $@; \
