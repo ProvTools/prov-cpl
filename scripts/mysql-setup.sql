@@ -124,6 +124,7 @@ CREATE TABLE IF NOT EXISTS cpl_properties (
        version INT,
        name VARCHAR(255) NOT NULL,
        value VARCHAR(4095) NOT NULL,
+	   PRIMARY KEY(id_hi, id_lo, version, name),
        FOREIGN KEY(id_hi, id_lo, version)
            REFERENCES cpl_versions(id_hi, id_lo, version));
 
