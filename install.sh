@@ -163,6 +163,34 @@ if [ "`uname`" = Linux ]; then
 			exit 1
 		fi
 
+	elif [ "`lsb_release -is`" = OracleServer \
+		-o "`lsb_release -is`" = RedHatEnterpriseClient ]; then
+
+		ensure_root
+		sudo yum groupinstall \
+			"Development Tools" "Development Libraries"
+
+		ensure_root
+		sudo yum install \
+			libuuid-devel \
+			openssl-devel \
+			ncurses-devel \
+			unixODBC \
+			unixODBC-devel \
+			mysql-connector-odbc \
+			postgresql-odbc \
+			libcurl-devel \
+			libxml2-devel \
+			libperl-devel \
+			python-devel \
+			swig \
+			jpackage-utils
+
+		if [ ${PIPESTATUS[0]} != 0 ]; then
+			echo "${P}Package installation faild" >&2
+			exit 1
+		fi
+
 	else
 		echo "${P}I do not know how to install packages on `lsb_release -is`" >&2
 		echo "${P}If any packages are missing, please install them manually" >&2
@@ -208,11 +236,6 @@ if [ $L_JAVA = yes ]; then
 	if [ ${PIPESTATUS[0]} = 0 ]; then
 		echo "" >&2
 		echo "${P}Building Java bindings " >&2
-		# XXX Should not need this
-		echo "" >&2
-        echo "${P}Running updatedb (potentially very slow)" >&2
-		ensure_root
-		sudo updatedb
 		echo "" >&2
         echo "${P}Building" >&2
 		make -C bindings/java release
@@ -358,7 +381,9 @@ case $DATABASE in
 		fi
 		if [ `odbcinst -q -s | grep -c CPL` = 0 ]; then
 			if [ "`uname`" = Linux ]; then
-				if [ "`lsb_release -is`" = Ubuntu ]; then
+				if [ "`lsb_release -is`" = Ubuntu \
+				  -o "`lsb_release -is`" = OracleServer \
+				  -o "`lsb_release -is`" = RedHatEnterpriseClient ]; then
 					echo "${P}Adding DSN \"CPL\" using default MySQL settings" >&2
 					ensure_root
 					sudo /bin/cp /etc/odbc.ini /etc/odbc.ini.old || exit 1
