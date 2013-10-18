@@ -45,6 +45,7 @@ SHELL := /bin/bash
 
 UNAME := $(shell uname)
 UNAME_ALL := $(shell uname -a)
+LINUX_DIST :=
  
 ifndef OSTYPE
 ifeq ($(UNAME),Darwin)
@@ -52,6 +53,7 @@ ifeq ($(UNAME),Darwin)
 else
 ifeq ($(UNAME),Linux)
 	OSTYPE := linux
+	LINUX_DIST := $(shell lsb_release -is)
 endif
 endif
 endif
@@ -274,6 +276,18 @@ endif
 
 ifndef INSTALL_PREFIX
 	INSTALL_PREFIX := /usr
+endif
+
+LIB_DIR := lib
+ifeq ($(BITS),64)
+ifeq ($(OSTYPE),linux)
+ifeq ($(LINUX_DIST),OracleServer)
+	LIB_DIR := lib64
+endif
+ifeq ($(LINUX_DIST),RedHatEnterpriseClient)
+	LIB_DIR := lib64
+endif
+endif
 endif
 
 

@@ -128,7 +128,7 @@ list-subproject-shared-lib-files::
 #
 
 ifdef INSTALL
-SO_INSTALL_DIR := $(INSTALL_PREFIX)/lib
+SO_INSTALL_DIR := $(INSTALL_PREFIX)/$(LIB_DIR)
 endif
 
 install::
