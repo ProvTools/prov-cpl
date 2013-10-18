@@ -38,7 +38,7 @@ WRAP_SOURCE := $(patsubst %.i,%_wrap.cxx,$(notdir $(INTERFACE)))
 WRAP_OBJECT := $(patsubst %.cxx,%.o,$(WRAP_SOURCE))
 WRAP_LIBRARY := lib$(PROJECT)-java.$(SOLIBRARY_EXT)
 WRAP_CXX := $(CXX) $(CXXFLAGS)  -fno-strict-aliasing $(INCLUDE_FLAGS) \
-			-c -O3 -fPIC -I$(JAVA_INCLUDE)
+			-c -O3 -fPIC $(JAVA_INCLUDE)
 WRAP_LINK := $(CXX) $(LINKER_FLAGS) -L. $(SHARED_OPTION)
 
 ifndef JAVA_PACKAGE

@@ -74,10 +74,10 @@ ifeq ($(OSTYPE),darwin)
 #XXX Need to get JAVA_HOME, but how?
 else
 	JAVA_HOME := $(shell readlink -f /usr/bin/java | sed "s:bin/java::" | sed "s:/jre/:/:")
-	JAVA_INCLUDE := $(JAVA_HOME)/include
+	JAVA_INCLUDE := -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/"`uname | tr '[:upper:]' '[:lower:]'`"
 endif
 else
-	JAVA_INCLUDE := $(JAVA_HOME)/include
+	JAVA_INCLUDE := -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/"`uname | tr '[:upper:]' '[:lower:]'`"
 endif
 
 
