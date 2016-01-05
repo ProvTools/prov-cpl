@@ -18,7 +18,7 @@ Contributor(s): Peter Macko
   0. Contact
 --------------
 
-Project Website:           http://code.google.com/p/core-provenance-library/
+Project Website:           https://github.com/pmacko86/core-provenance-library
 Research Group Website:    http://www.eecs.harvard.edu/syrah/pass/
 Email:                     pass@eecs.harvard.edu
 
@@ -46,7 +46,7 @@ database backends. An application would use the library's API to disclose its
 provenance by creating provenance objects and disclosing data and control flow
 between the objects. The library would take care of persistently storing the
 provenance, detecting and breaking the cycles, and providing an interface to
-query and visualize the collected provenance. 
+query and visualize the collected provenance.
 
 
   2. Compiling, installing, and setting up the CPL
@@ -211,7 +211,7 @@ Setting up your program to use the CPL:
      following code right after you initialize CPL (requires cplxx.h):
 
          CPLInitializationHelper __cpl(NULL); (void) __cpl;
-    
+
      This automatically detaches CPL when the variable __cpl falls out of
      scope.
 
