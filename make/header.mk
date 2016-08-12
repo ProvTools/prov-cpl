@@ -213,23 +213,6 @@ ifdef GPROF
 endif
 
 
-#
-# Cygwin & Microsoft Visual Studio (using Cygwin build system)
-#
-
-ifeq ($(shell echo $$TERM),cygwin)
-	BUILD_DIR := $(BUILD_DIR).cygwin
-	EXECUTABLE_SUFFIX :=.exe
-
-	#GCC_VERSION :=$(shell gcc -v 2>&1 | grep "gcc version" | awk '{ print $$3 }')
-	#INCLUDE_FLAGS := $(INCLUDE_FLAGS) -I/lib/gcc/$(shell echo $$MACHTYPE)/$(GCC_VERSION)/include/c++/ext
-	#INCLUDE_FLAGS := $(INCLUDE_FLAGS) -I/usr/lib/gcc/$(shell echo $$MACHTYPE)/$(GCC_VERSION)/include/c++/ext
-endif
-
-ifneq ($(shell echo ++$$VS_UNICODE_OUTPUT),++)
-	VISUAL_STUDIO := yes
-	NO_COLOR := yes
-endif
 
 
 #

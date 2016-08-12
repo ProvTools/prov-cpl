@@ -43,15 +43,6 @@
 #include <semaphore.h>
 #endif
 
-#ifdef _WINDOWS
-#include <aclapi.h>
-#include <tchar.h>
-#endif
-
-#ifdef _WINDOWS
-#pragma intrinsic(_InterlockedCompareExchange, _InterlockedExchange)
-#endif
-
 /*
  * Configuration
  */
@@ -94,11 +85,7 @@ cpl_host_unique_id_generator_initialize(void)
 	if (s == NULL) return CPL_E_PLATFORM_ERROR;
 	cpl_shared_semaphore_wait(s);
 
-#if defined(_WINDOWS)
-	Sleep(10 /* ms */);
-#else
 	usleep(10 * 1000 /* us */);
-#endif
 
 	timeval tv;
 	gettimeofday(&tv, NULL);
@@ -180,12 +167,6 @@ cpl_lock(cpl_lock_t* lock, bool yield)
 			if (yield) usleep(100);
 		}
 	}
-#elif defined _WINDOWS
-	while (_InterlockedCompareExchange(lock, 1, 0) == 1) {
-		while (*lock) {
-			if (yield) Sleep(1);
-		}
-	}
 #else
 #error "Not implemented"
 #endif
@@ -204,8 +185,6 @@ cpl_unlock(cpl_lock_t* lock)
 
 #if defined __GNUC__
 	__sync_lock_release(lock);
-#elif defined _WINDOWS
-	_InterlockedExchange(lock, 0);
 #else
 #error "Not implemented"
 #endif
@@ -245,13 +224,6 @@ cpl_shared_semaphore_open(const char* name)
 
 	return s;
 
-#elif defined(_WINDOWS)
-
-	size_t n_size = strlen(name) + 12;
-	char* n = (char*) alloca(n_size);
-#ifdef _WINDOWS
-	sprintf_s(n, n_size, "Global\\%s", name);
-#else
 	snprintf(n, n_size, "Global\\%s", name);
 #endif
 
@@ -362,8 +334,6 @@ cpl_shared_semaphore_close(cpl_shared_semaphore_t sem)
 	fprintf(stderr, "[Semaphore %p] Close: value=%d\n", (sem_t*) sem, v);
 #endif
 	sem_close((sem_t*) sem);
-#elif defined(_WINDOWS)
-	CloseHandle((HANDLE) sem);
 #else
 #error "Not implemented for this platform."
 #endif
@@ -393,8 +363,6 @@ cpl_shared_semaphore_wait(cpl_shared_semaphore_t sem)
 	sem_getvalue((sem_t*) sem, &v);
 	fprintf(stderr, "[Semaphore %p] Wait - after: value=%d\n", (sem_t*) sem, v);
 #endif
-#elif defined(_WINDOWS)
-	WaitForSingleObject((HANDLE) sem, INFINITE);
 #else
 #error "Not implemented for this platform."
 #endif
@@ -424,11 +392,6 @@ cpl_shared_semaphore_post(cpl_shared_semaphore_t sem)
 	sem_getvalue((sem_t*) sem, &v);
 	fprintf(stderr, "[Semaphore %p] Post - after: value=%d\n", (sem_t*) sem, v);
 #endif
-#elif defined(_WINDOWS)
-	if (!ReleaseSemaphore((HANDLE) sem, 1, NULL)) {
-		fprintf(stderr, "ReleaseSemaphore() failed.\n");
-		std::abort();
-	}
 #else
 #error "Not implemented for this platform."
 #endif
@@ -476,35 +439,3 @@ cpl_next_host_unique_id(void)
 
 #endif
 
-
-/**
- * Generate a globally unique ID
- *
- * @param out the place to store the globally unique ID
- */
-void
-cpl_generate_unique_id(cpl_id_t* out)
-{
-	// Static assertion
-	int __a[sizeof(cpl_uuid_t) == sizeof(cpl_id_t) ? 1 : -1]; (void) __a;
-
-	assert(out != NULL);
-
-#ifdef _CPL_CUSTOM_GLOBALLY_UNIQUE_IDS
-
-	out->hi = cpl_unique_machine_id;
-	out->lo = cpl_next_host_unique_id();
-
-#else
-
-	cpl_platform_generate_uuid((cpl_uuid_t*) out);
-
-
-	// Ensure that the ID components are positive -- hopefully without
-	// breaking anything
-
-	out->hi &= 0x7fffffffffffffffull;
-	out->lo &= 0x7fffffffffffffffull;
-
-#endif
-}

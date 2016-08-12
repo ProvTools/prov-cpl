@@ -83,24 +83,12 @@ ALL_OBJECTS := $(patsubst %,$(BUILD_DIR)/%,$(sort $(ALL_OBJECTS)))
 # Processing the compiler output
 #
 
-ifdef VISUAL_STUDIO
-	PROCESS_GCC_OUTPUT := \
-		| sed 's|\[|***BEGIN***|g' \
-		| sed 's|\]|***END***|g' \
-		| sed 's|^[^/][^ *:]*:|$(PWD_REL_SEP)&|' \
-		| sed 's|:[0-9][0-9]*:|***LEFT***&***RIGHT*** :|' \
-		| sed 's|\*\*\*LEFT\*\*\*:|(|' \
-		| sed 's|:\*\*\*RIGHT\*\*\*|)|' \
-		| sed 's|\*\*\*BEGIN\*\*\*|[|g' \
-		| sed 's|\*\*\*END\*\*\*|]|g'
-else
 	PROCESS_GCC_OUTPUT := \
 		| sed 's|\[|***BEGIN***|g' \
 		| sed 's|\]|***END***|g' \
 		| sed 's|^[^/][^ *:]*:|$(PWD_REL_SEP)&|' \
 		| sed 's|\*\*\*BEGIN\*\*\*|[|g' \
 		| sed 's|\*\*\*END\*\*\*|]|g'
-endif
 
 
 #

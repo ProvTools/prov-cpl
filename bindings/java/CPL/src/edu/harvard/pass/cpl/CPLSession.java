@@ -79,8 +79,7 @@ public class CPLSession {
 	 * @param id the internal CPL session ID
 	 */
 	CPLSession(cpl_id_t id) {
-		this.id = CPLDirect.new_cpl_id_tp();
-		CPLDirect.cpl_id_copy(this.id, id);
+		this.id = id;
 	}
 
 
@@ -115,8 +114,7 @@ public class CPLSession {
 	public boolean equals(Object other) {
 		if (other instanceof CPLSession) {
 			CPLSession o = (CPLSession) other;
-			return o.id.getHi().equals(this.id.getHi())
-				&& o.id.getLo().equals(this.id.getLo());
+			return o.id.equals(this.id);
 		}
 		else {
 			return false;
@@ -131,7 +129,7 @@ public class CPLSession {
 	 */
 	@Override
 	public int hashCode() {
-		return id.getHi().hashCode() ^ id.getLo().hashCode();
+		return id.hashCode();
 	}
 
 
@@ -143,7 +141,7 @@ public class CPLSession {
 	 */
 	@Override
 	public String toString() {
-		return id.getHi().toString(16) + ":" + id.getLo().toString(16);
+		return id.toString(16);
 	}
 
 

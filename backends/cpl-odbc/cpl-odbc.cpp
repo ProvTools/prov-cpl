@@ -303,7 +303,6 @@ cpl_sql_fetch_single_llong(SQLHSTMT stmt, long long* out, int column=1,
 	return CPL_OK;
 }
 
-
 /**
  * Convert a SQL timestamp to UNIX time
  *
@@ -324,15 +323,9 @@ cpl_sql_timestamp_to_unix_time(const SQL_TIMESTAMP_STRUCT& t)
 	m.tm_yday = 0;
 	m.tm_isdst = 0;
 	time_t T = mktime(&m);
-#ifdef _WINDOWS
-	struct tm mx;
-	localtime_s(&mx, &T);
-	if (mx.tm_isdst) T -= 3600;
-#else
 	struct tm mx;
 	localtime_r(&T, &mx);
 	if (mx.tm_isdst) T -= 3600;
-#endif
 	return (unsigned long) T;
 }
 
@@ -459,29 +452,23 @@ cpl_odbc_free_statement_handles(cpl_odbc_t* odbc)
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_session_insert_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_object_insert_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_object_insert_container_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_object_insert_version_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_object_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_object_ext_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_version_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_version_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->add_ancestry_edge_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->has_immediate_ancestor_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->has_immediate_ancestor_with_ver_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->add_property_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_session_info_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_all_objects_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_all_objects_with_session_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_info_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_version_info_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_ancestors_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_ancestors_with_ver_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_descendants_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_descendants_with_ver_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_properties_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_properties_with_ver_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_properties_with_key_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_properties_with_key_ver_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_by_property_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_ancestry_properties_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_ancestry_properties_with_key_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->has_immediate_ancestor_stmt);
+
 }
 
 
@@ -511,13 +498,7 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 		return CPL_E_INSUFFICIENT_RESOURCES;
 	}
 
-#ifdef _WINDOWS
-	strcpy_s((char*) connection_string_copy,
-			 strlen(connection_string) + 1,
-			 connection_string);
-#else
 	strcpy((char*) connection_string_copy, connection_string);
-#endif
 	connection_string_copy[l_connection_string] = '\0';
 
 	SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &odbc->db_environment);
@@ -549,29 +530,22 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 	ALLOC_STMT(create_session_insert_stmt);
 	ALLOC_STMT(create_object_insert_stmt);
 	ALLOC_STMT(create_object_insert_container_stmt);
-	ALLOC_STMT(create_object_insert_version_stmt);
 	ALLOC_STMT(lookup_object_stmt);
 	ALLOC_STMT(lookup_object_ext_stmt);
-	ALLOC_STMT(create_version_stmt);
-	ALLOC_STMT(get_version_stmt);
 	ALLOC_STMT(add_ancestry_edge_stmt);
-	ALLOC_STMT(has_immediate_ancestor_stmt);
-	ALLOC_STMT(has_immediate_ancestor_with_ver_stmt);
 	ALLOC_STMT(add_property_stmt);
 	ALLOC_STMT(get_session_info_stmt);
 	ALLOC_STMT(get_all_objects_stmt);
 	ALLOC_STMT(get_all_objects_with_session_stmt);
 	ALLOC_STMT(get_object_info_stmt);
-	ALLOC_STMT(get_version_info_stmt);
 	ALLOC_STMT(get_object_ancestors_stmt);
-	ALLOC_STMT(get_object_ancestors_with_ver_stmt);
 	ALLOC_STMT(get_object_descendants_stmt);
-	ALLOC_STMT(get_object_descendants_with_ver_stmt);
 	ALLOC_STMT(get_properties_stmt);
-	ALLOC_STMT(get_properties_with_ver_stmt);
 	ALLOC_STMT(get_properties_with_key_stmt);
-	ALLOC_STMT(get_properties_with_key_ver_stmt);
 	ALLOC_STMT(lookup_by_property_stmt);
+	ALLOC_STMT(get_ancestry_properties_stmt);
+	ALLOC_STMT(get_ancestry_properties_with_key_stmt);
+	ALLOC_STMT(has_immediate_ancestor_stmt);
 
 #undef ALLOC_STMT
 
@@ -588,156 +562,113 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 
 	PREPARE(create_session_insert_stmt,
 			"INSERT INTO cpl_sessions"
-			"            (id_hi, id_lo, mac_address, username, pid, program,"
+			"            (id, mac_address, username, pid, program,"
 			"             cmdline)"
-			"     VALUES (?, ?, ?, ?, ?, ?, ?);");
+			"     VALUES (DEFAULT, ?, ?, ?, ?, ?)"
+			"   RETURNING id;");
 
 	PREPARE(create_object_insert_stmt,
 			"INSERT INTO cpl_objects"
-			"            (id_hi, id_lo, originator, name, type) "
-			"     VALUES (?, ?, ?, ?, ?);");
+			"            (id, originator, name, type,"
+			"			  session_id)"
+			"     VALUES (DEFAULT, ?, ?, ?, ?)"
+			"   RETURNING id;");
 
 	PREPARE(create_object_insert_container_stmt,
 			"INSERT INTO cpl_objects"
-			"            (id_hi, id_lo, originator, name, type,"
-			"             container_id_hi, container_id_lo, container_ver)"
-			"     VALUES (?, ?, ?, ?, ?, ?, ?, ?);");
-
-	PREPARE(create_object_insert_version_stmt,
-			"INSERT INTO cpl_versions"
-			"            (id_hi, id_lo, version, session_id_hi, session_id_lo)"
-			"     VALUES (?, ?, 0, ?, ?);");
+			"            (id, originator, name, type,"
+			"             container_id,"
+			"             session_id)"
+			"     VALUES (DEFAULT, ?, ?, ?, ?, ?)"
+			"   RETURNING id;");
 
 	PREPARE(lookup_object_stmt,
-			"SELECT id_hi, id_lo"
+			"SELECT id"
 			"  FROM cpl_objects"
 			" WHERE originator = ? AND name = ? AND type = ?"
 			" ORDER BY creation_time DESC"
 			" LIMIT 1;");
 
 	PREPARE(lookup_object_ext_stmt,
-			"SELECT id_hi, id_lo, creation_time"
+			"SELECT id, creation_time"
 			"  FROM cpl_objects"
 			" WHERE originator = ? AND name = ? AND type = ?;");
 
-	PREPARE(create_version_stmt,
-			"INSERT INTO cpl_versions"
-			"            (id_hi, id_lo, version, session_id_hi, session_id_lo)"
-			"     VALUES (?, ?, ?, ?, ?);");
-
-	PREPARE(get_version_stmt,
-			"SELECT MAX(version)"
-			"  FROM cpl_versions"
-			" WHERE id_hi = ? AND id_lo = ?;");
-
 	PREPARE(add_ancestry_edge_stmt,
 			"INSERT INTO cpl_ancestry"
-			"            (from_id_hi, from_id_lo, from_version,"
-			"             to_id_hi, to_id_lo, to_version, type)"
-			"     VALUES (?, ?, ?, ?, ?, ?, ?);");
-
-	PREPARE(has_immediate_ancestor_stmt,
-			"SELECT to_version"
-			"  FROM cpl_ancestry"
-			" WHERE to_id_hi = ? AND to_id_lo = ? AND to_version <= ?"
-			"   AND from_id_hi = ? AND from_id_lo = ?"
-			" LIMIT 1;");
-
-	PREPARE(has_immediate_ancestor_with_ver_stmt,
-			"SELECT to_version"
-			"  FROM cpl_ancestry"
-			" WHERE to_id_hi = ? AND to_id_lo = ? AND to_version <= ?"
-			"   AND from_id_hi = ? AND from_id_lo = ? AND from_version <= ?"
-			" LIMIT 1;");
+			"            (id, from_id,"
+			"             to_id, type)"
+			"     VALUES (DEFAULT, ?, ?, ?);");
 
 	PREPARE(add_property_stmt,
 			"INSERT INTO cpl_properties"
-			"            (id_hi, id_lo, version, name, value)"
-			"     VALUES (?, ?, ?, ?, ?);");
+			"            (id, name, value)"
+			"     VALUES (?, ?, ?);");
 
 	PREPARE(get_all_objects_stmt,
-			"SELECT id_hi, id_lo, creation_time, originator, name, type,"
-			"       container_id_hi, container_id_lo, container_ver"
+			"SELECT id, creation_time, originator, name, type,"
+			"       container_id"
 			"  FROM cpl_objects;");
 
 	PREPARE(get_all_objects_with_session_stmt,
-			"SELECT cpl_objects.id_hi, cpl_objects.id_lo,"
-			"       cpl_objects.creation_time, originator, name, type,"
-			"       container_id_hi, container_id_lo, container_ver,"
-			"       session_id_hi, session_id_lo"
-			"  FROM cpl_objects, cpl_versions"
-			" WHERE cpl_objects.id_hi = cpl_versions.id_hi"
-			"   AND cpl_objects.id_lo = cpl_versions.id_lo"
-			"   AND version = 0;");
+			"SELECT id, creation_time, originator, name, type,"
+			"       container_id, session_id"
+			"  FROM cpl_objects");
 
 	PREPARE(get_object_info_stmt,
-			"SELECT session_id_hi, session_id_lo,"
-			"       cpl_objects.creation_time, originator, name, type,"
-			"       container_id_hi, container_id_lo, container_ver"
-			"  FROM cpl_objects, cpl_versions"
-			" WHERE cpl_objects.id_hi = ? AND cpl_objects.id_lo = ?"
-			"   AND cpl_objects.id_hi = cpl_versions.id_hi"
-			"   AND cpl_objects.id_lo = cpl_versions.id_lo"
-			"   AND version = 0"
+			"SELECT session_id,"
+			"       creation_time, originator, name, type,"
+			"       container_id"
+			"  FROM cpl_objects"
+			" WHERE id = ?"
 			" LIMIT 1;");
 
 	PREPARE(get_session_info_stmt,
 			"SELECT mac_address, username,"
 			"       pid, program, cmdline, initialization_time"
 			"  FROM cpl_sessions"
-			" WHERE id_hi = ? AND id_lo = ?"
-			" LIMIT 1;");
-
-	PREPARE(get_version_info_stmt,
-			"SELECT session_id_hi, session_id_lo, creation_time"
-			"  FROM cpl_versions"
-			" WHERE id_hi = ? AND id_lo = ? AND version = ?"
+			" WHERE id = ?"
 			" LIMIT 1;");
 
 	PREPARE(get_object_ancestors_stmt,
-			"SELECT to_id_hi, to_id_lo, to_version, from_version, type"
+			"SELECT id, to_id, type"
 			"  FROM cpl_ancestry"
-			" WHERE from_id_hi = ? AND from_id_lo = ?");
-
-	PREPARE(get_object_ancestors_with_ver_stmt,
-			"SELECT to_id_hi, to_id_lo, to_version, from_version, type"
-			"  FROM cpl_ancestry"
-			" WHERE from_id_hi = ? AND from_id_lo = ? AND from_version = ?");
+			" WHERE from_id = ?");
 
 	PREPARE(get_object_descendants_stmt,
-			"SELECT from_id_hi, from_id_lo, from_version, to_version, type"
+			"SELECT id, from_id, type"
 			"  FROM cpl_ancestry"
-			" WHERE to_id_hi = ? AND to_id_lo = ?");
-
-	PREPARE(get_object_descendants_with_ver_stmt,
-			"SELECT from_id_hi, from_id_lo, from_version, to_version, type"
-			"  FROM cpl_ancestry"
-			" WHERE to_id_hi = ? AND to_id_lo = ? AND to_version = ?");
+			" WHERE to_id = ?");
 
 	PREPARE(get_properties_stmt,
-			"SELECT id_hi, id_lo, version, name, value"
+			"SELECT id, name, value"
 			"  FROM cpl_properties"
-			" WHERE id_hi = ? AND id_lo = ?;");
-
-	PREPARE(get_properties_with_ver_stmt,
-			"SELECT id_hi, id_lo, version, name, value"
-			"  FROM cpl_properties"
-			" WHERE id_hi = ? AND id_lo = ? AND version = ?;");
+			" WHERE id = ?;");
 
 	PREPARE(get_properties_with_key_stmt,
-			"SELECT id_hi, id_lo, version, name, value"
+			"SELECT id, name, value"
 			"  FROM cpl_properties"
-			" WHERE id_hi = ? AND id_lo = ? AND name = ?;");
-
-	PREPARE(get_properties_with_key_ver_stmt,
-			"SELECT id_hi, id_lo, version, name, value"
-			"  FROM cpl_properties"
-			" WHERE id_hi = ? AND id_lo = ? AND name = ? AND version = ?;");
+			" WHERE id = ? AND name = ?;");
 
 	PREPARE(lookup_by_property_stmt,
-			"SELECT id_hi, id_lo, version"
+			"SELECT id"
 			"  FROM cpl_properties"
 			" WHERE name = ? AND value = ?;");
+
+	PREPARE(get_ancestry_properties_stmt,
+			"SELECT id, name, value"
+			" FROM cpl_ancestry_properties"
+			"WHERE id = ?");
+
+	PREPARE(get_ancestry_properties_with_key_stmt,
+			"SELECT id, name, value"
+			"  FROM cpl_ancestry_properties"
+			" WHERE id = ? AND name = ?;");
+
+	PREPARE(has_immediate_ancestor_stmt,
+			"SELECT id"
+			"  FROM cpl_ancestry"
+			" WHERE from_id = ? AND to_id = ?;");
 
 
 #undef PREPARE
@@ -840,19 +771,17 @@ cpl_create_odbc_backend(const char* connection_string,
 	mutex_init(odbc->create_object_lock);
 	mutex_init(odbc->lookup_object_lock);
 	mutex_init(odbc->lookup_object_ext_lock);
-	mutex_init(odbc->create_version_lock);
-	mutex_init(odbc->get_version_lock);
 	mutex_init(odbc->add_ancestry_edge_lock);
-	mutex_init(odbc->has_immediate_ancestor_lock);
 	mutex_init(odbc->add_property_lock);
 	mutex_init(odbc->get_session_info_lock);
 	mutex_init(odbc->get_all_objects_lock);
 	mutex_init(odbc->get_object_info_lock);
-	mutex_init(odbc->get_version_info_lock);
 	mutex_init(odbc->get_object_ancestry_lock);
 	mutex_init(odbc->get_properties_lock);
 	mutex_init(odbc->lookup_by_property_lock);
-
+	mutex_init(odbc->get_ancestry_properties_stmt);
+	mutex_init(odbc->get_ancestry_properties_with_key_stmt);
+	mutex_init(odbc->has_immediate_ancestor_lock);
 
 	// Open the database connection
 	
@@ -873,18 +802,18 @@ err_sync:
 	mutex_destroy(odbc->create_object_lock);
 	mutex_destroy(odbc->lookup_object_lock);
 	mutex_destroy(odbc->lookup_object_ext_lock);
-	mutex_destroy(odbc->create_version_lock);
-	mutex_destroy(odbc->get_version_lock);
 	mutex_destroy(odbc->add_ancestry_edge_lock);
 	mutex_destroy(odbc->has_immediate_ancestor_lock);
 	mutex_destroy(odbc->add_property_lock);
 	mutex_destroy(odbc->get_session_info_lock);
 	mutex_destroy(odbc->get_all_objects_lock);
 	mutex_destroy(odbc->get_object_info_lock);
-	mutex_destroy(odbc->get_version_info_lock);
 	mutex_destroy(odbc->get_object_ancestry_lock);
 	mutex_destroy(odbc->get_properties_lock);
 	mutex_destroy(odbc->lookup_by_property_lock);
+	mutex_destroy(odbc->get_ancestry_properties_stmt);
+	mutex_destroy(odbc->get_ancestry_properties_with_key_stmt);
+	mutex_destroy(odbc->has_immediate_ancestor_lock)
 
 	delete odbc;
 	return r;
@@ -954,18 +883,19 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
 	mutex_destroy(odbc->create_object_lock);
 	mutex_destroy(odbc->lookup_object_lock);
 	mutex_destroy(odbc->lookup_object_ext_lock);
-	mutex_destroy(odbc->create_version_lock);
-	mutex_destroy(odbc->get_version_lock);
 	mutex_destroy(odbc->add_ancestry_edge_lock);
 	mutex_destroy(odbc->has_immediate_ancestor_lock);
 	mutex_destroy(odbc->add_property_lock);
 	mutex_destroy(odbc->get_session_info_lock);
 	mutex_destroy(odbc->get_all_objects_lock);
 	mutex_destroy(odbc->get_object_info_lock);
-	mutex_destroy(odbc->get_version_info_lock);
 	mutex_destroy(odbc->get_object_ancestry_lock);
 	mutex_destroy(odbc->get_properties_lock);
 	mutex_destroy(odbc->lookup_by_property_lock);
+	mutex_destroy(odbc->get_ancestry_properties_stmt);
+	mutex_destroy(odbc->get_ancestry_properties_with_key_stmt);
+	mutex_destroy(odbc->has_immediate_ancestor_lock);
+
 	
 	delete odbc;
 	
@@ -1036,7 +966,7 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
  */
 extern "C" cpl_return_t
 cpl_odbc_create_session(struct _cpl_db_backend_t* backend,
-						const cpl_session_t session,
+						cpl_session_t* out_id,
 						const char* mac_address,
 						const char* user,
 						const int pid,
@@ -1053,26 +983,33 @@ cpl_odbc_create_session(struct _cpl_db_backend_t* backend,
 
 	SQL_START;
 
+	cpl_id_t id = CPL_NONE;
+	cpl_return_t r = CPL_E_INTERNAL_ERROR;
+
 retry:
 	SQLHSTMT stmt = odbc->create_session_insert_stmt;
 
-	SQL_BIND_INTEGER(stmt, 1, session.hi);
-	SQL_BIND_INTEGER(stmt, 2, session.lo);
-	SQL_BIND_VARCHAR(stmt, 3, 18, mac_address);
-	SQL_BIND_VARCHAR(stmt, 4, 255, user);
-	SQL_BIND_INTEGER(stmt, 5, pid);
-	SQL_BIND_VARCHAR(stmt, 6, 4095, program);
-	SQL_BIND_VARCHAR(stmt, 7, 4095, cmdline);
+	SQL_BIND_VARCHAR(stmt, 1, 18, mac_address);
+	SQL_BIND_VARCHAR(stmt, 2, 255, user);
+	SQL_BIND_INTEGER(stmt, 3, pid);
+	SQL_BIND_VARCHAR(stmt, 4, 4095, program);
+	SQL_BIND_VARCHAR(stmt, 5, 4095, cmdline);
 
 
 	// Insert the new row to the sessions table
 
 	SQL_EXECUTE(stmt);
 
+	r = cpl_sql_fetch_single_llong(stmt, (long long*) &id, 1);
+	if (!CPL_IS_OK(r)) {
+		mutex_unlock(odbc->create_session_lock);
+		return r;
+	}
 
 	// Finish
 
 	mutex_unlock(odbc->create_session_lock);
+	if (out_id != NULL) *out_id = id;
 	return CPL_OK;
 
 
@@ -1094,19 +1031,17 @@ err:
  * @param type the object type
  * @param container the ID of the object that should contain this object
  *                  (use CPL_NONE for no container)
- * @param container_version the version of the container (if not CPL_NONE)
  * @param session the session ID responsible for this provenance record
  * @return CPL_OK or an error code
  */
 extern "C" cpl_return_t
 cpl_odbc_create_object(struct _cpl_db_backend_t* backend,
-					   const cpl_id_t id,
 					   const char* originator,
 					   const char* name,
 					   const char* type,
 					   const cpl_id_t container,
-					   const cpl_version_t container_version,
-					   const cpl_session_t session)
+					   const cpl_session_t session,
+					   cpl_id_t* out_id)
 {
 	assert(backend != NULL && originator != NULL
 			&& name != NULL && type != NULL);
@@ -1119,44 +1054,39 @@ cpl_odbc_create_object(struct _cpl_db_backend_t* backend,
 
 	SQL_START;
 
+	cpl_id_t id = CPL_NONE;
+	cpl_return_t r = CPL_E_INTERNAL_ERROR;
+
 retry:
 	SQLHSTMT stmt = container == CPL_NONE
 		? odbc->create_object_insert_stmt
 		: odbc->create_object_insert_container_stmt;
 
-	SQL_BIND_INTEGER(stmt, 1, id.hi);
-	SQL_BIND_INTEGER(stmt, 2, id.lo);
-	SQL_BIND_VARCHAR(stmt, 3, 255, originator);
-	SQL_BIND_VARCHAR(stmt, 4, 255, name);
-	SQL_BIND_VARCHAR(stmt, 5, 100, type);
+	SQL_BIND_VARCHAR(stmt, 1, 255, originator);
+	SQL_BIND_VARCHAR(stmt, 2, 255, name);
+	SQL_BIND_VARCHAR(stmt, 3, 100, type);
+	SQL_BIND_VARCHAR(stmt, 4, session);
 
 	if (container != CPL_NONE) {
-		SQL_BIND_INTEGER(stmt, 6, container.hi);
-		SQL_BIND_INTEGER(stmt, 7, container.lo);
-		SQL_BIND_INTEGER(stmt, 8, container_version);
+		SQL_BIND_INTEGER(stmt, 5, container);
 	}
 
 
 	// Insert the new row to the objects table
 
 	SQL_EXECUTE(stmt);
-
-
-	// Insert the corresponding entry to the versions table
-
-retry2:
-	stmt = odbc->create_object_insert_version_stmt;
-	SQL_BIND_INTEGER(stmt, 1, id.hi);
-	SQL_BIND_INTEGER(stmt, 2, id.lo);
-	SQL_BIND_INTEGER(stmt, 3, session.hi);
-	SQL_BIND_INTEGER(stmt, 4, session.lo);
-
-	SQL_EXECUTE_EXT(stmt, retry2, err);
-
 	
+
+	r = cpl_sql_fetch_single_llong(stmt, (long long*) &id, 1);
+	if (!CPL_IS_OK(r)) {
+		mutex_unlock(odbc->create_session_lock);
+		return r;
+	}
 	// Finish
 
 	mutex_unlock(odbc->create_object_lock);
+
+	if (out_id != NULL) *out_id = id;
 	return CPL_OK;
 
 
@@ -1214,13 +1144,7 @@ retry:
 
 	// Fetch the result
 
-	r = cpl_sql_fetch_single_llong(stmt, (long long*) &id.hi, 1, true, false);
-	if (!CPL_IS_OK(r)) {
-		mutex_unlock(odbc->lookup_object_lock);
-		return r;
-	}
-
-	r = cpl_sql_fetch_single_llong(stmt, (long long*) &id.lo, 2, false, true);
+	r = cpl_sql_fetch_single_llong(stmt, (long long*) &id, 1);
 	if (!CPL_IS_OK(r)) {
 		mutex_unlock(odbc->lookup_object_lock);
 		return r;
@@ -1295,13 +1219,10 @@ retry:
 
 	// Bind the columns
 
-	ret = SQLBindCol(stmt, 1, SQL_C_UBIGINT, &entry.id.hi, 0, NULL);
+	ret = SQLBindCol(stmt, 1, SQL_C_UBIGINT, &entry.id, 0, NULL);
 	if (!SQL_SUCCEEDED(ret)) goto err_close;
 
-	ret = SQLBindCol(stmt, 2, SQL_C_UBIGINT, &entry.id.lo, 0, NULL);
-	if (!SQL_SUCCEEDED(ret)) goto err_close;
-
-	ret = SQLBindCol(stmt, 3, SQL_C_TYPE_TIMESTAMP, &t, sizeof(t), NULL);
+	ret = SQLBindCol(stmt, 2, SQL_C_TYPE_TIMESTAMP, &t, sizeof(t), NULL);
 	if (!SQL_SUCCEEDED(ret)) goto err_close;
 
 
@@ -1367,194 +1288,58 @@ err:
 
 
 /**
- * Create a new version of the given object
- *
- * @param backend the pointer to the backend structure
- * @param object_id the object ID
- * @param version the new version of the object
- * @param session the session ID responsible for this provenance record
- * @return CPL_OK or an error code
- */
-cpl_return_t
-cpl_odbc_create_version(struct _cpl_db_backend_t* backend,
-						const cpl_id_t object_id,
-						const cpl_version_t version,
-						const cpl_session_t session)
-{
-	assert(backend != NULL);
-	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
-	
-	SQLRETURN ret;
-
-	mutex_lock(odbc->create_version_lock);
-
-
-	// Prepare the statement
-
-	SQLHSTMT stmt = odbc->create_version_stmt;
-	SQL_BIND_INTEGER(stmt, 1, object_id.hi);
-	SQL_BIND_INTEGER(stmt, 2, object_id.lo);
-	SQL_BIND_INTEGER(stmt, 3, version);
-	SQL_BIND_INTEGER(stmt, 4, session.hi);
-	SQL_BIND_INTEGER(stmt, 5, session.lo);
-
-
-	// Execute
-	
-	ret = SQLExecute(stmt);
-	if (!SQL_SUCCEEDED(ret)) {
-		
-		SQLINTEGER native;
-		SQLCHAR	state[ 7 ];
-		SQLCHAR	text[256];
-		SQLSMALLINT	len;
-
-		ret = SQLGetDiagRec(SQL_HANDLE_STMT, stmt, 1, state, &native,
-							text, sizeof(text), &len);
-		
-		if (SQL_SUCCEEDED(ret)) {
-			if (strcmp((const char*) state, "23000") == 0) {
-				mutex_unlock(odbc->create_version_lock);
-				return CPL_E_ALREADY_EXISTS;
-			}
-			else {
-				print_odbc_error("SQLExecute", stmt, SQL_HANDLE_STMT);
-			}
-		}
-		else if (ret != SQL_NO_DATA) {
-			fprintf(stderr, "  SQLGetDiagRec failed with error code %ld\n",
-					(long) ret);
-		}
-
-		goto err;
-	}
-
-
-	// Cleanup
-
-	mutex_unlock(odbc->create_version_lock);
-	return CPL_OK;
-
-
-	// Error handling
-
-err:
-	mutex_unlock(odbc->create_version_lock);
-	return CPL_E_STATEMENT_ERROR;
-}
-
-
-/**
- * Determine the version of the object
- *
- * @param backend the pointer to the backend structure
- * @param id the object ID
- * @param out_version the pointer to store the version of the object
- * @return CPL_OK or an error code
- */
-extern "C" cpl_return_t
-cpl_odbc_get_version(struct _cpl_db_backend_t* backend,
-					 const cpl_id_t id,
-					 cpl_version_t* out_version)
-{
-	assert(backend != NULL);
-	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
-	
-	SQL_START;
-
-	long long l;
-	cpl_return_t r;
-
-	mutex_lock(odbc->get_version_lock);
-
-
-	// Prepare the statement
-
-retry:
-	SQLHSTMT stmt = odbc->get_version_stmt;
-	SQL_BIND_INTEGER(stmt, 1, id.hi);
-	SQL_BIND_INTEGER(stmt, 2, id.lo);
-
-
-	// Execute
-	
-	SQL_EXECUTE(stmt);
-
-
-	// Fetch the result
-
-	r = cpl_sql_fetch_single_llong(stmt, &l);
-	if (!CPL_IS_OK(r)) {
-		mutex_unlock(odbc->get_version_lock);
-		return r;
-	}
-
-
-	// Cleanup
-
-	mutex_unlock(odbc->get_version_lock);
-
-	if (out_version != NULL) *out_version = (cpl_version_t) l;
-	return CPL_OK;
-
-
-	// Error handling
-
-err:
-	mutex_unlock(odbc->get_version_lock);
-	return CPL_E_STATEMENT_ERROR;
-}
-
-
-/**
  * Add an ancestry edge
  *
  * @param backend the pointer to the backend structure
  * @param from_id the edge source ID
- * @param from_ver the edge source version
  * @param to_id the edge destination ID
- * @param to_ver the edge destination version
  * @param type the data or control dependency type
  * @return the error code
  */
 extern "C" cpl_return_t
 cpl_odbc_add_ancestry_edge(struct _cpl_db_backend_t* backend,
 						   const cpl_id_t from_id,
-						   const cpl_version_t from_ver,
 						   const cpl_id_t to_id,
-						   const cpl_version_t to_ver,
-						   const int type)
+						   const int type,
+						   cpl_id_t* out_id)
 {
 	assert(backend != NULL);
 	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
-
-	mutex_lock(odbc->add_ancestry_edge_lock);
 
 
 	// Prepare the statement
 
 	SQL_START;
 
+	cpl_id_t id = CPL_NONE;
+	cpl_return_t r = CPL_E_INTERNAL_ERROR;
+
+	mutex_lock(odbc->add_ancestry_edge_lock);
+
 retry:
 	SQLHSTMT stmt = odbc->add_ancestry_edge_stmt;
 
-	SQL_BIND_INTEGER(stmt, 1, from_id.hi);
-	SQL_BIND_INTEGER(stmt, 2, from_id.lo);
-	SQL_BIND_INTEGER(stmt, 3, from_ver);
-	SQL_BIND_INTEGER(stmt, 4, to_id.hi);
-	SQL_BIND_INTEGER(stmt, 5, to_id.lo);
-	SQL_BIND_INTEGER(stmt, 6, to_ver);
-	SQL_BIND_INTEGER(stmt, 7, type);
+	SQL_BIND_INTEGER(stmt, 1, from_id);
+	SQL_BIND_INTEGER(stmt, 2, to_id);
+	SQL_BIND_INTEGER(stmt, 3, type);
 
 
 	// Execute
 	
 	SQL_EXECUTE(stmt);
 
+	// Fetch the result
+
+	r = cpl_sql_fetch_single_llong(stmt, (long long*) &id, 1);
+	if (!CPL_IS_OK(r)) {
+		mutex_unlock(odbc->lookup_object_lock);
+		return r;
+	}
 
 	// Cleanup
 
 	mutex_unlock(odbc->add_ancestry_edge_lock);
+	if (out_id != NULL) *out_id = id;
 	return CPL_OK;
 
 
@@ -1571,21 +1356,15 @@ err:
  *
  * @param backend the pointer to the backend structure
  * @param object_id the object ID
- * @param version_hint the object version (if known), or CPL_VERSION_NONE
- *                     otherwise
  * @param query_object_id the object that we want to determine whether it
  *                        is one of the immediate ancestors
- * @param query_object_max_version the maximum version of the query
- *                                 object to consider
  * @param out the pointer to store a positive number if yes, or 0 if no
  * @return CPL_OK or an error code
  */
 extern "C" cpl_return_t
 cpl_odbc_has_immediate_ancestor(struct _cpl_db_backend_t* backend,
 								const cpl_id_t object_id,
-								const cpl_version_t version_hint,
 								const cpl_id_t query_object_id,
-								const cpl_version_t query_object_max_version,
 								int* out)
 {
 	assert(backend != NULL);
@@ -1602,17 +1381,9 @@ cpl_odbc_has_immediate_ancestor(struct _cpl_db_backend_t* backend,
 	// Prepare the statement
 
 retry:
-	SQLHSTMT stmt = version_hint == CPL_VERSION_NONE 
-		? odbc->has_immediate_ancestor_stmt
-		: odbc->has_immediate_ancestor_with_ver_stmt;
-	SQL_BIND_INTEGER(stmt, 1, query_object_id.hi);
-	SQL_BIND_INTEGER(stmt, 2, query_object_id.lo);
-	SQL_BIND_INTEGER(stmt, 3, query_object_max_version);
-	SQL_BIND_INTEGER(stmt, 4, object_id.hi);
-	SQL_BIND_INTEGER(stmt, 5, object_id.lo);
-	if (version_hint != CPL_VERSION_NONE) {
-		SQL_BIND_INTEGER(stmt, 6, version_hint);
-	}
+	SQLHSTMT stmt = odbc->has_immediate_ancestor_stmt
+	SQL_BIND_INTEGER(stmt, 1, query_object_id);
+	SQL_BIND_INTEGER(stmt, 2, object_id);
 
 
 	// Execute
@@ -1652,7 +1423,6 @@ err:
  *
  * @param backend the pointer to the backend structure
  * @param id the object ID
- * @param version the version number
  * @param key the key
  * @param value the value
  * @return CPL_OK or an error code
@@ -1660,7 +1430,6 @@ err:
 extern "C" cpl_return_t
 cpl_odbc_add_property(struct _cpl_db_backend_t* backend,
                       const cpl_id_t id,
-                      const cpl_version_t version,
                       const char* key,
                       const char* value)
 {
@@ -1677,11 +1446,9 @@ cpl_odbc_add_property(struct _cpl_db_backend_t* backend,
 retry:
 	SQLHSTMT stmt = odbc->add_property_stmt;
 
-	SQL_BIND_INTEGER(stmt, 1, id.hi);
-	SQL_BIND_INTEGER(stmt, 2, id.lo);
-	SQL_BIND_INTEGER(stmt, 3, version);
-	SQL_BIND_VARCHAR(stmt, 4, 255, key);
-	SQL_BIND_VARCHAR(stmt, 5, 4095, value);
+	SQL_BIND_INTEGER(stmt, 1, id);
+	SQL_BIND_VARCHAR(stmt, 2, 255, key);
+	SQL_BIND_VARCHAR(stmt, 3, 4095, value);
 
 
 	// Execute
@@ -1737,8 +1504,7 @@ cpl_odbc_get_session_info(struct _cpl_db_backend_t* backend,
 retry:
 	SQLHSTMT stmt = odbc->get_session_info_stmt;
 
-	SQL_BIND_INTEGER(stmt, 1, id.hi);
-	SQL_BIND_INTEGER(stmt, 2, id.lo);
+	SQL_BIND_INTEGER(stmt, 1, id);
 
 
 	// Execute
@@ -1825,9 +1591,8 @@ cpl_odbc_get_all_objects(struct _cpl_db_backend_t* backend,
 		return CPL_E_INSUFFICIENT_RESOURCES;
 	}
 
-	SQLLEN cb_container_id_lo = 0;
-	SQLLEN cb_container_id_hi = 0;
-	SQLLEN cb_container_ver = 0;
+	SQLLEN cb_container_id = 0;
+	SQLLEN cb_session_id = 0;
 
 	mutex_lock(odbc->get_all_objects_lock);
 
@@ -1850,54 +1615,39 @@ retry:
 
 	// Bind the columns
 
-	ret = SQLBindCol(stmt, 1, SQL_C_UBIGINT, &entry.id.hi, 0, NULL);
+	ret = SQLBindCol(stmt, 1, SQL_C_UBIGINT, &entry.id, 0, NULL);
 	if (!SQL_SUCCEEDED(ret)) goto err_close;
 
-	ret = SQLBindCol(stmt, 2, SQL_C_UBIGINT, &entry.id.lo, 0, NULL);
+	ret = SQLBindCol(stmt, 2, SQL_C_TYPE_TIMESTAMP, &t, sizeof(t), NULL);
 	if (!SQL_SUCCEEDED(ret)) goto err_close;
 
-	ret = SQLBindCol(stmt, 3, SQL_C_TYPE_TIMESTAMP, &t, sizeof(t), NULL);
-	if (!SQL_SUCCEEDED(ret)) goto err_close;
-
-	ret = SQLBindCol(stmt, 4, SQL_C_CHAR, entry_originator, originator_size,
+	ret = SQLBindCol(stmt, 3, SQL_C_CHAR, entry_originator, originator_size,
 					 NULL);
 	if (!SQL_SUCCEEDED(ret)) goto err_close;
 
-	ret = SQLBindCol(stmt, 5, SQL_C_CHAR, entry_name, name_size, NULL);
+	ret = SQLBindCol(stmt, 4, SQL_C_CHAR, entry_name, name_size, NULL);
 	if (!SQL_SUCCEEDED(ret)) goto err_close;
 
-	ret = SQLBindCol(stmt, 6, SQL_C_CHAR, entry_type, type_size, NULL);
+	ret = SQLBindCol(stmt, 5, SQL_C_CHAR, entry_type, type_size, NULL);
 	if (!SQL_SUCCEEDED(ret)) goto err_close;
 
-    ret = SQLBindCol(stmt, 7, SQL_C_UBIGINT, &entry.container_id.hi, 0,
-                     &cb_container_id_lo);
-    if (!SQL_SUCCEEDED(ret)) goto err_close;
-
-    ret = SQLBindCol(stmt, 8, SQL_C_UBIGINT, &entry.container_id.lo, 0,
-                     &cb_container_id_hi);
-    if (!SQL_SUCCEEDED(ret)) goto err_close;
-
-    ret = SQLBindCol(stmt, 9, SQL_C_SBIGINT, &entry.container_version, 0,
-                     &cb_container_ver);
+    ret = SQLBindCol(stmt, 6, SQL_C_UBIGINT, &entry.container_id, 0,
+                     &cb_container_id);
     if (!SQL_SUCCEEDED(ret)) goto err_close;
 
 
 	if ((flags & CPL_I_NO_CREATION_SESSION) == 0) {
 
-		ret = SQLBindCol(stmt, 10, SQL_C_UBIGINT, &entry.creation_session.hi,0,
-						 &cb_container_id_lo);
-		if (!SQL_SUCCEEDED(ret)) goto err_close;
-
-		ret = SQLBindCol(stmt, 11, SQL_C_UBIGINT, &entry.creation_session.lo,0,
-						 &cb_container_id_hi);
+		ret = SQLBindCol(stmt, 7, SQL_C_UBIGINT, &entry.creation_session,0,
+						 &cb_session_id);
 		if (!SQL_SUCCEEDED(ret)) goto err_close;
 	}
+
     else {
         
         entry.creation_session = CPL_NONE;
     }
 
-    entry.version = CPL_VERSION_NONE;
 
 
 	// Fetch the result
@@ -1923,9 +1673,8 @@ retry:
 		entry.name = entry_name;
 		entry.type = entry_type;
 
-		if (cb_container_id_lo <= 0) entry.container_id = CPL_NONE;
-		if (cb_container_id_hi <= 0) entry.container_id = CPL_NONE;
-		if (cb_container_ver   <= 0) entry.container_version =CPL_VERSION_NONE;
+		if (cb_container_id <= 0) entry.container_id = CPL_NONE;
+		if (cb_session_id <= 0) entry.creation_session = CPL_NONE;
 
 		entries.push_back(entry);
 	}
@@ -1953,35 +1702,21 @@ retry:
 		std::list<cplxx_object_info_t>::iterator i;
 		for (i = entries.begin(); i != entries.end(); i++) {
 
-#ifdef _WINDOWS
-			strcpy_s(entry_originator, originator_size, i->originator.c_str());
-			strcpy_s(entry_name, name_size, i->name.c_str());
-			strcpy_s(entry_type, type_size, i->type.c_str());
-#else
 			strncpy(entry_originator, i->originator.c_str(), originator_size);
 			strncpy(entry_name, i->name.c_str(), name_size);
 			strncpy(entry_type, i->type.c_str(), type_size);
-#endif
 			entry_originator[originator_size - 1] = '\0';
 			entry_name[name_size - 1] = '\0';
 			entry_type[type_size - 1] = '\0';
 
-			cpl_version_t version = CPL_VERSION_NONE;
-			if ((flags & CPL_I_NO_VERSION) == 0) {
-				cpl_return_t r = cpl_odbc_get_version(backend, i->id,&version);
-				if (!CPL_IS_OK(r)) return r;
-			}
-
 			cpl_object_info_t e;
 			e.id = i->id;
-			e.version = version;
 			e.creation_session = i->creation_session;
 			e.creation_time = i->creation_time;
 			e.originator = entry_originator;
 			e.name = entry_name;
 			e.type = entry_type;
 			e.container_id = i->container_id;
-			e.container_version = i->container_version;
 
 			r = iterator(&e, context);
 			if (!CPL_IS_OK(r)) return r;
@@ -2010,15 +1745,12 @@ err:
  *
  * @param backend the pointer to the backend structure
  * @param id the object ID
- * @param version_hint the version of the given provenance object if known,
- *                     or CPL_VERSION_NONE if not
  * @param out_info the pointer to store the object info structure
  * @return CPL_OK or an error code
  */
 cpl_return_t
 cpl_odbc_get_object_info(struct _cpl_db_backend_t* backend,
 						 const cpl_id_t id,
-						 const cpl_version_t version_hint,
 						 cpl_object_info_t** out_info)
 {
 	assert(backend != NULL);
@@ -2036,20 +1768,6 @@ cpl_odbc_get_object_info(struct _cpl_db_backend_t* backend,
 	p->id = id;
 
 
-	// Get the version
-
-	if (version_hint == CPL_VERSION_NONE) {
-		r = cpl_odbc_get_version(backend, id, &p->version);
-		if (!CPL_IS_OK(r)) {
-			free(p);
-			return r;
-		}
-	}
-	else {
-		p->version = version_hint;
-	}
-
-
 	// Prepare the statement
 
 	mutex_lock(odbc->get_object_info_lock);
@@ -2057,8 +1775,7 @@ cpl_odbc_get_object_info(struct _cpl_db_backend_t* backend,
 retry:
 	SQLHSTMT stmt = odbc->get_object_info_stmt;
 
-	SQL_BIND_INTEGER(stmt, 1, id.hi);
-	SQL_BIND_INTEGER(stmt, 2, id.lo);
+	SQL_BIND_INTEGER(stmt, 1, id);
 
 
 	// Execute
@@ -2068,37 +1785,18 @@ retry:
 
 	// Fetch the result
 
-	CPL_SQL_SIMPLE_FETCH(llong, 1, (long long*) &p->creation_session.hi);
-	CPL_SQL_SIMPLE_FETCH(llong, 2, (long long*) &p->creation_session.lo);
-	CPL_SQL_SIMPLE_FETCH(timestamp_as_unix_time, 3, &p->creation_time);
+	CPL_SQL_SIMPLE_FETCH(llong, 1, (long long*) &p->creation_session);
+	CPL_SQL_SIMPLE_FETCH(timestamp_as_unix_time, 2, &p->creation_time);
 
-	CPL_SQL_SIMPLE_FETCH_EXT(dynamically_allocated_string, 4, &p->originator,
+	CPL_SQL_SIMPLE_FETCH_EXT(dynamically_allocated_string, 3, &p->originator,
 							 true);
-#ifdef _WINDOWS
-	if (r == CPL_E_DB_NULL) p->originator = _strdup("");
-#else
 	if (r == CPL_E_DB_NULL) p->originator = strdup("");
-#endif
-	CPL_SQL_SIMPLE_FETCH_EXT(dynamically_allocated_string, 5, &p->name, true);
-#ifdef _WINDOWS
-	if (r == CPL_E_DB_NULL) p->name = _strdup("");
-#else
+	CPL_SQL_SIMPLE_FETCH_EXT(dynamically_allocated_string, 4, &p->name, true);
 	if (r == CPL_E_DB_NULL) p->name = strdup("");
-#endif
-	CPL_SQL_SIMPLE_FETCH_EXT(dynamically_allocated_string, 6, &p->type, true);
-#ifdef _WINDOWS
-	if (r == CPL_E_DB_NULL) p->type = _strdup("");
-#else
+	CPL_SQL_SIMPLE_FETCH_EXT(dynamically_allocated_string, 5, &p->type, true);
 	if (r == CPL_E_DB_NULL) p->type = strdup("");
-#endif
-
-	CPL_SQL_SIMPLE_FETCH_EXT(llong, 7, (long long*) &p->container_id.hi, true);
+	CPL_SQL_SIMPLE_FETCH_EXT(llong, 6, (long long*) &p->container_id, true);
 	if (r == CPL_E_DB_NULL) p->container_id = CPL_NONE;
-	CPL_SQL_SIMPLE_FETCH_EXT(llong, 8, (long long*) &p->container_id.lo, true);
-	if (r == CPL_E_DB_NULL) p->container_id = CPL_NONE;
-	CPL_SQL_SIMPLE_FETCH_EXT(llong, 9, &l, true);
-	if (r == CPL_E_DB_NULL) l = CPL_VERSION_NONE;
-	p->container_version = (cpl_version_t) l;
 	
 	ret = SQLCloseCursor(stmt);
 	if (!SQL_SUCCEEDED(ret)) {
@@ -2132,94 +1830,15 @@ err_r:
 }
 
 
-/**
- * Get information about the specific version of a provenance object
- *
- * @param backend the pointer to the backend structure
- * @param id the object ID
- * @param version the version of the given provenance object
- * @param out_info the pointer to store the version info structure
- * @return CPL_OK or an error code
- */
-cpl_return_t
-cpl_odbc_get_version_info(struct _cpl_db_backend_t* backend,
-						  const cpl_id_t id,
-						  const cpl_version_t version,
-						  cpl_version_info_t** out_info)
-{
-	assert(backend != NULL);
-	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
-	
-	SQL_START;
-
-	cpl_return_t r = CPL_E_INTERNAL_ERROR;
-
-	cpl_version_info_t* p = (cpl_version_info_t*) malloc(sizeof(*p));
-	if (p == NULL) return CPL_E_INSUFFICIENT_RESOURCES;
-	memset(p, 0, sizeof(*p));
-	p->id = id;
-	p->version = version;
-
-	mutex_lock(odbc->get_version_info_lock);
-
-
-	// Prepare the statement
-
-retry:
-	SQLHSTMT stmt = odbc->get_version_info_stmt;
-
-	SQL_BIND_INTEGER(stmt, 1, id.hi);
-	SQL_BIND_INTEGER(stmt, 2, id.lo);
-	SQL_BIND_INTEGER(stmt, 3, version);
-
-
-	// Execute
-	
-	SQL_EXECUTE(stmt);
-
-
-	// Fetch the result
-
-	CPL_SQL_SIMPLE_FETCH(llong, 1, (long long*) &p->session.hi);
-	CPL_SQL_SIMPLE_FETCH(llong, 2, (long long*) &p->session.lo);
-	CPL_SQL_SIMPLE_FETCH(timestamp_as_unix_time, 3, &p->creation_time);
-
-	ret = SQLCloseCursor(stmt);
-	if (!SQL_SUCCEEDED(ret)) {
-		print_odbc_error("SQLCloseCursor", stmt, SQL_HANDLE_STMT);
-		goto err;
-	}
-
-
-	// Cleanup
-
-	mutex_unlock(odbc->get_version_info_lock);
-	
-	*out_info = p;
-	return CPL_OK;
-
-
-	// Error handling
-
-err:
-	r = CPL_E_STATEMENT_ERROR;
-
-err_r:
-	mutex_unlock(odbc->get_version_info_lock);
-
-	free(p);
-	return r;
-}
-
 
 /**
+ * 
  * An entry in the result set of the queries issued by
  * cpl_odbc_get_object_ancestry().
- */
+ */ 
 typedef struct __get_object_ancestry__entry {
+	cpl_id_t ancestry_id;
 	cpl_id_t id;
-	long version;
-	long query_version;
 	long type;
 } __get_object_ancestry__entry_t;
 
@@ -2229,8 +1848,6 @@ typedef struct __get_object_ancestry__entry {
  *
  * @param backend the pointer to the backend structure
  * @param id the object ID
- * @param version the object version, or CPL_VERSION_NONE to access all
- *                version nodes associated with the given object
  * @param direction the direction of the graph traversal (CPL_D_ANCESTORS
  *                  or CPL_D_DESCENDANTS)
  * @param flags the bitwise combination of flags describing how should
@@ -2243,7 +1860,6 @@ typedef struct __get_object_ancestry__entry {
 cpl_return_t
 cpl_odbc_get_object_ancestry(struct _cpl_db_backend_t* backend,
 							 const cpl_id_t id,
-							 const cpl_version_t version,
 							 const int direction,
 							 const int flags,
 							 cpl_ancestry_iterator_t iterator,
@@ -2252,9 +1868,11 @@ cpl_odbc_get_object_ancestry(struct _cpl_db_backend_t* backend,
 	assert(backend != NULL);
 	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
 
+	/*
 	if ((flags & ~CPL_ODBC_A_SUPPORTED_FLAGS) != 0) {
 		return CPL_E_NOT_IMPLEMENTED;
 	}
+	*/
 	
 	SQL_START;
 
@@ -2273,22 +1891,13 @@ cpl_odbc_get_object_ancestry(struct _cpl_db_backend_t* backend,
 retry:
 	SQLHSTMT stmt;
 	if (direction == CPL_D_ANCESTORS) {
-		stmt = version == CPL_VERSION_NONE
-			? odbc->get_object_ancestors_stmt
-			: odbc->get_object_ancestors_with_ver_stmt;
+		stmt = odbc->get_object_ancestors_stmt;
 	}
 	else {
-		stmt = version == CPL_VERSION_NONE
-			? odbc->get_object_descendants_stmt
-			: odbc->get_object_descendants_with_ver_stmt;
+		stmt = odbc->get_object_descendants_stmt;
 	}
 
-	SQL_BIND_INTEGER(stmt, 1, id.hi);
-	SQL_BIND_INTEGER(stmt, 2, id.lo);
-
-	if (version != CPL_VERSION_NONE) {
-		SQL_BIND_INTEGER(stmt, 3, version);
-	}
+	SQL_BIND_INTEGER(stmt, 1, id);
 
 
 	// Execute
@@ -2298,19 +1907,13 @@ retry:
 
 	// Bind the columns
 
-	ret = SQLBindCol(stmt, 1, SQL_C_UBIGINT, &entry.id.hi, 0, NULL);
+	ret = SQLBindCol(stmt, 1, SQL_C_UBIGINT, &entry.ancestry_id, 0, NULL);
 	if (!SQL_SUCCEEDED(ret)) goto err_close;
 
-	ret = SQLBindCol(stmt, 2, SQL_C_UBIGINT, &entry.id.lo, 0, NULL);
+	ret = SQLBindCol(stmt, 2, SQL_C_UBIGINT, &entry.id, 0, NULL);
 	if (!SQL_SUCCEEDED(ret)) goto err_close;
 
-	ret = SQLBindCol(stmt, 3, SQL_C_SLONG, &entry.version, 0, NULL);
-	if (!SQL_SUCCEEDED(ret)) goto err_close;
-
-	ret = SQLBindCol(stmt, 4, SQL_C_SLONG, &entry.query_version, 0, NULL);
-	if (!SQL_SUCCEEDED(ret)) goto err_close;
-
-	ret = SQLBindCol(stmt, 5, SQL_C_SLONG, &entry.type, 0, &ind_type);
+	ret = SQLBindCol(stmt, 3, SQL_C_SLONG, &entry.type, 0, &ind_type);
 	if (!SQL_SUCCEEDED(ret)) goto err_close;
 
 
@@ -2329,18 +1932,20 @@ retry:
 
 		found = true;
 
+		/*
 		if (ind_type == SQL_NULL_DATA) {
 			// Should we handle NULL dependency types? They should never occur.
 			// entry.type = CPL_DEPENDENCY_NONE;
 			continue;
 		}
 
+		//TODO edit for new types!
 		int type_category = CPL_GET_DEPENDENCY_CATEGORY((int) entry.type);
 		if (type_category == CPL_DEPENDENCY_CATEGORY_DATA
 				&& (flags & CPL_A_NO_DATA_DEPENDENCIES) != 0) continue;
 		if (type_category == CPL_DEPENDENCY_CATEGORY_CONTROL
 				&& (flags & CPL_A_NO_CONTROL_DEPENDENCIES) != 0) continue;
-
+		*/
 		entries.push_back(entry);
 	}
 	
@@ -2356,17 +1961,6 @@ retry:
 	mutex_unlock(odbc->get_object_ancestry_lock);
 
 
-	// If we did not get any data back, check for whether the object exists.
-	// If the version is set, the library already verified that the object
-	// actually exists.
-
-	if (!found && version != CPL_VERSION_NONE) {
-		// XXX This is ugly and potentially quite slow
-		r = cpl_odbc_get_version(backend, id, NULL);
-		if (!CPL_IS_SUCCESS(r)) return r;
-	}
-
-
 	// If we did not get any data back, terminate
 
 	if (entries.empty()) return CPL_S_NO_DATA;
@@ -2377,9 +1971,7 @@ retry:
 	if (iterator != NULL) {
 		std::list<__get_object_ancestry__entry_t>::iterator i;
 		for (i = entries.begin(); i != entries.end(); i++) {
-			r = iterator(id, (cpl_version_t) i->query_version,
-						 i->id, (cpl_version_t) i->version,
-						 (int) i->type, context);
+			r = iterator(id, i->id, (int) i->type, context);
 			if (!CPL_IS_OK(r)) return r;
 		}
 	}
@@ -2407,7 +1999,6 @@ err:
  */
 typedef struct __get_properties__entry {
 	cpl_id_t id;
-	long version;
 	SQLCHAR key[256];
 	SQLCHAR value[4096];
 } __get_properties__entry_t;
@@ -2418,8 +2009,6 @@ typedef struct __get_properties__entry {
  *
  * @param backend the pointer to the backend structure
  * @param id the the object ID
- * @param version the object version, or CPL_VERSION_NONE to access all
- *                version nodes associated with the given object
  * @param key the property to fetch - or NULL for all properties
  * @param iterator the iterator callback function
  * @param context the user context to be passed to the iterator function
@@ -2428,7 +2017,6 @@ typedef struct __get_properties__entry {
 cpl_return_t
 cpl_odbc_get_properties(struct _cpl_db_backend_t* backend,
 						const cpl_id_t id,
-						const cpl_version_t version,
 						const char* key,
 						cpl_property_iterator_t iterator,
 						void* context)
@@ -2453,28 +2041,17 @@ cpl_odbc_get_properties(struct _cpl_db_backend_t* backend,
 
 retry:
 	SQLHSTMT stmt;
-	int column_i = 3;
 	if (key == NULL) {
-		stmt = version == CPL_VERSION_NONE
-			? odbc->get_properties_stmt
-			: odbc->get_properties_with_ver_stmt;
+		stmt = odbc->get_properties_stmt;
 	}
 	else {
-		stmt = version == CPL_VERSION_NONE
-			? odbc->get_properties_with_key_stmt
-			: odbc->get_properties_with_key_ver_stmt;
+		stmt = odbc->get_properties_with_key_stmt;
 	}
 
-	SQL_BIND_INTEGER(stmt, 1, id.hi);
-	SQL_BIND_INTEGER(stmt, 2, id.lo);
+	SQL_BIND_INTEGER(stmt, 1, id);
 
 	if (key != NULL) {
-		SQL_BIND_VARCHAR(stmt, column_i, 255, key);
-		column_i++;
-	}
-	if (version != CPL_VERSION_NONE) {
-		SQL_BIND_INTEGER(stmt, column_i, version);
-		column_i++;
+		SQL_BIND_VARCHAR(stmt, 2, 255, key);
 	}
 
 
@@ -2485,20 +2062,14 @@ retry:
 
 	// Bind the columns
 
-	ret = SQLBindCol(stmt, 1, SQL_C_UBIGINT, &entry.id.hi, 0, NULL);
+	ret = SQLBindCol(stmt, 1, SQL_C_UBIGINT, &entry.id, 0, NULL);
 	if (!SQL_SUCCEEDED(ret)) goto err_close;
 
-	ret = SQLBindCol(stmt, 2, SQL_C_UBIGINT, &entry.id.lo, 0, NULL);
-	if (!SQL_SUCCEEDED(ret)) goto err_close;
-
-	ret = SQLBindCol(stmt, 3, SQL_C_SLONG, &entry.version, 0, NULL);
-	if (!SQL_SUCCEEDED(ret)) goto err_close;
-
-	ret = SQLBindCol(stmt, 4, SQL_C_CHAR, entry.key, sizeof(entry.key),
+	ret = SQLBindCol(stmt, 2, SQL_C_CHAR, entry.key, sizeof(entry.key),
 			&ind_key);
 	if (!SQL_SUCCEEDED(ret)) goto err_close;
 
-	ret = SQLBindCol(stmt, 5, SQL_C_CHAR, entry.value, sizeof(entry.value),
+	ret = SQLBindCol(stmt, 3, SQL_C_CHAR, entry.value, sizeof(entry.value),
 			&ind_value);
 	if (!SQL_SUCCEEDED(ret)) goto err_close;
 
@@ -2540,18 +2111,6 @@ retry:
 
 	mutex_unlock(odbc->get_properties_lock);
 
-
-	// If we did not get any data back, check for whether the object exists.
-	// If the version is set, the library already verified that the object
-	// actually exists.
-
-	if (!found && version != CPL_VERSION_NONE) {
-		// XXX This is ugly and potentially quite slow
-		r = cpl_odbc_get_version(backend, id, NULL);
-		if (!CPL_IS_SUCCESS(r)) goto err_free;
-	}
-
-
 	// If we did not get any data back, terminate
 
 	if (entries.empty()) return CPL_S_NO_DATA;
@@ -2561,8 +2120,7 @@ retry:
 
 	if (iterator != NULL) {
 		for (i = entries.begin(); i != entries.end(); i++) {
-			r = iterator(id, (cpl_version_t) (*i)->version,
-						 (const char*) (*i)->key,
+			r = iterator(id, (const char*) (*i)->key,
 						 (const char*) (*i)->value,
 						 context);
 			if (!CPL_IS_OK(r)) goto err_free;
@@ -2593,16 +2151,6 @@ err:
 
 
 /**
- * An entry in the result set of the queries issued by
- * cpl_odbc_lookup_by_property().
- */
-typedef struct __lookup_by_property__entry {
-	cpl_id_t id;
-	long version;
-} __lookup_by_property__entry_t;
-
-
-/**
  * Lookup an object based on a property value.
  *
  * @param backend the pointer to the backend structure
@@ -2626,8 +2174,8 @@ cpl_odbc_lookup_by_property(struct _cpl_db_backend_t* backend,
 
 	cpl_return_t r = CPL_E_INTERNAL_ERROR;
 
-	std::list<__lookup_by_property__entry_t> entries;
-	__lookup_by_property__entry_t entry;
+	std::list<cpl_id_t> entries;
+	cpl_id_t entry;
 
 	mutex_lock(odbc->lookup_by_property_lock);
 
@@ -2647,13 +2195,7 @@ retry:
 
 	// Bind the columns
 
-	ret = SQLBindCol(stmt, 1, SQL_C_UBIGINT, &entry.id.hi, 0, NULL);
-	if (!SQL_SUCCEEDED(ret)) goto err_close;
-
-	ret = SQLBindCol(stmt, 2, SQL_C_UBIGINT, &entry.id.lo, 0, NULL);
-	if (!SQL_SUCCEEDED(ret)) goto err_close;
-
-	ret = SQLBindCol(stmt, 3, SQL_C_SLONG, &entry.version, 0, NULL);
+	ret = SQLBindCol(stmt, 1, SQL_C_UBIGINT, &entry, 0, NULL);
 	if (!SQL_SUCCEEDED(ret)) goto err_close;
 
 
@@ -2693,10 +2235,9 @@ retry:
 	// Call the user-provided callback function
 
 	if (iterator != NULL) {
-		std::list<__lookup_by_property__entry_t>::iterator i;
+		std::list<cpl_id_t>::iterator i;
 		for (i = entries.begin(); i != entries.end(); i++) {
-			r = iterator(i->id, (cpl_version_t) i->version,
-						 key, value, context);
+			r = iterator(i, key, value, context);
 			if (!CPL_IS_OK(r)) return r;
 		}
 	}
@@ -2718,6 +2259,152 @@ err:
 }
 
 
+cpl_return_t
+cpl_odbc_get_ancestry_properties(struct _cpl_db_backend_t* backend,
+						const cpl_id_t id,
+						const char* key,
+						cpl_property_iterator_t iterator,
+						void* context)
+{
+	assert(backend != NULL);
+	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
+
+	std::list<__get_properties__entry_t*> entries;
+	__get_properties__entry_t entry;
+	SQLLEN ind_key, ind_value;
+
+	SQL_START;
+
+	cpl_return_t r = CPL_E_INTERNAL_ERROR;
+	bool found = false;
+	std::list<__get_properties__entry_t*>::iterator i;
+
+	mutex_lock(odbc->get_ancestry_properties_lock);
+
+
+	// Prepare the statement
+
+retry:
+	SQLHSTMT stmt;
+
+	if (key == NULL) {
+		odbc->get_ancestry_properties_stmt
+	}
+	else {
+		odbc->get_ancestry_properties_with_key_stmt
+	}
+
+	SQL_BIND_INTEGER(stmt, 1, id);
+
+	if (key != NULL) {
+		SQL_BIND_VARCHAR(stmt, 2, 255, key);
+	}
+
+
+	// Execute
+	
+	SQL_EXECUTE(stmt);
+
+
+	// Bind the columns
+
+	ret = SQLBindCol(stmt, 1, SQL_C_UBIGINT, &entry.id, 0, NULL);
+	if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+	ret = SQLBindCol(stmt, 2, SQL_C_CHAR, entry.key, sizeof(entry.key),
+			&ind_key);
+	if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+	ret = SQLBindCol(stmt, 3, SQL_C_CHAR, entry.value, sizeof(entry.value),
+			&ind_value);
+	if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+
+	// Fetch the result
+
+	while (true) {
+
+		ret = SQLFetch(stmt);
+		if (!SQL_SUCCEEDED(ret)) {
+			if (ret != SQL_NO_DATA) {
+				print_odbc_error("SQLFetch", stmt, SQL_HANDLE_STMT);
+				goto err_close;
+			}
+			break;
+		}
+
+		found = true;
+
+		if (ind_key == SQL_NULL_DATA || ind_value == SQL_NULL_DATA) {
+			// NULLs should never occur here
+			continue;
+		}
+
+		__get_properties__entry_t* e = new __get_properties__entry_t;
+		memcpy(e, (const void*) &entry, sizeof(*e));
+
+		entries.push_back(e);
+	}
+	
+	ret = SQLCloseCursor(stmt);
+	if (!SQL_SUCCEEDED(ret)) {
+		print_odbc_error("SQLCloseCursor", stmt, SQL_HANDLE_STMT);
+		goto err;
+	}
+
+
+	// Unlock
+
+	mutex_unlock(odbc->get_ancestry_properties_lock);
+
+
+	// If we did not get any data back, check for whether the object exists.
+	//TODO: double check this against later logic
+
+	if (!found) {
+		goto err_free;
+	}
+
+
+	// If we did not get any data back, terminate
+
+	if (entries.empty()) return CPL_S_NO_DATA;
+
+
+	// Call the user-provided callback function
+
+	if (iterator != NULL) {
+		for (i = entries.begin(); i != entries.end(); i++) {
+			r = iterator(id,
+						 (const char*) (*i)->key,
+						 (const char*) (*i)->value,
+						 context);
+			if (!CPL_IS_OK(r)) goto err_free;
+		}
+	}
+
+	r = CPL_OK;
+
+
+	// Error handling
+
+err_free:
+	for (i = entries.begin(); i != entries.end(); i++) {
+		delete *i;
+	}
+	return r;
+
+err_close:
+	ret = SQLCloseCursor(stmt);
+	if (!SQL_SUCCEEDED(ret)) {
+		print_odbc_error("SQLCloseCursor", stmt, SQL_HANDLE_STMT);
+	}
+
+err:
+	mutex_unlock(odbc->get_ancestry_properties_lock);
+	return CPL_E_STATEMENT_ERROR;
+}
+
 
 /***************************************************************************/
 /** The export / interface struct                                         **/
@@ -2732,17 +2419,15 @@ const cpl_db_backend_t CPL_ODBC_BACKEND = {
 	cpl_odbc_create_object,
 	cpl_odbc_lookup_object,
 	cpl_odbc_lookup_object_ext,
-	cpl_odbc_create_version,
-	cpl_odbc_get_version,
 	cpl_odbc_add_ancestry_edge,
 	cpl_odbc_has_immediate_ancestor,
 	cpl_odbc_add_property,
 	cpl_odbc_get_session_info,
 	cpl_odbc_get_all_objects,
 	cpl_odbc_get_object_info,
-	cpl_odbc_get_version_info,
 	cpl_odbc_get_object_ancestry,
 	cpl_odbc_get_properties,
 	cpl_odbc_lookup_by_property,
+	cpl_odbc_get_ancestry_properties,
 };
 

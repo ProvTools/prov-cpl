@@ -47,14 +47,9 @@ import java.util.Vector;
  */
 public class CPLPropertyEntry {
 
-	/// The provenance object and a version
-    private CPLObjectVersion objectVersion;
 
     /// The provenance object
 	private CPLObject object;
-
-	/// The version
-	private int version;
 
 	/// The property name
 	private String key;
@@ -67,34 +62,14 @@ public class CPLPropertyEntry {
 	 * Create an instance of CPLPropertyEntry
 	 *
 	 * @param object the provenance object
-	 * @param version the provenance version
      * @param key the property name
      * @param value the property value
 	 */
-	CPLPropertyEntry(CPLObject object, int version, String key, String value) {
-        this.objectVersion = null;
+	CPLPropertyEntry(CPLObject object, String key, String value) {
 		this.object = object;
-		this.version = version;
         this.key = key;
         this.value = value;
 	}
-
-
-	/**
-	 * Create an instance of CPLPropertyEntry
-	 *
-	 * @param objectVersion the provenance object and version
-     * @param key the property name
-     * @param value the property value
-	 */
-	CPLPropertyEntry(CPLObjectVersion objectVersion, String key, String value) {
-        this.objectVersion = objectVersion;
-		this.object = objectVersion.getObject();
-		this.version = objectVersion.getVersion();
-        this.key = key;
-        this.value = value;
-	}
-
 
 	/**
 	 * Determine whether this and the other object are equal
@@ -107,7 +82,6 @@ public class CPLPropertyEntry {
 		if (other instanceof CPLPropertyEntry) {
 			CPLPropertyEntry o = (CPLPropertyEntry) other;
 			return o.object.equals(object)
-                && o.version == version
                 && o.key.equals(key)
                 && (o.value == value ? true : o.value.equals(value));
 		}
@@ -138,7 +112,7 @@ public class CPLPropertyEntry {
 	 */
 	@Override
 	public String toString() {
-		return object.toString() + "-" + version + " " + key + " = " + value;
+		return object.toString() + "-" + key + " = " + value;
 	}
 
 
@@ -150,30 +124,6 @@ public class CPLPropertyEntry {
 	public CPLObject getObject() {
 		return object;
 	}
-
-
-	/**
-	 * Get the version number
-	 *
-	 * @return the version number
-	 */
-	public int getVersion() {
-		return version;
-	}
-
-
-	/**
-	 * Get the object-version object
-	 *
-	 * @return the object and the version
-	 */
-	public CPLObjectVersion getObjectVersion() {
-		if (objectVersion == null) {
-            objectVersion = new CPLObjectVersion(object, version);
-        }
-		return objectVersion;
-	}
-
 
 	/**
 	 * Get the property name (key)
@@ -203,7 +153,7 @@ public class CPLPropertyEntry {
 	 */
 	public String toString(boolean includeObject) {
 
-		return (includeObject ? object.toString() + "-" + version + " " : "")
+		return (includeObject ? object.toString() + "- " : "")
             + key + " = " + value;
 	}
 }

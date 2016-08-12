@@ -35,6 +35,9 @@ package edu.harvard.pass.cpl;
  */
 
 
+//TODO c++ to java translation + API
+//TODO figure out if cpl_id_t works the way i think it does
+
 import swig.direct.CPLDirect.*;
 
 import java.util.Vector;
@@ -50,57 +53,11 @@ public class CPLObject {
 	/// The null object
 	private static cpl_id_t nullId = null;
 
-	/// Data flow type: Generic
-	public static final int DATA_GENERIC = CPLDirectConstants.CPL_DATA_GENERIC;
-
-	/// Data flow type: Generic
-	public static final int DATA_INPUT = CPLDirectConstants.CPL_DATA_INPUT;
-
-	/// Data flow type: IPC
-	public static final int DATA_IPC = CPLDirectConstants.CPL_DATA_IPC;
-
-	/// Data flow type: Translation
-	public static final int DATA_TRANSLATION
-		= CPLDirectConstants.CPL_DATA_TRANSLATION;
-
-	/// Data flow type: Copy
-	public static final int DATA_COPY = CPLDirectConstants.CPL_DATA_COPY;
-
-	/// Control flow type: Generic
-	public static final int CONTROL_GENERIC=CPLDirectConstants.CPL_CONTROL_GENERIC;
-
-	/// Control flow type: Generic
-	public static final int CONTROL_OP = CPLDirectConstants.CPL_CONTROL_OP;
-
-	/// Control flow type: Start
-	public static final int CONTROL_START=CPLDirectConstants.CPL_CONTROL_START;
-
-	/// Version dependency: Generic
-	public static final int VERSION_GENERIC=CPLDirectConstants.CPL_VERSION_GENERIC;
-
-	/// Version dependency: Previous version
-	public static final int VERSION_PREV = CPLDirectConstants.CPL_VERSION_PREV;
-
 	/// Traversal direction: Ancestors
 	public static final int D_ANCESTORS = CPLDirectConstants.CPL_D_ANCESTORS;
 
 	/// Traversal direction: Descendants
 	public static final int D_DESCENDANTS=CPLDirectConstants.CPL_D_DESCENDANTS;
-
-	/// Traversal option: No prev/next version edges
-	public static final int A_NO_PREV_NEXT_VERSION
-		= CPLDirectConstants.CPL_A_NO_PREV_NEXT_VERSION;
-
-	/// Traversal option: No data dependencies
-	public static final int A_NO_DATA_DEPENDENCIES
-		= CPLDirectConstants.CPL_A_NO_DATA_DEPENDENCIES;
-
-	/// Traversal option: No control dependencies
-	public static final int A_NO_CONTROL_DEPENDENCIES
-		= CPLDirectConstants.CPL_A_NO_CONTROL_DEPENDENCIES;
-
-	/// Specify all versions where supported
-	public static final int ALL_VERSIONS = -1;
 
 	/// The internal object ID
 	cpl_id_t id;
@@ -114,8 +71,8 @@ public class CPLObject {
 	/// The object type (cache)
 	private String type = null;
 
-	/// The object containter (cache)
-	private CPLObjectVersion container = null;
+	/// The object container (cache)
+	private cpl_id_t containerId = null;
 
 	/// Whether we know the container
 	private boolean knowContainer = false;
@@ -145,64 +102,10 @@ public class CPLObject {
 	 *
 	 * @param id the internal CPL object ID
 	 */
-	CPLObject(cpl_id_t id) {
+	public CPLObject(cpl_id_t id) {
 		this.id = CPLDirect.new_cpl_id_tp();
 		CPLDirect.cpl_id_copy(this.id, id);
 	}
-
-
-	/**
-	 * Create an instance of CPLObject from its ID
-	 *
-	 * @param id the internal CPL object ID
-	 */
-	public CPLObject(CPLId id) {
-		this.id = CPLDirect.new_cpl_id_tp();
-		this.id.setHi(id.getHi());
-		this.id.setLo(id.getLo());
-		getVersion();	// Check that the ID is a valid object ID (slow!)
-	}
-
-
-	/**
-	 * Create a new CPLObject
-	 *
-	 * @param originator the originator
-	 * @param name the object name
-	 * @param type the object type
-	 * @param container the object container
-     *
-	 * @deprecated Please use create() instead
-	 */
-    @Deprecated
-	public CPLObject(String originator, String name, String type,
-			CPLObject container) {
-
-		this.originator = originator;
-		this.name = name;
-		this.type = type;
-
-		this.id = new cpl_id_t();
-		int r = CPLDirect.cpl_create_object(originator, name, type,
-				container == null ? nullId : container.id, this.id);
-		CPLException.assertSuccess(r);
-	}
-
-
-	/**
-	 * Create a new CPLObject
-	 *
-	 * @param originator the originator
-	 * @param name the object name
-	 * @param type the object type
-     *
-	 * @deprecated Please use create() instead
-	 */
-    @Deprecated
-	public CPLObject(String originator, String name, String type) {
-		this(originator, name, type, null);
-	}
-
 
 	/**
 	 * Create a new CPLObject
@@ -424,16 +327,7 @@ public class CPLObject {
                 o.name = e.getName();
                 o.type = e.getType();
                 
-                CPLObjectVersion container;
-                cpl_id_t containerId = e.getContainer_id();
-                if (CPL.isNone(containerId)) {
-                    container = null;
-                }
-                else {
-                    container = new CPLObjectVersion(new CPLObject(containerId),
-                            e.getContainer_version());
-                }
-                o.container = container;
+                containerId = e.getContainer_id();
                 o.knowContainer = true;
 
 				result.add(o);
@@ -458,8 +352,7 @@ public class CPLObject {
 	public boolean equals(Object other) {
 		if (other instanceof CPLObject) {
 			CPLObject o = (CPLObject) other;
-			return o.id.getHi().equals(this.id.getHi())
-				&& o.id.getLo().equals(this.id.getLo());
+			return o.id.equals(this.id);
 		}
 		else {
 			return false;
@@ -474,7 +367,7 @@ public class CPLObject {
 	 */
 	@Override
 	public int hashCode() {
-		return id.getHi().hashCode() ^ id.getLo().hashCode();
+		return id.hashCode();
 	}
 
 
@@ -486,7 +379,7 @@ public class CPLObject {
 	 */
 	@Override
 	public String toString() {
-		return id.getHi().toString(16) + ":" + id.getLo().toString(16);
+		return id.toString(16);
 	}
 
 
@@ -518,14 +411,7 @@ public class CPLObject {
 			name = info.getName();
 			type = info.getType();
 
-			cpl_id_t containerId = info.getContainer_id();
-			if (CPL.isNone(containerId)) {
-				container = null;
-			}
-			else {
-				container = new CPLObjectVersion(new CPLObject(containerId),
-						info.getContainer_version());
-			}
+			containerId = info.getContainer_id();
 
 			cpl_id_t creationSessionId = info.getCreation_session();
 			if (CPL.isNone(creationSessionId)) {
@@ -554,10 +440,9 @@ public class CPLObject {
 	 *
 	 * @return the internal ID of this object
 	 */
-	public CPLId getId() {
-		return new CPLId(id);
+	public cpl_id_t getId() {
+		return id;
 	}
-
 
 	/**
 	 * Get the object originator
@@ -597,9 +482,9 @@ public class CPLObject {
 	 *
 	 * @return the container, or null if none
 	 */
-	public CPLObjectVersion getContainer() {
+	public cpl_id_t getContainerId() {
 		if (!knowContainer) fetchInfo();
-		return container;
+		return containerId;
 	}
 
 
@@ -622,73 +507,6 @@ public class CPLObject {
 	public long getCreationTime() {
 		if (!knowCreationInfo) fetchInfo();
 		return creationTime;
-	}
-
-
-	/**
-	 * Get the current version of the object
-	 *
-	 * @return the current version
-	 */
-	public int getVersion() {
-
-		int v = Integer.MIN_VALUE;
-		SWIGTYPE_p_int vp = CPLDirect.new_cpl_version_tp();
-
-		try {
-			int r = CPLDirect.cpl_get_version(id, vp);
-			CPLException.assertSuccess(r);
-			v = CPLDirect.cpl_version_tp_value(vp);
-		}
-		finally {
-			CPLDirect.delete_cpl_version_tp(vp);
-		}
-
-		return v;
-	}
-
-
-	/**
-	 * Create a new version of the object
-	 *
-	 * @return the new version number
-	 */
-	public int newVersion() {
-
-		int v = Integer.MIN_VALUE;
-		SWIGTYPE_p_int vp = CPLDirect.new_cpl_version_tp();
-
-		try {
-			int r = CPLDirect.cpl_new_version(id, vp);
-			CPLException.assertSuccess(r);
-			v = CPLDirect.cpl_version_tp_value(vp);
-		}
-		finally {
-			CPLDirect.delete_cpl_version_tp(vp);
-		}
-
-		return v;
-	}
-
-
-	/**
-	 * Get a specific version of the object
-	 *
-	 * @param version the version number
-	 * @return the specific version of the object
-	 */
-	public CPLObjectVersion getSpecificVersion(int version) {
-		return new CPLObjectVersion(this, version);
-	}
-
-
-	/**
-	 * Get the current (most recent) version of an object
-	 *
-	 * @return the latest version of the object
-	 */
-	public CPLObjectVersion getCurrentVersion() {
-		return new CPLObjectVersion(this, getVersion());
 	}
 
 
@@ -718,11 +536,6 @@ public class CPLObject {
 		sb.append("\n");
 
 		if (detail) {
-			CPLObjectVersion v = getCurrentVersion();
-
-			sb.append("Current version     : ");
-			sb.append(v.getVersion());
-			sb.append("\n");
 
 			sb.append("Container ID        : ");
 			sb.append(getContainer());
@@ -754,160 +567,13 @@ public class CPLObject {
 
 
 	/**
-	 * Disclose data flow
-	 *
-	 * @param source the data source object
-	 * @param source_version the version of the source object
-	 * @param type the data flow type (one of CPLObject.DATA_*)
-	 * @return true if the dependency was added, false if it is a duplicate
-	 */
-	public boolean dataFlowFrom(CPLObject source, int source_version, int type){
-		int r = CPLDirect.cpl_data_flow_ext(id, source.id, source_version,type);
-		CPLException.assertSuccess(r);
-		return r != CPLDirectConstants.CPL_S_DUPLICATE_IGNORED;
-	}
-
-
-	/**
-	 * Disclose data flow
-	 *
-	 * @param source the data source object and version
-	 * @param type the data flow type (one of CPLObject.DATA_*)
-	 * @return true if the dependency was added, false if it is a duplicate
-	 */
-	public boolean dataFlowFrom(CPLObjectVersion source, int type){
-		int r = CPLDirect.cpl_data_flow_ext(id, source.getObject().id,
-				source.getVersion(), type);
-		CPLException.assertSuccess(r);
-		return r != CPLDirectConstants.CPL_S_DUPLICATE_IGNORED;
-	}
-
-
-	/**
-	 * Disclose data flow
-	 *
-	 * @param source the data source object and version
-	 * @param type the data flow type (one of CPLObject.DATA_*)
-	 * @return true if the dependency was added, false if it is a duplicate
-	 */
-	public boolean dataFlowFrom(CPLObjectVersion source){
-		int r = CPLDirect.cpl_data_flow_ext(id, source.getObject().id,
-				source.getVersion(), DATA_GENERIC);
-		CPLException.assertSuccess(r);
-		return r != CPLDirectConstants.CPL_S_DUPLICATE_IGNORED;
-	}
-
-
-	/**
-	 * Disclose data flow
-	 *
-	 * @param source the data source object
-	 * @param type the data flow type (one of CPLObject.DATA_*)
-	 * @return true if the dependency was added, false if it is a duplicate
-	 */
-	public boolean dataFlowFrom(CPLObject source, int type) {
-		int r = CPLDirect.cpl_data_flow(id, source.id, type);
-		CPLException.assertSuccess(r);
-		return r != CPLDirectConstants.CPL_S_DUPLICATE_IGNORED;
-	}
-
-
-	/**
-	 * Disclose data flow
-	 *
-	 * @param source the data source object
-	 * @return true if the dependency was added, false if it is a duplicate
-	 */
-	public boolean dataFlowFrom(CPLObject source) {
-		int r = CPLDirect.cpl_data_flow(id, source.id, DATA_GENERIC);
-		CPLException.assertSuccess(r);
-		return r != CPLDirectConstants.CPL_S_DUPLICATE_IGNORED;
-	}
-
-
-	/**
-	 * Disclose control flow
-	 *
-	 * @param controller the controller object
-	 * @param controller_version the version of the controller object
-	 * @param type the data flow type (one of CPLObject.CONTROL_*)
-	 * @return true if the dependency was added, false if it is a duplicate
-	 */
-	public boolean controlledBy(CPLObject controller, int controller_version,
-			int type) {
-		int r = CPLDirect.cpl_control_flow_ext(id, controller.id,
-                controller_version, type);
-		CPLException.assertSuccess(r);
-		return r != CPLDirectConstants.CPL_S_DUPLICATE_IGNORED;
-	}
-
-
-	/**
-	 * Disclose control flow
-	 *
-	 * @param controller the controller object and version
-	 * @param type the data flow type (one of CPLObject.CONTROL_*)
-	 * @return true if the dependency was added, false if it is a duplicate
-	 */
-	public boolean controlledBy(CPLObjectVersion controller, int type) {
-		int r = CPLDirect.cpl_control_flow_ext(id, controller.getObject().id,
-				controller.getVersion(), type);
-		CPLException.assertSuccess(r);
-		return r != CPLDirectConstants.CPL_S_DUPLICATE_IGNORED;
-	}
-
-
-	/**
-	 * Disclose control flow
-	 *
-	 * @param controller the controller object and version
-	 * @return true if the dependency was added, false if it is a duplicate
-	 */
-	public boolean controlledBy(CPLObjectVersion controller) {
-		int r = CPLDirect.cpl_control_flow_ext(id, controller.getObject().id,
-				controller.getVersion(), CONTROL_GENERIC);
-		CPLException.assertSuccess(r);
-		return r != CPLDirectConstants.CPL_S_DUPLICATE_IGNORED;
-	}
-
-
-	/**
-	 * Disclose control flow
-	 *
-	 * @param controller the controller object
-	 * @param type the data flow type (one of CPLObject.CONTROL_*)
-	 * @return true if the dependency was added, false if it is a duplicate
-	 */
-	public boolean controlledBy(CPLObject controller, int type) {
-		int r = CPLDirect.cpl_control_flow(id, controller.id, type);
-		CPLException.assertSuccess(r);
-		return r != CPLDirectConstants.CPL_S_DUPLICATE_IGNORED;
-	}
-
-
-	/**
-	 * Disclose control flow
-	 *
-	 * @param controller the controller object
-	 * @return true if the dependency was added, false if it is a duplicate
-	 */
-	public boolean controlledBy(CPLObject controller) {
-		int r = CPLDirect.cpl_control_flow(id, controller.id, CONTROL_GENERIC);
-		CPLException.assertSuccess(r);
-		return r != CPLDirectConstants.CPL_S_DUPLICATE_IGNORED;
-	}
-
-
-	/**
 	 * Query the ancestry of the object
-	 *
-	 * @param version a specific version, or ALL_VERSIONS for all versions
 	 * @param direction the direction, either D_ANCESTORS or D_DESCENDANTS
 	 * @param flags a combination of A_* flags, or 0 for defaults
 	 * @return a vector of results &ndash; instances of CPLAncestryEntry
 	 * @see CPLAncestryEntry
 	 */
-	public Vector<CPLAncestryEntry> getAncestry(int version, int direction,
+	public Vector<CPLAncestryEntry> getAncestry(int direction,
 			int flags) {
 
 		SWIGTYPE_p_std_vector_cpl_ancestry_entry_t pVector
@@ -917,7 +583,7 @@ public class CPLObject {
 		Vector<CPLAncestryEntry> result = null;
 
 		try {
-			int r = CPLDirect.cpl_get_object_ancestry(id, version, direction,
+			int r = CPLDirect.cpl_get_object_ancestry(id, direction,
 					flags, CPLDirect.cpl_cb_collect_ancestry_vector, pv);
 			CPLException.assertSuccess(r);
 
@@ -928,9 +594,8 @@ public class CPLObject {
 			for (long i = 0; i < l; i++) {
 				cpl_ancestry_entry_t e = v.get((int) i);
 				result.add(new CPLAncestryEntry(
-						new CPLObjectVersion(this, e.getQuery_object_version()),
-						new CPLObjectVersion(new CPLObject(e.getOther_object_id()),
-							e.getOther_object_version()),
+						this,
+						new CPLObject(e.getOther_object_id()),
 						e.getType(),
 						direction == D_ANCESTORS));
 			}
@@ -962,37 +627,36 @@ public class CPLObject {
 	 * @param key the key
 	 * @param value the value
 	 * @param failOnNotFound whether to fail if no matching objects were found
-	 * @return the vector of matching object-version pairs
+	 * @return the vector of objects
 	 */
-	protected static Vector<CPLObjectVersion> lookupByProperty(String key,
+	protected static Vector<CPLObject> lookupByProperty(String key,
 			String value, boolean failOnNotFound) {
 
 		SWIGTYPE_p_std_vector_cpl_id_version_t pVector
-			= CPLDirect.new_std_vector_cpl_id_version_tp();
+			= CPLDirect.new_std_vector_cpl_id_tp();
 		SWIGTYPE_p_void pv = CPLDirect
-			.cpl_convert_p_std_vector_cpl_id_version_t_to_p_void(pVector);
+			.cpl_convert_p_std_vector_cpl_id_t_to_p_void(pVector);
 		Vector<CPLObjectVersion> result = null;
 
 		try {
 			int r = CPLDirect.cpl_lookup_by_property(key, value,
 					CPLDirect.cpl_cb_collect_property_lookup_vector, pv);
 			if (!failOnNotFound && r == CPLDirectConstants.CPL_E_NOT_FOUND) {
-				return new Vector<CPLObjectVersion>();
+				return new Vector<CPLObject>();
 			}
 			CPLException.assertSuccess(r);
 
-			cpl_id_version_t_vector v = CPLDirect
-				.cpl_dereference_p_std_vector_cpl_id_version_t(pVector);
+			cpl_id_t_vector v = CPLDirect
+				.cpl_dereference_p_std_vector_cpl_id_t(pVector);
 			long l = v.size();
-			result = new Vector<CPLObjectVersion>((int) l);
+			result = new Vector<cpl_id_t>((int) l);
 			for (long i = 0; i < l; i++) {
-				cpl_id_version_t e = v.get((int) i);
-				result.add(new CPLObjectVersion(new CPLObject(e.getId()),
-							e.getVersion()));
+				cpl_id_t e = v.get((int) i);
+				result.add(new CPLObject(e));
 			}
 		}
 		finally {
-			CPLDirect.delete_std_vector_cpl_id_version_tp(pVector);
+			CPLDirect.delete_std_vector_cpl_id_tp(pVector);
 		}
 
 		return result;
@@ -1002,11 +666,10 @@ public class CPLObject {
 	/**
 	 * Get the properties of an object
 	 *
-	 * @param version the project version or ALL_VERSIONS
 	 * @param key the property name or null for all entries
 	 * @return the vector of property entries
 	 */
-	Vector<CPLPropertyEntry> getProperties(int version, String key) {
+	Vector<CPLPropertyEntry> getProperties(String key) {
 
 		SWIGTYPE_p_std_vector_cplxx_property_entry_t pVector
 			= CPLDirect.new_std_vector_cplxx_property_entry_tp();
@@ -1015,7 +678,7 @@ public class CPLObject {
 		Vector<CPLPropertyEntry> result = null;
 
 		try {
-			int r = CPLDirect.cpl_get_properties(id, version, key,
+			int r = CPLDirect.cpl_get_properties(id, key,
 					CPLDirect.cpl_cb_collect_properties_vector, pv);
 			CPLException.assertSuccess(r);
 
@@ -1026,7 +689,6 @@ public class CPLObject {
 			for (long i = 0; i < l; i++) {
 				cplxx_property_entry_t e = v.get((int) i);
 				result.add(new CPLPropertyEntry(this,
-							e.getVersion(),
 							e.getKey(),
 							e.getValue()));
 			}
@@ -1045,30 +707,17 @@ public class CPLObject {
 	 * @return the vector of property entries
 	 */
 	public Vector<CPLPropertyEntry> getProperties() {
-		return getProperties(ALL_VERSIONS, null);
+		return getProperties(null);
 	}
-
-
-	/**
-	 * Get properties of an object associated with the given key
-	 *
-	 * @param key the property name (key) or null for all keys
-	 * @return the vector of property entries
-	 */
-	public Vector<CPLPropertyEntry> getProperties(String key) {
-		return getProperties(ALL_VERSIONS, key);
-	}
-
 
 	/**
 	 * Lookup an object based on the property value
 	 *
 	 * @param key the key
 	 * @param value the value
-	 * @return the vector of matching object-version pairs
 	 * @throws CPLException if no matching object is found
 	 */
-	public static Vector<CPLObjectVersion> lookupByProperty(String key,
+	public static Vector<CPLObject> lookupByProperty(String key,
 			String value) {
 		return lookupByProperty(key, value, true);
 	}
@@ -1082,7 +731,7 @@ public class CPLObject {
 	 * @param value the value
 	 * @return the vector of matching object-version pairs (empty if not found)
 	 */
-	public static Vector<CPLObjectVersion> tryLookupByProperty(String key,
+	public static Vector<CPLObject> tryLookupByProperty(String key,
 			String value) {
 		return lookupByProperty(key, value, false);
 	}

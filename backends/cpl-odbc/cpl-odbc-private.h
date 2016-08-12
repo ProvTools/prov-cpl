@@ -106,12 +106,6 @@ typedef struct {
 	SQLHSTMT create_object_insert_container_stmt;
 
 	/**
-	 * Insert a new 0th version to the versions table (to be used while
-	 * creating a new object)
-	 */
-	SQLHSTMT create_object_insert_version_stmt;
-
-	/**
 	 * The lock for lookup_object
 	 */
 	mutex_t lookup_object_lock;
@@ -134,26 +128,6 @@ typedef struct {
 	SQLHSTMT lookup_object_ext_stmt;
 
 	/**
-	 * Lock for version creation
-	 */
-	mutex_t create_version_lock;
-
-	/**
-	 * The insert statement for version creation
-	 */
-	SQLHSTMT create_version_stmt;
-
-	/**
-	 * The lock for get_version
-	 */
-	mutex_t get_version_lock;
-
-	/**
-	 * The statement that determines the version of an object given its ID
-	 */
-	SQLHSTMT get_version_stmt;
-
-	/**
 	 * The lock for add_ancestry_edge
 	 */
 	mutex_t add_ancestry_edge_lock;
@@ -162,23 +136,6 @@ typedef struct {
 	 * The statement that adds a new ancestry edge
 	 */
 	SQLHSTMT add_ancestry_edge_stmt;
-
-	/**
-	 * The lock for has_immediate_ancestor
-	 */
-	mutex_t has_immediate_ancestor_lock;
-
-	/**
-	 * The statement that determines whether the given object is present
-	 * in the immediate ancestry
-	 */
-	SQLHSTMT has_immediate_ancestor_stmt;
-
-	/**
-	 * The statement that determines whether the given object is present
-	 * in the immediate ancestry -- also considering the version of the object
-	 */
-	SQLHSTMT has_immediate_ancestor_with_ver_stmt;
 
 	/**
 	 * The lock for add_property
@@ -226,16 +183,6 @@ typedef struct {
 	 */
 	SQLHSTMT get_object_info_stmt;
 
-	/**
-	 * The lock for get_version_info
-	 */
-	mutex_t get_version_info_lock;
-
-	/**
-	 * The statement that returns information about a specific version
-	 * of the provenance object
-	 */
-	SQLHSTMT get_version_info_stmt;
 
 	/**
 	 * The mutex for get_object_ancestry
@@ -248,19 +195,9 @@ typedef struct {
 	SQLHSTMT get_object_ancestors_stmt;
 
 	/**
-	 * The statement for listing ancestors of a specific version of the object
-	 */
-	SQLHSTMT get_object_ancestors_with_ver_stmt;
-
-	/**
 	 * The statement for listing descendants
 	 */
 	SQLHSTMT get_object_descendants_stmt;
-
-	/**
-	 * The statement for listing descendants of a specific version of the object
-	 */
-	SQLHSTMT get_object_descendants_with_ver_stmt;
 
 	/**
 	 * The mutex for get_properties
@@ -273,19 +210,9 @@ typedef struct {
 	SQLHSTMT get_properties_stmt;
 
 	/**
-	 * The statement for listing properties of a specific version of the object
-	 */
-	SQLHSTMT get_properties_with_ver_stmt;
-
-	/**
 	 * The statement for listing specific properties
 	 */
 	SQLHSTMT get_properties_with_key_stmt;
-
-	/**
-	 * The statement for listing specific properties of a version of the object
-	 */
-	SQLHSTMT get_properties_with_key_ver_stmt;
 
 	/**
 	 * The mutex for lookup_by_property
@@ -296,6 +223,13 @@ typedef struct {
 	 * The statement for looking up by a property value
 	 */
 	SQLHSTMT lookup_by_property_stmt;
+
+	mutex_t get_ancestry_properties_lock;
+	SQLHSTMT get_ancestry_properties_stmt;
+	SQLHSTMT get_ancestry_properties_with_key_stmt;
+	
+	mutex_t has_immediate_ancestor_lock;
+	SQLHSTMT has_immediate_ancestor_stmt;
 
 } cpl_odbc_t;
 

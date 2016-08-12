@@ -45,11 +45,14 @@ import swig.direct.CPLDirect.*;
  */
 public class CPLAncestryEntry {
 
+	/// The null object
+	private static cpl_id_t nullId = null;
+
 	/// The queried object
-	private CPLObjectVersion base;
+	private CPLObject base;
 
 	/// The other object
-	private CPLObjectVersion other;
+	private CPLObject other;
 
 	/// The type of the dependency
 	private int type;
@@ -57,25 +60,56 @@ public class CPLAncestryEntry {
 	/// The direction of the query
 	private boolean otherIsAncestor;
 
+	/// The internal object ID
+	cpl_id_t id;
+
+	static {
+		if (CPL.isInstalled()) {
+			nullId = CPLDirect.getCPL_NONE();
+		}
+	}
 
 	/**
 	 * Create an instance of CPLAncestryEntry
 	 *
+	 * @param id the dependency's id
 	 * @param base the queried (base) object
 	 * @param other the other object
 	 * @param type the dependency type
 	 * @param otherIsAncestor the dependency direction
 	 */
-	CPLAncestryEntry(CPLObjectVersion base, CPLObjectVersion other,
+	CPLAncestryEntry(cpl_id_t id, CPLObject base, CPLObject other,
 			int type, boolean otherIsAncestor) {
 
+		this.id = id;
+		CPLDirect.cpl_id_copy(this.id, id);
 		this.base = base;
 		this.other = other;
 		this.type = type;
 		this.otherIsAncestor = otherIsAncestor;
 	}
 
+	CPLAncestryEntry(cpl_id_t id){
+		this.id = id;
+	}
 
+	// TODO double check this isn't borked
+	public CPLAncestryEntry create(CPLObject source, CPLObject dest, int type){
+
+		cpl_id_t id = new cpl_id_t();
+		int r = CPLDirect.cpl_add_dependency(source.get_object().id, dest.get_object().id, type, id);
+		CPLException.assertSuccess(r);
+
+		CPLAncestryEntry a = new CPLAncestryEntry(id);
+		a.base = source;
+		a.other = dest;
+		a.type = type;
+		a.otherIsAncestor = false;
+
+		return a;
+	}
+
+	public
 	/**
 	 * Determine whether this and the other object are equal
 	 *
@@ -86,16 +120,12 @@ public class CPLAncestryEntry {
 	public boolean equals(Object other) {
 		if (other instanceof CPLAncestryEntry) {
 			CPLAncestryEntry o = (CPLAncestryEntry) other;
-			return base.equals(o.base)
-				&& other.equals(o.other)
-				&& type == o.type
-				&& otherIsAncestor == o.otherIsAncestor;
+			return o.id.equals(this.id);
 		}
 		else {
 			return false;
 		}
 	}
-
 
 	/**
 	 * Compute the hash code of this object
@@ -104,10 +134,7 @@ public class CPLAncestryEntry {
 	 */
 	@Override
 	public int hashCode() {
-		return (base.hashCode() << 8)
-			 ^ (other.hashCode() << 4)
-			 ^ (type << 2)
-			 ^ (otherIsAncestor ? 1 : 0);
+		return id.hashCode();
 	}
 
 
@@ -118,18 +145,19 @@ public class CPLAncestryEntry {
 	 */
 	@Override
 	public String toString() {
+		String id = id.toString(16);
 		String arrow = otherIsAncestor ? " --> " : " <-- ";
 		return "" + base + arrow + other
-			 + " [type " + Integer.toHexString(type) + "]";
+			 + " [type " + Integer.toHexString(type) + "; id " + id + "]";
 	}
 
 
 	/**
 	 * Get the queried (base) object
 	 *
-	 * @return a specific version of that object
+	 * @return the object
 	 */
-	public CPLObjectVersion getBase() {
+	public CPLObject getBase() {
 		return base;
 	}
 
@@ -137,9 +165,9 @@ public class CPLAncestryEntry {
 	/**
 	 * Get the other object
 	 *
-	 * @return a specific version of that object
+	 * @return the object
 	 */
-	public CPLObjectVersion getOther() {
+	public CPLObject getOther() {
 		return other;
 	}
 
@@ -147,9 +175,9 @@ public class CPLAncestryEntry {
 	/**
 	 * Get the ancestor object
 	 *
-	 * @return a specific version of that object
+	 * @return the object
 	 */
-	public CPLObjectVersion getAncestor() {
+	public CPLObject getAncestor() {
 		return otherIsAncestor ? other : base;
 	}
 
@@ -157,9 +185,9 @@ public class CPLAncestryEntry {
 	/**
 	 * Get the descendant object
 	 *
-	 * @return a specific version of that object
+	 * @return the object
 	 */
-	public CPLObjectVersion getDescendant() {
+	public CPLObject getDescendant() {
 		return !otherIsAncestor ? other : base;
 	}
 
@@ -175,42 +203,99 @@ public class CPLAncestryEntry {
 
 
 	/**
-	 * Is this a data dependency?
-	 *
-	 * @return true if this is a data dependency
-	 */
-	public boolean isDataDependency() {
-		return (type >> 8) == CPLDirectConstants.CPL_DEPENDENCY_CATEGORY_DATA;
-	}
-
-
-	/**
-	 * Is this a control dependency?
-	 *
-	 * @return true if this is a control dependency
-	 */
-	public boolean isControlDependency() {
-		return (type>>8) == CPLDirectConstants.CPL_DEPENDENCY_CATEGORY_CONTROL;
-	}
-
-
-	/**
-	 * Is this a version dependency?
-	 *
-	 * @return true if this is a version dependency
-	 */
-	public boolean isVersionDependency() {
-		return (type>>8) == CPLDirectConstants.CPL_DEPENDENCY_CATEGORY_VERSION;
-	}
-
-
-	/**
 	 * Get the direction of the dependency
 	 *
 	 * @return true if the other object is an ancestor
 	 */
 	public boolean isOtherAncestor() {
 		return otherIsAncestor;
+	}
+
+		/**
+	 * Add a property
+	 *
+	 * @param key the key
+	 * @param value the value
+	 */
+	public void addProperty(String key, String value) {
+
+		int r = CPLDirect.cpl_add_ancestry_property(id, key, value);
+		CPLException.assertSuccess(r);
+	}
+
+
+	/**
+	 * Get the properties of an ancestry edge
+	 *
+	 * @param key the property name or null for all entries
+	 * @return the vector of property entries
+	 */
+	Vector<CPLPropertyEntry> getProperties(String key) {
+				SWIGTYPE_p_std_vector_cplxx_property_entry_t pVector
+			= CPLDirect.new_std_vector_cplxx_property_entry_tp();
+		SWIGTYPE_p_void pv = CPLDirect
+			.cpl_convert_p_std_vector_cplxx_property_entry_t_to_p_void(pVector);
+		Vector<CPLPropertyEntry> result = null;
+
+		try {
+			int r = CPLDirect.cpl_get_ancestry_properties(id, key,
+					CPLDirect.cpl_cb_collect_properties_vector, pv);
+			CPLException.assertSuccess(r);
+
+			cplxx_property_entry_t_vector v = CPLDirect
+				.cpl_dereference_p_std_vector_cplxx_property_entry_t(pVector);
+			long l = v.size();
+			result = new Vector<CPLPropertyEntry>((int) l);
+			for (long i = 0; i < l; i++) {
+				cplxx_property_entry_t e = v.get((int) i);
+				result.add(new CPLPropertyEntry(this,
+							e.getKey(),
+							e.getValue()));
+			}
+		}
+		finally {
+			CPLDirect.delete_std_vector_cplxx_property_entry_tp(pVector);
+		}
+
+		return result;
+	}
+
+
+	/**
+	 * Get all properties of an object
+	 *
+	 * @return the vector of property entries
+	 */
+	public Vector<CPLPropertyEntry> getProperties() {
+		return getProperties(null);
+	}
+
+
+	/**
+	 * Lookup an object based on the property value
+	 *
+	 * @param key the key
+	 * @param value the value
+	 * @return the vector of edges
+	 * @throws CPLException if no matching object is found
+	 */
+	public static Vector<CPLAncestryEntry> lookupByProperty(String key,
+			String value) {
+		return lookupByProperty(key, value, true);
+	}
+
+
+	/**
+	 * Lookup an object based on the property value, but do not fail if no
+	 * objects are found
+	 *
+	 * @param key the key
+	 * @param value the value
+	 * @return the vector of edges
+	 */
+	public static Vector<CPLAncestryEntry> tryLookupByProperty(String key,
+			String value) {
+		return lookupByProperty(key, value, false);
 	}
 }
 

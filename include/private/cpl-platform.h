@@ -35,52 +35,13 @@
 #ifndef __CPL_PRIVATE_PLATFORM_H__
 #define __CPL_PRIVATE_PLATFORM_H__
 
-#if !(defined _WIN32 || defined _WIN64)
 #include <pthread.h>
-#endif
 
 
 
 /***************************************************************************/
 /** Cross-Platform Compatibility: Mutex                                   **/
 /***************************************************************************/
-
-#if defined _WIN32 || defined _WIN64
-
-/**
- * Mutex
- */
-typedef CRITICAL_SECTION mutex_t;
-
-/**
- * Initialize a mutex
- *
- * @param m the mutex
- */
-#define mutex_init(m) InitializeCriticalSection(&(m));
-
-/**
- * Destroy a mutex
- *
- * @param m the mutex
- */
-#define mutex_destroy(m) DeleteCriticalSection(&(m));
-
-/**
- * Lock a mutex
- *
- * @param m the mutex
- */
-#define mutex_lock(m) EnterCriticalSection(&(m));
-
-/**
- * Unlock a mutex
- *
- * @param m the mutex
- */
-#define mutex_unlock(m) LeaveCriticalSection(&(m));
-
-#else
 
 /**
  * Mutex
@@ -114,8 +75,6 @@ typedef pthread_mutex_t mutex_t;
  * @param m the mutex
  */
 #define mutex_unlock(m) pthread_mutex_unlock(&(m));
-
-#endif
 
 
 

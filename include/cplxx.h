@@ -35,10 +35,6 @@
 #ifndef __CPLXX_H__
 #define __CPLXX_H__
 
-#if defined _WIN64 || defined _WIN32
-#pragma once
-#endif
-
 #include <cpl.h>
 
 #ifdef __cplusplus
@@ -67,183 +63,6 @@
 using namespace __gnu_cxx;
 #endif
 
-#if defined _WIN32 || defined _WIN64
-using namespace stdext;
-#endif
-
-
-
-/***************************************************************************/
-/** ID Manipulation                                                       **/
-/***************************************************************************/
-
-
-#ifndef SWIG
-
-/**
- * Compare ID's
- *
- * @param a the first ID
- * @param b the second ID
- * @return true if a < b
- */
-inline bool
-operator<(const cpl_id_t& a, const cpl_id_t& b)
-{
-	return cpl_id_cmp(&a, &b) < 0;
-}
-
-/**
- * Compare ID's
- *
- * @param a the first ID
- * @param b the second ID
- * @return true if a <= b
- */
-inline bool
-operator<=(const cpl_id_t& a, const cpl_id_t& b)
-{
-	return cpl_id_cmp(&a, &b) <= 0;
-}
-
-/**
- * Compare ID's
- *
- * @param a the first ID
- * @param b the second ID
- * @return true if a > b
- */
-inline bool
-operator>(const cpl_id_t& a, const cpl_id_t& b)
-{
-	return cpl_id_cmp(&a, &b) > 0;
-}
-
-/**
- * Compare ID's
- *
- * @param a the first ID
- * @param b the second ID
- * @return true if a >= b
- */
-inline bool
-operator>=(const cpl_id_t& a, const cpl_id_t& b)
-{
-	return cpl_id_cmp(&a, &b) >= 0;
-}
-
-/**
- * Compare ID's
- *
- * @param a the first ID
- * @param b the second ID
- * @return true if a == b
- */
-inline bool
-operator==(const cpl_id_t& a, const cpl_id_t& b)
-{
-	return a.hi == b.hi && a.lo == b.lo; 
-}
-
-/**
- * Compare ID's
- *
- * @param a the first ID
- * @param b the second ID
- * @return true if a != b
- */
-inline bool
-operator!=(const cpl_id_t& a, const cpl_id_t& b)
-{
-	return a.hi != b.hi || a.lo != b.lo;
-}
-
-#endif
-
-
-
-/***************************************************************************/
-/** Templates                                                             **/
-/***************************************************************************/
-
-/**
- * Traits for cpl_id_t
- */
-struct cpl_traits_id_t
-{
-	/**
-	 * Mean bucket size that the container should try not to exceed
-	 */
-	static const size_t bucket_size = 10;
-
-	/**
-	 * Minimum number of buckets, power of 2, >0
-	 */
-	static const size_t min_buckets = (1 << 10);
-
-#ifndef SWIG
-
-	/**
-	 * Compute the hash value for the given argument
-	 *
-	 * @param key the argument
-	 * @return the hash value
-	 */
-	inline size_t operator() (const cpl_id_t& key) const
-	{
-		return cpl_hash_id(key);
-	}
-
-	/**
-	 * Determine whether the two parameters are equal on UNIX or a < b on Windows
-	 *
-	 * @param a the first argument
-	 * @param b the second argument
-	 * @return true if they are equal on UNIX or a < b on Windows
-	 */
-	inline bool operator() (const cpl_id_t& a, const cpl_id_t& b) const
-	{
-#if defined _WIN64 || defined _WIN32
-		return a < b;
-#else
-		return a == b;
-#endif
-	}
-
-#endif
-};
-
-
-/**
- * Hash set: cpl_id_t
- */
-#if defined _WIN32 || defined _WIN64
-typedef hash_set<cpl_id_t, cpl_traits_id_t>
-	cpl_hash_set_id_t;
-#else
-typedef hash_set<cpl_id_t, cpl_traits_id_t, cpl_traits_id_t>
-	cpl_hash_set_id_t;
-#endif
-
-
-/**
- * Hash map template: cpl_id_t --> T
- */
-#if defined _WIN32 || defined _WIN64
-template <class T>
-struct cpl_hash_map_id_t
-{
-	typedef hash_map<cpl_id_t, T, cpl_traits_id_t>
-		type;
-};
-#else
-template <class T>
-struct cpl_hash_map_id_t
-{
-	typedef hash_map<cpl_id_t, T, cpl_traits_id_t, cpl_traits_id_t>
-		type;
-};
-#endif
 
 
 
@@ -288,7 +107,6 @@ public:
 /***************************************************************************/
 /** Special Data Types                                                    **/
 /***************************************************************************/
-
 /**
  * Information about a provenance object.
  */
@@ -296,9 +114,6 @@ typedef struct cplxx_object_info {
 	
 	/// The object ID.
 	cpl_id_t id;
-	
-	/// The object version.
-	cpl_version_t version;
 
 	/// The session ID of the process that created the object (not necessarily
 	/// the latest version).
@@ -320,9 +135,6 @@ typedef struct cplxx_object_info {
 	/// The object ID of the container, or CPL_NONE if none.
 	cpl_id_t container_id;
 
-	/// The version number of the container, or CPL_VERSION_NONE if none.
-	cpl_version_t container_version;
-
 } cplxx_object_info_t;
 
 /**
@@ -332,9 +144,6 @@ typedef struct cplxx_property_entry {
 
 	/// The object ID
 	cpl_id_t id;
-
-	/// The object version
-	cpl_version_t version;
 
 	/// The property key (name)
 	std::string key;
@@ -349,7 +158,7 @@ typedef struct cplxx_property_entry {
 /***************************************************************************/
 /** Callbacks                                                             **/
 /***************************************************************************/
-
+//TODO edit
 /**
  * The iterator callback for cpl_get_all_objects() that collects the returned
  * information in an instance of std::vector<cplxx_object_info_t>.
@@ -401,10 +210,9 @@ cpl_cb_collect_id_timestamp_vector(const cpl_id_t id,
 %constant
 #endif
 EXPORT cpl_return_t
-cpl_cb_collect_ancestry_list(const cpl_id_t query_object_id,
-							 const cpl_version_t query_object_version,
+cpl_cb_collect_ancestry_list(const cpl_id_t ancestry_id,
+							 const cpl_id_t query_object_id,
 							 const cpl_id_t other_object_id,
-							 const cpl_version_t other_object_version,
 							 const int type,
 							 void* context);
 
@@ -425,10 +233,9 @@ cpl_cb_collect_ancestry_list(const cpl_id_t query_object_id,
 %constant
 #endif
 EXPORT cpl_return_t
-cpl_cb_collect_ancestry_vector(const cpl_id_t query_object_id,
-							   const cpl_version_t query_object_version,
+cpl_cb_collect_ancestry_vector(const cpl_id_t ancestry_id,
+							   const cpl_id_t query_object_id,
 							   const cpl_id_t other_object_id,
-							   const cpl_version_t other_object_version,
 							   const int type,
 							   void* context);
 
@@ -448,7 +255,6 @@ cpl_cb_collect_ancestry_vector(const cpl_id_t query_object_id,
 #endif
 EXPORT cpl_return_t
 cpl_cb_collect_properties_vector(const cpl_id_t id,
-								 const cpl_version_t version,
 								 const char* key,
 								 const char* value,
 								 void* context);
@@ -469,7 +275,6 @@ cpl_cb_collect_properties_vector(const cpl_id_t id,
 #endif
 EXPORT cpl_return_t
 cpl_cb_collect_property_lookup_vector(const cpl_id_t id,
-									  const cpl_version_t version,
 									  const char* key,
 									  const char* value,
 									  void* context);

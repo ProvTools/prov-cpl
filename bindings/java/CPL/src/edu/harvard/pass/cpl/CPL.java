@@ -162,36 +162,6 @@ public class CPL {
 
 
 	/**
-	 * Attach to the CPL using an RDF/SPARQL connection
-	 *
-	 * @param queryURL the query URL
-	 * @param updateURL the update URL
-	 */
-	public static synchronized void attachRDF(String queryURL, String updateURL) {
-
-        if (!cplInstalled) {
-            throw new RuntimeException("The shared library for CPL Java "
-                    + "bindings is not (properly) installed");
-        }
-
-		if (cpl != null) {
-			throw new CPLException(CPLDirectConstants.CPL_E_ALREADY_INITIALIZED);
-		}
-
-        SWIGTYPE_p_p_cpl_db_backend_t outDb = CPLDirect.new_cpl_db_backend_tpp();
-        int r = CPLDirect.cpl_create_rdf_backend(queryURL, updateURL, 0, outDb);
-		CPLException.assertSuccess("Could not open database connection", r);
-
-		try {
-			cpl = new CPL(CPLDirect.cpl_dereference_pp_cpl_db_backend_t(outDb));
-		}
-		finally {
-			CPLDirect.delete_cpl_db_backend_tpp(outDb);
-		}
-	}
-
-
-	/**
 	 * Detach from the CPL. Do nothing if the CPL is not attached.
 	 */
 	public static synchronized void detach() {
@@ -230,8 +200,7 @@ public class CPL {
 	 * @return if it is CPL_NONE
 	 */
 	static boolean isNone(cpl_id_t id) {
-		return id.getHi().equals(BigInteger.ZERO)
-			&& id.getLo().equals(BigInteger.ZERO);
+		return id.equals(BigInteger.ZERO);
 	}
 }
 

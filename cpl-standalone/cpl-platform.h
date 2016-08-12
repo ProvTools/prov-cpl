@@ -38,31 +38,6 @@
 #include <cpl.h>
 
 
-/***************************************************************************/
-/** Windows Implementations of UNIX Functions                             **/
-/***************************************************************************/
-
-#ifdef _WINDOWS
-
-// From: http://suacommunity.com/dictionary/gettimeofday-entry.php
-struct timezone
-{
-	int  tz_minuteswest; /* minutes W of Greenwich */
-	int  tz_dsttime;     /* type of dst correction */
-};
-
-/**
- * Get the current UNIX time
- *
- * @param tv the output timeval structure (or NULL)
- * @param tz the output timezone structure (or NULL)
- * @return 0 on success or -1 on error
- */
-int
-gettimeofday(struct timeval *tv, struct timezone *tz);
-
-#endif
-
 
 
 /***************************************************************************/
@@ -73,11 +48,6 @@ gettimeofday(struct timeval *tv, struct timezone *tz);
  * MAC address
  */
 typedef unsigned char cpl_mac_address_t[6];
-
-/**
- * UUID
- */
-typedef unsigned char cpl_uuid_t[16];
 
 
 /***************************************************************************/
@@ -93,14 +63,6 @@ typedef unsigned char cpl_uuid_t[16];
 cpl_return_t
 cpl_platform_get_mac_address(cpl_mac_address_t* out);
 
-/**
- * Generate a UUID
- *
- * @param out the output character array
- * @return CPL_OK on success or an error code
- */
-cpl_return_t
-cpl_platform_generate_uuid(cpl_uuid_t* out);
 
 
 #endif

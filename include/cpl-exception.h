@@ -64,11 +64,8 @@ public:
 		va_list args;
 		va_start(args, format);
 
-#if defined _WIN64 || defined _WIN32
-		vsnprintf_s(m_message, CPL_EXCEPTION_MAX_MSG_LENGTH, _TRUNCATE, format, args);
-#else
 		vsnprintf(m_message, CPL_EXCEPTION_MAX_MSG_LENGTH, format, args);
-#endif
+		
 		m_message[CPL_EXCEPTION_MAX_MSG_LENGTH] = '\0';
 
 		va_end(args);

@@ -35,10 +35,6 @@
 #ifndef __CPL_H__
 #define __CPL_H__
 
-#if defined _WIN64 || defined _WIN32
-#pragma once
-#endif
-
 #include <stddef.h>
 
 #ifdef __cplusplus
@@ -50,19 +46,8 @@ extern "C" {
 
 struct _cpl_db_backend_t;
 
-#if defined _WIN64 || defined _WIN32
-	#define EXPORT __declspec(dllexport)
-	// Use the /D "_CPL_DLL" compiler option in VC++ to distinguish
-	// the CPL library that defines the given symbols from its users
-	#if defined(_CPL_DLL)
-	#define WINDLL_API __declspec(dllexport)
-	#else
-	#define WINDLL_API __declspec(dllimport)
-	#endif
-#else
-	#define EXPORT
-	#define WINDLL_API
-#endif
+#define EXPORT
+#define WINDLL_API
 
 
 /***************************************************************************/
@@ -88,41 +73,12 @@ struct _cpl_db_backend_t;
 /***************************************************************************/
 /** Standard types                                                        **/
 /***************************************************************************/
-
+//TODO add ancestry types
 /**
  * A generic type for an ID. It is used primarily for object IDs.
  */
-typedef struct cpl_id {
-#ifndef SWIG
-	union {
-		struct {
-#endif
-			unsigned long long hi;
-			unsigned long long lo;
-#ifndef SWIG
-		};
-		char bytes[16];
-	};
-#endif
-} cpl_id_t;
+typedef unsigned long long cpl_id_t;
 
-/**
- * A version number.
- */
-typedef int cpl_version_t;
-
-/**
- * A combination of the ID and the version number.
- */
-typedef struct cpl_id_version {
-
-	/// The ID
-	cpl_id_t id;
-
-	/// The version
-	cpl_version_t version;
-
-} cpl_id_version_t;
 
 /**
  * A combination of the ID and the UNIX timestamp.
@@ -182,12 +138,8 @@ typedef struct cpl_object_info {
 	
 	/// The object ID.
 	cpl_id_t id;
-	
-	/// The object version.
-	cpl_version_t version;
 
-	/// The session ID of the process that created the object (not necessarily
-	/// the latest version).
+	/// The session ID of the process that created the object
 	cpl_session_t creation_session;
 
 	/// The object creation time expressed as UNIX time.
@@ -206,9 +158,6 @@ typedef struct cpl_object_info {
 	/// The object ID of the container, or CPL_NONE if none.
 	cpl_id_t container_id;
 
-	/// The version number of the container, or CPL_VERSION_NONE if none.
-	cpl_version_t container_version;
-
 } cpl_object_info_t;
 
 /**
@@ -223,24 +172,6 @@ typedef cpl_return_t (*cpl_object_info_iterator_t)
 						(const cpl_object_info_t* info,
 						 void* context);
 
-/**
- * Information about a specific version of a provenance object.
- */
-typedef struct cpl_version_info {
-
-	/// The object ID.
-	cpl_id_t id;
-
-	/// The object version.
-	cpl_version_t version;
-
-	/// The session ID od the process that created this version.
-	cpl_session_t session;
-
-	/// The version creation time expressed as UNIX time.
-	unsigned long creation_time;
-
-} cpl_version_info_t;
 
 /**
  * The iterator callback function used by cpl_lookup_object_ext().
@@ -259,19 +190,15 @@ typedef cpl_return_t (*cpl_id_timestamp_iterator_t)
  * The iterator callback function used by cpl_get_object_ancestry().
  *
  * @param query_object_id the ID of the object on which we are querying
- * @param query_object_verson the version of the queried object
  * @param other_object_id the ID of the object on the other end of the
  *                        dependency/ancestry edge
- * @param other_object_version the version of the other object
  * @param type the type of the data or the control dependency
  * @param context the application-provided context
  * @return CPL_OK or an error code (the caller should fail on this error)
  */
 typedef cpl_return_t (*cpl_ancestry_iterator_t)
 						(const cpl_id_t query_object_id,
-						 const cpl_version_t query_object_version,
 						 const cpl_id_t other_object_id,
-						 const cpl_version_t other_object_version,
 						 const int type,
 						 void* context);
 
@@ -281,17 +208,13 @@ typedef cpl_return_t (*cpl_ancestry_iterator_t)
  */
 typedef struct cpl_ancestry_entry {
 
+	cpl_id_t id;
+
 	/// The ID of the object on which we are querying.
 	cpl_id_t query_object_id;
 
-	/// The version of the queried object.
-	cpl_version_t query_object_version;
-
 	/// The ID of the object on the other end of the dependency/ancestry edge.
 	cpl_id_t other_object_id;
-
-	/// The version of the other object.
-	cpl_version_t other_object_version;
 
 	/// The type of the data or the control dependency.
 	int type;
@@ -302,7 +225,6 @@ typedef struct cpl_ancestry_entry {
  * The iterator callback function used by property accessors.
  *
  * @param id the object ID
- * @param version the object version
  * @param key the property name
  * @param value the property value
  * @param context the application-provided context
@@ -310,7 +232,6 @@ typedef struct cpl_ancestry_entry {
  */
 typedef cpl_return_t (*cpl_property_iterator_t)
 						(const cpl_id_t id,
-						 const cpl_version_t version,
 						 const char* key,
 						 const char* value,
 						 void* context);
@@ -323,41 +244,6 @@ extern int __cpl_assert__cpl_id_size[sizeof(cpl_id_t) == 16 ? 1 : -1];
 #endif
 
 
-
-/***************************************************************************/
-/** ID Manipulation                                                       **/
-/***************************************************************************/
-
-/**
- * Copy an ID
- *
- * @param dest the destination ID
- * @param src the source ID
- */
-inline void
-cpl_id_copy(cpl_id_t* dest, const cpl_id_t* src)
-{
-	dest->hi = src->hi;
-	dest->lo = src->lo;
-}
-
-/**
- * Compare ID's
- *
- * @param a the first ID
- * @param b the second ID
- * @return negative if a < b, 0 if a == b, or positive if b > a
- */
-inline int
-cpl_id_cmp(const cpl_id_t* a, const cpl_id_t* b)
-{
-	if (a->hi != b->hi) return a->hi < b->hi ? -1 : 1;
-	if (a->lo != b->lo) return a->lo < b->lo ? -1 : 1;
-	return 0;
-}
-
-
-
 /***************************************************************************/
 /** Basic Constants                                                       **/
 /***************************************************************************/
@@ -367,113 +253,46 @@ cpl_id_cmp(const cpl_id_t* a, const cpl_id_t* b)
  */
 WINDLL_API extern const cpl_id_t CPL_NONE;
 
-/**
- * An invalid version number
- */
-#ifdef SWIG
-#define CPL_VERSION_NONE				-1
-#else
-#define CPL_VERSION_NONE				((cpl_version_t) -1)
-#endif
 
 
 
 /***************************************************************************/
 /** Dependency Edge Types                                                 **/
 /***************************************************************************/
+// TODO finish
 
-/**
- * The data dependency category
- */
-#define CPL_DEPENDENCY_CATEGORY_DATA	1
+#define F_ENT_T_ENT				1
+#define F_ENT_T_ACT				2
+#define F_ENT_T_AGT				3
+#define F_ACT_T_ENT				4
+#define F_ACT_T_ACT				5
+#define F_ACT_T_AGT				6
+#define F_AGT_T_ENT				7
+#define F_AGT_T_ACT				8
+#define F_AGT_T_AGT				9
 
-/**
- * The control dependency category
- */
-#define CPL_DEPENDENCY_CATEGORY_CONTROL	2
+#define FROM_TO_VAL(f,t,v)			((f << 16) | (t << 8) | v)
 
-/**
- * The version dependency category
- */
-#define CPL_DEPENDENCY_CATEGORY_VERSION	3
+#define ACTEDONBEHALFOF			FROM_TO_VAL(AGENT_T, AGENT_T, 1)
 
+#define	WASSTARTEDBY			FROM_TO_VAL(ACTIVITY_T, AGENT_T, 1)
 
-/**
- * Data dependency
- *
- * @param n the dependency subtype
- */
-#define CPL_DATA_DEPENDENCY(n)		((CPL_DEPENDENCY_CATEGORY_DATA << 8) | (n))
-
-/**
- * Control dependency
- *
- * @param n the dependency subtype
- */
-#define CPL_CONTROL_DEPENDENCY(n)	((CPL_DEPENDENCY_CATEGORY_CONTROL<<8) | (n))
-
-/**
- * Version dependency
- *
- * @param n the dependency subtype
- */
-#define CPL_VERSION_DEPENDENCY(n)	((CPL_DEPENDENCY_CATEGORY_VERSION<<8) | (n))
-
-
-/**
- * Return the dependency category
- *
- * @param d the dependency code
- * @return the dependency category
- */
-#define CPL_GET_DEPENDENCY_CATEGORY(d)	((d) >> 8)
-
-
-/**
- * An unspecified dependency type
- */
-#define CPL_DEPENDENCY_NONE				0
-
-
-/**
- * Generic data dependency
- */
-#define CPL_DATA_INPUT					CPL_DATA_DEPENDENCY(0)
-#define CPL_DATA_GENERIC				CPL_DATA_INPUT
-
-/**
- * Potential data dependency via an observed IPC
- */
-#define CPL_DATA_IPC					CPL_DATA_DEPENDENCY(1)
-
-/**
- * Data translation
- */
-#define CPL_DATA_TRANSLATION			CPL_DATA_DEPENDENCY(2)
-
-/**
- * Data copy
- */
-#define CPL_DATA_COPY					CPL_DATA_DEPENDENCY(3)
-
-
-/**
- * Generic control dependency
- */
-#define CPL_CONTROL_OP					CPL_CONTROL_DEPENDENCY(0)
-#define CPL_CONTROL_GENERIC				CPL_CONTROL_OP
-
-/**
- * Process start/fork
- */
-#define CPL_CONTROL_START				CPL_CONTROL_DEPENDENCY(1)
-
-/**
- * Generic version dependency
- */
-#define CPL_VERSION_PREV				CPL_VERSION_DEPENDENCY(0)
-#define CPL_VERSION_GENERIC				CPL_VERSION_PREV
-
+#define ALTERNATEOF				FROM_TO_VAL()
+#define	DERIVEDBYINSERTIONFROM	FROM_TO_VAL()
+#define	DERIVEDBYREMOVALFROM	FROM_TO_VAL()
+#define	HADMEMBER 				FROM_TO_VAL()
+#define	HADDICTIONARYMEMBER		FROM_TO_VAL()
+#define	MENTIONOF				FROM_TO_VAL()
+#define	SPECIALIZATIONOF		FROM_TO_VAL()
+#define	USED 					FROM_TO_VAL()
+#define	WASASSOCIATEDWITH		FROM_TO_VAL()
+#define	WASATTRIBUTEDTO			FROM_TO_VAL()
+#define	WASDERIVEDFROM			FROM_TO_VAL()
+#define	WASENDEDBY				FROM_TO_VAL()
+#define	WASGENERATEDBY			FROM_TO_VAL()
+#define	WASINFLUENCEDBY			FROM_TO_VAL()
+#define	WASINFORMEDBY			FROM_TO_VAL()
+#define	WASINVALIDATEDBY		FROM_TO_VAL()
 
 
 /***************************************************************************/
@@ -647,24 +466,24 @@ WINDLL_API extern const cpl_id_t CPL_NONE;
 /***************************************************************************/
 
 /**
- * The default artifact type
+ * The default entity type
  */
-#define CPL_T_ARTIFACT					"ARTIFACT"
+#define ENTITY							"ENTITY"
 
 /**
- * The default file type
+ * The default activity type
  */
-#define CPL_T_FILE						"FILE"
+#define ACTIVITY						"ACTIVITY"
 
 /**
- * The default process type
+ * The default agent type
  */
-#define CPL_T_PROCESS					"PROCESS"
+#define AGENT 							"AGENT"
 
 /**
- * The default URL type
+ * The default bundle type
  */
-#define CPL_T_URL						"URL"
+#define BUNDLE							"BUNDLE"
 
 
 
@@ -682,16 +501,11 @@ WINDLL_API extern const cpl_id_t CPL_NONE;
  */
 #define CPL_I_NO_CREATION_SESSION		(1 << 0)
 
-/**
- * Do not get the version of the object, if it is not readily available
- */
-#define CPL_I_NO_VERSION				(1 << 1)
 
 /**
  * Do not get any information that is not readily available at the lookup time
  */
-#define CPL_I_FAST						(CPL_I_NO_CREATION_SESSION \
-											| CPL_I_NO_VERSION)
+#define CPL_I_FAST						CPL_I_NO_CREATION_SESSION
 
 /**
  * Get ancestors
@@ -703,20 +517,6 @@ WINDLL_API extern const cpl_id_t CPL_NONE;
  */
 #define CPL_D_DESCENDANTS				1
 
-/**
- * Do not add the previous or the next version of the object to the result set
- */
-#define CPL_A_NO_PREV_NEXT_VERSION		(1 << 0)
-
-/**
- * Ignore data dependencies
- */
-#define CPL_A_NO_DATA_DEPENDENCIES		(1 << 1)
-
-/**
- * Ignore control dependencies
- */
-#define CPL_A_NO_CONTROL_DEPENDENCIES	(1 << 2)
 
 
 
@@ -762,6 +562,7 @@ cpl_error_string(cpl_return_t error);
 /** Disclosed Provenance API                                              **/
 /***************************************************************************/
 
+//TODO edit function headers
 /**
  * Create an object.
  *
@@ -837,64 +638,6 @@ cpl_lookup_or_create_object(const char* originator,
 							cpl_id_t* out_id);
 
 /**
- * Disclose a data flow.
- *
- * @param data_dest the destination object
- * @param data_source the source object
- * @param type the data dependency edge type
- * @return CPL_OK, CPL_S_DUPLICATE_IGNORED, or an error code
- */
-EXPORT cpl_return_t
-cpl_data_flow(const cpl_id_t data_dest,
-			  const cpl_id_t data_source,
-			  const int type);
-
-/**
- * Disclose a data flow from a specific version of the data source.
- *
- * @param data_dest the destination object
- * @param data_source the source object
- * @param data_source_ver the version of the source object (where
- *                        CPL_VERSION_NONE = current)
- * @param type the data dependency edge type
- * @return CPL_OK, CPL_S_DUPLICATE_IGNORED, or an error code
- */
-EXPORT cpl_return_t
-cpl_data_flow_ext(const cpl_id_t data_dest,
-				  const cpl_id_t data_source,
-				  const cpl_version_t data_source_ver,
-				  const int type);
-
-/**
- * Disclose a control flow operation.
- *
- * @param object_id the ID of the controlled object
- * @param controller the object ID of the controller
- * @param type the control dependency edge type
- * @return CPL_OK, CPL_S_DUPLICATE_IGNORED, or an error code
- */
-EXPORT cpl_return_t
-cpl_control_flow(const cpl_id_t object_id,
-				 const cpl_id_t controller,
-				 const int type);
-
-/**
- * Disclose a control flow operation using a specific version of the controller.
- *
- * @param object_id the ID of the controlled object
- * @param controller the object ID of the controller
- * @param controller_ver the version of the controller object (where
- *                       CPL_VERSION_NONE = current version)
- * @param type the control dependency edge type
- * @return CPL_OK, CPL_S_DUPLICATE_IGNORED, or an error code
- */
-EXPORT cpl_return_t
-cpl_control_flow_ext(const cpl_id_t object_id,
-					 const cpl_id_t controller,
-					 const cpl_version_t controller_ver,
-					 const int type);
-
-/**
  * Add a property to the given object.
  *
  * @param id the object ID
@@ -907,16 +650,12 @@ cpl_add_property(const cpl_id_t id,
 				 const char* key,
                  const char* value);
 
-/**
- * Create a new version of the given provenance object.
- *
- * @param id the object ID
- * @param new_version the new version number (can be NULL)
- * @return CPL_OK or an error code
- */
 EXPORT cpl_return_t
-cpl_new_version(const cpl_id_t id,
-				cpl_version_t* new_version);
+cpl_add_dependency(const cpl_id_t from_id,
+			  	   const cpl_id_t to_id,
+				   const int type,
+				   cpl_id_t* out_id);
+
 
 
 
@@ -931,17 +670,6 @@ cpl_new_version(const cpl_id_t id,
 /***************************************************************************/
 /** Provenance Access API                                                 **/
 /***************************************************************************/
-
-/**
- * Get a version of a provenance object.
- *
- * @param id the object ID
- * @param out_version the pointer to store the version of the object
- * @return CPL_OK or an error code
- */
-EXPORT cpl_return_t
-cpl_get_version(const cpl_id_t id,
-				cpl_version_t* out_version);
 
 /**
  * Get the ID of the current session.
@@ -1005,34 +733,11 @@ cpl_get_object_info(const cpl_id_t id,
 EXPORT cpl_return_t
 cpl_free_object_info(cpl_object_info_t* info);
 
-/**
- * Get information about the specific version of a provenance object.
- *
- * @param id the object ID
- * @param version the version of the given provenance object
- * @param out_info the pointer to store the version info structure
- * @return CPL_OK or an error code
- */
-EXPORT cpl_return_t
-cpl_get_version_info(const cpl_id_t id,
-					 const cpl_version_t version,
-					 cpl_version_info_t** out_info);
-
-/**
- * Free cpl_version_info_t.
- *
- * @param info the pointer to the version info structure
- * @return CPL_OK or an error code
- */
-EXPORT cpl_return_t
-cpl_free_version_info(cpl_version_info_t* info);
 
 /**
  * Iterate over the ancestors or the descendants of a provenance object.
  *
  * @param id the object ID
- * @param version the object version, or CPL_VERSION_NONE to access all
- *                version nodes associated with the given object
  * @param direction the direction of the graph traversal (CPL_D_ANCESTORS
  *                  or CPL_D_DESCENDANTS)
  * @param flags the bitwise combination of flags describing how should
@@ -1044,7 +749,6 @@ cpl_free_version_info(cpl_version_info_t* info);
  */
 EXPORT cpl_return_t
 cpl_get_object_ancestry(const cpl_id_t id,
-						const cpl_version_t version,
 						const int direction,
 						const int flags,
 						cpl_ancestry_iterator_t iterator,
@@ -1054,8 +758,6 @@ cpl_get_object_ancestry(const cpl_id_t id,
  * Get the properties associated with the given provenance object.
  *
  * @param id the the object ID
- * @param version the object version, or CPL_VERSION_NONE to access all
- *                version nodes associated with the given object
  * @param key the property to fetch - or NULL for all properties
  * @param iterator the iterator callback function
  * @param context the user context to be passed to the iterator function
@@ -1063,7 +765,6 @@ cpl_get_object_ancestry(const cpl_id_t id,
  */
 EXPORT cpl_return_t
 cpl_get_properties(const cpl_id_t id,
-				   const cpl_version_t version,
 				   const char* key,
 				   cpl_property_iterator_t iterator,
 				   void* context);

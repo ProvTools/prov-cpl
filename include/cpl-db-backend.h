@@ -44,11 +44,7 @@ extern "C" {
 }	/* Hack for editors that try to be too smart about indentation */
 #endif
 
-#if defined _WIN64 || defined _WIN32
-#define EXPORT __declspec(dllexport)
-#else
 #define EXPORT
-#endif
 
 
 /***************************************************************************/
@@ -81,7 +77,7 @@ typedef struct _cpl_db_backend_t {
 	 */
 	cpl_return_t
 	(*cpl_db_create_session)(struct _cpl_db_backend_t* backend,
-							 const cpl_session_t session,
+							 cpl_session_t* out_id,
 							 const char* mac_address,
 							 const char* user,
 							 const int pid,
@@ -104,13 +100,12 @@ typedef struct _cpl_db_backend_t {
 	 */
 	cpl_return_t
 	(*cpl_db_create_object)(struct _cpl_db_backend_t* backend,
-							const cpl_id_t id,
 							const char* originator,
 							const char* name,
 							const char* type,
 							const cpl_id_t container,
-							const cpl_version_t container_version,
-							const cpl_session_t session);
+							const cpl_session_t session,
+							cpl_id_t* out_id);
 
 	/**
 	 * Look up an object by name. If multiple objects share the same name,
@@ -153,34 +148,6 @@ typedef struct _cpl_db_backend_t {
 								void* context);
 
 	/**
-	 * Create a new version of the given object
-	 *
-	 * @param backend the pointer to the backend structure
-	 * @param object_id the object ID
-	 * @param version the new version of the object
-	 * @param session the session ID responsible for this provenance record
-	 * @return CPL_OK or an error code
-	 */
-	cpl_return_t
-	(*cpl_db_create_version)(struct _cpl_db_backend_t* backend,
-							 const cpl_id_t object_id,
-							 const cpl_version_t version,
-							 const cpl_session_t session);
-
-	/**
-	 * Determine the version of the object
-	 *
-	 * @param backend the pointer to the backend structure
-	 * @param id the object ID
-	 * @param out_version the pointer to store the version of the object
-	 * @return CPL_OK or an error code
-	 */
-	cpl_return_t
-	(*cpl_db_get_version)(struct _cpl_db_backend_t* backend,
-						  const cpl_id_t id,
-						  cpl_version_t* out_version);
-
-	/**
 	 * Add an ancestry edge
 	 *
 	 * @param backend the pointer to the backend structure
@@ -194,10 +161,9 @@ typedef struct _cpl_db_backend_t {
 	cpl_return_t
 	(*cpl_db_add_ancestry_edge)(struct _cpl_db_backend_t* backend,
 								const cpl_id_t from_id,
-								const cpl_version_t from_ver,
 								const cpl_id_t to_id,
-								const cpl_version_t to_ver,
-								const int type);
+								const int type,
+								cpl_id_t* out_id);
 
 	/**
 	 * Determine whether the given object has the given ancestor
@@ -216,9 +182,7 @@ typedef struct _cpl_db_backend_t {
 	cpl_return_t
 	(*cpl_db_has_immediate_ancestor)(struct _cpl_db_backend_t* backend,
 									 const cpl_id_t object_id,
-									 const cpl_version_t version_hint,
 									 const cpl_id_t query_object_id,
-									 const cpl_version_t query_object_max_ver,
 									 int* out);
 
     /**
@@ -234,7 +198,6 @@ typedef struct _cpl_db_backend_t {
     cpl_return_t
     (*cpl_db_add_property)(struct _cpl_db_backend_t* backend,
                            const cpl_id_t id,
-                           const cpl_version_t version,
                            const char* key,
                            const char* value);
 
@@ -279,23 +242,7 @@ typedef struct _cpl_db_backend_t {
 	cpl_return_t
 	(*cpl_db_get_object_info)(struct _cpl_db_backend_t* backend,
 							  const cpl_id_t id,
-							  const cpl_version_t version_hint,
 							  cpl_object_info_t** out_info);
-
-	/**
-	 * Get information about the specific version of a provenance object
-	 *
-	 * @param backend the pointer to the backend structure
-	 * @param id the object ID
-	 * @param version the version of the given provenance object
-	 * @param out_info the pointer to store the version info structure
-	 * @return CPL_OK or an error code
-	 */
-	cpl_return_t
-	(*cpl_db_get_version_info)(struct _cpl_db_backend_t* backend,
-							   const cpl_id_t id,
-							   const cpl_version_t version,
-							   cpl_version_info_t** out_info);
 
 	/**
 	 * Iterate over the ancestors or the descendants of a provenance object.
@@ -316,7 +263,6 @@ typedef struct _cpl_db_backend_t {
 	cpl_return_t
 	(*cpl_db_get_object_ancestry)(struct _cpl_db_backend_t* backend,
 								  const cpl_id_t id,
-								  const cpl_version_t version,
 								  const int direction,
 								  const int flags,
 								  cpl_ancestry_iterator_t iterator,
@@ -337,7 +283,6 @@ typedef struct _cpl_db_backend_t {
 	cpl_return_t
 	(*cpl_db_get_properties)(struct _cpl_db_backend_t* backend,
 							 const cpl_id_t id,
-							 const cpl_version_t version,
 							 const char* key,
 							 cpl_property_iterator_t iterator,
 							 void* context);
@@ -358,6 +303,14 @@ typedef struct _cpl_db_backend_t {
 								 const char* value,
 								 cpl_property_iterator_t iterator,
 								 void* context);
+
+	cpl_return_t
+	(*cpl_db_get_ancestry_properties)(struct _cpl_db_backend_t* backend,
+								 const cpl_id_t id,
+								 const char* key,
+								 cpl_property_iterator_t iterator,
+								 void* context);
+
 
 } cpl_db_backend_t;
 

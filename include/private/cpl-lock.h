@@ -133,19 +133,6 @@ cpl_shared_semaphore_post(cpl_shared_semaphore_t sem);
 
 
 /***************************************************************************/
-/** Functions - Unique IDs                                                **/
-/***************************************************************************/
-
-/**
- * Generate a globally unique ID
- *
- * @param out the place to store the globally unique ID
- */
-void
-cpl_generate_unique_id(cpl_id_t* out);
-
-
-/***************************************************************************/
 /** Convenience Classes                                                   **/
 /***************************************************************************/
 

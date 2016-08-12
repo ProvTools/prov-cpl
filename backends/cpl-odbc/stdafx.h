@@ -39,16 +39,6 @@
 #include <cstring>
 #include <ctime>
 
-#if defined _WIN64 || defined _WIN32
-#ifndef _WINDOWS
-#define _WINDOWS
-#endif
-#endif
-
-#ifdef _WINDOWS
-#include <windows.h>
-#include <intrin.h>
-#endif
 
 #ifdef __unix__
 #include <unistd.h>

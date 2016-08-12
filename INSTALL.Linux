@@ -20,7 +20,6 @@ Please make sure that the following packages are installed:
   unixodbc
   unixodbc-dev
   odbcinst
-  libmyodbc (for MySQL)
   odbc-postgresql (for PostgreSQL)
   libcurl4-openssl-dev
   libxml2-dev
