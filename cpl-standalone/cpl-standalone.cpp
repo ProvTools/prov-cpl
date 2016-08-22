@@ -488,7 +488,7 @@ cpl_lookup_object(const char* originator,
 
 	CPL_ENSURE_NOT_NULL(originator);
 	CPL_ENSURE_NOT_NULL(name);
-	CPL_ENSURE_NOT_NULL(type); //TODO do i need type??
+	CPL_ENSURE_NOT_NULL(type);
 
 
 	// Call the backend
@@ -606,7 +606,7 @@ out:
  * @return CPL_OK or an error code
  */
 extern "C" EXPORT cpl_return_t
-cpl_add_property(const cpl_id_t id,
+cpl_add_object_property(const cpl_id_t id,
 				 const char* key,
                  const char* value)
 {
@@ -623,14 +623,14 @@ cpl_add_property(const cpl_id_t id,
 
     // Call the backend
 
-	return cpl_db_backend->cpl_db_add_property(cpl_db_backend,
+	return cpl_db_backend->cpl_db_add_object_property(cpl_db_backend,
 											   id,
 											   key,
 											   value);
 }
 
 extern "C" EXPORT cpl_return_t
-cpl_add_ancestry_property(const cpl_id_t id,
+cpl_add_relation_property(const cpl_id_t id,
 						  const char* key,
 						  const char* value)
 {
@@ -644,7 +644,7 @@ cpl_add_ancestry_property(const cpl_id_t id,
 
 	// Call the backend
 
-	return cpl_db_backend->cpl_db_add_ancestry_property(cpl_db_backend,
+	return cpl_db_backend->cpl_db_add_relation_property(cpl_db_backend,
 														id,
 														key,
 														value);
@@ -659,7 +659,7 @@ cpl_add_ancestry_property(const cpl_id_t id,
  * @return CPL_OK, CPL_S_DUPLICATE_IGNORED, or an error code
  */
 extern "C" EXPORT cpl_return_t
-cpl_add_dependency(const cpl_id_t from_id,
+cpl_add_relation(const cpl_id_t from_id,
 			  	   const cpl_id_t to_id,
 				   const int type,
 				   cpl_id_t* out_id)
@@ -677,7 +677,7 @@ cpl_add_dependency(const cpl_id_t from_id,
 	cpl_id_t id;
 	cpl_return_t ret;
 
-	ret = cpl_db_backend->cpl_db_add_ancestry_edge(cpl_db_backend,
+	ret = cpl_db_backend->cpl_db_add_relation(cpl_db_backend,
 													from_id,
 													to_id,
 													type,
@@ -825,7 +825,7 @@ cpl_free_object_info(cpl_object_info_t* info)
 
 /**
  * Iterate over the ancestors or the descendants of a provenance object.
- * TODO: modify
+ *
  * @param id the object ID
  * @param direction the direction of the graph traversal (CPL_D_ANCESTORS
  *                  or CPL_D_DESCENDANTS)
@@ -837,7 +837,7 @@ cpl_free_object_info(cpl_object_info_t* info)
  * @return CPL_OK, CPL_S_NO_DATA, or an error code
  */
 extern "C" EXPORT cpl_return_t
-cpl_get_object_ancestry(const cpl_id_t id,
+cpl_get_object_relations(const cpl_id_t id,
 						const int direction,
 						const int flags,
 						cpl_ancestry_iterator_t iterator,
@@ -855,9 +855,9 @@ cpl_get_object_ancestry(const cpl_id_t id,
 	// Call the database backend
 
 	cpl_return_t r;
-	r = cpl_db_backend->cpl_db_get_object_ancestry(cpl_db_backend,
+	r = cpl_db_backend->cpl_db_get_object_relations(cpl_db_backend,
 												   id, direction,
-												   new_flags, iterator,
+												   flags, iterator,
 												   context);
 	
 	if (r == CPL_S_NO_DATA) return CPL_OK;
@@ -875,7 +875,7 @@ cpl_get_object_ancestry(const cpl_id_t id,
  * @return CPL_OK, CPL_S_NO_DATA, or an error code
  */
 extern "C" EXPORT cpl_return_t
-cpl_get_properties(const cpl_id_t id,
+cpl_get_object_properties(const cpl_id_t id,
 				   const char* key,
 				   cpl_property_iterator_t iterator,
 				   void* context)
@@ -888,7 +888,7 @@ cpl_get_properties(const cpl_id_t id,
 
 	// Call the database backend
 
-	return cpl_db_backend->cpl_db_get_properties(cpl_db_backend,
+	return cpl_db_backend->cpl_db_get_object_properties(cpl_db_backend,
 												 id, key,
 												 iterator, context);
 }
@@ -904,7 +904,7 @@ cpl_get_properties(const cpl_id_t id,
  * @return CPL_OK, CPL_E_NOT_FOUND, or an error code
  */
 extern "C" EXPORT cpl_return_t
-cpl_lookup_by_property(const char* key,
+cpl_lookup_object_by_property(const char* key,
 					   const char* value,
 					   cpl_property_iterator_t iterator,
 					   void* context)
@@ -917,7 +917,7 @@ cpl_lookup_by_property(const char* key,
 
 	// Call the database backend
 
-	return cpl_db_backend->cpl_db_lookup_by_property(cpl_db_backend,
+	return cpl_db_backend->cpl_db_lookup_object_by_property(cpl_db_backend,
 													 key, value,
 													 iterator, context);
 }
@@ -926,7 +926,7 @@ cpl_lookup_by_property(const char* key,
 
 
 extern "C" EXPORT cpl_return_t
-cpl_get_ancestry_properties(const cpl_id_t id,
+cpl_get_relation_properties(const cpl_id_t id,
 				   const char* key,
 				   cpl_property_iterator_t iterator,
 				   void* context)
@@ -937,7 +937,7 @@ cpl_get_ancestry_properties(const cpl_id_t id,
 
 	// Call the database backend
 
-	return cpl_db_backend->cpl_db_get_ancestry_properties(cpl_db_backend,
+	return cpl_db_backend->cpl_db_get_relation_properties(cpl_db_backend,
 												 id, key,
 												 iterator, context);
 }
@@ -946,7 +946,6 @@ cpl_get_ancestry_properties(const cpl_id_t id,
 /** Public API: Enhanced C++ Functionality                                **/
 /***************************************************************************/
 
-//TODO modify
 #ifdef __cplusplus
 
 /**

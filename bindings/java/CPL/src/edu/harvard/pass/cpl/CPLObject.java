@@ -60,6 +60,7 @@ public class CPLObject {
 	public static final int D_DESCENDANTS=CPLDirectConstants.CPL_D_DESCENDANTS;
 
 	/// The internal object ID
+	//TODO make BigInt
 	cpl_id_t id;
 
 	/// The object originator (cache)

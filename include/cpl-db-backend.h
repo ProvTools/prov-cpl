@@ -144,7 +144,7 @@ typedef struct _cpl_db_backend_t {
 								const char* name,
 								const char* type,
 								const int flags,
-								cpl_id_timestamp_iterator_t iterator,
+								cpl_id_timestamp_iterator_t callback,
 								void* context);
 
 	/**
@@ -159,7 +159,7 @@ typedef struct _cpl_db_backend_t {
 	 * @return CPL_OK or an error code
 	 */
 	cpl_return_t
-	(*cpl_db_add_ancestry_edge)(struct _cpl_db_backend_t* backend,
+	(*cpl_db_add_relation)(struct _cpl_db_backend_t* backend,
 								const cpl_id_t from_id,
 								const cpl_id_t to_id,
 								const int type,
@@ -196,7 +196,13 @@ typedef struct _cpl_db_backend_t {
      * @return CPL_OK or an error code
      */
     cpl_return_t
-    (*cpl_db_add_property)(struct _cpl_db_backend_t* backend,
+    (*cpl_db_add_object_property)(struct _cpl_db_backend_t* backend,
+                           const cpl_id_t id,
+                           const char* key,
+                           const char* value);
+
+        cpl_return_t
+    (*cpl_db_add_relation_property)(struct _cpl_db_backend_t* backend,
                            const cpl_id_t id,
                            const char* key,
                            const char* value);
@@ -226,7 +232,7 @@ typedef struct _cpl_db_backend_t {
     cpl_return_t
     (*cpl_db_get_all_objects)(struct _cpl_db_backend_t* backend,
                               const int flags,
-                              cpl_object_info_iterator_t iterator,
+                              cpl_object_info_iterator_t callback,
                               void* context);
 
 	/**
@@ -261,11 +267,11 @@ typedef struct _cpl_db_backend_t {
 	 * @return CPL_OK, CPL_S_NO_DATA, or an error code
 	 */
 	cpl_return_t
-	(*cpl_db_get_object_ancestry)(struct _cpl_db_backend_t* backend,
+	(*cpl_db_get_object_relations)(struct _cpl_db_backend_t* backend,
 								  const cpl_id_t id,
 								  const int direction,
 								  const int flags,
-								  cpl_ancestry_iterator_t iterator,
+								  cpl_ancestry_iterator_t callback,
 								  void* context);
 
 	/**
@@ -281,10 +287,10 @@ typedef struct _cpl_db_backend_t {
 	 * @return CPL_OK, CPL_S_NO_DATA, or an error code
 	 */
 	cpl_return_t
-	(*cpl_db_get_properties)(struct _cpl_db_backend_t* backend,
+	(*cpl_db_get_object_properties)(struct _cpl_db_backend_t* backend,
 							 const cpl_id_t id,
 							 const char* key,
-							 cpl_property_iterator_t iterator,
+							 cpl_property_iterator_t callback,
 							 void* context);
 
 	/**
@@ -298,17 +304,17 @@ typedef struct _cpl_db_backend_t {
 	 * @return CPL_OK, CPL_E_NOT_FOUND, or an error code
 	 */
 	cpl_return_t
-	(*cpl_db_lookup_by_property)(struct _cpl_db_backend_t* backend,
+	(*cpl_db_lookup_object_by_property)(struct _cpl_db_backend_t* backend,
 								 const char* key,
 								 const char* value,
-								 cpl_property_iterator_t iterator,
+								 cpl_property_iterator_t callback,
 								 void* context);
 
 	cpl_return_t
-	(*cpl_db_get_ancestry_properties)(struct _cpl_db_backend_t* backend,
+	(*cpl_db_get_relation_properties)(struct _cpl_db_backend_t* backend,
 								 const cpl_id_t id,
 								 const char* key,
-								 cpl_property_iterator_t iterator,
+								 cpl_property_iterator_t callback,
 								 void* context);
 
 

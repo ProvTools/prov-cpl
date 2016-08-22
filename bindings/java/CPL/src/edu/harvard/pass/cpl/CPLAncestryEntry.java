@@ -43,6 +43,8 @@ import swig.direct.CPLDirect.*;
  *
  * @author Peter Macko
  */
+
+//TODO change to relation
 public class CPLAncestryEntry {
 
 	/// The null object

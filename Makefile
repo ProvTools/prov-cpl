@@ -28,4 +28,3 @@ RUN_PROGRAM := test
 #
 
 include $(ROOT)/make/project.mk
-

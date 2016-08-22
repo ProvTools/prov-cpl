@@ -85,7 +85,7 @@ CREATE TABLE IF NOT EXISTS cpl_sessions (
        initialization_time TIMESTAMP DEFAULT NOW(),
        PRIMARY KEY (id));
 
-CREATE TABLE IF NOT EXISTS cpl_ancestry (
+CREATE TABLE IF NOT EXISTS cpl_relations (
        id BIGSERIAL,
        from_id BIGSERIAL NOT NULL,
        to_id BIGSERIAL NOT NULL,
@@ -96,14 +96,14 @@ CREATE TABLE IF NOT EXISTS cpl_ancestry (
        FOREIGN KEY(to_id)
                    REFERENCES cpl_objects(id);
 
-CREATE TABLE IF NOT EXISTS cpl_ancestry_properties (
+CREATE TABLE IF NOT EXISTS cpl_relation_properties (
       id BIGINT,
       name VARCHAR(255) NOT NULL,
       value VARCHAR(4095) NOT NULL,
       FOREIGN KEY(id)
-            REFERENCES cpl_ancestry(id));
+            REFERENCES cpl_relation(id));
 
-CREATE TABLE IF NOT EXISTS cpl_properties (
+CREATE TABLE IF NOT EXISTS cpl_object_properties (
        id BIGINT,
        name VARCHAR(255) NOT NULL,
        value VARCHAR(4095) NOT NULL,
@@ -121,7 +121,7 @@ ALTER TABLE cpl_objects ADD CONSTRAINT cpl_objects_fk
 
 GRANT ALL PRIVILEGES ON TABLE cpl_objects TO cpl WITH GRANT OPTION;
 GRANT ALL PRIVILEGES ON TABLE cpl_sessions TO cpl WITH GRANT OPTION;
-GRANT ALL PRIVILEGES ON TABLE cpl_ancestry TO cpl WITH GRANT OPTION;
+GRANT ALL PRIVILEGES ON TABLE cpl_relations TO cpl WITH GRANT OPTION;
 GRANT ALL PRIVILEGES ON TABLE cpl_properties TO cpl WITH GRANT OPTION;
-GRANT ALL PRIVILEGES ON TABLE cpl_ancestry_properties TO cpl WITH GRANT OPTION;
+GRANT ALL PRIVILEGES ON TABLE cpl_relation_properties TO cpl WITH GRANT OPTION;
 

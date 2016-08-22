@@ -75,9 +75,21 @@ extern "C" {
 /**
  * The combination of CPL_A_* flags that are currently supported by the driver.
  */
+ /*
 #define CPL_ODBC_A_SUPPORTED_FLAGS \
 	(CPL_A_NO_PREV_NEXT_VERSION | CPL_A_NO_CONTROL_DEPENDENCIES \
      | CPL_A_NO_DATA_DEPENDENCIES)
+*/
+
+#define MAC_ADDR_LEN			18
+#define USER_LEN				255
+#define PROGRAM_LEN				4095
+#define CMDLINE_LEN				4095
+#define ORIGINATOR_LEN			255
+#define NAME_LEN				255
+#define TYPE_LEN				100
+#define KEY_LEN					255
+#define VALUE_LEN				4095
 
 
 

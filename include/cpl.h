@@ -62,12 +62,12 @@ struct _cpl_db_backend_t;
 /**
  * The CPL version - minor number (two digits)
  */
-#define CPL_VERSION_MINOR		2
+#define CPL_VERSION_MINOR		0
 
 /**
  * The CPL version - as a string
  */
-#define CPL_VERSION_STR			"1.02"
+#define CPL_VERSION_STR			"1.0"
 
 
 /***************************************************************************/
@@ -240,7 +240,7 @@ typedef cpl_return_t (*cpl_property_iterator_t)
  * Static assertions
  */
 #ifdef _DEBUG
-extern int __cpl_assert__cpl_id_size[sizeof(cpl_id_t) == 16 ? 1 : -1];
+extern int __cpl_assert__cpl_id_size[sizeof(cpl_id_t) == 8 ? 1 : -1];
 #endif
 
 
@@ -261,6 +261,7 @@ WINDLL_API extern const cpl_id_t CPL_NONE;
 /***************************************************************************/
 // TODO finish
 
+#define NOT_SPECIFIED 			0
 #define F_ENT_T_ENT				1
 #define F_ENT_T_ACT				2
 #define F_ENT_T_AGT				3
@@ -271,30 +272,38 @@ WINDLL_API extern const cpl_id_t CPL_NONE;
 #define F_AGT_T_ACT				8
 #define F_AGT_T_AGT				9
 
-#define FROM_TO_VAL(f,t,v)			((f << 16) | (t << 8) | v)
+#define FROM_TO_VAL(t,v)		((t << 8) | v)
 
-#define ACTEDONBEHALFOF			FROM_TO_VAL(AGENT_T, AGENT_T, 1)
+#define ALTERNATEOF				FROM_TO_VAL(F_ENT_T_ENT, 1)
+#define	DERIVEDBYINSERTIONFROM	FROM_TO_VAL(F_ENT_T_ENT, 2)
+#define	DERIVEDBYREMOVALFROM	FROM_TO_VAL(F_ENT_T_ENT, 3)
+#define	HADMEMBER 				FROM_TO_VAL(F_ENT_T_ENT, 4)
+#define	HADDICTIONARYMEMBER		FROM_TO_VAL(F_ENT_T_ENT, 5)
+#define	SPECIALIZATIONOF		FROM_TO_VAL(F_ENT_T_ENT, 6)
+#define	WASDERIVEDFROM			FROM_TO_VAL(F_ENT_T_ENT, 7)
 
-#define	WASSTARTEDBY			FROM_TO_VAL(ACTIVITY_T, AGENT_T, 1)
+#define	WASGENERATEDBY			FROM_TO_VAL(F_ENT_T_ACT, 1)
+#define	WASINVALIDATEDBY		FROM_TO_VAL(F_ENT_T_ACT, 2)
 
-#define ALTERNATEOF				FROM_TO_VAL()
-#define	DERIVEDBYINSERTIONFROM	FROM_TO_VAL()
-#define	DERIVEDBYREMOVALFROM	FROM_TO_VAL()
-#define	HADMEMBER 				FROM_TO_VAL()
-#define	HADDICTIONARYMEMBER		FROM_TO_VAL()
-#define	MENTIONOF				FROM_TO_VAL()
-#define	SPECIALIZATIONOF		FROM_TO_VAL()
-#define	USED 					FROM_TO_VAL()
-#define	WASASSOCIATEDWITH		FROM_TO_VAL()
-#define	WASATTRIBUTEDTO			FROM_TO_VAL()
-#define	WASDERIVEDFROM			FROM_TO_VAL()
-#define	WASENDEDBY				FROM_TO_VAL()
-#define	WASGENERATEDBY			FROM_TO_VAL()
-#define	WASINFLUENCEDBY			FROM_TO_VAL()
-#define	WASINFORMEDBY			FROM_TO_VAL()
-#define	WASINVALIDATEDBY		FROM_TO_VAL()
+#define	WASATTRIBUTEDTO			FROM_TO_VAL(F_ENT_T_AGT, 1)
 
 
+#define	USED 					FROM_TO_VAL(F_ACT_T_ENT, 1)
+
+#define	WASINFORMEDBY			FROM_TO_VAL(F_ACT_T_ACT, 1)
+
+#define	WASSTARTEDBY			FROM_TO_VAL(F_ACT_T_AGT, 1)
+#define	WASENDEDBY				FROM_TO_VAL(F_ACT_T_AGT, 2)
+
+#define HADPLAN					FROM_TO_VAL(F_AGT_T_ENT, 1)
+
+#define	WASASSOCIATEDWITH		FROM_TO_VAL(F_AGT_T_ACT, 1)
+
+#define ACTEDONBEHALFOF			FROM_TO_VAL(F_AGT_T_AGT, 1)
+
+#define WASINFLUENCEDBY(t)		FROM_TO_VAL(t, 1)
+
+#define GET_RELATION_CATEGORY(n) (n >> 8)
 /***************************************************************************/
 /** Return Codes                                                          **/
 /***************************************************************************/
@@ -518,6 +527,11 @@ WINDLL_API extern const cpl_id_t CPL_NONE;
 #define CPL_D_DESCENDANTS				1
 
 
+#define NO_ENTITIES						(1 << 1)
+#define NO_ACTIVITIES					(1 << 2)
+#define NO_AGENTS						(1 << 3)
+
+
 
 
 /***************************************************************************/
@@ -646,25 +660,15 @@ cpl_lookup_or_create_object(const char* originator,
  * @return CPL_OK or an error code
  */
 EXPORT cpl_return_t
-cpl_add_property(const cpl_id_t id,
+cpl_add_object_property(const cpl_id_t id,
 				 const char* key,
                  const char* value);
 
 EXPORT cpl_return_t
-cpl_add_dependency(const cpl_id_t from_id,
+cpl_add_relation(const cpl_id_t from_id,
 			  	   const cpl_id_t to_id,
 				   const int type,
 				   cpl_id_t* out_id);
-
-
-
-
-/***************************************************************************/
-/** Legacy                                                                **/
-/***************************************************************************/
-
-#define cpl_control			cpl_control_flow
-#define cpl_control_ext		cpl_control_flow_ext
 
 
 /***************************************************************************/
@@ -748,7 +752,7 @@ cpl_free_object_info(cpl_object_info_t* info);
  * @return CPL_OK, CPL_S_NO_DATA, or an error code
  */
 EXPORT cpl_return_t
-cpl_get_object_ancestry(const cpl_id_t id,
+cpl_get_object_relations(const cpl_id_t id,
 						const int direction,
 						const int flags,
 						cpl_ancestry_iterator_t iterator,
@@ -764,7 +768,7 @@ cpl_get_object_ancestry(const cpl_id_t id,
  * @return CPL_OK, CPL_S_NO_DATA, or an error code
  */
 EXPORT cpl_return_t
-cpl_get_properties(const cpl_id_t id,
+cpl_get_object_properties(const cpl_id_t id,
 				   const char* key,
 				   cpl_property_iterator_t iterator,
 				   void* context);
@@ -779,11 +783,16 @@ cpl_get_properties(const cpl_id_t id,
  * @return CPL_OK, CPL_E_NOT_FOUND, or an error code
  */
 EXPORT cpl_return_t
-cpl_lookup_by_property(const char* key,
+cpl_lookup_object_by_property(const char* key,
 					   const char* value,
 					   cpl_property_iterator_t iterator,
 					   void* context);
 
+EXPORT cpl_return_t
+cpl_get_relation_properties(const cpl_id_t id,
+				   const char* key,
+				   cpl_property_iterator_t iterator,
+				   void* context);
 
 /***************************************************************************/
 /** Utility functions                                                     **/
@@ -822,7 +831,7 @@ cpl_hash_int64(const long long key)
 inline size_t
 cpl_hash_id(const cpl_id_t key)
 {
-	return cpl_hash_int64(key.lo) ^ ~cpl_hash_int64(key.hi);
+	return cpl_hash_int64(key);
 }
 
 

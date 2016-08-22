@@ -37,11 +37,9 @@
 #include <cpl-exception.h>
 #include "cpl-platform.h"
 
-#if defined(__unix__) || defined(__APPLE__)
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <semaphore.h>
-#endif
 
 /*
  * Configuration
@@ -224,95 +222,6 @@ cpl_shared_semaphore_open(const char* name)
 
 	return s;
 
-	snprintf(n, n_size, "Global\\%s", name);
-#endif
-
-	// Portions of the following code are from:
-	//   http://msdn.microsoft.com/en-us/library/windows/desktop/aa446595%28v=vs.85%29.aspx
-
-	DWORD dwRes;
-	PSID pEveryoneSID = NULL;
-	PACL pACL = NULL;
-	PSECURITY_DESCRIPTOR pSD = NULL;
-	EXPLICIT_ACCESS ea[1];
-	SID_IDENTIFIER_AUTHORITY SIDAuthWorld =
-		SECURITY_WORLD_SID_AUTHORITY;
-	SID_IDENTIFIER_AUTHORITY SIDAuthNT = SECURITY_NT_AUTHORITY;
-	SECURITY_ATTRIBUTES sa;
-	HANDLE hSemaphore = NULL;
-
-	// Create a well-known SID for the Everyone group.
-	if (!AllocateAndInitializeSid(&SIDAuthWorld, 1,
-		SECURITY_WORLD_RID,
-		0, 0, 0, 0, 0, 0, 0,
-		&pEveryoneSID)) {
-		fprintf(stderr, "AllocateAndInitializeSid Error %u\n", GetLastError());
-		goto cleanup;
-	}
-
-	// Initialize an EXPLICIT_ACCESS structure for an ACE.
-	// The ACE will allow Everyone full access to the mutex.
-	ZeroMemory(&ea, sizeof(EXPLICIT_ACCESS));
-	ea[0].grfAccessPermissions = MUTEX_ALL_ACCESS;
-	ea[0].grfAccessMode = SET_ACCESS;
-	ea[0].grfInheritance= NO_INHERITANCE;
-	ea[0].Trustee.TrusteeForm = TRUSTEE_IS_SID;
-	ea[0].Trustee.TrusteeType = TRUSTEE_IS_WELL_KNOWN_GROUP;
-	ea[0].Trustee.ptstrName  = (LPTSTR) pEveryoneSID;
-
-	// Create a new ACL that contains the new ACEs.
-	dwRes = SetEntriesInAcl(1, ea, NULL, &pACL);
-	if (ERROR_SUCCESS != dwRes) {
-		fprintf(stderr, "SetEntriesInAcl Error %u\n", GetLastError());
-		goto cleanup;
-	}
-
-	// Initialize a security descriptor.  
-	pSD = (PSECURITY_DESCRIPTOR) LocalAlloc(LPTR, 
-		SECURITY_DESCRIPTOR_MIN_LENGTH); 
-	if (NULL == pSD) { 
-		fprintf(stderr, "LocalAlloc Error %u\n", GetLastError());
-		goto cleanup; 
-	} 
-
-	if (!InitializeSecurityDescriptor(pSD,
-		SECURITY_DESCRIPTOR_REVISION)) {  
-		fprintf(stderr, "InitializeSecurityDescriptor Error %u\n",
-				GetLastError());
-		goto cleanup; 
-	} 
-
-	// Add the ACL to the security descriptor. 
-	if (!SetSecurityDescriptorDacl(pSD, 
-		TRUE,     // bDaclPresent flag   
-		pACL, 
-		FALSE))   // not a default DACL 
-	{  
-		fprintf(stderr, "SetSecurityDescriptorDacl Error %u\n",
-			GetLastError());
-		goto cleanup; 
-	} 
-
-	// Initialize a security attributes structure.
-	sa.nLength = sizeof (SECURITY_ATTRIBUTES);
-	sa.lpSecurityDescriptor = pSD;
-	sa.bInheritHandle = FALSE;
-
-	// Create the semaphore
-	hSemaphore = CreateSemaphore(&sa, 1, 1, n);
-	if (NULL == hSemaphore)	{  
-		fprintf(stderr, "CreateSemaphore Error %u\n",
-			GetLastError());
-		goto cleanup; 
-	}
-
-cleanup:
-	if (pEveryoneSID) FreeSid(pEveryoneSID);
-	if (pACL) LocalFree(pACL);
-	if (pSD) LocalFree(pSD);
-
-	return hSemaphore;
-
 #else
 #error "Not implemented for this platform."
 #endif
@@ -342,7 +251,7 @@ cpl_shared_semaphore_close(cpl_shared_semaphore_t sem)
 
 /**
  * Wait on a shared semaphore
- *
+ *sub
  * @param sem the shared semaphore
  */
 void

@@ -454,19 +454,20 @@ cpl_odbc_free_statement_handles(cpl_odbc_t* odbc)
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_object_insert_container_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_object_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_object_ext_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->add_ancestry_edge_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->add_property_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->add_relation_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->add_object_property_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->add_relation_property_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_session_info_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_all_objects_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_all_objects_with_session_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_info_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_ancestors_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_descendants_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_properties_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_properties_with_key_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_by_property_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_ancestry_properties_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_ancestry_properties_with_key_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_properties_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_object_properties_with_key_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_object_by_property_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_relation_properties_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_relation_properties_with_key_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->has_immediate_ancestor_stmt);
 
 }
@@ -532,19 +533,20 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 	ALLOC_STMT(create_object_insert_container_stmt);
 	ALLOC_STMT(lookup_object_stmt);
 	ALLOC_STMT(lookup_object_ext_stmt);
-	ALLOC_STMT(add_ancestry_edge_stmt);
-	ALLOC_STMT(add_property_stmt);
+	ALLOC_STMT(add_relation_stmt);
+	ALLOC_STMT(add_object_property_stmt);
+	ALLOC_STMT(add_relation_property_stmt);
 	ALLOC_STMT(get_session_info_stmt);
 	ALLOC_STMT(get_all_objects_stmt);
 	ALLOC_STMT(get_all_objects_with_session_stmt);
 	ALLOC_STMT(get_object_info_stmt);
 	ALLOC_STMT(get_object_ancestors_stmt);
 	ALLOC_STMT(get_object_descendants_stmt);
-	ALLOC_STMT(get_properties_stmt);
-	ALLOC_STMT(get_properties_with_key_stmt);
-	ALLOC_STMT(lookup_by_property_stmt);
-	ALLOC_STMT(get_ancestry_properties_stmt);
-	ALLOC_STMT(get_ancestry_properties_with_key_stmt);
+	ALLOC_STMT(get_object_properties_stmt);
+	ALLOC_STMT(get_object_properties_with_key_stmt);
+	ALLOC_STMT(lookup_object_by_property_stmt);
+	ALLOC_STMT(get_relation_properties_stmt);
+	ALLOC_STMT(get_relation_properties_with_key_stmt);
 	ALLOC_STMT(has_immediate_ancestor_stmt);
 
 #undef ALLOC_STMT
@@ -560,6 +562,7 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 		goto err_stmts; \
 	}}
 
+	//TODO document parameter numbers and what people will be filling in... also results
 	PREPARE(create_session_insert_stmt,
 			"INSERT INTO cpl_sessions"
 			"            (id, mac_address, username, pid, program,"
@@ -594,16 +597,21 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 			"  FROM cpl_objects"
 			" WHERE originator = ? AND name = ? AND type = ?;");
 
-	PREPARE(add_ancestry_edge_stmt,
-			"INSERT INTO cpl_ancestry"
+	PREPARE(add_relation_stmt,
+			"INSERT INTO cpl_relations"
 			"            (id, from_id,"
 			"             to_id, type)"
 			"     VALUES (DEFAULT, ?, ?, ?);");
 
-	PREPARE(add_property_stmt,
-			"INSERT INTO cpl_properties"
+	PREPARE(add_object_property_stmt,
+			"INSERT INTO cpl_object_properties"
 			"            (id, name, value)"
 			"     VALUES (?, ?, ?);");
+
+	PREPARE(add_relation_property_stmt,
+		"INSERT INTO cpl_relation_properties"
+		"            (id, name, value)"
+		"     VALUES (?, ?, ?);");
 
 	PREPARE(get_all_objects_stmt,
 			"SELECT id, creation_time, originator, name, type,"
@@ -632,42 +640,42 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 
 	PREPARE(get_object_ancestors_stmt,
 			"SELECT id, to_id, type"
-			"  FROM cpl_ancestry"
+			"  FROM cpl_relations"
 			" WHERE from_id = ?");
 
 	PREPARE(get_object_descendants_stmt,
 			"SELECT id, from_id, type"
-			"  FROM cpl_ancestry"
+			"  FROM cpl_relations"
 			" WHERE to_id = ?");
 
-	PREPARE(get_properties_stmt,
+	PREPARE(get_object_properties_stmt,
 			"SELECT id, name, value"
-			"  FROM cpl_properties"
+			"  FROM cpl_object_properties"
 			" WHERE id = ?;");
 
-	PREPARE(get_properties_with_key_stmt,
+	PREPARE(get_object_properties_with_key_stmt,
 			"SELECT id, name, value"
-			"  FROM cpl_properties"
+			"  FROM cpl_object_properties"
 			" WHERE id = ? AND name = ?;");
 
-	PREPARE(lookup_by_property_stmt,
+	PREPARE(lookup_object_by_property_stmt,
 			"SELECT id"
-			"  FROM cpl_properties"
+			"  FROM cpl_object_properties"
 			" WHERE name = ? AND value = ?;");
 
-	PREPARE(get_ancestry_properties_stmt,
+	PREPARE(get_relation_properties_stmt,
 			"SELECT id, name, value"
-			" FROM cpl_ancestry_properties"
+			" FROM cpl_relation_properties"
 			"WHERE id = ?");
 
-	PREPARE(get_ancestry_properties_with_key_stmt,
+	PREPARE(get_relation_properties_with_key_stmt,
 			"SELECT id, name, value"
-			"  FROM cpl_ancestry_properties"
+			"  FROM cpl_relation_properties"
 			" WHERE id = ? AND name = ?;");
 
 	PREPARE(has_immediate_ancestor_stmt,
 			"SELECT id"
-			"  FROM cpl_ancestry"
+			"  FROM cpl_relations"
 			" WHERE from_id = ? AND to_id = ?;");
 
 
@@ -771,16 +779,16 @@ cpl_create_odbc_backend(const char* connection_string,
 	mutex_init(odbc->create_object_lock);
 	mutex_init(odbc->lookup_object_lock);
 	mutex_init(odbc->lookup_object_ext_lock);
-	mutex_init(odbc->add_ancestry_edge_lock);
-	mutex_init(odbc->add_property_lock);
+	mutex_init(odbc->add_relation_lock);
+	mutex_init(odbc->add_object_property_lock);
+	mutex_init(odbc->add_relation_property_lock);
 	mutex_init(odbc->get_session_info_lock);
 	mutex_init(odbc->get_all_objects_lock);
 	mutex_init(odbc->get_object_info_lock);
-	mutex_init(odbc->get_object_ancestry_lock);
-	mutex_init(odbc->get_properties_lock);
-	mutex_init(odbc->lookup_by_property_lock);
-	mutex_init(odbc->get_ancestry_properties_stmt);
-	mutex_init(odbc->get_ancestry_properties_with_key_stmt);
+	mutex_init(odbc->get_object_relations_lock);
+	mutex_init(odbc->get_object_properties_lock);
+	mutex_init(odbc->lookup_object_by_property_lock);
+	mutex_init(odbc->get_relation_properties_lock);
 	mutex_init(odbc->has_immediate_ancestor_lock);
 
 	// Open the database connection
@@ -802,18 +810,17 @@ err_sync:
 	mutex_destroy(odbc->create_object_lock);
 	mutex_destroy(odbc->lookup_object_lock);
 	mutex_destroy(odbc->lookup_object_ext_lock);
-	mutex_destroy(odbc->add_ancestry_edge_lock);
-	mutex_destroy(odbc->has_immediate_ancestor_lock);
-	mutex_destroy(odbc->add_property_lock);
+	mutex_destroy(odbc->add_relation_lock);
+	mutex_destroy(odbc->add_object_property_lock);
+	mutex_destroy(odbc->add_relation_property_lock);
 	mutex_destroy(odbc->get_session_info_lock);
 	mutex_destroy(odbc->get_all_objects_lock);
 	mutex_destroy(odbc->get_object_info_lock);
-	mutex_destroy(odbc->get_object_ancestry_lock);
-	mutex_destroy(odbc->get_properties_lock);
-	mutex_destroy(odbc->lookup_by_property_lock);
-	mutex_destroy(odbc->get_ancestry_properties_stmt);
-	mutex_destroy(odbc->get_ancestry_properties_with_key_stmt);
-	mutex_destroy(odbc->has_immediate_ancestor_lock)
+	mutex_destroy(odbc->get_object_relations_lock);
+	mutex_destroy(odbc->get_object_properties_lock);
+	mutex_destroy(odbc->lookup_object_by_property_lock);
+	mutex_destroy(odbc->get_relation_properties_lock);
+	mutex_destroy(odbc->has_immediate_ancestor_lock);
 
 	delete odbc;
 	return r;
@@ -883,19 +890,17 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
 	mutex_destroy(odbc->create_object_lock);
 	mutex_destroy(odbc->lookup_object_lock);
 	mutex_destroy(odbc->lookup_object_ext_lock);
-	mutex_destroy(odbc->add_ancestry_edge_lock);
-	mutex_destroy(odbc->has_immediate_ancestor_lock);
-	mutex_destroy(odbc->add_property_lock);
+	mutex_destroy(odbc->add_relation_lock);
+	mutex_destroy(odbc->add_object_property_lock);
+	mutex_destroy(odbc->add_relation_property_lock);
 	mutex_destroy(odbc->get_session_info_lock);
 	mutex_destroy(odbc->get_all_objects_lock);
 	mutex_destroy(odbc->get_object_info_lock);
-	mutex_destroy(odbc->get_object_ancestry_lock);
-	mutex_destroy(odbc->get_properties_lock);
-	mutex_destroy(odbc->lookup_by_property_lock);
-	mutex_destroy(odbc->get_ancestry_properties_stmt);
-	mutex_destroy(odbc->get_ancestry_properties_with_key_stmt);
+	mutex_destroy(odbc->get_object_relations_lock);
+	mutex_destroy(odbc->get_object_properties_lock);
+	mutex_destroy(odbc->lookup_object_by_property_lock);
+	mutex_destroy(odbc->get_relation_properties_lock);
 	mutex_destroy(odbc->has_immediate_ancestor_lock);
-
 	
 	delete odbc;
 	
@@ -989,11 +994,11 @@ cpl_odbc_create_session(struct _cpl_db_backend_t* backend,
 retry:
 	SQLHSTMT stmt = odbc->create_session_insert_stmt;
 
-	SQL_BIND_VARCHAR(stmt, 1, 18, mac_address);
-	SQL_BIND_VARCHAR(stmt, 2, 255, user);
+	SQL_BIND_VARCHAR(stmt, 1, MAC_ADDR_LEN, mac_address);
+	SQL_BIND_VARCHAR(stmt, 2, USER_LEN, user);
 	SQL_BIND_INTEGER(stmt, 3, pid);
-	SQL_BIND_VARCHAR(stmt, 4, 4095, program);
-	SQL_BIND_VARCHAR(stmt, 5, 4095, cmdline);
+	SQL_BIND_VARCHAR(stmt, 4, PROGRAM_LEN, program);
+	SQL_BIND_VARCHAR(stmt, 5, CMDLINE_LEN, cmdline);
 
 
 	// Insert the new row to the sessions table
@@ -1062,10 +1067,10 @@ retry:
 		? odbc->create_object_insert_stmt
 		: odbc->create_object_insert_container_stmt;
 
-	SQL_BIND_VARCHAR(stmt, 1, 255, originator);
-	SQL_BIND_VARCHAR(stmt, 2, 255, name);
-	SQL_BIND_VARCHAR(stmt, 3, 100, type);
-	SQL_BIND_VARCHAR(stmt, 4, session);
+	SQL_BIND_VARCHAR(stmt, 1, ORIGINATOR_LEN, originator);
+	SQL_BIND_VARCHAR(stmt, 2, NAME_LEN, name);
+	SQL_BIND_VARCHAR(stmt, 3, TYPE_LEN, type);
+	SQL_BIND_INTEGER(stmt, 4, session);
 
 	if (container != CPL_NONE) {
 		SQL_BIND_INTEGER(stmt, 5, container);
@@ -1100,7 +1105,7 @@ err:
 
 /**
  * Look up an object by name. If multiple objects share the same name,
- * get the latest one.
+ * get one.
  *
  * @param backend the pointer to the backend structure
  * @param originator the object originator (namespace)
@@ -1132,9 +1137,9 @@ cpl_odbc_lookup_object(struct _cpl_db_backend_t* backend,
 retry:
 	SQLHSTMT stmt = odbc->lookup_object_stmt;
 
-	SQL_BIND_VARCHAR(stmt, 1, 255, originator);
-	SQL_BIND_VARCHAR(stmt, 2, 255, name);
-	SQL_BIND_VARCHAR(stmt, 3, 100, type);
+	SQL_BIND_VARCHAR(stmt, 1, ORIGINATOR_LEN, originator);
+	SQL_BIND_VARCHAR(stmt, 2, NAME_LEN, name);
+	SQL_BIND_VARCHAR(stmt, 3, TYPE_LEN, type);
 
 
 	// Execute
@@ -1169,7 +1174,7 @@ err:
 
 /**
  * Look up an object by name. If multiple objects share the same name,
- * get the latest one.
+ * get all of them
  *
  * @param backend the pointer to the backend structure
  * @param originator the object originator (namespace)
@@ -1186,7 +1191,7 @@ cpl_odbc_lookup_object_ext(struct _cpl_db_backend_t* backend,
 						   const char* name,
 						   const char* type,
 						   const int flags,
-						   cpl_id_timestamp_iterator_t iterator,
+						   cpl_id_timestamp_iterator_t callback,
 						   void* context)
 {
 	assert(backend != NULL);
@@ -1207,9 +1212,9 @@ cpl_odbc_lookup_object_ext(struct _cpl_db_backend_t* backend,
 retry:
 	SQLHSTMT stmt = odbc->lookup_object_ext_stmt;
 
-	SQL_BIND_VARCHAR(stmt, 1, 255, originator);
-	SQL_BIND_VARCHAR(stmt, 2, 255, name);
-	SQL_BIND_VARCHAR(stmt, 3, 100, type);
+	SQL_BIND_VARCHAR(stmt, 1, ORIGINATOR_LEN, originator);
+	SQL_BIND_VARCHAR(stmt, 2, NAME_LEN, name);
+	SQL_BIND_VARCHAR(stmt, 3, TYPE_LEN, type);
 
 
 	// Execute
@@ -1239,6 +1244,8 @@ retry:
 			break;
 		}
 
+		// Convert timestamp
+
 		entry.timestamp = cpl_sql_timestamp_to_unix_time(t);
 		entries.push_back(entry);
 	}
@@ -1262,10 +1269,10 @@ retry:
 
 	// Call the user-provided callback function
 
-	if (iterator != NULL) {
+	if (callback != NULL) {
 		std::list<cpl_id_timestamp_t>::iterator i;
 		for (i = entries.begin(); i != entries.end(); i++) {
-			r = iterator(i->id, i->timestamp, context);
+			r = callback(i->id, i->timestamp, context);
 			if (!CPL_IS_OK(r)) return r;
 		}
 	}
@@ -1297,7 +1304,7 @@ err:
  * @return the error code
  */
 extern "C" cpl_return_t
-cpl_odbc_add_ancestry_edge(struct _cpl_db_backend_t* backend,
+cpl_odbc_add_relation(struct _cpl_db_backend_t* backend,
 						   const cpl_id_t from_id,
 						   const cpl_id_t to_id,
 						   const int type,
@@ -1314,10 +1321,10 @@ cpl_odbc_add_ancestry_edge(struct _cpl_db_backend_t* backend,
 	cpl_id_t id = CPL_NONE;
 	cpl_return_t r = CPL_E_INTERNAL_ERROR;
 
-	mutex_lock(odbc->add_ancestry_edge_lock);
+	mutex_lock(odbc->add_relation_lock);
 
 retry:
-	SQLHSTMT stmt = odbc->add_ancestry_edge_stmt;
+	SQLHSTMT stmt = odbc->add_relation_stmt;
 
 	SQL_BIND_INTEGER(stmt, 1, from_id);
 	SQL_BIND_INTEGER(stmt, 2, to_id);
@@ -1332,13 +1339,13 @@ retry:
 
 	r = cpl_sql_fetch_single_llong(stmt, (long long*) &id, 1);
 	if (!CPL_IS_OK(r)) {
-		mutex_unlock(odbc->lookup_object_lock);
+		mutex_unlock(odbc->add_relation_lock);
 		return r;
 	}
 
 	// Cleanup
 
-	mutex_unlock(odbc->add_ancestry_edge_lock);
+	mutex_unlock(odbc->add_relation_lock);
 	if (out_id != NULL) *out_id = id;
 	return CPL_OK;
 
@@ -1346,14 +1353,14 @@ retry:
 	// Error handling
 
 err:
-	mutex_unlock(odbc->add_ancestry_edge_lock);
+	mutex_unlock(odbc->add_relation_lock);
 	return CPL_E_STATEMENT_ERROR;
 }
 
 
 /**
  * Determine whether the given object has the given ancestor
- *
+ * TODO maybe change to descendant given how this shit works
  * @param backend the pointer to the backend structure
  * @param object_id the object ID
  * @param query_object_id the object that we want to determine whether it
@@ -1381,7 +1388,7 @@ cpl_odbc_has_immediate_ancestor(struct _cpl_db_backend_t* backend,
 	// Prepare the statement
 
 retry:
-	SQLHSTMT stmt = odbc->has_immediate_ancestor_stmt
+	SQLHSTMT stmt = odbc->has_immediate_ancestor_stmt;
 	SQL_BIND_INTEGER(stmt, 1, query_object_id);
 	SQL_BIND_INTEGER(stmt, 2, object_id);
 
@@ -1428,7 +1435,7 @@ err:
  * @return CPL_OK or an error code
  */
 extern "C" cpl_return_t
-cpl_odbc_add_property(struct _cpl_db_backend_t* backend,
+cpl_odbc_add_object_property(struct _cpl_db_backend_t* backend,
                       const cpl_id_t id,
                       const char* key,
                       const char* value)
@@ -1436,7 +1443,7 @@ cpl_odbc_add_property(struct _cpl_db_backend_t* backend,
     assert(backend != NULL);
     cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
 
-	mutex_lock(odbc->add_property_lock);
+	mutex_lock(odbc->add_object_property_lock);
 
 
 	// Prepare the statement
@@ -1444,11 +1451,11 @@ cpl_odbc_add_property(struct _cpl_db_backend_t* backend,
 	SQL_START;
 
 retry:
-	SQLHSTMT stmt = odbc->add_property_stmt;
+	SQLHSTMT stmt = odbc->add_object_property_stmt;
 
 	SQL_BIND_INTEGER(stmt, 1, id);
-	SQL_BIND_VARCHAR(stmt, 2, 255, key);
-	SQL_BIND_VARCHAR(stmt, 3, 4095, value);
+	SQL_BIND_VARCHAR(stmt, 2, KEY_LEN, key);
+	SQL_BIND_VARCHAR(stmt, 3, VALUE_LEN, value);
 
 
 	// Execute
@@ -1458,16 +1465,59 @@ retry:
 
 	// Cleanup
 
-	mutex_unlock(odbc->add_property_lock);
+	mutex_unlock(odbc->add_object_property_lock);
 	return CPL_OK;
 
 
 	// Error handling
 
 err:
-	mutex_unlock(odbc->add_property_lock);
+	mutex_unlock(odbc->add_object_property_lock);
 	return CPL_E_STATEMENT_ERROR;
 }
+
+extern "C" cpl_return_t
+cpl_odbc_add_relation_property(struct _cpl_db_backend_t* backend,
+                      const cpl_id_t id,
+                      const char* key,
+                      const char* value)
+{
+    assert(backend != NULL);
+    cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
+
+	mutex_lock(odbc->add_relation_property_lock);
+
+
+	// Prepare the statement
+
+	SQL_START;
+
+retry:
+	SQLHSTMT stmt = odbc->add_relation_property_stmt;
+
+	SQL_BIND_INTEGER(stmt, 1, id);
+	SQL_BIND_VARCHAR(stmt, 2, KEY_LEN, key);
+	SQL_BIND_VARCHAR(stmt, 3, VALUE_LEN, value);
+
+
+	// Execute
+	
+	SQL_EXECUTE(stmt);
+
+
+	// Cleanup
+
+	mutex_unlock(odbc->add_relation_property_lock);
+	return CPL_OK;
+
+
+	// Error handling
+
+err:
+	mutex_unlock(odbc->add_relation_property_lock);
+	return CPL_E_STATEMENT_ERROR;
+}
+
 
 
 /**
@@ -1566,7 +1616,7 @@ err_r:
 cpl_return_t
 cpl_odbc_get_all_objects(struct _cpl_db_backend_t* backend,
 						 const int flags,
-						 cpl_object_info_iterator_t iterator,
+						 cpl_object_info_iterator_t callback,
 						 void* context)
 {
 	assert(backend != NULL);
@@ -1579,9 +1629,9 @@ cpl_odbc_get_all_objects(struct _cpl_db_backend_t* backend,
 	std::list<cplxx_object_info_t> entries;
 	SQL_TIMESTAMP_STRUCT t;
 
-	size_t originator_size = 4096;
-	size_t name_size = 4096;
-	size_t type_size = 256;
+	size_t originator_size = ORIGINATOR_LEN + 1;
+	size_t name_size = NAME_LEN + 1;
+	size_t type_size = TYPE_LEN + 1;
 
 	char* entry_originator = (char*) alloca(originator_size);
 	char* entry_name = (char*) alloca(name_size);
@@ -1651,6 +1701,7 @@ retry:
 
 
 	// Fetch the result
+	// TODO think about merging into one loop
 
 	while (true) {
 
@@ -1698,7 +1749,7 @@ retry:
 
 	// Call the user-provided callback function
 
-	if (iterator != NULL) {
+	if (callback != NULL) {
 		std::list<cplxx_object_info_t>::iterator i;
 		for (i = entries.begin(); i != entries.end(); i++) {
 
@@ -1718,7 +1769,7 @@ retry:
 			e.type = entry_type;
 			e.container_id = i->container_id;
 
-			r = iterator(&e, context);
+			r = callback(&e, context);
 			if (!CPL_IS_OK(r)) return r;
 		}
 	}
@@ -1760,7 +1811,7 @@ cpl_odbc_get_object_info(struct _cpl_db_backend_t* backend,
 	SQL_START;
 
 	cpl_return_t r = CPL_E_INTERNAL_ERROR;
-	long long l;
+
 
 	cpl_object_info_t* p = (cpl_object_info_t*) malloc(sizeof(*p));
 	if (p == NULL) return CPL_E_INSUFFICIENT_RESOURCES;
@@ -1858,11 +1909,11 @@ typedef struct __get_object_ancestry__entry {
  * @return CPL_OK, CPL_S_NO_DATA, or an error code
  */
 cpl_return_t
-cpl_odbc_get_object_ancestry(struct _cpl_db_backend_t* backend,
+cpl_odbc_get_object_relations(struct _cpl_db_backend_t* backend,
 							 const cpl_id_t id,
 							 const int direction,
 							 const int flags,
-							 cpl_ancestry_iterator_t iterator,
+							 cpl_ancestry_iterator_t callback,
 							 void* context)
 {
 	assert(backend != NULL);
@@ -1883,7 +1934,7 @@ cpl_odbc_get_object_ancestry(struct _cpl_db_backend_t* backend,
 	SQLLEN ind_type;
 	bool found = false;
 
-	mutex_lock(odbc->get_object_ancestry_lock);
+	mutex_lock(odbc->get_object_relations_lock);
 
 
 	// Prepare the statement
@@ -1932,20 +1983,26 @@ retry:
 
 		found = true;
 
-		/*
-		if (ind_type == SQL_NULL_DATA) {
-			// Should we handle NULL dependency types? They should never occur.
-			// entry.type = CPL_DEPENDENCY_NONE;
-			continue;
+		int cat = GET_RELATION_CATEGORY((int) entry.type);
+
+		if(direction == CPL_D_ANCESTORS){
+
+			if ((cat == F_ENT_T_ENT | cat == F_ENT_T_ACT | cat == F_ENT_T_AGT)
+					&& (flags & NO_ENTITIES) != 0) continue;
+			if ((cat == F_ACT_T_ENT | cat == F_ACT_T_ACT | cat == F_ACT_T_AGT)
+					&& (flags & NO_ACTIVITIES) != 0) continue;
+			if ((cat == F_AGT_T_ENT | cat == F_AGT_T_ACT | cat == F_AGT_T_AGT)
+					&& (flags & NO_AGENTS) != 0) continue;
+		} else {	
+
+			if ((cat == F_ENT_T_ENT | cat == F_ACT_T_ENT | cat == F_AGT_T_ENT)
+					&& (flags & NO_ENTITIES) != 0) continue;
+			if ((cat == F_ENT_T_ACT | cat == F_ACT_T_ACT | cat == F_AGT_T_ACT)
+					&& (flags & NO_ACTIVITIES) != 0) continue;
+			if ((cat == F_ENT_T_AGT | cat == F_ACT_T_AGT | cat == F_AGT_T_AGT)
+					&& (flags & NO_AGENTS) != 0) continue;
 		}
 
-		//TODO edit for new types!
-		int type_category = CPL_GET_DEPENDENCY_CATEGORY((int) entry.type);
-		if (type_category == CPL_DEPENDENCY_CATEGORY_DATA
-				&& (flags & CPL_A_NO_DATA_DEPENDENCIES) != 0) continue;
-		if (type_category == CPL_DEPENDENCY_CATEGORY_CONTROL
-				&& (flags & CPL_A_NO_CONTROL_DEPENDENCIES) != 0) continue;
-		*/
 		entries.push_back(entry);
 	}
 	
@@ -1958,7 +2015,7 @@ retry:
 
 	// Unlock
 
-	mutex_unlock(odbc->get_object_ancestry_lock);
+	mutex_unlock(odbc->get_object_relations_lock);
 
 
 	// If we did not get any data back, terminate
@@ -1968,10 +2025,10 @@ retry:
 
 	// Call the user-provided callback function
 
-	if (iterator != NULL) {
+	if (callback != NULL) {
 		std::list<__get_object_ancestry__entry_t>::iterator i;
 		for (i = entries.begin(); i != entries.end(); i++) {
-			r = iterator(id, i->id, (int) i->type, context);
+			r = callback(id, i->id, (int) i->type, context);
 			if (!CPL_IS_OK(r)) return r;
 		}
 	}
@@ -1988,7 +2045,7 @@ err_close:
 	}
 
 err:
-	mutex_unlock(odbc->get_object_ancestry_lock);
+	mutex_unlock(odbc->get_object_relations_lock);
 	return CPL_E_STATEMENT_ERROR;
 }
 
@@ -2015,10 +2072,10 @@ typedef struct __get_properties__entry {
  * @return CPL_OK, CPL_S_NO_DATA, or an error code
  */
 cpl_return_t
-cpl_odbc_get_properties(struct _cpl_db_backend_t* backend,
+cpl_odbc_get_object_properties(struct _cpl_db_backend_t* backend,
 						const cpl_id_t id,
 						const char* key,
-						cpl_property_iterator_t iterator,
+						cpl_property_iterator_t callback,
 						void* context)
 {
 	assert(backend != NULL);
@@ -2034,7 +2091,7 @@ cpl_odbc_get_properties(struct _cpl_db_backend_t* backend,
 	bool found = false;
 	std::list<__get_properties__entry_t*>::iterator i;
 
-	mutex_lock(odbc->get_properties_lock);
+	mutex_lock(odbc->get_object_properties_lock);
 
 
 	// Prepare the statement
@@ -2042,10 +2099,10 @@ cpl_odbc_get_properties(struct _cpl_db_backend_t* backend,
 retry:
 	SQLHSTMT stmt;
 	if (key == NULL) {
-		stmt = odbc->get_properties_stmt;
+		stmt = odbc->get_object_properties_stmt;
 	}
 	else {
-		stmt = odbc->get_properties_with_key_stmt;
+		stmt = odbc->get_object_properties_with_key_stmt;
 	}
 
 	SQL_BIND_INTEGER(stmt, 1, id);
@@ -2109,7 +2166,7 @@ retry:
 
 	// Unlock
 
-	mutex_unlock(odbc->get_properties_lock);
+	mutex_unlock(odbc->get_object_properties_lock);
 
 	// If we did not get any data back, terminate
 
@@ -2118,9 +2175,9 @@ retry:
 
 	// Call the user-provided callback function
 
-	if (iterator != NULL) {
+	if (callback != NULL) {
 		for (i = entries.begin(); i != entries.end(); i++) {
-			r = iterator(id, (const char*) (*i)->key,
+			r = callback(id, (const char*) (*i)->key,
 						 (const char*) (*i)->value,
 						 context);
 			if (!CPL_IS_OK(r)) goto err_free;
@@ -2145,7 +2202,7 @@ err_close:
 	}
 
 err:
-	mutex_unlock(odbc->get_properties_lock);
+	mutex_unlock(odbc->get_object_properties_lock);
 	return CPL_E_STATEMENT_ERROR;
 }
 
@@ -2161,10 +2218,10 @@ err:
  * @return CPL_OK, CPL_E_NOT_FOUND, or an error code
  */
 cpl_return_t
-cpl_odbc_lookup_by_property(struct _cpl_db_backend_t* backend,
+cpl_odbc_lookup_object_by_property(struct _cpl_db_backend_t* backend,
 							const char* key,
 							const char* value,
-							cpl_property_iterator_t iterator,
+							cpl_property_iterator_t callback,
 							void* context)
 {
 	assert(backend != NULL);
@@ -2177,13 +2234,13 @@ cpl_odbc_lookup_by_property(struct _cpl_db_backend_t* backend,
 	std::list<cpl_id_t> entries;
 	cpl_id_t entry;
 
-	mutex_lock(odbc->lookup_by_property_lock);
+	mutex_lock(odbc->lookup_object_by_property_lock);
 
 
 	// Prepare the statement
 
 retry:
-	SQLHSTMT stmt = odbc->lookup_by_property_stmt;
+	SQLHSTMT stmt = odbc->lookup_object_by_property_stmt;
 	SQL_BIND_VARCHAR(stmt, 1, 255, key);
 	SQL_BIND_VARCHAR(stmt, 2, 4095, value);
 
@@ -2224,7 +2281,7 @@ retry:
 
 	// Unlock
 
-	mutex_unlock(odbc->lookup_by_property_lock);
+	mutex_unlock(odbc->lookup_object_by_property_lock);
 
 
 	// If we did not get any data back, terminate
@@ -2234,10 +2291,10 @@ retry:
 
 	// Call the user-provided callback function
 
-	if (iterator != NULL) {
+	if (callback != NULL) {
 		std::list<cpl_id_t>::iterator i;
 		for (i = entries.begin(); i != entries.end(); i++) {
-			r = iterator(i, key, value, context);
+			r = callback(*i, key, value, context);
 			if (!CPL_IS_OK(r)) return r;
 		}
 	}
@@ -2254,16 +2311,16 @@ err_close:
 	}
 
 err:
-	mutex_unlock(odbc->lookup_by_property_lock);
+	mutex_unlock(odbc->lookup_object_by_property_lock);
 	return CPL_E_STATEMENT_ERROR;
 }
 
 
 cpl_return_t
-cpl_odbc_get_ancestry_properties(struct _cpl_db_backend_t* backend,
+cpl_odbc_get_relation_properties(struct _cpl_db_backend_t* backend,
 						const cpl_id_t id,
 						const char* key,
-						cpl_property_iterator_t iterator,
+						cpl_property_iterator_t callback,
 						void* context)
 {
 	assert(backend != NULL);
@@ -2279,7 +2336,7 @@ cpl_odbc_get_ancestry_properties(struct _cpl_db_backend_t* backend,
 	bool found = false;
 	std::list<__get_properties__entry_t*>::iterator i;
 
-	mutex_lock(odbc->get_ancestry_properties_lock);
+	mutex_lock(odbc->get_relation_properties_lock);
 
 
 	// Prepare the statement
@@ -2288,16 +2345,16 @@ retry:
 	SQLHSTMT stmt;
 
 	if (key == NULL) {
-		odbc->get_ancestry_properties_stmt
+		stmt = odbc->get_relation_properties_stmt;
 	}
 	else {
-		odbc->get_ancestry_properties_with_key_stmt
+		stmt = odbc->get_relation_properties_with_key_stmt;
 	}
 
 	SQL_BIND_INTEGER(stmt, 1, id);
 
 	if (key != NULL) {
-		SQL_BIND_VARCHAR(stmt, 2, 255, key);
+		SQL_BIND_VARCHAR(stmt, 2, KEY_LEN, key);
 	}
 
 
@@ -2355,11 +2412,10 @@ retry:
 
 	// Unlock
 
-	mutex_unlock(odbc->get_ancestry_properties_lock);
+	mutex_unlock(odbc->get_relation_properties_lock);
 
 
 	// If we did not get any data back, check for whether the object exists.
-	//TODO: double check this against later logic
 
 	if (!found) {
 		goto err_free;
@@ -2373,9 +2429,9 @@ retry:
 
 	// Call the user-provided callback function
 
-	if (iterator != NULL) {
+	if (callback != NULL) {
 		for (i = entries.begin(); i != entries.end(); i++) {
-			r = iterator(id,
+			r = callback(id,
 						 (const char*) (*i)->key,
 						 (const char*) (*i)->value,
 						 context);
@@ -2401,7 +2457,7 @@ err_close:
 	}
 
 err:
-	mutex_unlock(odbc->get_ancestry_properties_lock);
+	mutex_unlock(odbc->get_relation_properties_lock);
 	return CPL_E_STATEMENT_ERROR;
 }
 
@@ -2419,15 +2475,16 @@ const cpl_db_backend_t CPL_ODBC_BACKEND = {
 	cpl_odbc_create_object,
 	cpl_odbc_lookup_object,
 	cpl_odbc_lookup_object_ext,
-	cpl_odbc_add_ancestry_edge,
+	cpl_odbc_add_relation,
 	cpl_odbc_has_immediate_ancestor,
-	cpl_odbc_add_property,
+	cpl_odbc_add_object_property,
+	cpl_odbc_add_relation_property,
 	cpl_odbc_get_session_info,
 	cpl_odbc_get_all_objects,
 	cpl_odbc_get_object_info,
-	cpl_odbc_get_object_ancestry,
-	cpl_odbc_get_properties,
-	cpl_odbc_lookup_by_property,
-	cpl_odbc_get_ancestry_properties,
+	cpl_odbc_get_object_relations,
+	cpl_odbc_get_object_properties,
+	cpl_odbc_lookup_object_by_property,
+	cpl_odbc_get_relation_properties
 };
 

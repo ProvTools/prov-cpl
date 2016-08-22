@@ -39,8 +39,9 @@
 #include <private/cpl-platform.h>
 #include <cplxx.h>
 
-#include <sql.h>
-#include <sqlext.h>
+// TODO figure out wtf is wrong with gcc
+#include </usr/local/include/sql.h>
+#include </usr/local/include/sqlext.h>
 
 #include <string>
 
@@ -130,22 +131,26 @@ typedef struct {
 	/**
 	 * The lock for add_ancestry_edge
 	 */
-	mutex_t add_ancestry_edge_lock;
+	mutex_t add_relation_lock;
 
 	/**
 	 * The statement that adds a new ancestry edge
 	 */
-	SQLHSTMT add_ancestry_edge_stmt;
+	SQLHSTMT add_relation_stmt;
 
 	/**
 	 * The lock for add_property
 	 */
-	mutex_t add_property_lock;
+	mutex_t add_object_property_lock;
 
 	/**
 	 * The statement that adds a new property
 	 */
-	SQLHSTMT add_property_stmt;
+	SQLHSTMT add_object_property_stmt;
+
+	mutex_t add_relation_property_lock;
+
+	SQLHSTMT add_relation_property_stmt;
 
 	/**
 	 * The lock for get_session_info
@@ -187,7 +192,7 @@ typedef struct {
 	/**
 	 * The mutex for get_object_ancestry
 	 */
-	mutex_t get_object_ancestry_lock;
+	mutex_t get_object_relations_lock;
 
 	/**
 	 * The statement for listing ancestors
@@ -202,31 +207,31 @@ typedef struct {
 	/**
 	 * The mutex for get_properties
 	 */
-	mutex_t get_properties_lock;
+	mutex_t get_object_properties_lock;
 
 	/**
 	 * The statement for listing properties
 	 */
-	SQLHSTMT get_properties_stmt;
+	SQLHSTMT get_object_properties_stmt;
 
 	/**
 	 * The statement for listing specific properties
 	 */
-	SQLHSTMT get_properties_with_key_stmt;
+	SQLHSTMT get_object_properties_with_key_stmt;
 
 	/**
 	 * The mutex for lookup_by_property
 	 */
-	mutex_t lookup_by_property_lock;
+	mutex_t lookup_object_by_property_lock;
 
 	/**
 	 * The statement for looking up by a property value
 	 */
-	SQLHSTMT lookup_by_property_stmt;
+	SQLHSTMT lookup_object_by_property_stmt;
 
-	mutex_t get_ancestry_properties_lock;
-	SQLHSTMT get_ancestry_properties_stmt;
-	SQLHSTMT get_ancestry_properties_with_key_stmt;
+	mutex_t get_relation_properties_lock;
+	SQLHSTMT get_relation_properties_stmt;
+	SQLHSTMT get_relation_properties_with_key_stmt;
 	
 	mutex_t has_immediate_ancestor_lock;
 	SQLHSTMT has_immediate_ancestor_stmt;
