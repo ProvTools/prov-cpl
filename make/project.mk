@@ -4,7 +4,6 @@
 # Copyright (c) Peter Macko
 #
 
-
 #
 # Set the project root
 #
