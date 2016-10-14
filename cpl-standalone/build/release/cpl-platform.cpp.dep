@@ -1,0 +1,1 @@
+cpl-platform.o: cpl-platform.cpp stdafx.h cpl-platform.h ../include/cpl.h

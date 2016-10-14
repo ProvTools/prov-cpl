@@ -1,0 +1,2 @@
+cpl-lock.o: cpl-lock.cpp stdafx.h ../include/private/cpl-lock.h \
+  ../include/cpl.h ../include/cpl-exception.h cpl-platform.h

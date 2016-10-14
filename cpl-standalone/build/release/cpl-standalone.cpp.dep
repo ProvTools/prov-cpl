@@ -1,0 +1,4 @@
+cpl-standalone.o: cpl-standalone.cpp stdafx.h cpl-private.h \
+  ../include/cplxx.h ../include/cpl.h ../include/cpl-exception.h \
+  ../include/cpl-db-backend.h ../include/private/cpl-lock.h \
+  cpl-platform.h
