@@ -37,6 +37,7 @@ package edu.harvard.pass.cpl;
 
 import swig.direct.CPLDirect.*;
 
+import java.math.BigInteger;
 
 /**
  * A session of the provenance-aware application
@@ -49,7 +50,7 @@ public class CPLSession {
 	private static CPLSession current;
 
 	/// The internal id
-	cpl_id_t id;
+	BigInteger id;
 
 	/// The MAC address
 	private String macAddress = null;
@@ -78,7 +79,7 @@ public class CPLSession {
 	 *
 	 * @param id the internal CPL session ID
 	 */
-	CPLSession(cpl_id_t id) {
+	CPLSession(BigInteger id) {
 		this.id = id;
 	}
 
@@ -94,7 +95,7 @@ public class CPLSession {
 		// even in the case of a race condition.
 
 		if (current == null) {
-			cpl_id_t id = new cpl_id_t();
+			BigInteger id = BigInteger.ZERO;
 			int r = CPLDirect.cpl_get_current_session(id);
 			CPLException.assertSuccess(r);
 			current = new CPLSession(id);

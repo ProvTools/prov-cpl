@@ -73,7 +73,7 @@ struct _cpl_db_backend_t;
 /***************************************************************************/
 /** Standard types                                                        **/
 /***************************************************************************/
-//TODO add ancestry types
+
 /**
  * A generic type for an ID. It is used primarily for object IDs.
  */
@@ -189,6 +189,7 @@ typedef cpl_return_t (*cpl_id_timestamp_iterator_t)
 /**
  * The iterator callback function used by cpl_get_object_ancestry().
  *
+ * @param relation_id the ID of the relation
  * @param query_object_id the ID of the object on which we are querying
  * @param other_object_id the ID of the object on the other end of the
  *                        dependency/ancestry edge
@@ -196,18 +197,21 @@ typedef cpl_return_t (*cpl_id_timestamp_iterator_t)
  * @param context the application-provided context
  * @return CPL_OK or an error code (the caller should fail on this error)
  */
-typedef cpl_return_t (*cpl_ancestry_iterator_t)
-						(const cpl_id_t query_object_id,
+typedef cpl_return_t (*cpl_relation_iterator_t)
+						(const cpl_id_t relation_id,
+						 const cpl_id_t query_object_id,
 						 const cpl_id_t other_object_id,
 						 const int type,
+						 const cpl_id_t container_id,
 						 void* context);
 
 /**
  * The arguments of cpl_ancestry_iterator_t() expressed as a struct (excluding
  * the caller-provided context).
  */
-typedef struct cpl_ancestry_entry {
+typedef struct cpl_relation {
 
+	/// The relation ID
 	cpl_id_t id;
 
 	/// The ID of the object on which we are querying.
@@ -219,7 +223,10 @@ typedef struct cpl_ancestry_entry {
 	/// The type of the data or the control dependency.
 	int type;
 
-} cpl_ancestry_entry_t;
+	/// The ID of the container object
+	cpl_id_t container_id;
+
+} cpl_relation_t;
 
 /**
  * The iterator callback function used by property accessors.
@@ -257,10 +264,11 @@ WINDLL_API extern const cpl_id_t CPL_NONE;
 
 
 /***************************************************************************/
-/** Dependency Edge Types                                                 **/
+/** Relation Types                                                        **/
 /***************************************************************************/
-// TODO finish
 
+/*
+/// Macros defining the source and origin of a relation
 #define NOT_SPECIFIED 			0
 #define F_ENT_T_ENT				1
 #define F_ENT_T_ACT				2
@@ -274,6 +282,7 @@ WINDLL_API extern const cpl_id_t CPL_NONE;
 
 #define FROM_TO_VAL(t,v)		((t << 8) | v)
 
+/// Types of relation
 #define ALTERNATEOF				FROM_TO_VAL(F_ENT_T_ENT, 1)
 #define	DERIVEDBYINSERTIONFROM	FROM_TO_VAL(F_ENT_T_ENT, 2)
 #define	DERIVEDBYREMOVALFROM	FROM_TO_VAL(F_ENT_T_ENT, 3)
@@ -304,6 +313,36 @@ WINDLL_API extern const cpl_id_t CPL_NONE;
 #define WASINFLUENCEDBY(t)		FROM_TO_VAL(t, 1)
 
 #define GET_RELATION_CATEGORY(n) (n >> 8)
+*/
+
+#define WASINFLUENCEDBY			0
+
+#define ALTERNATEOF				1
+#define	DERIVEDBYINSERTIONFROM	2
+#define	DERIVEDBYREMOVALFROM	3
+#define	HADMEMBER 				4
+#define	HADDICTIONARYMEMBER		5
+#define	SPECIALIZATIONOF		6
+#define	WASDERIVEDFROM			7
+
+#define	WASGENERATEDBY			8
+#define	WASINVALIDATEDBY		9
+
+#define	WASATTRIBUTEDTO			10
+
+
+#define	USED 					11
+
+#define	WASINFORMEDBY			12
+
+#define	WASSTARTEDBY			13
+#define	WASENDEDBY				14
+
+#define HADPLAN					15
+
+#define	WASASSOCIATEDWITH		16
+
+#define ACTEDONBEHALFOF			17
 /***************************************************************************/
 /** Return Codes                                                          **/
 /***************************************************************************/
@@ -526,7 +565,9 @@ WINDLL_API extern const cpl_id_t CPL_NONE;
  */
 #define CPL_D_DESCENDANTS				1
 
-
+/**
+* Do not return this kind of object
+**/
 #define NO_ENTITIES						(1 << 1)
 #define NO_ACTIVITIES					(1 << 2)
 #define NO_AGENTS						(1 << 3)
@@ -664,12 +705,35 @@ cpl_add_object_property(const cpl_id_t id,
 				 const char* key,
                  const char* value);
 
+/**
+* Add a relation
+* 
+* @param from_id the source's ID
+* @param to_id the destination's ID
+* @param type the relation's PROV type
+* @param out_id the pointer to store the ID of the newly created relation
+* @return CPL_OK or an error code
+**/
 EXPORT cpl_return_t
 cpl_add_relation(const cpl_id_t from_id,
 			  	   const cpl_id_t to_id,
 				   const int type,
+				   const cpl_id_t container,
 				   cpl_id_t* out_id);
 
+
+/**
+ * Add a property to the given relation.
+ *
+ * @param id the object ID
+ * @param key the key
+ * @param value the value
+ * @return CPL_OK or an error code
+ */
+EXPORT cpl_return_t
+cpl_add_relation_property(const cpl_id_t id,
+				 const char* key,
+                 const char* value);
 
 /***************************************************************************/
 /** Provenance Access API                                                 **/
@@ -755,7 +819,7 @@ EXPORT cpl_return_t
 cpl_get_object_relations(const cpl_id_t id,
 						const int direction,
 						const int flags,
-						cpl_ancestry_iterator_t iterator,
+						cpl_relation_iterator_t iterator,
 						void* context);
 
 /**
@@ -794,6 +858,18 @@ cpl_get_relation_properties(const cpl_id_t id,
 				   cpl_property_iterator_t iterator,
 				   void* context);
 
+EXPORT cpl_return_t
+cpl_delete_bundle(const cpl_id_t id);
+
+EXPORT cpl_return_t
+cpl_get_bundle_objects(const cpl_id_t id,
+					cpl_object_info_iterator_t iterator,
+					void* context);
+
+EXPORT cpl_return_t
+cpl_get_bundle_relations(const cpl_id_t id,
+					cpl_relation_iterator_t iterator,
+					void* context);
 /***************************************************************************/
 /** Utility functions                                                     **/
 /***************************************************************************/

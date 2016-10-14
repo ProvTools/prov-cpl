@@ -662,6 +662,7 @@ extern "C" EXPORT cpl_return_t
 cpl_add_relation(const cpl_id_t from_id,
 			  	   const cpl_id_t to_id,
 				   const int type,
+				   const cpl_id_t container,
 				   cpl_id_t* out_id)
 {
 	CPL_ENSURE_INITIALIZED;
@@ -670,6 +671,7 @@ cpl_add_relation(const cpl_id_t from_id,
 
 	CPL_ENSURE_NOT_NONE(from_id);
 	CPL_ENSURE_NOT_NONE(to_id);
+	CPL_ENSURE_NOT_NONE(container);
 
 	//TODO add verification + caching
 
@@ -681,6 +683,7 @@ cpl_add_relation(const cpl_id_t from_id,
 													from_id,
 													to_id,
 													type,
+													container,
 													&id);
 
 
@@ -693,7 +696,6 @@ cpl_add_relation(const cpl_id_t from_id,
 	if (out_id != NULL) *out_id = id;
 	return CPL_OK;
 }
-
 
 
 /***************************************************************************/
@@ -840,7 +842,7 @@ extern "C" EXPORT cpl_return_t
 cpl_get_object_relations(const cpl_id_t id,
 						const int direction,
 						const int flags,
-						cpl_ancestry_iterator_t iterator,
+						cpl_relation_iterator_t iterator,
 						void* context)
 {
 	CPL_ENSURE_INITIALIZED;
@@ -942,6 +944,40 @@ cpl_get_relation_properties(const cpl_id_t id,
 												 iterator, context);
 }
 
+extern "C" EXPORT cpl_return_t
+cpl_delete_bundle(const cpl_id_t id)
+{
+	CPL_ENSURE_INITIALIZED;
+	CPL_ENSURE_NOT_NONE(id);
+
+	return cpl_db_backend->cpl_db_delete_bundle(cpl_db_backend, id);
+}
+
+extern "C" EXPORT cpl_return_t
+cpl_get_bundle_objects(const cpl_id_t id,
+					cpl_object_info_iterator_t iterator,
+					void* context)
+{
+	CPL_ENSURE_INITIALIZED;
+	CPL_ENSURE_NOT_NONE(id);
+	CPL_ENSURE_NOT_NULL(iterator);
+
+	return cpl_db_backend->cpl_db_get_bundle_objects(cpl_db_backend, id,
+												iterator, context);
+}
+
+extern "C" EXPORT cpl_return_t
+cpl_get_bundle_relations(const cpl_id_t id,
+					cpl_relation_iterator_t iterator,
+					void* context)
+{
+	CPL_ENSURE_INITIALIZED;
+	CPL_ENSURE_NOT_NONE(id);
+	CPL_ENSURE_NOT_NULL(iterator);
+
+	return cpl_db_backend->cpl_db_get_bundle_relations(cpl_db_backend, id,
+												iterator, context);
+}
 /***************************************************************************/
 /** Public API: Enhanced C++ Functionality                                **/
 /***************************************************************************/
@@ -987,8 +1023,7 @@ cpl_cb_collect_object_info_vector(const cpl_object_info_t* info,
  * information in an instance of std::vector<cpl_id_timestamp_t>.
  *
  * @param id the object ID
- * @param key the property name
- * @param value the property value
+ * @param @param timestamp the object creation time expressed as UNIX time
  * @param context the pointer to an instance of the vector 
  * @return CPL_OK or an error code
  */
@@ -1015,6 +1050,7 @@ cpl_cb_collect_id_timestamp_vector(const cpl_id_t id,
  * The iterator callback for cpl_get_object_ancestry() that collects
  * the passed-in information in an instance of std::list<cpl_ancestry_entry_t>.
  *
+ * @param relation_id the ID of the relation
  * @param query_object_id the ID of the object on which we are querying
  * @param other_object_id the ID of the object on the other end of the
  *                        dependency/ancestry edge
@@ -1023,7 +1059,7 @@ cpl_cb_collect_id_timestamp_vector(const cpl_id_t id,
  * @return CPL_OK or an error code
  */
 EXPORT cpl_return_t
-cpl_cb_collect_ancestry_list(const cpl_id_t ancestry_id,
+cpl_cb_collect_relation_list(const cpl_id_t relation_id,
 							 const cpl_id_t query_object_id,
 							 const cpl_id_t other_object_id,
 							 const int type,
@@ -1031,14 +1067,14 @@ cpl_cb_collect_ancestry_list(const cpl_id_t ancestry_id,
 {
 	if (context == NULL) return CPL_E_INVALID_ARGUMENT;
 
-	cpl_ancestry_entry_t e;
-	e.id = ancestry_id;
+	cpl_relation_t e;
+	e.id = relation_id;
 	e.query_object_id = query_object_id;
 	e.other_object_id = other_object_id;
 	e.type = type;
 
-	std::list<cpl_ancestry_entry_t>& l =
-		*((std::list<cpl_ancestry_entry_t>*) context);
+	std::list<cpl_relation_t>& l =
+		*((std::list<cpl_relation_t>*) context);
 	l.push_back(e);
 
 	return CPL_OK;
@@ -1049,6 +1085,7 @@ cpl_cb_collect_ancestry_list(const cpl_id_t ancestry_id,
  * The iterator callback for cpl_get_object_ancestry() that collects
  * the information in an instance of std::vector<cpl_ancestry_entry_t>.
  *
+ * @param relation_id the ID of the relation
  * @param query_object_id the ID of the object on which we are querying
  * @param other_object_id the ID of the object on the other end of the
  *                        dependency/ancestry edge
@@ -1057,22 +1094,24 @@ cpl_cb_collect_ancestry_list(const cpl_id_t ancestry_id,
  * @return CPL_OK or an error code
  */
 EXPORT cpl_return_t
-cpl_cb_collect_ancestry_vector(const cpl_id_t ancestry_id,
+cpl_cb_collect_relation_vector(const cpl_id_t relation_id,
 							   const cpl_id_t query_object_id,
 							   const cpl_id_t other_object_id,
 							   const int type,
+							   const cpl_id_t container_id,
 							   void* context)
 {
 	if (context == NULL) return CPL_E_INVALID_ARGUMENT;
 
-	cpl_ancestry_entry_t e;
-	e.id = ancestry_id;
+	cpl_relation_t e;
+	e.id = relation_id;
 	e.query_object_id = query_object_id;
 	e.other_object_id = other_object_id;
 	e.type = type;
+	e.container_id = container_id;
 
-	std::vector<cpl_ancestry_entry_t>& l =
-		*((std::vector<cpl_ancestry_entry_t>*) context);
+	std::vector<cpl_relation_t>& l =
+		*((std::vector<cpl_relation_t>*) context);
 	l.push_back(e);
 
 	return CPL_OK;
@@ -1118,7 +1157,6 @@ cpl_cb_collect_properties_vector(const cpl_id_t id,
  * the returned information in an instance of std::vector<cpl_id_t>.
  *
  * @param id the object ID
- * @param version the object version
  * @param key the property name
  * @param value the property value
  * @param context the pointer to an instance of the vector 

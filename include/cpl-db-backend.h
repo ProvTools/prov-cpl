@@ -163,6 +163,7 @@ typedef struct _cpl_db_backend_t {
 								const cpl_id_t from_id,
 								const cpl_id_t to_id,
 								const int type,
+								const cpl_id_t container,
 								cpl_id_t* out_id);
 
 	/**
@@ -271,7 +272,7 @@ typedef struct _cpl_db_backend_t {
 								  const cpl_id_t id,
 								  const int direction,
 								  const int flags,
-								  cpl_ancestry_iterator_t callback,
+								  cpl_relation_iterator_t callback,
 								  void* context);
 
 	/**
@@ -315,6 +316,22 @@ typedef struct _cpl_db_backend_t {
 								 const cpl_id_t id,
 								 const char* key,
 								 cpl_property_iterator_t callback,
+								 void* context);
+
+	cpl_return_t
+	(*cpl_db_delete_bundle)(struct _cpl_db_backend_t* backend,
+								 const cpl_id_t id);
+
+	cpl_return_t
+	(*cpl_db_get_bundle_objects)(struct _cpl_db_backend_t* backend,
+								 const cpl_id_t id,
+                                 cpl_object_info_iterator_t callback,
+                                 void* context);
+
+	cpl_return_t
+	(*cpl_db_get_bundle_relations)(struct _cpl_db_backend_t* backend,
+								 const cpl_id_t id,
+								 cpl_relation_iterator_t callback,
 								 void* context);
 
 

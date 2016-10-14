@@ -90,30 +90,44 @@ CREATE TABLE IF NOT EXISTS cpl_relations (
        from_id BIGSERIAL NOT NULL,
        to_id BIGSERIAL NOT NULL,
        type INT,
+       container_id BIGINT,
        PRIMARY KEY(id),
        FOREIGN KEY(from_id)
-                   REFERENCES cpl_objects(id),
+                   REFERENCES cpl_objects(id)
+                   ON DELETE CASCADE,
        FOREIGN KEY(to_id)
-                   REFERENCES cpl_objects(id);
+                   REFERENCES cpl_objects(id)
+                   ON DELETE CASCADE,
+       FOREIGN KEY(container_id)
+                   REFERENCES cpl_objects(id)
+                   ON DELETE CASCADE);
 
 CREATE TABLE IF NOT EXISTS cpl_relation_properties (
       id BIGINT,
       name VARCHAR(255) NOT NULL,
       value VARCHAR(4095) NOT NULL,
       FOREIGN KEY(id)
-            REFERENCES cpl_relation(id));
+            REFERENCES cpl_relations(id)
+            ON DELETE CASCADE);
 
 CREATE TABLE IF NOT EXISTS cpl_object_properties (
        id BIGINT,
        name VARCHAR(255) NOT NULL,
        value VARCHAR(4095) NOT NULL,
        FOREIGN KEY(id)
-           REFERENCES cpl_objects(id));
+           REFERENCES cpl_objects(id)
+           ON DELETE CASCADE);
 
 ALTER TABLE cpl_objects ADD CONSTRAINT cpl_objects_fk
       FOREIGN KEY (container_id)
-      REFERENCES cpl_objects(id);
+      REFERENCES cpl_objects(id)
+      ON DELETE CASCADE;
 
+ALTER SEQUENCE cpl_objects_id_seq RESTART WITH 1;
+
+ALTER SEQUENCE cpl_sessions_id_seq RESTART WITH 1;
+
+ALTER SEQUENCE cpl_relations_id_seq RESTART WITH 1;
 
 --
 -- Grant the appropriate privileges
@@ -122,6 +136,6 @@ ALTER TABLE cpl_objects ADD CONSTRAINT cpl_objects_fk
 GRANT ALL PRIVILEGES ON TABLE cpl_objects TO cpl WITH GRANT OPTION;
 GRANT ALL PRIVILEGES ON TABLE cpl_sessions TO cpl WITH GRANT OPTION;
 GRANT ALL PRIVILEGES ON TABLE cpl_relations TO cpl WITH GRANT OPTION;
-GRANT ALL PRIVILEGES ON TABLE cpl_properties TO cpl WITH GRANT OPTION;
 GRANT ALL PRIVILEGES ON TABLE cpl_relation_properties TO cpl WITH GRANT OPTION;
+GRANT ALL PRIVILEGES ON TABLE cpl_object_properties TO cpl WITH GRANT OPTION;
 

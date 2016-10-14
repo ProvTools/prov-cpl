@@ -199,7 +199,7 @@ public class CPL {
 	 * @param id the internal id
 	 * @return if it is CPL_NONE
 	 */
-	static boolean isNone(cpl_id_t id) {
+	static boolean isNone(BigInteger id) {
 		return id.equals(BigInteger.ZERO);
 	}
 }

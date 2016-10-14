@@ -129,27 +129,33 @@ typedef struct {
 	SQLHSTMT lookup_object_ext_stmt;
 
 	/**
-	 * The lock for add_ancestry_edge
+	 * The lock for add_relation_edge
 	 */
 	mutex_t add_relation_lock;
 
 	/**
-	 * The statement that adds a new ancestry edge
+	 * The statement that adds a new relation
 	 */
 	SQLHSTMT add_relation_stmt;
 
 	/**
-	 * The lock for add_property
+	 * The lock for add_object_property
 	 */
 	mutex_t add_object_property_lock;
 
 	/**
-	 * The statement that adds a new property
+	 * The statement that adds a new object property
 	 */
 	SQLHSTMT add_object_property_stmt;
 
+	/**
+	* The lock for add_relation_property
+	*/
 	mutex_t add_relation_property_lock;
 
+	/**
+	* The statement that adds a new relation property
+	*/
 	SQLHSTMT add_relation_property_stmt;
 
 	/**
@@ -190,7 +196,7 @@ typedef struct {
 
 
 	/**
-	 * The mutex for get_object_ancestry
+	 * The mutex for get_object_relations
 	 */
 	mutex_t get_object_relations_lock;
 
@@ -205,22 +211,22 @@ typedef struct {
 	SQLHSTMT get_object_descendants_stmt;
 
 	/**
-	 * The mutex for get_properties
+	 * The mutex for get_object_properties
 	 */
 	mutex_t get_object_properties_lock;
 
 	/**
-	 * The statement for listing properties
+	 * The statement for listing object properties
 	 */
 	SQLHSTMT get_object_properties_stmt;
 
 	/**
-	 * The statement for listing specific properties
+	 * The statement for listing specific object properties
 	 */
 	SQLHSTMT get_object_properties_with_key_stmt;
 
 	/**
-	 * The mutex for lookup_by_property
+	 * The mutex for lookup_object_by_property
 	 */
 	mutex_t lookup_object_by_property_lock;
 
@@ -229,12 +235,48 @@ typedef struct {
 	 */
 	SQLHSTMT lookup_object_by_property_stmt;
 
+	/**
+	* The mutex for get_relation_properties
+	*/
 	mutex_t get_relation_properties_lock;
+
+	/**
+	* The statement for listing object properties
+	*/
 	SQLHSTMT get_relation_properties_stmt;
+
+	/**
+	* The statement for listing specific object properties
+	*/
 	SQLHSTMT get_relation_properties_with_key_stmt;
 	
+	/**
+	* The mutex for has_immediate_ancestor
+	*/
 	mutex_t has_immediate_ancestor_lock;
+
+	/**
+	* The statement for determining whether an object has a particular ancestor
+	*/
 	SQLHSTMT has_immediate_ancestor_stmt;
+	
+	/**
+	* The mutex for delete_bundle
+	*/
+	mutex_t delete_bundle_lock;
+
+	/**
+	* The statement for deleting a bundle
+	*/
+	SQLHSTMT delete_bundle_stmt;
+
+	mutex_t get_bundle_objects_lock;
+
+	SQLHSTMT get_bundle_objects_stmt;
+
+	mutex_t get_bundle_relations_lock;
+	
+	SQLHSTMT get_bundle_relations_stmt;
 
 } cpl_odbc_t;
 

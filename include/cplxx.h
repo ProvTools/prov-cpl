@@ -197,6 +197,7 @@ cpl_cb_collect_id_timestamp_vector(const cpl_id_t id,
  * The iterator callback for cpl_get_object_ancestry() that collects
  * the passed-in information in an instance of std::list<cpl_ancestry_entry_t>.
  *
+ * @param relation_id the ID of the relation
  * @param query_object_id the ID of the object on which we are querying
  * @param query_object_verson the version of the queried object
  * @param other_object_id the ID of the object on the other end of the
@@ -210,7 +211,7 @@ cpl_cb_collect_id_timestamp_vector(const cpl_id_t id,
 %constant
 #endif
 EXPORT cpl_return_t
-cpl_cb_collect_ancestry_list(const cpl_id_t ancestry_id,
+cpl_cb_collect_relation_list(const cpl_id_t relation_id,
 							 const cpl_id_t query_object_id,
 							 const cpl_id_t other_object_id,
 							 const int type,
@@ -220,6 +221,7 @@ cpl_cb_collect_ancestry_list(const cpl_id_t ancestry_id,
  * The iterator callback for cpl_get_object_ancestry() that collects
  * the information in an instance of std::vector<cpl_ancestry_entry_t>.
  *
+ * @param relation_id the ID of the relation
  * @param query_object_id the ID of the object on which we are querying
  * @param query_object_verson the version of the queried object
  * @param other_object_id the ID of the object on the other end of the
@@ -233,10 +235,11 @@ cpl_cb_collect_ancestry_list(const cpl_id_t ancestry_id,
 %constant
 #endif
 EXPORT cpl_return_t
-cpl_cb_collect_ancestry_vector(const cpl_id_t ancestry_id,
+cpl_cb_collect_relation_vector(const cpl_id_t relation_id,
 							   const cpl_id_t query_object_id,
 							   const cpl_id_t other_object_id,
 							   const int type,
+							   const cpl_id_t container_id,
 							   void* context);
 
 /**

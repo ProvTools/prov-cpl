@@ -35,13 +35,13 @@ package edu.harvard.pass.cpl;
  */
 
 
-//TODO c++ to java translation + API
 //TODO figure out if cpl_id_t works the way i think it does
 
 import swig.direct.CPLDirect.*;
 
 import java.util.Vector;
 
+import java.math.BigInteger;
 
 /**
  * A provenance object
@@ -51,17 +51,25 @@ import java.util.Vector;
 public class CPLObject {
 
 	/// The null object
-	private static cpl_id_t nullId = null;
+	private static BigInteger nullId = null;
 
 	/// Traversal direction: Ancestors
 	public static final int D_ANCESTORS = CPLDirectConstants.CPL_D_ANCESTORS;
 
 	/// Traversal direction: Descendants
-	public static final int D_DESCENDANTS=CPLDirectConstants.CPL_D_DESCENDANTS;
+	public static final int D_DESCENDANTS = CPLDirectConstants.CPL_D_DESCENDANTS;
+
+	public static final String ENTITY = CPLDirectConstants.ENTITY;
+	public static final String ACTIVITY = CPLDirectConstants.ACTIVITY;
+	public static final String AGENT = CPLDirectConstants.AGENT;	
+	public static final String BUNDLE = CPLDirectConstants.BUNDLE;	
+
+	public static final int	NO_ENTITIES = CPLDirectConstants.NO_ENTITIES;
+	public static final int	NO_ACTIVITIES = CPLDirectConstants.NO_ACTIVITIES;
+	public static final int	NO_AGENTS = CPLDirectConstants.NO_AGENTS;
 
 	/// The internal object ID
-	//TODO make BigInt
-	cpl_id_t id;
+	BigInteger id;
 
 	/// The object originator (cache)
 	private String originator = null;
@@ -73,7 +81,7 @@ public class CPLObject {
 	private String type = null;
 
 	/// The object container (cache)
-	private cpl_id_t containerId = null;
+	private BigInteger containerId = null;
 
 	/// Whether we know the container
 	private boolean knowContainer = false;
@@ -103,9 +111,8 @@ public class CPLObject {
 	 *
 	 * @param id the internal CPL object ID
 	 */
-	public CPLObject(cpl_id_t id) {
-		this.id = CPLDirect.new_cpl_id_tp();
-		CPLDirect.cpl_id_copy(this.id, id);
+	public CPLObject(BigInteger id) {
+		this.id = id;
 	}
 
 	/**
@@ -120,7 +127,7 @@ public class CPLObject {
 	public static CPLObject create(String originator, String name, String type,
 			CPLObject container) {
 
-		cpl_id_t id = new cpl_id_t();
+		BigInteger id = BigInteger.ZERO;
 		int r = CPLDirect.cpl_create_object(originator, name, type,
 				container == null ? nullId : container.id, id);
 		CPLException.assertSuccess(r);
@@ -159,7 +166,7 @@ public class CPLObject {
 	public static CPLObject tryLookup(String originator, String name,
 			String type) {
 
-		cpl_id_t id = new cpl_id_t();
+		BigInteger id = BigInteger.ZERO;
 		int r = CPLDirect.cpl_lookup_object(originator, name, type, id);
 
 		if (CPLException.isError(r)) {
@@ -220,7 +227,7 @@ public class CPLObject {
 			long l = v.size();
 			for (long i = 0; i < l; i++) {
 				cpl_id_timestamp_t e = v.get((int) i);
-                cpl_id_t id = e.getId();
+                BigInteger id = e.getId();
 
                 CPLObject o = new CPLObject(id);
                 o.originator = originator;
@@ -266,7 +273,7 @@ public class CPLObject {
 	public static CPLObject lookupOrCreate(String originator, String name,
 			String type, CPLObject container) {
 
-		cpl_id_t id = new cpl_id_t();
+		BigInteger id = BigInteger.ZERO;
 		int r = CPLDirect.cpl_lookup_or_create_object(originator, name, type,
 				container == null ? nullId : container.id, id);
 
@@ -321,14 +328,14 @@ public class CPLObject {
 			long l = v.size();
 			for (long i = 0; i < l; i++) {
 				cplxx_object_info_t e = v.get((int) i);
-                cpl_id_t id = e.getId();
+                BigInteger id = e.getId();
 
                 CPLObject o = new CPLObject(id);
                 o.originator = e.getOriginator();
                 o.name = e.getName();
                 o.type = e.getType();
                 
-                containerId = e.getContainer_id();
+                o.containerId = e.getContainer_id();
                 o.knowContainer = true;
 
 				result.add(o);
@@ -414,7 +421,7 @@ public class CPLObject {
 
 			containerId = info.getContainer_id();
 
-			cpl_id_t creationSessionId = info.getCreation_session();
+			BigInteger creationSessionId = info.getCreation_session();
 			if (CPL.isNone(creationSessionId)) {
 				creationSession = null;		// This should never happen!
 			}
@@ -441,7 +448,7 @@ public class CPLObject {
 	 *
 	 * @return the internal ID of this object
 	 */
-	public cpl_id_t getId() {
+	public BigInteger getId() {
 		return id;
 	}
 
@@ -483,7 +490,7 @@ public class CPLObject {
 	 *
 	 * @return the container, or null if none
 	 */
-	public cpl_id_t getContainerId() {
+	public BigInteger getContainerId() {
 		if (!knowContainer) fetchInfo();
 		return containerId;
 	}
@@ -539,7 +546,7 @@ public class CPLObject {
 		if (detail) {
 
 			sb.append("Container ID        : ");
-			sb.append(getContainer());
+			sb.append(getContainerId());
 			sb.append("\n");
 
 			sb.append("Creation session    : ");
@@ -550,16 +557,6 @@ public class CPLObject {
 			sb.append(new java.sql.Date(1000L * getCreationTime()));
 			sb.append(" ");
 			sb.append(new java.sql.Time(1000L * getCreationTime()));
-			sb.append("\n");
-
-			sb.append("Modification session: ");
-			sb.append(v.getSession());
-			sb.append("\n");
-
-			sb.append("Modification time   : ");
-			sb.append(new java.sql.Date(1000L * v.getCreationTime()));
-			sb.append(" ");
-			sb.append(new java.sql.Time(1000L * v.getCreationTime()));
 			sb.append("\n");
 		}
 
@@ -574,35 +571,37 @@ public class CPLObject {
 	 * @return a vector of results &ndash; instances of CPLAncestryEntry
 	 * @see CPLAncestryEntry
 	 */
-	public Vector<CPLAncestryEntry> getAncestry(int direction,
+	public Vector<CPLRelation> getRelations(int direction,
 			int flags) {
 
-		SWIGTYPE_p_std_vector_cpl_ancestry_entry_t pVector
-			= CPLDirect.new_std_vector_cpl_ancestry_entry_tp();
+		SWIGTYPE_p_std_vector_cpl_relation_t pVector
+			= CPLDirect.new_std_vector_cpl_relation_tp();
 		SWIGTYPE_p_void pv = CPLDirect
-			.cpl_convert_p_std_vector_cpl_ancestry_entry_t_to_p_void(pVector);
-		Vector<CPLAncestryEntry> result = null;
+			.cpl_convert_p_std_vector_cpl_relation_t_to_p_void(pVector);
+		Vector<CPLRelation> result = null;
 
 		try {
-			int r = CPLDirect.cpl_get_object_ancestry(id, direction,
-					flags, CPLDirect.cpl_cb_collect_ancestry_vector, pv);
+			int r = CPLDirect.cpl_get_object_relations(id, direction,
+					flags, CPLDirect.cpl_cb_collect_relation_vector, pv);
 			CPLException.assertSuccess(r);
 
-			cpl_ancestry_entry_t_vector v = CPLDirect
-				.cpl_dereference_p_std_vector_cpl_ancestry_entry_t(pVector);
+			cpl_relation_t_vector v = CPLDirect
+				.cpl_dereference_p_std_vector_cpl_relation_t(pVector);
 			long l = v.size();
-			result = new Vector<CPLAncestryEntry>((int) l);
+			result = new Vector<CPLRelation>((int) l);
 			for (long i = 0; i < l; i++) {
-				cpl_ancestry_entry_t e = v.get((int) i);
-				result.add(new CPLAncestryEntry(
+				cpl_relation_t e = v.get((int) i);
+				result.add(new CPLRelation(
+						e.getId(),
 						this,
 						new CPLObject(e.getOther_object_id()),
 						e.getType(),
+						new CPLObject(e.getContainer_id()),
 						direction == D_ANCESTORS));
 			}
 		}
 		finally {
-			CPLDirect.delete_std_vector_cpl_ancestry_entry_tp(pVector);
+			CPLDirect.delete_std_vector_cpl_relation_tp(pVector);
 		}
 
 		return result;
@@ -617,7 +616,7 @@ public class CPLObject {
 	 */
 	public void addProperty(String key, String value) {
 
-		int r = CPLDirect.cpl_add_property(id, key, value);
+		int r = CPLDirect.cpl_add_object_property(id, key, value);
 		CPLException.assertSuccess(r);
 	}
 
@@ -633,14 +632,14 @@ public class CPLObject {
 	protected static Vector<CPLObject> lookupByProperty(String key,
 			String value, boolean failOnNotFound) {
 
-		SWIGTYPE_p_std_vector_cpl_id_version_t pVector
+		SWIGTYPE_p_std_vector_cpl_id_t pVector
 			= CPLDirect.new_std_vector_cpl_id_tp();
 		SWIGTYPE_p_void pv = CPLDirect
 			.cpl_convert_p_std_vector_cpl_id_t_to_p_void(pVector);
-		Vector<CPLObjectVersion> result = null;
+		Vector<CPLObject> result = null;
 
 		try {
-			int r = CPLDirect.cpl_lookup_by_property(key, value,
+			int r = CPLDirect.cpl_lookup_object_by_property(key, value,
 					CPLDirect.cpl_cb_collect_property_lookup_vector, pv);
 			if (!failOnNotFound && r == CPLDirectConstants.CPL_E_NOT_FOUND) {
 				return new Vector<CPLObject>();
@@ -650,9 +649,9 @@ public class CPLObject {
 			cpl_id_t_vector v = CPLDirect
 				.cpl_dereference_p_std_vector_cpl_id_t(pVector);
 			long l = v.size();
-			result = new Vector<cpl_id_t>((int) l);
+			result = new Vector<CPLObject>((int) l);
 			for (long i = 0; i < l; i++) {
-				cpl_id_t e = v.get((int) i);
+				BigInteger e = v.get((int) i);
 				result.add(new CPLObject(e));
 			}
 		}
@@ -670,26 +669,26 @@ public class CPLObject {
 	 * @param key the property name or null for all entries
 	 * @return the vector of property entries
 	 */
-	Vector<CPLPropertyEntry> getProperties(String key) {
+	Vector<CPLObjectPropertyEntry> getProperties(String key) {
 
 		SWIGTYPE_p_std_vector_cplxx_property_entry_t pVector
 			= CPLDirect.new_std_vector_cplxx_property_entry_tp();
 		SWIGTYPE_p_void pv = CPLDirect
 			.cpl_convert_p_std_vector_cplxx_property_entry_t_to_p_void(pVector);
-		Vector<CPLPropertyEntry> result = null;
+		Vector<CPLObjectPropertyEntry> result = null;
 
 		try {
-			int r = CPLDirect.cpl_get_properties(id, key,
+			int r = CPLDirect.cpl_get_object_properties(id, key,
 					CPLDirect.cpl_cb_collect_properties_vector, pv);
 			CPLException.assertSuccess(r);
 
 			cplxx_property_entry_t_vector v = CPLDirect
 				.cpl_dereference_p_std_vector_cplxx_property_entry_t(pVector);
 			long l = v.size();
-			result = new Vector<CPLPropertyEntry>((int) l);
+			result = new Vector<CPLObjectPropertyEntry>((int) l);
 			for (long i = 0; i < l; i++) {
 				cplxx_property_entry_t e = v.get((int) i);
-				result.add(new CPLPropertyEntry(this,
+				result.add(new CPLObjectPropertyEntry(this,
 							e.getKey(),
 							e.getValue()));
 			}
@@ -707,7 +706,7 @@ public class CPLObject {
 	 *
 	 * @return the vector of property entries
 	 */
-	public Vector<CPLPropertyEntry> getProperties() {
+	public Vector<CPLObjectPropertyEntry> getProperties() {
 		return getProperties(null);
 	}
 
@@ -736,5 +735,87 @@ public class CPLObject {
 			String value) {
 		return lookupByProperty(key, value, false);
 	}
+
+	public static void deleteBundle(BigInteger id) {
+
+		int r = CPLDirect.cpl_delete_bundle(id);
+		if (CPLException.isError(r)){
+			throw new CPLException(r);
+		}
+	}
+
+	public static Vector<CPLObject> getBundleObjects(BigInteger id) {
+
+		SWIGTYPE_p_std_vector_cplxx_object_info_t pVector
+			= CPLDirect.new_std_vector_cplxx_object_info_tp();
+		SWIGTYPE_p_void pv = CPLDirect
+			.cpl_convert_p_std_vector_cplxx_object_info_t_to_p_void(pVector);
+		Vector<CPLObject> result = new Vector<CPLObject>();
+
+		try {
+            int r = CPLDirect.cpl_get_bundle_objects(id,
+					CPLDirect.cpl_cb_collect_object_info_vector, pv);
+			CPLException.assertSuccess(r);
+
+			cplxx_object_info_t_vector v = CPLDirect
+				.cpl_dereference_p_std_vector_cplxx_object_info_t(pVector);
+			long l = v.size();
+			for (long i = 0; i < l; i++) {
+				cplxx_object_info_t e = v.get((int) i);
+                BigInteger obj_id = e.getId();
+
+                CPLObject o = new CPLObject(obj_id);
+                o.originator = e.getOriginator();
+                o.name = e.getName();
+                o.type = e.getType();
+                
+                o.containerId = id;
+                o.knowContainer = true;
+
+				result.add(o);
+			}
+		}
+		finally {
+			CPLDirect.delete_std_vector_cplxx_object_info_tp(pVector);
+		}
+
+		return result;
+	}
+
+	public Vector<CPLRelation> getBundleRelations(BigInteger id) {
+
+		SWIGTYPE_p_std_vector_cpl_relation_t pVector
+			= CPLDirect.new_std_vector_cpl_relation_tp();
+		SWIGTYPE_p_void pv = CPLDirect
+			.cpl_convert_p_std_vector_cpl_relation_t_to_p_void(pVector);
+		Vector<CPLRelation> result = null;
+
+		try {
+			int r = CPLDirect.cpl_get_bundle_relations(id, 
+				CPLDirect.cpl_cb_collect_relation_vector, pv);
+			CPLException.assertSuccess(r);
+
+			cpl_relation_t_vector v = CPLDirect
+				.cpl_dereference_p_std_vector_cpl_relation_t(pVector);
+			long l = v.size();
+			result = new Vector<CPLRelation>((int) l);
+			for (long i = 0; i < l; i++) {
+				cpl_relation_t e = v.get((int) i);
+				result.add(new CPLRelation(
+						e.getId(),
+						new CPLObject(e.getQuery_object_id()),
+						new CPLObject(e.getOther_object_id()),
+						e.getType(),
+						new CPLObject(e.getContainer_id()),
+						true));
+			}
+		}
+		finally {
+			CPLDirect.delete_std_vector_cpl_relation_tp(pVector);
+		}
+
+		return result;
+	}
+
 }
 

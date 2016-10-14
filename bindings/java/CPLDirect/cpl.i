@@ -39,8 +39,8 @@
 %javaconst(0) min_buckets;
 %javaconst(0) cpl_cb_collect_object_info_vector;
 %javaconst(0) cpl_cb_collect_id_timestamp_vector;
-%javaconst(0) cpl_cb_collect_ancestry_list;
-%javaconst(0) cpl_cb_collect_ancestry_vector;
+%javaconst(0) cpl_cb_collect_relation_list;
+%javaconst(0) cpl_cb_collect_relation_vector;
 %javaconst(0) cpl_cb_collect_properties_vector;
 %javaconst(0) cpl_cb_collect_property_lookup_vector;
 

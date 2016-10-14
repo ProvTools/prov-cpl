@@ -469,6 +469,9 @@ cpl_odbc_free_statement_handles(cpl_odbc_t* odbc)
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_relation_properties_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_relation_properties_with_key_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->has_immediate_ancestor_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->delete_bundle_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_bundle_objects_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_bundle_relations_stmt);
 
 }
 
@@ -548,7 +551,9 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 	ALLOC_STMT(get_relation_properties_stmt);
 	ALLOC_STMT(get_relation_properties_with_key_stmt);
 	ALLOC_STMT(has_immediate_ancestor_stmt);
-
+	ALLOC_STMT(delete_bundle_stmt);
+	ALLOC_STMT(get_bundle_objects_stmt);
+	ALLOC_STMT(get_bundle_relations_stmt);
 #undef ALLOC_STMT
 
 
@@ -600,8 +605,8 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 	PREPARE(add_relation_stmt,
 			"INSERT INTO cpl_relations"
 			"            (id, from_id,"
-			"             to_id, type)"
-			"     VALUES (DEFAULT, ?, ?, ?);");
+			"             to_id, type, container_id)"
+			"     VALUES (DEFAULT, ?, ?, ?, ?);");
 
 	PREPARE(add_object_property_stmt,
 			"INSERT INTO cpl_object_properties"
@@ -639,14 +644,14 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 			" LIMIT 1;");
 
 	PREPARE(get_object_ancestors_stmt,
-			"SELECT id, to_id, type"
-			"  FROM cpl_relations"
-			" WHERE from_id = ?");
-
-	PREPARE(get_object_descendants_stmt,
-			"SELECT id, from_id, type"
+			"SELECT id, from_id, type, container_id"
 			"  FROM cpl_relations"
 			" WHERE to_id = ?");
+
+	PREPARE(get_object_descendants_stmt,
+			"SELECT id, to_id, type, container_id"
+			"  FROM cpl_relations"
+			" WHERE from_id = ?");
 
 	PREPARE(get_object_properties_stmt,
 			"SELECT id, name, value"
@@ -678,7 +683,19 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 			"  FROM cpl_relations"
 			" WHERE from_id = ? AND to_id = ?;");
 
+	PREPARE(delete_bundle_stmt,
+			"DELETE FROM cpl_objects"
+			"	WHERE id = ? AND type = 'BUNDLE';");
 
+	PREPARE(get_bundle_objects_stmt,
+			"SELECT id, creation_time, originator, name, type"
+			"  FROM cpl_objects"
+			"WHERE container_id = ?;")
+
+	PREPARE(get_bundle_relations_stmt,
+			"SELECT id, from_id, to_id, type"
+			"  FROM cpl_relations"
+			"WHERE container_id = ?;")
 #undef PREPARE
 
 
@@ -790,6 +807,9 @@ cpl_create_odbc_backend(const char* connection_string,
 	mutex_init(odbc->lookup_object_by_property_lock);
 	mutex_init(odbc->get_relation_properties_lock);
 	mutex_init(odbc->has_immediate_ancestor_lock);
+	mutex_init(odbc->delete_bundle_lock);
+	mutex_init(odbc->get_bundle_objects_lock);
+	mutex_init(odbc->get_bundle_relations_lock);
 
 	// Open the database connection
 	
@@ -821,6 +841,9 @@ err_sync:
 	mutex_destroy(odbc->lookup_object_by_property_lock);
 	mutex_destroy(odbc->get_relation_properties_lock);
 	mutex_destroy(odbc->has_immediate_ancestor_lock);
+	mutex_destroy(odbc->delete_bundle_lock);
+	mutex_destroy(odbc->get_bundle_objects_lock);
+	mutex_destroy(odbc->get_bundle_relations_lock);
 
 	delete odbc;
 	return r;
@@ -873,7 +896,7 @@ cpl_create_odbc_backend_dsn(const char* dsn,
  * should be freed by this function
  *
  * @param backend the pointer to the backend structure
- * @param the error code
+ * @return the error code
  */
 extern "C" cpl_return_t
 cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
@@ -901,6 +924,8 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
 	mutex_destroy(odbc->lookup_object_by_property_lock);
 	mutex_destroy(odbc->get_relation_properties_lock);
 	mutex_destroy(odbc->has_immediate_ancestor_lock);
+	mutex_destroy(odbc->get_bundle_objects_lock);
+	mutex_destroy(odbc->get_bundle_relations_lock);
 	
 	delete odbc;
 	
@@ -1030,13 +1055,13 @@ err:
  * Create an object.
  *
  * @param backend the pointer to the backend structure
- * @param id the ID of the new object
  * @param originator the originator
  * @param name the object name
  * @param type the object type
  * @param container the ID of the object that should contain this object
  *                  (use CPL_NONE for no container)
  * @param session the session ID responsible for this provenance record
+ * @param out_id the pointer to store the object ID
  * @return CPL_OK or an error code
  */
 extern "C" cpl_return_t
@@ -1180,7 +1205,7 @@ err:
  * @param originator the object originator (namespace)
  * @param name the object name
  * @param type the object type
- * @param flags a logical combination of CPL_L_* flags
+ * @param flags a logical combination of CPL_L_* flags (currently unused)
  * @param iterator the iterator to be called for each matching object
  * @param context the caller-provided iterator context
  * @return CPL_OK or an error code
@@ -1295,12 +1320,13 @@ err:
 
 
 /**
- * Add an ancestry edge
+ * Add a provenance relation
  *
  * @param backend the pointer to the backend structure
- * @param from_id the edge source ID
- * @param to_id the edge destination ID
- * @param type the data or control dependency type
+ * @param from_id the relation source ID
+ * @param to_id the relation destination ID
+ * @param type the relation type
+ * @param out_id the pointer to store the relation ID
  * @return the error code
  */
 extern "C" cpl_return_t
@@ -1308,6 +1334,7 @@ cpl_odbc_add_relation(struct _cpl_db_backend_t* backend,
 						   const cpl_id_t from_id,
 						   const cpl_id_t to_id,
 						   const int type,
+						   const cpl_id_t container,
 						   cpl_id_t* out_id)
 {
 	assert(backend != NULL);
@@ -1329,6 +1356,7 @@ retry:
 	SQL_BIND_INTEGER(stmt, 1, from_id);
 	SQL_BIND_INTEGER(stmt, 2, to_id);
 	SQL_BIND_INTEGER(stmt, 3, type);
+	SQL_BIND_INTEGER(stmt, 4, container);
 
 
 	// Execute
@@ -1360,7 +1388,7 @@ err:
 
 /**
  * Determine whether the given object has the given ancestor
- * TODO maybe change to descendant given how this shit works
+ * TODO maybe change to descendant?
  * @param backend the pointer to the backend structure
  * @param object_id the object ID
  * @param query_object_id the object that we want to determine whether it
@@ -1476,6 +1504,16 @@ err:
 	return CPL_E_STATEMENT_ERROR;
 }
 
+
+/**
+ * Add a property to the given relation
+ *
+ * @param backend the pointer to the backend structure
+ * @param id the edge ID
+ * @param key the key
+ * @param value the value
+ * @return CPL_OK or an error code
+ */
 extern "C" cpl_return_t
 cpl_odbc_add_relation_property(struct _cpl_db_backend_t* backend,
                       const cpl_id_t id,
@@ -1885,13 +1923,14 @@ err_r:
 /**
  * 
  * An entry in the result set of the queries issued by
- * cpl_odbc_get_object_ancestry().
+ * cpl_odbc_get_object_relations().
  */ 
-typedef struct __get_object_ancestry__entry {
-	cpl_id_t ancestry_id;
-	cpl_id_t id;
+typedef struct __get_object_relation__entry {
+	cpl_id_t relation_id;
+	cpl_id_t other_id;
 	long type;
-} __get_object_ancestry__entry_t;
+	cpl_id_t container_id;
+} __get_object_relation__entry_t;
 
 
 /**
@@ -1902,8 +1941,7 @@ typedef struct __get_object_ancestry__entry {
  * @param direction the direction of the graph traversal (CPL_D_ANCESTORS
  *                  or CPL_D_DESCENDANTS)
  * @param flags the bitwise combination of flags describing how should
- *              the graph be traversed (a logical combination of the
- *              CPL_A_* flags)
+ *              the graph be traversed
  * @param iterator the iterator callback function
  * @param context the user context to be passed to the iterator function
  * @return CPL_OK, CPL_S_NO_DATA, or an error code
@@ -1913,24 +1951,18 @@ cpl_odbc_get_object_relations(struct _cpl_db_backend_t* backend,
 							 const cpl_id_t id,
 							 const int direction,
 							 const int flags,
-							 cpl_ancestry_iterator_t callback,
+							 cpl_relation_iterator_t callback,
 							 void* context)
 {
 	assert(backend != NULL);
 	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
-
-	/*
-	if ((flags & ~CPL_ODBC_A_SUPPORTED_FLAGS) != 0) {
-		return CPL_E_NOT_IMPLEMENTED;
-	}
-	*/
 	
 	SQL_START;
 
 	cpl_return_t r = CPL_E_INTERNAL_ERROR;
 
-	std::list<__get_object_ancestry__entry_t> entries;
-	__get_object_ancestry__entry_t entry;
+	std::list<__get_object_relation__entry_t> entries;
+	__get_object_relation__entry_t entry;
 	SQLLEN ind_type;
 	bool found = false;
 
@@ -1958,13 +1990,16 @@ retry:
 
 	// Bind the columns
 
-	ret = SQLBindCol(stmt, 1, SQL_C_UBIGINT, &entry.ancestry_id, 0, NULL);
+	ret = SQLBindCol(stmt, 1, SQL_C_UBIGINT, &entry.relation_id, 0, NULL);
 	if (!SQL_SUCCEEDED(ret)) goto err_close;
 
-	ret = SQLBindCol(stmt, 2, SQL_C_UBIGINT, &entry.id, 0, NULL);
+	ret = SQLBindCol(stmt, 2, SQL_C_UBIGINT, &entry.other_id, 0, NULL);
 	if (!SQL_SUCCEEDED(ret)) goto err_close;
 
 	ret = SQLBindCol(stmt, 3, SQL_C_SLONG, &entry.type, 0, &ind_type);
+	if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+	ret = SQLBindCol(stmt, 4, SQL_C_UBIGINT, &entry.container_id, 0, NULL);
 	if (!SQL_SUCCEEDED(ret)) goto err_close;
 
 
@@ -1983,6 +2018,7 @@ retry:
 
 		found = true;
 
+		/*
 		int cat = GET_RELATION_CATEGORY((int) entry.type);
 
 		if(direction == CPL_D_ANCESTORS){
@@ -2002,6 +2038,7 @@ retry:
 			if ((cat == F_ENT_T_AGT | cat == F_ACT_T_AGT | cat == F_AGT_T_AGT)
 					&& (flags & NO_AGENTS) != 0) continue;
 		}
+	    */
 
 		entries.push_back(entry);
 	}
@@ -2026,9 +2063,9 @@ retry:
 	// Call the user-provided callback function
 
 	if (callback != NULL) {
-		std::list<__get_object_ancestry__entry_t>::iterator i;
+		std::list<__get_object_relation__entry_t>::iterator i;
 		for (i = entries.begin(); i != entries.end(); i++) {
-			r = callback(id, i->id, (int) i->type, context);
+			r = callback(i->relation_id, id, i->other_id, (int) i->type, i->container_id, context);
 			if (!CPL_IS_OK(r)) return r;
 		}
 	}
@@ -2052,7 +2089,7 @@ err:
 
 /**
  * An entry in the result set of the queries issued by
- * cpl_odbc_get_properties().
+ * cpl_odbc_get_*_properties().
  */
 typedef struct __get_properties__entry {
 	cpl_id_t id;
@@ -2315,7 +2352,16 @@ err:
 	return CPL_E_STATEMENT_ERROR;
 }
 
-
+/**
+ * Get the properties associated with the given provenance relation.
+ *
+ * @param backend the pointer to the backend structure
+ * @param id the the relation ID
+ * @param key the property to fetch - or NULL for all properties
+ * @param iterator the iterator callback function
+ * @param context the user context to be passed to the iterator function
+ * @return CPL_OK, CPL_S_NO_DATA, or an error code
+ */
 cpl_return_t
 cpl_odbc_get_relation_properties(struct _cpl_db_backend_t* backend,
 						const cpl_id_t id,
@@ -2462,6 +2508,321 @@ err:
 }
 
 
+
+cpl_return_t
+cpl_odbc_delete_bundle(struct _cpl_db_backend_t* backend,
+						const cpl_id_t id)
+{
+	assert(backend != NULL);
+	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
+
+	mutex_lock(odbc->delete_bundle_lock);
+
+
+	// Prepare the statement
+
+	SQL_START;
+
+retry:
+	SQLHSTMT stmt = odbc->delete_bundle_stmt;
+
+	SQL_BIND_INTEGER(stmt, 1, id);
+
+	// Execute
+	
+	SQL_EXECUTE(stmt);
+
+	// Cleanup
+
+	mutex_unlock(odbc->delete_bundle_lock);
+	return CPL_OK;
+
+
+	// Error handling
+
+err:
+	mutex_unlock(odbc->delete_bundle_lock);
+	return CPL_E_STATEMENT_ERROR;
+
+}
+
+cpl_return_t
+cpl_odbc_get_bundle_objects(struct _cpl_db_backend_t* backend,
+						     const cpl_id_t id,
+						     cpl_object_info_iterator_t callback,
+						     void* context){
+	assert(backend != NULL);
+	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
+
+SQL_START;
+
+	cpl_return_t r = CPL_E_INTERNAL_ERROR;
+	cplxx_object_info_t entry;
+	std::list<cplxx_object_info_t> entries;
+	SQL_TIMESTAMP_STRUCT t;
+
+	size_t originator_size = ORIGINATOR_LEN + 1;
+	size_t name_size = NAME_LEN + 1;
+	size_t type_size = TYPE_LEN + 1;
+
+	char* entry_originator = (char*) alloca(originator_size);
+	char* entry_name = (char*) alloca(name_size);
+	char* entry_type = (char*) alloca(type_size);
+
+	if (entry_originator == NULL || entry_name == NULL || entry_type == NULL) {
+		return CPL_E_INSUFFICIENT_RESOURCES;
+	}
+
+	mutex_lock(odbc->get_bundle_objects_lock);
+
+
+	// Get and execute the statement
+	
+retry:
+
+	entries.clear();
+
+	SQLHSTMT stmt = odbc->get_bundle_objects_stmt;
+
+	SQL_BIND_INTEGER(stmt, 1, id);
+
+	// Execute
+	
+	SQL_EXECUTE(stmt);
+
+	// Bind the columns
+
+	ret = SQLBindCol(stmt, 1, SQL_C_UBIGINT, &entry.id, 0, NULL);
+	if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+	ret = SQLBindCol(stmt, 2, SQL_C_TYPE_TIMESTAMP, &t, sizeof(t), NULL);
+	if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+	ret = SQLBindCol(stmt, 3, SQL_C_CHAR, entry_originator, originator_size,
+					 NULL);
+	if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+	ret = SQLBindCol(stmt, 4, SQL_C_CHAR, entry_name, name_size, NULL);
+	if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+	ret = SQLBindCol(stmt, 5, SQL_C_CHAR, entry_type, type_size, NULL);
+	if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+    entry.container_id = id;
+
+    entry.creation_session = CPL_NONE;
+
+
+
+
+	// Fetch the result
+	// TODO think about merging into one loop
+
+	while (true) {
+
+		ret = SQLFetch(stmt);
+		if (!SQL_SUCCEEDED(ret)) {
+			if (ret == SQL_INVALID_HANDLE) {
+				fprintf(stderr, "\nThe ODBC driver failed while running "
+								"SQLFetch due to SQL_INVALID_HANDLE\n\n");
+				goto err_close;
+			}
+			else if (ret != SQL_NO_DATA) {
+				print_odbc_error("SQLFetch", stmt, SQL_HANDLE_STMT);
+				goto err_close;
+			}
+			break;
+		}
+
+		entry.creation_time = cpl_sql_timestamp_to_unix_time(t);
+		entry.originator = entry_originator;
+		entry.name = entry_name;
+		entry.type = entry_type;
+
+		entries.push_back(entry);
+	}
+	
+	ret = SQLCloseCursor(stmt);
+	if (!SQL_SUCCEEDED(ret)) {
+		print_odbc_error("SQLCloseCursor", stmt, SQL_HANDLE_STMT);
+		goto err;
+	}
+
+
+	// Unlock
+
+	mutex_unlock(odbc->get_bundle_objects_lock);
+
+
+	// If we did not get any data back, terminate
+
+	if (entries.empty()) return CPL_S_NO_DATA;
+
+
+	// Call the user-provided callback function
+
+	if (callback != NULL) {
+		std::list<cplxx_object_info_t>::iterator i;
+		for (i = entries.begin(); i != entries.end(); i++) {
+
+			strncpy(entry_originator, i->originator.c_str(), originator_size);
+			strncpy(entry_name, i->name.c_str(), name_size);
+			strncpy(entry_type, i->type.c_str(), type_size);
+			entry_originator[originator_size - 1] = '\0';
+			entry_name[name_size - 1] = '\0';
+			entry_type[type_size - 1] = '\0';
+
+			cpl_object_info_t e;
+			e.id = i->id;
+			e.creation_session = i->creation_session;
+			e.creation_time = i->creation_time;
+			e.originator = entry_originator;
+			e.name = entry_name;
+			e.type = entry_type;
+			e.container_id = i->container_id;
+
+			r = callback(&e, context);
+			if (!CPL_IS_OK(r)) return r;
+		}
+	}
+
+	return CPL_OK;
+
+
+	// Error handling
+
+err_close:
+	ret = SQLCloseCursor(stmt);
+	if (!SQL_SUCCEEDED(ret)) {
+		print_odbc_error("SQLCloseCursor", stmt, SQL_HANDLE_STMT);
+	}
+
+err:
+	mutex_unlock(odbc->get_bundle_objects_lock);
+	return CPL_E_STATEMENT_ERROR;
+}
+
+typedef struct __get_bundle_relation__entry {
+	cpl_id_t relation_id;
+	cpl_id_t from_id;
+	cpl_id_t to_id;
+	long type;
+	cpl_id_t container_id;
+} __get_bundle_relation__entry_t;
+
+cpl_return_t
+cpl_odbc_get_bundle_relations(struct _cpl_db_backend_t* backend,
+						     const cpl_id_t id,
+						     cpl_relation_iterator_t callback,
+							 void* context){
+
+	assert(backend != NULL);
+	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
+	
+	SQL_START;
+
+	cpl_return_t r = CPL_E_INTERNAL_ERROR;
+
+	std::list<__get_bundle_relation__entry_t> entries;
+	__get_bundle_relation__entry_t entry;
+	SQLLEN ind_type;
+	bool found = false;
+
+	mutex_lock(odbc->get_bundle_relations_lock);
+
+
+	// Prepare the statement
+
+retry:
+	SQLHSTMT stmt;
+	
+	stmt = odbc->get_bundle_relations_stmt;
+
+	SQL_BIND_INTEGER(stmt, 1, id);
+
+
+	// Execute
+	
+	SQL_EXECUTE(stmt);
+
+
+	// Bind the columns
+
+	ret = SQLBindCol(stmt, 1, SQL_C_UBIGINT, &entry.relation_id, 0, NULL);
+	if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+	ret = SQLBindCol(stmt, 2, SQL_C_UBIGINT, &entry.from_id, 0, NULL);
+	if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+	ret = SQLBindCol(stmt, 3, SQL_C_UBIGINT, &entry.to_id, 0, NULL);
+	if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+	ret = SQLBindCol(stmt, 4, SQL_C_SLONG, &entry.type, 0, &ind_type);
+	if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+	entry.container_id = id;
+
+
+	// Fetch the result
+
+	while (true) {
+
+		ret = SQLFetch(stmt);
+		if (!SQL_SUCCEEDED(ret)) {
+			if (ret != SQL_NO_DATA) {
+				print_odbc_error("SQLFetch", stmt, SQL_HANDLE_STMT);
+				goto err_close;
+			}
+			break;
+		}
+
+		found = true;
+
+		entries.push_back(entry);
+	}
+	
+	ret = SQLCloseCursor(stmt);
+	if (!SQL_SUCCEEDED(ret)) {
+		print_odbc_error("SQLCloseCursor", stmt, SQL_HANDLE_STMT);
+		goto err;
+	}
+
+
+	// Unlock
+
+	mutex_unlock(odbc->get_bundle_relations_lock);
+
+
+	// If we did not get any data back, terminate
+
+	if (entries.empty()) return CPL_S_NO_DATA;
+
+
+	// Call the user-provided callback function
+
+	if (callback != NULL) {
+		std::list<__get_bundle_relation__entry_t>::iterator i;
+		for (i = entries.begin(); i != entries.end(); i++) {
+			r = callback(i->relation_id, i->from_id, i->to_id, (int) i->type, id, context);
+			if (!CPL_IS_OK(r)) return r;
+		}
+	}
+
+	return CPL_OK;
+
+
+	// Error handling
+
+err_close:
+	ret = SQLCloseCursor(stmt);
+	if (!SQL_SUCCEEDED(ret)) {
+		print_odbc_error("SQLCloseCursor", stmt, SQL_HANDLE_STMT);
+	}
+
+err:
+	mutex_unlock(odbc->get_bundle_relations_lock);
+	return CPL_E_STATEMENT_ERROR;
+}
 /***************************************************************************/
 /** The export / interface struct                                         **/
 /***************************************************************************/
@@ -2485,6 +2846,9 @@ const cpl_db_backend_t CPL_ODBC_BACKEND = {
 	cpl_odbc_get_object_relations,
 	cpl_odbc_get_object_properties,
 	cpl_odbc_lookup_object_by_property,
-	cpl_odbc_get_relation_properties
+	cpl_odbc_get_relation_properties,
+	cpl_odbc_delete_bundle,
+	cpl_odbc_get_bundle_objects,
+	cpl_odbc_get_bundle_relations
 };
 

@@ -51,10 +51,6 @@
 
 #include <backends/cpl-odbc.h>
 
-#if defined(__unix__) || defined(__APPLE__)
-#include <backends/cpl-rdf.h>
-#endif
-
 typedef cpl_db_backend_t* p_cpl_db_backend_t;
 typedef cpl_session_info_t* p_cpl_session_info_t;
 typedef cpl_object_info_t* p_cpl_object_info_t;
@@ -104,18 +100,18 @@ cpl_convert_p_std_vector_cpl_id_timestamp_t_to_p_void(
     return (void*) p;
 }
 
-/*typedef std::list<cpl_ancestry_entry_t> std_list_cpl_ancestry_entry_t;*/
-typedef std::vector<cpl_ancestry_entry_t> std_vector_cpl_ancestry_entry_t;
+/*typedef std::list<cpl_relation_t> std_list_cpl_relation_t;*/
+typedef std::vector<cpl_relation_t> std_vector_cpl_relation_t;
 
-inline std::vector<cpl_ancestry_entry_t>&
-cpl_dereference_p_std_vector_cpl_ancestry_entry_t(
-        std_vector_cpl_ancestry_entry_t* p) {
+inline std::vector<cpl_relation_t>&
+cpl_dereference_p_std_vector_cpl_relation_t(
+        std_vector_cpl_relation_t* p) {
     return *p;
 }
 
 inline void*
-cpl_convert_p_std_vector_cpl_ancestry_entry_t_to_p_void(
-        std_vector_cpl_ancestry_entry_t* p) {
+cpl_convert_p_std_vector_cpl_relation_t_to_p_void(
+        std_vector_cpl_relation_t* p) {
     return (void*) p;
 }
 
@@ -165,7 +161,6 @@ cpl_convert_p_std_vector_cpl_id_t_to_p_void(
 
 %}
 
-
 /*
  * Special functions - workarounds for SWIG limitations
  */
@@ -198,8 +193,42 @@ cpl_is_ok(cpl_return_t ret);
 
 %include "../../../include/backends/cpl-odbc.h"
 
-/* XXX The RDF driver does not work on Windows, so this should be conditional */
-%include "../../../include/backends/cpl-rdf.h"
+/*
+ * cpl_id_t reference pointer workarounds
+ */
+
+%include typemaps.i
+
+cpl_return_t
+cpl_create_object(const char* originator,
+                  const char* name,
+                  const char* type,
+                  const cpl_id_t container,
+                  unsigned long long* INPUT);
+
+cpl_return_t
+cpl_lookup_object(const char* originator,
+                  const char* name,
+                  const char* type,
+                  unsigned long long* INPUT);
+
+cpl_return_t
+cpl_lookup_or_create_object(const char* originator,
+                            const char* name,
+                            const char* type,
+                            const cpl_id_t container,
+                            unsigned long long* INPUT);
+
+cpl_return_t
+cpl_add_relation(const cpl_id_t from_id,
+                   const cpl_id_t to_id,
+                   const int type,
+                   const cpl_id_t container,
+                   unsigned long long* INPUT);
+
+cpl_return_t
+cpl_get_current_session(unsigned long long* INPUT);
+
 
 
 /*
@@ -216,16 +245,16 @@ inline void*
 cpl_convert_p_std_vector_cpl_id_timestamp_t_to_p_void(
         std_vector_cpl_id_timestamp_t* p);
 
-/*%template (cpl_ancestry_entry_t_list) std::list<cpl_ancestry_entry_t>;*/
-%template (cpl_ancestry_entry_t_vector) std::vector<cpl_ancestry_entry_t>;
+/*%template (cpl_relation_t_list) std::list<cpl_relation_t>;*/
+%template (cpl_relation_t_vector) std::vector<cpl_relation_t>;
 
-inline std::vector<cpl_ancestry_entry_t>&
-cpl_dereference_p_std_vector_cpl_ancestry_entry_t(
-    std_vector_cpl_ancestry_entry_t* p);
+inline std::vector<cpl_relation_t>&
+cpl_dereference_p_std_vector_cpl_relation_t(
+    std_vector_cpl_relation_t* p);
 
 inline void*
-cpl_convert_p_std_vector_cpl_ancestry_entry_t_to_p_void(
-        std_vector_cpl_ancestry_entry_t* p);
+cpl_convert_p_std_vector_cpl_relation_t_to_p_void(
+        std_vector_cpl_relation_t* p);
 
 %template (cplxx_object_info_t_vector) std::vector<cplxx_object_info_t>;
 
@@ -272,10 +301,10 @@ cpl_convert_p_std_vector_cpl_id_t_to_p_void(
 
 %pointer_functions(std_vector_cpl_id_timestamp_t,
         std_vector_cpl_id_timestamp_tp);
-/*%pointer_functions(std_list_cpl_ancestry_entry_t,
-        std_list_cpl_ancestry_entry_tp);*/
-%pointer_functions(std_vector_cpl_ancestry_entry_t,
-        std_vector_cpl_ancestry_entry_tp);
+/*%pointer_functions(std_list_cpl_relation_t,
+        std_list_cpl_relation_tp);*/
+%pointer_functions(std_vector_cpl_relation_t,
+        std_vector_cpl_relation_tp);
 
 %pointer_functions(std_vector_cplxx_object_info_t,
         std_vector_cplxx_object_info_tp);
