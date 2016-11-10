@@ -2,7 +2,7 @@
  * cpl-db-backend.h
  * Core Provenance Library
  *
- * Copyright 2011
+ * Copyright 2016
  *      The President and Fellows of Harvard College.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * Contributor(s): Peter Macko
+ * Contributor(s): Jackson Okuhn, Peter Macko
  */
 
 #ifndef __CPL_DB_BACKEND_H__

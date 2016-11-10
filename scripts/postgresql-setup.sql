@@ -1,8 +1,8 @@
 --
 -- postgresql-setup.sql
--- Core Provenance Library
+-- Prov-CPL
 --
--- Copyright 2011
+-- Copyright 2016
 --      The President and Fellows of Harvard College.
 --
 -- Redistribution and use in source and binary forms, with or without
@@ -29,7 +29,7 @@
 -- OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 -- SUCH DAMAGE.
 --
--- Contributor(s): Peter Macko
+-- Contributor(s): Jackson Okuhn, Peter Macko
 --
 
 
@@ -128,6 +128,22 @@ ALTER SEQUENCE cpl_objects_id_seq RESTART WITH 1;
 ALTER SEQUENCE cpl_sessions_id_seq RESTART WITH 1;
 
 ALTER SEQUENCE cpl_relations_id_seq RESTART WITH 1;
+
+CREATE OR REPLACE RULE cpl_relation_properties_ignore_duplicate_inserts AS
+    ON INSERT TO cpl_relation_properties
+   WHERE (EXISTS ( SELECT 1
+           FROM cpl_relation_properties
+          WHERE cpl_relation_properties.id = NEW.id 
+          AND cpl_relation_properties.name = NEW.name)) 
+      DO INSTEAD NOTHING;
+
+CREATE OR REPLACE RULE cpl_object_properties_ignore_duplicate_inserts AS
+    ON INSERT TO cpl_object_properties
+   WHERE (EXISTS ( SELECT 1
+           FROM cpl_object_properties
+          WHERE cpl_object_properties.id = NEW.id 
+          AND cpl_object_properties.name = NEW.name)) 
+      DO INSTEAD NOTHING;
 
 --
 -- Grant the appropriate privileges
