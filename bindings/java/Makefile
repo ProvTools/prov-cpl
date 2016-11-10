@@ -14,7 +14,6 @@ ROOT := ../..
 LIBRARIES := CPLDirect CPL
 #PROGRAMS := test
 
-
 #
 # Include the magic script
 #

@@ -1,10 +1,10 @@
 package edu.harvard.pass.cpl;
 
 /*
- * CPLAncestryEntry.java
- * Core Provenance Library
+ * CPLRelation.java
+ * Prov-CPL
  *
- * Copyright 2012
+ * Copyright 2016
  *      The President and Fellows of Harvard College.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,7 +31,7 @@ package edu.harvard.pass.cpl;
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * Contributor(s): Peter Macko
+ * Contributor(s): Jackson Okuhn, Peter Macko
  */
 
 
@@ -41,11 +41,6 @@ import java.util.Vector;
 
 import java.math.BigInteger;
 
-/**
- * An entry in the results of a simple ancestry query
- *
- * @author Peter Macko
- */
 
 //TODO change to relation
 public class CPLRelation {
@@ -67,9 +62,8 @@ public class CPLRelation {
 	public static final int HADPLAN					= CPLDirectConstants.HADPLAN;
 	public static final int WASASSOCIATEDWITH		= CPLDirectConstants.WASASSOCIATEDWITH;
 	public static final int ACTEDONBEHALFOF			= CPLDirectConstants.ACTEDONBEHALFOF;
-	/*
 	public static final int WASINFLUENCEDBY			= CPLDirectConstants.WASINFLUENCEDBY;
-	*/
+
 	/// The null object
 	private static BigInteger nullId = null;
 
@@ -121,7 +115,7 @@ public class CPLRelation {
 		this.id = id;
 	}
 
-	// TODO double check this isn't borked
+	// TODO dest == null case
 	public static CPLRelation create(CPLObject source, CPLObject dest,  int type, CPLObject container){
 
 		BigInteger id = BigInteger.ZERO;

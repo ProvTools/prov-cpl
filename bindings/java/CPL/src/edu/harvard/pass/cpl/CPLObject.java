@@ -4,7 +4,7 @@ package edu.harvard.pass.cpl;
  * CPLObject.java
  * Core Provenance Library
  *
- * Copyright 2012
+ * Copyright 2016
  *      The President and Fellows of Harvard College.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,7 +31,7 @@ package edu.harvard.pass.cpl;
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * Contributor(s): Peter Macko
+ * Contributor(s): Jackson OKuhn, Peter Macko
  */
 
 
@@ -63,10 +63,6 @@ public class CPLObject {
 	public static final String ACTIVITY = CPLDirectConstants.ACTIVITY;
 	public static final String AGENT = CPLDirectConstants.AGENT;	
 	public static final String BUNDLE = CPLDirectConstants.BUNDLE;	
-
-	public static final int	NO_ENTITIES = CPLDirectConstants.NO_ENTITIES;
-	public static final int	NO_ACTIVITIES = CPLDirectConstants.NO_ACTIVITIES;
-	public static final int	NO_AGENTS = CPLDirectConstants.NO_AGENTS;
 
 	/// The internal object ID
 	BigInteger id;
@@ -736,15 +732,15 @@ public class CPLObject {
 		return lookupByProperty(key, value, false);
 	}
 
-	public static void deleteBundle(BigInteger id) {
+	public static void deleteBundle(CPLObject bundle) {
 
-		int r = CPLDirect.cpl_delete_bundle(id);
+		int r = CPLDirect.cpl_delete_bundle(bundle.getId());
 		if (CPLException.isError(r)){
 			throw new CPLException(r);
 		}
 	}
 
-	public static Vector<CPLObject> getBundleObjects(BigInteger id) {
+	public static Vector<CPLObject> getBundleObjects(CPLObject bundle) {
 
 		SWIGTYPE_p_std_vector_cplxx_object_info_t pVector
 			= CPLDirect.new_std_vector_cplxx_object_info_tp();
@@ -753,7 +749,7 @@ public class CPLObject {
 		Vector<CPLObject> result = new Vector<CPLObject>();
 
 		try {
-            int r = CPLDirect.cpl_get_bundle_objects(id,
+            int r = CPLDirect.cpl_get_bundle_objects(bundle.getId(),
 					CPLDirect.cpl_cb_collect_object_info_vector, pv);
 			CPLException.assertSuccess(r);
 
@@ -769,7 +765,7 @@ public class CPLObject {
                 o.name = e.getName();
                 o.type = e.getType();
                 
-                o.containerId = id;
+                o.containerId = bundle.getId();
                 o.knowContainer = true;
 
 				result.add(o);
@@ -782,7 +778,7 @@ public class CPLObject {
 		return result;
 	}
 
-	public Vector<CPLRelation> getBundleRelations(BigInteger id) {
+	public static Vector<CPLRelation> getBundleRelations(CPLObject bundle) {
 
 		SWIGTYPE_p_std_vector_cpl_relation_t pVector
 			= CPLDirect.new_std_vector_cpl_relation_tp();
@@ -791,7 +787,7 @@ public class CPLObject {
 		Vector<CPLRelation> result = null;
 
 		try {
-			int r = CPLDirect.cpl_get_bundle_relations(id, 
+			int r = CPLDirect.cpl_get_bundle_relations(bundle.getId(), 
 				CPLDirect.cpl_cb_collect_relation_vector, pv);
 			CPLException.assertSuccess(r);
 
