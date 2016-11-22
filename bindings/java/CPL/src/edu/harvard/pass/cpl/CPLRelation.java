@@ -193,7 +193,14 @@ public class CPLRelation {
 		return type;
 	}
 
-
+	/**
+	 * Get the ID of the relation
+	 *
+	 * @return the internal ID of this relation
+	 */
+	public BigInteger getId() {
+		return id;
+	}
 
 	/**
 	 * Get the ancestor object

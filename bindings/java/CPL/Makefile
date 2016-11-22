@@ -21,8 +21,8 @@ MAVEN_INSTALL := yes
 MAVEN_GROUP_ID := edu.harvard.pass
 MAVEN_VERSION := $(CPL_VERSION)
 
-JAVA_MODULE_DEPENDECIES := ../CPLDirect 
-
+JAVA_MODULE_DEPENDECIES := ../CPLDirect
+EXTERNAL_JARS := ../json-simple-1.1.1.jar
 
 #
 # Include the magic script

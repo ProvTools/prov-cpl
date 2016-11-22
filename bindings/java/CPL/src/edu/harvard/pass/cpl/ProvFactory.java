@@ -58,7 +58,7 @@ public class ProvFactory{
 		return bundle;
 	}
 
-	public void SetBundle(String o, String name){
+	public void setBundle(String o, String name){
 		if (o != null){
 			bundle = CPLObject.create(o, name, CPLObject.BUNDLE, null);
 		} else {
@@ -66,7 +66,7 @@ public class ProvFactory{
 		}
 	}
 
-    public void SetBundle(String name){
+    public void setBundle(String name){
         bundle = CPLObject.create(originator, name, CPLObject.BUNDLE, null);
     }
 
@@ -219,7 +219,7 @@ public class ProvFactory{
     }
     
     public CPLRelation createWasInfluencedBy(CPLObject source, CPLObject dest) {
-        return CPLRelation.create(source, dest, CPLRelation.WASINFLUENCEDBY);
+        return CPLRelation.create(source, dest, CPLRelation.WASINFLUENCEDBY, bundle);
     }
     
 
@@ -308,6 +308,10 @@ public class ProvFactory{
 
     public CPLRelation createWasStartedBy(CPLObject source, CPLObject dest) {
         return CPLRelation.create(source, dest, CPLRelation.WASSTARTEDBY, bundle);
+    }
+
+    public CPLRelation createHadPlan(CPLObject source, CPLObject dest) {
+        return CPLRelation.create(source, dest, CPLRelation.HADPLAN, bundle);
     }
 
 }
