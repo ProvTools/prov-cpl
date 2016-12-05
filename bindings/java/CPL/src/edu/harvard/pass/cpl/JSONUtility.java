@@ -41,8 +41,12 @@ import java.io.IOException;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
+import org.jgrapht.DirectedGraph;
+import org.jgrapht.graph.*;
+import org.jgrapht.alg.*;
 import java.io.FileReader;
 import java.util.Vector;
+import java.util.Set;
 import java.util.Iterator;
 
 class JsonUtility {
@@ -56,8 +60,284 @@ class JsonUtility {
 		document = null;
 	}
 
-	public void verifyJson(String fileName){
-		//TODO
+	public String verifyJson(String fileName){
+		
+		JSONParser parser = new JSONParser();
+
+		String out = "JSON verification failed. Reason unspecified.";
+
+		try {
+
+			Object obj = parser.parse(new FileReader(fileName));
+
+			document = (JSONObject) obj;
+
+		   	DirectedGraph<String, DefaultEdge> directedGraph =
+	        new DefaultDirectedGraph<String, DefaultEdge>
+	        (DefaultEdge.class);
+
+	        JSONObject relations;
+
+			relations = (JSONObject) document.get("alternateOf");
+			for (Iterator relIterator = relations.keySet().iterator(); relIterator.hasNext();){
+				String name = (String) relIterator.next();
+
+				JSONObject relationJson = (JSONObject) relations.get(name); 
+
+				String source = (String) relationJson.get("prov:alternate1");
+				String dest = (String) relationJson.get("prov:alternate2");
+				directedGraph.addVertex(source);
+				directedGraph.addVertex(dest);
+				directedGraph.addEdge(source, dest);
+			}
+
+			relations = (JSONObject) document.get("derivedByInsertionFrom");
+			for (Iterator relIterator = relations.keySet().iterator(); relIterator.hasNext();){
+				String name = (String) relIterator.next();
+
+				JSONObject relationJson = (JSONObject) relations.get(name); 
+
+				String source = (String) relationJson.get("prov:after");
+				String dest = (String) relationJson.get("prov:before");
+				directedGraph.addVertex(source);
+				directedGraph.addVertex(dest);
+				directedGraph.addEdge(source, dest);
+			}
+
+			relations = (JSONObject) document.get("derivedByRemovalFrom");
+			for (Iterator relIterator = relations.keySet().iterator(); relIterator.hasNext();){
+				String name = (String) relIterator.next();
+
+				JSONObject relationJson = (JSONObject) relations.get(name); 
+
+				String source = (String) relationJson.get("prov:after");
+				String dest = (String) relationJson.get("prov:before");
+				directedGraph.addVertex(source);
+				directedGraph.addVertex(dest);
+				directedGraph.addEdge(source, dest);
+			}
+
+			relations = (JSONObject) document.get("hadMember");
+			for (Iterator relIterator = relations.keySet().iterator(); relIterator.hasNext();){
+				String name = (String) relIterator.next();
+
+				JSONObject relationJson = (JSONObject) relations.get(name); 
+
+				String source = (String) relationJson.get("prov:collection");
+				String dest = (String) relationJson.get("prov:entity");
+				directedGraph.addVertex(source);
+				directedGraph.addVertex(dest);
+				directedGraph.addEdge(source, dest);
+			}
+
+			relations = (JSONObject) document.get("hadDictionaryMember");
+			for (Iterator relIterator = relations.keySet().iterator(); relIterator.hasNext();){
+				String name = (String) relIterator.next();
+
+				JSONObject relationJson = (JSONObject) relations.get(name); 
+
+				String source = (String) relationJson.get("prov:dictionary");
+				String dest = (String) relationJson.get("prov:entity");
+				directedGraph.addVertex(source);
+				directedGraph.addVertex(dest);
+				directedGraph.addEdge(source, dest);
+			}
+
+			relations = (JSONObject) document.get("specializationOf");
+			for (Iterator relIterator = relations.keySet().iterator(); relIterator.hasNext();){
+				String name = (String) relIterator.next();
+
+				JSONObject relationJson = (JSONObject) relations.get(name); 
+
+				String source = (String) relationJson.get("prov:specificEntity");
+				String dest = (String) relationJson.get("prov:generalEntity");
+				directedGraph.addVertex(source);
+				directedGraph.addVertex(dest);
+				directedGraph.addEdge(source, dest);
+			}
+
+			relations = (JSONObject) document.get("wasDerivedFrom");
+			for (Iterator relIterator = relations.keySet().iterator(); relIterator.hasNext();){
+				String name = (String) relIterator.next();
+
+				JSONObject relationJson = (JSONObject) relations.get(name); 
+
+				String source = (String) relationJson.get("prov:generatedEntity");
+				String dest = (String) relationJson.get("prov:usedEntity");
+				directedGraph.addVertex(source);
+				directedGraph.addVertex(dest);
+				directedGraph.addEdge(source, dest);
+			}
+
+			relations = (JSONObject) document.get("wasGeneratedBy");
+			for (Iterator relIterator = relations.keySet().iterator(); relIterator.hasNext();){
+				String name = (String) relIterator.next();
+
+				JSONObject relationJson = (JSONObject) relations.get(name); 
+
+				String source = (String) relationJson.get("prov:entity");
+				String dest = (String) relationJson.get("prov:activity");
+				directedGraph.addVertex(source);
+				directedGraph.addVertex(dest);
+				directedGraph.addEdge(source, dest);
+			}
+
+			relations = (JSONObject) document.get("wasInvalidatedBy");
+			for (Iterator relIterator = relations.keySet().iterator(); relIterator.hasNext();){
+				String name = (String) relIterator.next();
+
+				JSONObject relationJson = (JSONObject) relations.get(name); 
+
+				String source = (String) relationJson.get("prov:entity");
+				String dest = (String) relationJson.get("prov:activity");
+				directedGraph.addVertex(source);
+				directedGraph.addVertex(dest);
+				directedGraph.addEdge(source, dest);
+			}
+
+			relations = (JSONObject) document.get("wasAttributedTo");
+			for (Iterator relIterator = relations.keySet().iterator(); relIterator.hasNext();){
+				String name = (String) relIterator.next();
+
+				JSONObject relationJson = (JSONObject) relations.get(name); 
+
+				String source = (String) relationJson.get("prov:entity");
+				String dest = (String) relationJson.get("prov:agent");
+				directedGraph.addVertex(source);
+				directedGraph.addVertex(dest);
+				directedGraph.addEdge(source, dest);
+			}
+
+			relations = (JSONObject) document.get("used");
+			for (Iterator relIterator = relations.keySet().iterator(); relIterator.hasNext();){
+				String name = (String) relIterator.next();
+
+				JSONObject relationJson = (JSONObject) relations.get(name); 
+
+				String source = (String) relationJson.get("prov:activity");
+				String dest = (String) relationJson.get("prov:entity");
+				directedGraph.addVertex(source);
+				directedGraph.addVertex(dest);
+				directedGraph.addEdge(source, dest);
+			}
+
+			relations = (JSONObject) document.get("wasInformedBy");
+			for (Iterator relIterator = relations.keySet().iterator(); relIterator.hasNext();){
+				String name = (String) relIterator.next();
+
+				JSONObject relationJson = (JSONObject) relations.get(name); 
+
+				String source = (String) relationJson.get("prov:informed");
+				String dest = (String) relationJson.get("prov:informant");
+				directedGraph.addVertex(source);
+				directedGraph.addVertex(dest);
+				directedGraph.addEdge(source, dest);
+			}
+
+			relations = (JSONObject) document.get("wasStartedBy");
+			for (Iterator relIterator = relations.keySet().iterator(); relIterator.hasNext();){
+				String name = (String) relIterator.next();
+
+				JSONObject relationJson = (JSONObject) relations.get(name); 
+
+				String source = (String) relationJson.get("prov:activity");
+				String dest = (String) relationJson.get("prov:trigger");
+				directedGraph.addVertex(source);
+				directedGraph.addVertex(dest);
+				directedGraph.addEdge(source, dest);
+			}
+
+			relations = (JSONObject) document.get("wasEndedBy");
+			for (Iterator relIterator = relations.keySet().iterator(); relIterator.hasNext();){
+				String name = (String) relIterator.next();
+
+				JSONObject relationJson = (JSONObject) relations.get(name); 
+
+				String source = (String) relationJson.get("prov:activity");
+				String dest = (String) relationJson.get("prov:trigger");
+				directedGraph.addVertex(source);
+				directedGraph.addVertex(dest);
+				directedGraph.addEdge(source, dest);
+			}
+
+			relations = (JSONObject) document.get("hadPlan");
+			for (Iterator relIterator = relations.keySet().iterator(); relIterator.hasNext();){
+				String name = (String) relIterator.next();
+
+				JSONObject relationJson = (JSONObject) relations.get(name); 
+
+				String source = (String) relationJson.get("prov:agent");
+				String dest = (String) relationJson.get("prov:plan");
+				directedGraph.addVertex(source);
+				directedGraph.addVertex(dest);
+				directedGraph.addEdge(source, dest);
+			}
+
+			relations = (JSONObject) document.get("wasAssociatedWith");
+			for (Iterator relIterator = relations.keySet().iterator(); relIterator.hasNext();){
+				String name = (String) relIterator.next();
+
+				JSONObject relationJson = (JSONObject) relations.get(name); 
+
+				String source = (String) relationJson.get("prov:activity");
+				String dest = (String) relationJson.get("prov:agent");
+				directedGraph.addVertex(source);
+				directedGraph.addVertex(dest);
+				directedGraph.addEdge(source, dest);
+			}
+
+			relations = (JSONObject) document.get("actedOnBehalfOf");
+			for (Iterator relIterator = relations.keySet().iterator(); relIterator.hasNext();){
+				String name = (String) relIterator.next();
+
+				JSONObject relationJson = (JSONObject) relations.get(name); 
+
+				String source = (String) relationJson.get("prov:delegate");
+				String dest = (String) relationJson.get("prov:responsible");
+				directedGraph.addVertex(source);
+				directedGraph.addVertex(dest);
+				directedGraph.addEdge(source, dest);
+			}
+
+			relations = (JSONObject) document.get("wasInfluencedBy");
+			for (Iterator relIterator = relations.keySet().iterator(); relIterator.hasNext();){
+				String name = (String) relIterator.next();
+
+				JSONObject relationJson = (JSONObject) relations.get(name); 
+
+				String source = (String) relationJson.get("prov:influencee");
+				String dest = (String) relationJson.get("prov:influencer");
+				directedGraph.addVertex(source);
+				directedGraph.addVertex(dest);
+				directedGraph.addEdge(source, dest);
+			}
+
+			CycleDetector cycleDetector = new CycleDetector(directedGraph);
+
+			Set<String> cycleVertices = cycleDetector.findCycles();
+
+			if(!cycleVertices.isEmpty()){
+				out = "JSON verification failed." +
+					"The following vertices belong to one or more cycles:\n";
+				for(String vertex : cycleVertices) {
+					out += vertex + "\n";
+				}
+
+			} else {
+				out = "JSON verified";
+			}
+
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+
+		} catch (IOException e) {
+			e.printStackTrace();
+
+		} catch (ParseException e) {
+			e.printStackTrace();
+		}
+
+		return out;
 	}
 
 	private void importBundlePrefixes(CPLObject bundle) {
@@ -193,9 +473,9 @@ class JsonUtility {
 
 				case CPLRelation.SPECIALIZATIONOF:
 					source = CPLObject.tryLookup(o,
-						(String) relationJson.get("prov:generalEntity"), "entity");
+						(String) relationJson.get("prov:specificlEntity"), "entity");
 					dest = CPLObject.tryLookup(o,
-						(String) relationJson.get("prov:specificEntity"), "entity");
+						(String) relationJson.get("prov:generalEntity"), "entity");
 					relation = pFactory.createSpecializationOf(source, dest);
 					
 					for (Iterator propIterator = relationJson.keySet().iterator(); propIterator.hasNext();){
@@ -385,7 +665,7 @@ class JsonUtility {
 			importBundlePrefixes(pFactory.getBundle());
 
 			if(bundleAgent != null){
-				pFactory.createWasAttributedTo(pFactory.getBundle(), anchorObject);
+				pFactory.createWasAttributedTo(pFactory.getBundle(), bundleAgent);
 			}
 
 			//TODO implement addObjects("bundle"); next release
