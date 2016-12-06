@@ -41,8 +41,11 @@ import java.util.Vector;
 
 import java.math.BigInteger;
 
-
-//TODO change to relation
+/**
+ * A provenance relation
+ *
+ * @author Jackson Okuhn
+ */
 public class CPLRelation {
 
 	public static final int ALTERNATEOF				= CPLDirectConstants.ALTERNATEOF;

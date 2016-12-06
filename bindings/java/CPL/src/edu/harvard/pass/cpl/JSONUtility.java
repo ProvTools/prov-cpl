@@ -49,22 +49,36 @@ import java.util.Vector;
 import java.util.Set;
 import java.util.Iterator;
 
+/**
+ * A utility for processing Prov JSON
+ *
+ * @author Jackson Okuhn
+ */
 class JsonUtility {
 
 	ProvFactory pFactory;
 
 	JSONObject document;
 
+	/**
+	 * Create an instance of JsonUtility
+	 */
 	public JsonUtility() {
 		pFactory = null;
 		document = null;
 	}
 
+	/**
+	 * Verify the correctness of a Prov JSON document
+	 *
+	 *@param fileName document location
+	 *@return a string detailing errors if any exist
+	 */
 	public String verifyJson(String fileName){
 		
 		JSONParser parser = new JSONParser();
 
-		String out = "JSON verification failed. Reason unspecified.";
+		String out = "JSON verification failed. Reason unspecif";
 
 		try {
 
@@ -646,6 +660,16 @@ class JsonUtility {
 		}
 	}
 
+	/**
+	 * Import a Prov JSON document into Prov-CPL as a bundle. Does not verify correctness.
+	 * Currently supports only one anchor object.
+	 *
+	 * @param fileName document location
+	 * @param originator document originator
+	 * @param bundleName name of document bundle
+	 * @param anchorObject Prov-CPL object identical to an object in the document
+	 * @param bundleAgent agent responsible for the document bundle
+	 */
 	public void importJson(String fileName, String originator, 
 			String bundleName, CPLObject anchorObject, CPLObject bundleAgent) {
 
@@ -900,6 +924,12 @@ class JsonUtility {
 		}
 	}
 
+	/**
+	 * Export a Prov bundle as a JSON document
+	 *
+	 * @param bundle bundle to export
+	 * @return a JSONObject containing the bundle as a document
+	 */
 	public JSONObject exportJson(CPLObject bundle) {
 
 		document = new JSONObject();

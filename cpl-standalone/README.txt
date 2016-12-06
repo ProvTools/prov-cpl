@@ -4,8 +4,8 @@
 Contents:
   1. Required packages in Ubuntu
 
-Copyright 2011 The President and Fellows of Harvard College.
-Contributor(s): Peter Macko
+Copyright 2016 The President and Fellows of Harvard College.
+Contributor(s): Jackson Okuhn, Peter Macko
 
 
   1. Required packages in Ubuntu

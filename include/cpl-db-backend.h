@@ -1,6 +1,6 @@
 /*
  * cpl-db-backend.h
- * Core Provenance Library
+ * Prov-CPL
  *
  * Copyright 2016
  *      The President and Fellows of Harvard College.

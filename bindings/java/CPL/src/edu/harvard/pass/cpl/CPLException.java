@@ -2,9 +2,9 @@ package edu.harvard.pass.cpl;
 
 /*
  * CPLException.java
- * Core Provenance Library
+ * Prov-CPL
  *
- * Copyright 2012
+ * Copyright 2016
  *      The President and Fellows of Harvard College.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,7 +31,7 @@ package edu.harvard.pass.cpl;
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * Contributor(s): Peter Macko
+ * Contributor(s): Jackson Okuhn, Peter Macko
  */
 
 

@@ -9,7 +9,7 @@ Contents:
   4. Configuring PostgreSQL
 
 Copyright 2012 The President and Fellows of Harvard College.
-Contributor(s): Peter Macko
+Contributor(s): Jackson Okuhn, Peter Macko
 
 
   1. Installing ODBC on Ubuntu

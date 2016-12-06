@@ -1,10 +1,10 @@
 package edu.harvard.pass.cpl;
 
 /*
- * CPLPropertyEntry.java
- * Core Provenance Library
+ * CPLObjectPropertyEntry.java
+ * Prov-CPL
  *
- * Copyright 2012
+ * Copyright 2016
  *      The President and Fellows of Harvard College.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,7 +31,7 @@ package edu.harvard.pass.cpl;
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * Contributor(s): Peter Macko
+ * Contributor(s): Jackson Okuhn, Peter Macko
  */
 
 
@@ -43,7 +43,7 @@ import java.util.Vector;
 /**
  * An entry in the list of object properties
  *
- * @author Peter Macko
+ * @author Jackson Okuhn
  */
 public class CPLObjectPropertyEntry {
 
@@ -59,7 +59,7 @@ public class CPLObjectPropertyEntry {
 
 
 	/**
-	 * Create an instance of CPLPropertyEntry
+	 * Create an instance of CPLObjectPropertyEntry
 	 *
 	 * @param object the provenance object
      * @param key the property name

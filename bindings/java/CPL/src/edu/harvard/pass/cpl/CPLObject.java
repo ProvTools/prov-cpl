@@ -2,7 +2,7 @@ package edu.harvard.pass.cpl;
 
 /*
  * CPLObject.java
- * Core Provenance Library
+ * Prov-CPL
  *
  * Copyright 2016
  *      The President and Fellows of Harvard College.
@@ -31,7 +31,7 @@ package edu.harvard.pass.cpl;
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * Contributor(s): Jackson OKuhn, Peter Macko
+ * Contributor(s): Jackson Okuhn, Peter Macko
  */
 
 
@@ -46,7 +46,7 @@ import java.math.BigInteger;
 /**
  * A provenance object
  *
- * @author Peter Macko
+ * @author Jackson Okuhn
  */
 public class CPLObject {
 
