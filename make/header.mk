@@ -258,7 +258,7 @@ endif
 #
 
 ifndef INSTALL_PREFIX
-	INSTALL_PREFIX := /usr
+	INSTALL_PREFIX := /usr/local
 endif
 
 LIB_DIR := lib

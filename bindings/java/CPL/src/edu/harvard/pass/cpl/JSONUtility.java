@@ -670,6 +670,7 @@ class JsonUtility {
 	 * @param anchorObject Prov-CPL object identical to an object in the document
 	 * @param bundleAgent agent responsible for the document bundle
 	 */
+
 	public void importJson(String fileName, String originator, 
 			String bundleName, CPLObject anchorObject, CPLObject bundleAgent) {
 
@@ -684,6 +685,7 @@ class JsonUtility {
 
 			pFactory = new ProvFactory(originator);
 
+			//TODO: exit if failed
 			pFactory.setBundle(bundleName);
 
 			importBundlePrefixes(pFactory.getBundle());
