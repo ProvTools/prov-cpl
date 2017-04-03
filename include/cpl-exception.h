@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * Contributor(s): Jackson Okuhn, Peter Macko
+ * Contributor(s): Jackson Okuhn
  */
 
 #ifndef __CPL_EXCEPTION_H__
@@ -46,7 +46,7 @@
 /**
  * An exception with a message
  *
- * @author Peter Macko
+ * @author Jackson Okuhn, Peter Macko
  */
 class CPLException : public std::exception
 {

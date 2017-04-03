@@ -8,15 +8,6 @@ ROOT := ../..
 
 include $(ROOT)/make/header.mk
 
-
-#
-# Source files
-#
-
-PLATFORM_COMPAT := $(ROOT)/private-lib/platform-compat
-DEPENDENCIES := $(ROOT)/include/*.h $(PLATFORM_COMPAT)/include/*.h
-
-
 #
 # Customize the build
 #

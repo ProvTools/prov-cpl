@@ -42,7 +42,7 @@ import java.math.BigInteger;
 /**
  * A session of the provenance-aware application
  *
- * @author Peter Macko
+ * @author Jackson Okuhn, Peter Macko
  */
 public class CPLSession {
 

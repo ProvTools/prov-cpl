@@ -37,7 +37,6 @@
 
 #include <cplxx.h>
 #include <cpl-exception.h>
-#include <cpl-file.h>
 
 #include "print-buffer.h"
 

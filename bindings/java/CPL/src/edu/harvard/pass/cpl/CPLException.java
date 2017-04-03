@@ -41,7 +41,7 @@ import swig.direct.CPLDirect.*;
 /**
  * CPL exception
  *
- * @author Peter Macko
+ * @author Jackson Okuhn, Peter Macko
  */
 public class CPLException extends RuntimeException {
 

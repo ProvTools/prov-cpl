@@ -1085,14 +1085,14 @@ cpl_cb_collect_relation_list(const cpl_id_t relation_id,
 
 
 /**
- * The iterator callback for cpl_get_object_ancestry() that collects
+ * The iterator callback for cpl_get_object_relations() that collects
  * the information in an instance of std::vector<cpl_ancestry_entry_t>.
  *
  * @param relation_id the ID of the relation
  * @param query_object_id the ID of the object on which we are querying
  * @param other_object_id the ID of the object on the other end of the
  *                        dependency/ancestry edge
- * @param type the type of the data or the control dependency
+ * @param type the type of the relation
  * @param context the pointer to an instance of the vector
  * @return CPL_OK or an error code
  */

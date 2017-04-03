@@ -35,9 +35,11 @@
 #include "stdafx.h"
 #include "standalone-test.h"
 
+#include <sys/time.h>
 #include <backends/cpl-odbc.h>
-#include <backends/cpl-rdf.h>
-#include <getopt_compat.h>
+#//include <backends/cpl-rdf.h>
+#include <unistd.h>
+#include <getopt.h>
 
 #include <vector>
 

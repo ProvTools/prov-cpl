@@ -38,6 +38,7 @@
 #include <map>
 #include <set>
 #include <vector>
+#include <unistd.h>
 
 
 using namespace std;
@@ -100,8 +101,8 @@ print_object_info(cpl_object_info_t* info)
  * @param context the pointer to an instance of the map
  * @return CPL_OK or an error code
  */
-EXPORT cpl_return_t
-cb_lookup(const cpl_id_t id,
+static cpl_return_t
+cb_lookup_objects(const cpl_id_t id,
 		  const unsigned long timestamp,
 		  void* context)
 {
@@ -114,6 +115,41 @@ cb_lookup(const cpl_id_t id,
 	return CPL_OK;
 }
 
+/**
+ * The iterator callback for cpl_get_object_relations() that collects
+ * the information in an instance of std::set<cpl_id_t>.
+ *
+ * @param relation_id the ID of the relation
+ * @param query_object_id the ID of the object on which we are querying
+ * @param other_object_id the ID of the object on the other end of the
+ *                        dependency/ancestry edge
+ * @param type the type of relation
+ * @param context the pointer to an instance of the set
+ * @return CPL_OK or an error code
+ */
+static cpl_return_t
+cb_lookup_relations(const cpl_id_t relation_id,
+				   const cpl_id_t query_object_id,
+				   const cpl_id_t other_object_id,
+				   const int type,
+				   const cpl_id_t container_id,
+				   void* context)
+{
+	std::set<cpl_id_t>* s
+		= (std::set<cpl_id_t>*) context;
+	s->insert(relation_id);
+	return CPL_OK;
+}
+
+static cpl_return_t
+cb_collect_object_info_set(const cpl_object_info_t* info,
+							      void* context)
+{
+	std::set<cpl_id_t>* s
+		= (std::set<cpl_id_t>*) context;
+	s->insert(info->id);
+	return CPL_OK;
+}
 /**
  * The iterator callback function used by property accessors.
  *
@@ -319,18 +355,18 @@ test_simple(void)
 	if (with_delays) delay();
 
 	ret = cpl_create_object(ORIGINATOR, "Entity", "ENTITY", bun, &obj1);
-	print(L_DEBUG, "cpl_create_object --> %llx [%d]", obj2,ret);
+	print(L_DEBUG, "cpl_create_object --> %llx [%d]", obj1,ret);
 	CPL_VERIFY(cpl_create_object, ret);
 	if (with_delays) delay();
 
 	ret = cpl_create_object(ORIGINATOR, "Agent", "AGENT", bun, &obj2);
-	print(L_DEBUG, "cpl_create_object --> %llx [%d]", obj3,ret);
+	print(L_DEBUG, "cpl_create_object --> %llx [%d]", obj2,ret);
 	CPL_VERIFY(cpl_create_object, ret);
 	if (with_delays) delay();
 
 	ret = cpl_lookup_or_create_object(ORIGINATOR, "Activity", "ACTIVITY", bun, &obj3);
 	print(L_DEBUG, "cpl_lookup_or_create_object --> %llx [%d]",
-			obj4,ret);
+			obj3,ret);
 	CPL_VERIFY(cpl_lookup_or_create_object, ret);
 	if (with_delays) delay();
 
@@ -361,7 +397,7 @@ test_simple(void)
 
     std::map<cpl_id_t, unsigned long> ectx;
 	ret = cpl_lookup_object_ext(ORIGINATOR, "Activity", "ACTIVITY", CPL_L_NO_FAIL,
-            cb_lookup, &ectx);
+            cb_lookup_objects, &ectx);
     if (!CPL_IS_OK(ret)) {
         print(L_DEBUG, "cpl_lookup_object_ext --> [%d]", ret);
         CPL_VERIFY(cpl_lookup_object, ret);
@@ -379,19 +415,19 @@ test_simple(void)
 	if (with_delays) delay();
 
 	//Bundle objects
-	ectx.clear();
-	ret = cpl_get_bundle_objects(bun, cb_lookup, &ectx);
+	std::set<cpl_id_t> rctx;
+	ret = cpl_get_bundle_objects(bun, cb_collect_object_info_set, &rctx);
 	 if (!CPL_IS_OK(ret)) {
         print(L_DEBUG, "cpl_get_bundle_objects --> [%d]", ret);
         CPL_VERIFY(cpl_lookup_object, ret);
     }
-    if (!contains(ectx, obj1) || !contains(ectx, obj2) || !contains(ectx, obj3)) {
+    if (!contains(rctx, obj1) || !contains(rctx, obj2) || !contains(rctx, obj3)) {
         print(L_DEBUG, "cpl_get_bundle_objects --> not found (%lu results) [%d]",
                 ectx.size(), ret);
         throw CPLException("get bundle objects result does not contain the objects");
     }
     print(L_DEBUG, "cpl_get_bundle_objects --> found (%lu results) [%d]",
-            ectx.size(), ret);
+            rctx.size(), ret);
 	if (with_delays) delay();
 
 	print(L_DEBUG, " ");
@@ -424,136 +460,136 @@ test_simple(void)
 	print(L_DEBUG, " ");
 
 	// Relation lookup
-	ectx.clear();
-	ret = cpl_get_object_relations(obj1, CPL_D_ANCESTORS, 0, cb_lookup, &ectx);
+	rctx.clear();
+	ret = cpl_get_object_relations(obj1, CPL_D_ANCESTORS, 0, cb_lookup_relations, &rctx);
 	if (!CPL_IS_OK(ret)) {
         print(L_DEBUG, "cpl_get_object_relations --> [%d]", ret);
         CPL_VERIFY(cpl_get_object_relations, ret);
     }
-    if(ectx.size() != 2){
+    if(rctx.size() != 2){
     	print(L_DEBUG, "cpl_get_object_relations --> wrong size (%lu results) [%d]",
-    		ectx.size(), ret);
+    		rctx.size(), ret);
     	throw CPLException("get object relations result is the wrong size");
     }
-    if (!contains(ectx, rel1) || !contains(ectx, rel2)) {
+    if (!contains(rctx, rel1) || !contains(rctx, rel2)) {
         print(L_DEBUG, "cpl_get_object_relations --> not found (%lu results) [%d]",
-                ectx.size(), ret);
+                rctx.size(), ret);
         throw CPLException("get object relations result does not contain the relations");
     }
     print(L_DEBUG, "cpl_get_object_relations --> found (%lu results) [%d]",
-            ectx.size(), ret);
+            rctx.size(), ret);
 	if (with_delays) delay();
 
-	ectx.clear();
-	ret = cpl_get_object_relations(obj1, CPL_D_DESCENDANTS, 0, cb_lookup, &ectx);
+	rctx.clear();
+	ret = cpl_get_object_relations(obj1, CPL_D_DESCENDANTS, 0, cb_lookup_relations, &rctx);
 	if (!CPL_IS_OK(ret)) {
         print(L_DEBUG, "cpl_get_object_relations --> [%d]", ret);
         CPL_VERIFY(cpl_get_object_relations, ret);
     }
-    if(ectx.size() != 0){
+    if(rctx.size() != 0){
     	print(L_DEBUG, "cpl_get_object_relations --> wrong size (%lu results) [%d]",
-    		ectx.size(), ret);
+    		rctx.size(), ret);
     	throw CPLException("get object relations result is the wrong size");
     }
     print(L_DEBUG, "cpl_get_object_relations --> found (%lu results) [%d]",
-            ectx.size(), ret);
+            rctx.size(), ret);
 	if (with_delays) delay();
 
 
-	ectx.clear();
-	ret = cpl_get_object_relations(obj2, CPL_D_ANCESTORS, 0, cb_lookup, &ectx);
+	rctx.clear();
+	ret = cpl_get_object_relations(obj2, CPL_D_ANCESTORS, 0, cb_lookup_relations, &rctx);
 	if (!CPL_IS_OK(ret)) {
         print(L_DEBUG, "cpl_get_object_relations --> [%d]", ret);
         CPL_VERIFY(cpl_get_object_relations, ret);
     }
-    if(ectx.size() != 1){
+    if(rctx.size() != 1){
     	print(L_DEBUG, "cpl_get_object_relations --> wrong size (%lu results) [%d]",
-    		ectx.size(), ret);
+    		rctx.size(), ret);
     	throw CPLException("get object relations result is the wrong size");
     }
-    if (!contains(ectx, rel3)) {
+    if (!contains(rctx, rel3)) {
         print(L_DEBUG, "cpl_get_object_relations --> not found (%lu results) [%d]",
-                ectx.size(), ret);
+                rctx.size(), ret);
         throw CPLException("get object relations result does not contain the relations");
     }
     print(L_DEBUG, "cpl_get_object_relations --> found (%lu results) [%d]",
-            ectx.size(), ret);
+            rctx.size(), ret);
 	if (with_delays) delay();
 
-	ectx.clear();
-	ret = cpl_get_object_relations(obj2, CPL_D_DESCENDANTS, 0, cb_lookup, &ectx);
+	rctx.clear();
+	ret = cpl_get_object_relations(obj2, CPL_D_DESCENDANTS, 0, cb_lookup_relations, &rctx);
 	if (!CPL_IS_OK(ret)) {
         print(L_DEBUG, "cpl_get_object_relations --> [%d]", ret);
         CPL_VERIFY(cpl_get_object_relations, ret);
     }
-    if(ectx.size() != 1){
+    if(rctx.size() != 1){
     	print(L_DEBUG, "cpl_get_object_relations --> wrong size (%lu results) [%d]",
-    		ectx.size(), ret);
+    		rctx.size(), ret);
     	throw CPLException("get object relations result is the wrong size");
     }
-    if (!contains(ectx, rel1)) {
+    if (!contains(rctx, rel1)) {
         print(L_DEBUG, "cpl_get_object_relations --> not found (%lu results) [%d]",
-                ectx.size(), ret);
+                rctx.size(), ret);
         throw CPLException("get object relations result does not contain the relations");
     }
     print(L_DEBUG, "cpl_get_object_relations --> found (%lu results) [%d]",
-            ectx.size(), ret);
+            rctx.size(), ret);
 	if (with_delays) delay();
 
-	ectx.clear();
-	ret = cpl_get_object_relations(obj3, CPL_D_DESCENDANTS, 0, cb_lookup, &ectx);
+	rctx.clear();
+	ret = cpl_get_object_relations(obj3, CPL_D_DESCENDANTS, 0, cb_lookup_relations, &rctx);
 	if (!CPL_IS_OK(ret)) {
         print(L_DEBUG, "cpl_get_object_relations --> [%d]", ret);
         CPL_VERIFY(cpl_get_object_relations, ret);
     }
-    if(ectx.size() != 2){
+    if(rctx.size() != 2){
     	print(L_DEBUG, "cpl_get_object_relations --> wrong size (%lu results) [%d]",
-    		ectx.size(), ret);
+    		rctx.size(), ret);
     	throw CPLException("get object relations result is the wrong size");
     }
-    if (!contains(ectx, rel2) || !contains(ectx, rel3)) {
+    if (!contains(rctx, rel2) || !contains(rctx, rel3)) {
         print(L_DEBUG, "cpl_get_object_relations --> not found (%lu results) [%d]",
-                ectx.size(), ret);
+                rctx.size(), ret);
         throw CPLException("get object relations result does not contain the relations");
     }
     print(L_DEBUG, "cpl_get_object_relations --> found (%lu results) [%d]",
-            ectx.size(), ret);
+            rctx.size(), ret);
 	if (with_delays) delay();
 
-	ectx.clear();
-	ret = cpl_get_object_relations(obj3, CPL_D_ANCESTORS, 0, cb_lookup, &ectx);
+	rctx.clear();
+	ret = cpl_get_object_relations(obj3, CPL_D_ANCESTORS, 0, cb_lookup_relations, &rctx);
 	if (!CPL_IS_OK(ret)) {
         print(L_DEBUG, "cpl_get_object_relations --> [%d]", ret);
         CPL_VERIFY(cpl_get_object_relations, ret);
     }
-    if(ectx.size() != 0){
+    if(rctx.size() != 0){
     	print(L_DEBUG, "cpl_get_object_relations --> wrong size (%lu results) [%d]",
-    		ectx.size(), ret);
+    		rctx.size(), ret);
     	throw CPLException("get object relations result is the wrong size");
     }
     print(L_DEBUG, "cpl_get_object_relations --> found (%lu results) [%d]",
-            ectx.size(), ret);
+            rctx.size(), ret);
 	if (with_delays) delay();
-	ectx.clear();
+	rctx.clear();
 
 	//Bundle relations
-	ret = cpl_get_bundle_relations(bun, cb_lookup_object_ext, &ectx);
+	ret = cpl_get_bundle_relations(bun, cb_lookup_relations, &rctx);
 	if (!CPL_IS_OK(ret)) {
         print(L_DEBUG, "cpl_get_bundle_relations --> [%d]", ret);
         CPL_VERIFY(cpl_lookup_object, ret);
     }
-    if(ectx.size() != 3){
+    if(rctx.size() != 3){
     	print(L_DEBUG, "cpl_get_bundle_relations --> wrong size (%lu results) [%d]",
-    		ectx.size(), ret);
+    		rctx.size(), ret);
     	throw CPLException("get bundle relations result is the wrong size");
     }
-    if (!contains(ectx, rel1) || !contains(ectx, rel2) || !contains(ectx, rel3)) {
+    if (!contains(rctx, rel1) || !contains(rctx, rel2) || !contains(rctx, rel3)) {
         print(L_DEBUG, "cpl_get_bundle_relations --> not found (%lu results) [%d]",
-                ectx.size(), ret);
+                rctx.size(), ret);
         throw CPLException("get bundle relations result does not contain the relations");
     }
     print(L_DEBUG, "cpl_get_bundle_relations --> found (%lu results) [%d]",
-            ectx.size(), ret);
+            rctx.size(), ret);
 	if (with_delays) delay();
 
 	print(L_DEBUG, " ");
@@ -626,13 +662,13 @@ test_simple(void)
 	if (with_delays) delay();
 
 	print_object_info(info);
-	if (info->id != obj
+	if (info->id != obj1
 			|| info->creation_session != session
 			|| (!with_delays && !check_time(info->creation_time))
 			|| strcmp(info->originator, ORIGINATOR) != 0
 			|| strcmp(info->name, "Entity") != 0
 			|| strcmp(info->type, "ENTITY") != 0
-			|| info->container_id != obj) {
+			|| info->container_id != bun) {
 		throw CPLException("The returned object information is incorrect");
 	}
 
@@ -767,8 +803,6 @@ test_simple(void)
 
 	print(L_DEBUG, "Properties of relation 3:");
 
-	std::multimap<std::string, std::string> pctx;
-
 	print(L_DEBUG, "All:");
 	pctx.clear();
 	ret = cpl_get_relation_properties(rel3, NULL,
@@ -802,17 +836,6 @@ test_simple(void)
 	CPL_VERIFY(cpl_get_relation_properties, ret);
 	if (pctx.size() != 0)
 		throw CPLException("The relation has unexpected properties.");
-	if (with_delays) delay();
-
-	print(L_DEBUG, " ");
-
-	std::set<cpl_id_t> lctx;
-	ret = cpl_lookup_relation_by_property("LABEL", "3",
-			cb_lookup_by_property, &lctx);
-	print(L_DEBUG, "cpl_lookup_relation_by_property --> %d", ret);
-	CPL_VERIFY(cpl_lookup_relation_by_property, ret);
-	if (!contains(lctx, rel3))
-		throw CPLException("The relation is missing in the result set.");
 	if (with_delays) delay();
 
 	print(L_DEBUG, " ");

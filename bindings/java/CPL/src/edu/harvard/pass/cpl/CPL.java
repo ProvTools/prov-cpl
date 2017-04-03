@@ -45,7 +45,7 @@ import java.math.BigInteger;
 /**
  * The main class
  *
- * @author Peter Macko
+ * @author Jackson Okuhn, Peter Macko
  */
 public class CPL {
 
