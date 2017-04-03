@@ -1,0 +1,822 @@
+/*
+ * test-simple.cpp
+ * Core Provenance Library
+ *
+ * Copyright 2011
+ *      The President and Fellows of Harvard College.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the University nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE UNIVERSITY OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ *
+ * Contributor(s): Jackson Okuhn, Peter Macko
+ */
+
+#include "stdafx.h"
+#include "standalone-test.h"
+
+#include <map>
+#include <set>
+#include <vector>
+
+
+using namespace std;
+
+
+/**
+ * Print the cpl_session_info_t structure
+ *
+ * @param info the info structure
+ */
+static void
+print_session_info(cpl_session_info_t* info)
+{
+	time_t start_time = (time_t) info->start_time;
+	char* s_start_time = ctime(&start_time);
+	if (s_start_time[strlen(s_start_time)-1] == '\n') {
+		s_start_time[strlen(s_start_time)-1] = '\0';
+	}
+
+	print(L_DEBUG, "  ID               : %llx", info->id);
+	print(L_DEBUG, "  MAC Address      : %s", info->mac_address);
+	print(L_DEBUG, "  User Name        : %s", info->user);
+	print(L_DEBUG, "  PID              : %d", info->pid);
+	print(L_DEBUG, "  Program Name     : %s", info->program);
+	print(L_DEBUG, "  Command Line     : %s", info->cmdline);
+	print(L_DEBUG, "  Start Time       : %s", s_start_time);
+}
+
+
+/**
+ * Print the cpl_object_info_t structure
+ *
+ * @param info the info structure
+ */
+static void
+print_object_info(cpl_object_info_t* info)
+{
+	time_t creation_time = (time_t) info->creation_time;
+	char* s_creation_time = ctime(&creation_time);
+	if (s_creation_time[strlen(s_creation_time)-1] == '\n') {
+		s_creation_time[strlen(s_creation_time)-1] = '\0';
+	}
+
+	print(L_DEBUG, "  ID               : %llx", info->id);
+	print(L_DEBUG, "  Creation Session : %llx", info->creation_session);
+	print(L_DEBUG, "  Creation Time    : %s", s_creation_time);
+	print(L_DEBUG, "  Originator       : %s", info->originator);
+	print(L_DEBUG, "  Name             : %s", info->name);
+	print(L_DEBUG, "  Type             : %s", info->type);
+	print(L_DEBUG, "  Container ID     : %llx", info->container_id);
+}
+
+
+/**
+ * The iterator callback for cpl_lookup_object_ext() that collects the returned
+ * information in an instance of std::map<cpl_id_t, unsigned long>*.
+ *
+ * @param id the object ID
+ * @param @param timestamp the object creation time expressed as UNIX time
+ * @param context the pointer to an instance of the map
+ * @return CPL_OK or an error code
+ */
+EXPORT cpl_return_t
+cb_lookup(const cpl_id_t id,
+		  const unsigned long timestamp,
+		  void* context)
+{
+	if (context == NULL) return CPL_E_INVALID_ARGUMENT;
+
+	std::map<cpl_id_t, unsigned long>* m
+		= (std::map<cpl_id_t, unsigned long>*) context;
+	(*m)[id] = timestamp;
+
+	return CPL_OK;
+}
+
+/**
+ * The iterator callback function used by property accessors.
+ *
+ * @param id the object ID
+ * @param key the property name
+ * @param value the property value
+ * @param context the application-provided context
+ * @return CPL_OK or an error code (the caller should fail on this error)
+ */
+static cpl_return_t
+cb_get_properties(const cpl_id_t id,
+				  const char* key,
+				  const char* value,
+				  void* context)
+{
+	std::multimap<std::string, std::string>* m
+		= (std::multimap<std::string, std::string>*) context;
+	m->insert(std::pair<std::string, std::string>(std::string(key),
+				std::string(value)));
+	
+	print(L_DEBUG, "  %llx %s = %s",
+			id, key, value);
+
+	return CPL_OK;
+}
+
+
+/**
+ * The iterator callback function used by property accessors.
+ *
+ * @param id the object ID
+ * @param key the property name
+ * @param value the property value
+ * @param context the application-provided context
+ * @return CPL_OK or an error code (the caller should fail on this error)
+ */
+static cpl_return_t
+cb_lookup_by_property(const cpl_id_t id,
+					  const char* key,
+					  const char* value,
+					  void* context)
+{
+	std::set<cpl_id_t>* s
+		= (std::set<cpl_id_t>*) context;
+	s->insert(id);
+	return CPL_OK;
+}
+
+
+/**
+ * Check the time
+ *
+ * @param t the time
+ * @return true if t is within 30 seconds of now
+ */
+static bool
+check_time(long t)
+{
+	time_t now = time(NULL);
+	return t - 5 <= now && t + 30 >= now;
+}
+
+
+/**
+ * Check whether the map contains the given id
+ *
+ * @param m the map
+ * @param id the ID
+ * @return true if it contains the given id
+ */
+static bool
+contains(std::map<cpl_id_t, unsigned long>& m, const cpl_id_t id)
+{
+	return m.find(id) != m.end();
+}
+
+
+/**
+ * Check whether the multimap contains the given pair
+ *
+ * @param m the multimap
+ * @param key the key
+ * @param value the value
+ * @return true if it contains the given pair
+ */
+static bool
+contains(std::multimap<std::string, std::string>& m, const char* key,
+		 const char* value)
+{
+	std::multimap<std::string, std::string>::iterator i;
+	for (i = m.find(std::string(key)); i != m.end(); i++) {
+		if (i->first != key) return false;
+		if (i->second == value) return true;
+	}
+	return false;
+}
+
+
+/**
+ * Check whether the set contains the given pair
+ *
+ * @param s the set
+ * @param id the ID
+ * @return true if it contains the given pair
+ */
+static bool
+contains(std::set<cpl_id_t>& s, const cpl_id_t id)
+{
+	return s.find(id) != s.end();
+}
+
+
+/**
+ * Create a random binary file
+ *
+ * @param size the file size
+ * @return the file name
+ */
+std::string
+create_random_file(size_t size=256)
+{
+	char _name[L_tmpnam + 4];
+	char* name = tmpnam(_name);
+	if (name == NULL) {
+		throw CPLException("Could not generate a new name for a temporary file.");
+	}
+
+	FILE* f = fopen(name, "wb");
+	if (f == NULL) {
+		throw CPLException("Could not create file: %s", strerror(errno));
+	}
+
+	size_t remaining = size;
+	char buffer[256];
+	while (remaining > 0) {
+		size_t l = remaining;
+		if (l > sizeof(buffer)) l = sizeof(buffer);
+		remaining -= l;
+
+		for (size_t i = 0; i < l; i++) buffer[i] = rand() & 0xff;
+		buffer[l-1]=0;
+		size_t r = fwrite(buffer, 1, l, f);
+		if (l != r || ferror(f)) {
+			throw CPLException("Could not write to file: %s", strerror(errno));
+		}
+	}
+
+	if (fclose(f) == EOF) {
+		throw CPLException("Could not close file: %s", strerror(errno));
+	}
+	return std::string(name);
+}
+
+
+/**
+ * Sleep for a small amount of time (on the order of seconds)
+ */
+void
+delay()
+{
+	int t = 2;
+
+	usleep(t * 1000000);
+}
+
+
+/**
+ * The simplest possible test
+ */
+void
+test_simple(void)
+{
+	cpl_return_t ret;
+	cpl_session_t session;
+
+	bool with_delays = false;
+
+	cpl_id_t bun  = CPL_NONE;
+	cpl_id_t obj1 = CPL_NONE;
+	cpl_id_t obj2 = CPL_NONE;
+	cpl_id_t obj3 = CPL_NONE;
+	cpl_id_t rel1 = CPL_NONE;
+	cpl_id_t rel2 = CPL_NONE;
+	cpl_id_t rel3 = CPL_NONE;
+
+	// Get the current session
+
+	ret = cpl_get_current_session(&session);
+	print(L_DEBUG, "cpl_get_current_session --> %llx [%d]",
+		  session, ret);
+	CPL_VERIFY(cpl_get_current_session, ret);
+
+	print(L_DEBUG, " ");
+
+	if (with_delays) delay();
+
+
+	// Object creation
+
+	ret = cpl_create_object(ORIGINATOR, "Bundle", "BUNDLE", CPL_NONE, &bun);
+	print(L_DEBUG, "cpl_create_object --> %llx [%d]", bun, ret);
+	CPL_VERIFY(cpl_create_object, ret);
+	if (with_delays) delay();
+
+	ret = cpl_create_object(ORIGINATOR, "Entity", "ENTITY", bun, &obj1);
+	print(L_DEBUG, "cpl_create_object --> %llx [%d]", obj2,ret);
+	CPL_VERIFY(cpl_create_object, ret);
+	if (with_delays) delay();
+
+	ret = cpl_create_object(ORIGINATOR, "Agent", "AGENT", bun, &obj2);
+	print(L_DEBUG, "cpl_create_object --> %llx [%d]", obj3,ret);
+	CPL_VERIFY(cpl_create_object, ret);
+	if (with_delays) delay();
+
+	ret = cpl_lookup_or_create_object(ORIGINATOR, "Activity", "ACTIVITY", bun, &obj3);
+	print(L_DEBUG, "cpl_lookup_or_create_object --> %llx [%d]",
+			obj4,ret);
+	CPL_VERIFY(cpl_lookup_or_create_object, ret);
+	if (with_delays) delay();
+
+	print(L_DEBUG, " ");
+
+
+	// Object lookup
+
+	cpl_id_t objx;
+
+	ret = cpl_lookup_object(ORIGINATOR, "Bundle", "BUNDLE", &objx);
+	print(L_DEBUG, "cpl_lookup_object --> %llx [%d]", objx ,ret);
+	CPL_VERIFY(cpl_lookup_object, ret);
+	if (bun!=objx)throw CPLException("Object lookup returned the wrong object");
+	if (with_delays) delay();
+
+	ret = cpl_lookup_object(ORIGINATOR, "Entity", "ENTITY", &objx);
+	print(L_DEBUG, "cpl_lookup_object --> %llx [%d]", objx ,ret);
+	CPL_VERIFY(cpl_lookup_object, ret);
+	if(obj1!=objx)throw CPLException("Object lookup returned the wrong object");
+	if (with_delays) delay();
+
+	ret = cpl_lookup_object(ORIGINATOR, "Agent", "AGENT", &objx);
+	print(L_DEBUG, "cpl_lookup_object --> %llx [%d]", objx,ret);
+	CPL_VERIFY(cpl_lookup_object, ret);
+	if(obj2!=objx)throw CPLException("Object lookup returned the wrong object");
+	if (with_delays) delay();
+
+    std::map<cpl_id_t, unsigned long> ectx;
+	ret = cpl_lookup_object_ext(ORIGINATOR, "Activity", "ACTIVITY", CPL_L_NO_FAIL,
+            cb_lookup, &ectx);
+    if (!CPL_IS_OK(ret)) {
+        print(L_DEBUG, "cpl_lookup_object_ext --> [%d]", ret);
+        CPL_VERIFY(cpl_lookup_object, ret);
+    }
+    if (!contains(ectx, obj3)) {
+        print(L_DEBUG, "cpl_lookup_object_ext --> not found (%lu results) [%d]",
+                ectx.size(), ret);
+        throw CPLException("Object lookup result does not contain the object");
+    }
+    print(L_DEBUG, "cpl_lookup_object_ext --> found (%lu results) [%d]",
+            ectx.size(), ret);
+    if (!with_delays && !check_time(ectx[obj3])) {
+        throw CPLException("The returned timestamp information is incorrect");
+    }
+	if (with_delays) delay();
+
+	//Bundle objects
+	ectx.clear();
+	ret = cpl_get_bundle_objects(bun, cb_lookup, &ectx);
+	 if (!CPL_IS_OK(ret)) {
+        print(L_DEBUG, "cpl_get_bundle_objects --> [%d]", ret);
+        CPL_VERIFY(cpl_lookup_object, ret);
+    }
+    if (!contains(ectx, obj1) || !contains(ectx, obj2) || !contains(ectx, obj3)) {
+        print(L_DEBUG, "cpl_get_bundle_objects --> not found (%lu results) [%d]",
+                ectx.size(), ret);
+        throw CPLException("get bundle objects result does not contain the objects");
+    }
+    print(L_DEBUG, "cpl_get_bundle_objects --> found (%lu results) [%d]",
+            ectx.size(), ret);
+	if (with_delays) delay();
+
+	print(L_DEBUG, " ");
+
+	// Relation creation
+
+	ret = cpl_add_relation(obj1, obj2, WASATTRIBUTEDTO , bun, &rel1);
+	print(L_DEBUG, "cpl_relation --> %d", ret);
+	CPL_VERIFY(cpl_add_relation, ret);
+	if (with_delays) delay();
+
+	ret = cpl_add_relation(obj1, obj2, WASATTRIBUTEDTO, bun, &rel1);
+	print(L_DEBUG, "cpl_relation --> %d", ret);
+	CPL_VERIFY(cpl_add_relation, ret);
+	if (ret != CPL_S_DUPLICATE_IGNORED) {
+		throw CPLException("This is a duplicate, but it was not ignored");
+	}
+	if (with_delays) delay();
+
+	ret = cpl_add_relation(obj1, obj3, WASGENERATEDBY, bun, &rel2);
+	print(L_DEBUG, "cpl_relation --> %d", ret);
+	CPL_VERIFY(cpl_add_relation, ret);
+	if (with_delays) delay();
+
+	ret = cpl_add_relation(obj2, obj3, WASASSOCIATEDWITH, bun, &rel3);
+	print(L_DEBUG, "cpl_relation --> %d", ret);
+	CPL_VERIFY(cpl_add_relation, ret);
+	if (with_delays) delay();
+
+	print(L_DEBUG, " ");
+
+	// Relation lookup
+	ectx.clear();
+	ret = cpl_get_object_relations(obj1, CPL_D_ANCESTORS, 0, cb_lookup, &ectx);
+	if (!CPL_IS_OK(ret)) {
+        print(L_DEBUG, "cpl_get_object_relations --> [%d]", ret);
+        CPL_VERIFY(cpl_get_object_relations, ret);
+    }
+    if(ectx.size() != 2){
+    	print(L_DEBUG, "cpl_get_object_relations --> wrong size (%lu results) [%d]",
+    		ectx.size(), ret);
+    	throw CPLException("get object relations result is the wrong size");
+    }
+    if (!contains(ectx, rel1) || !contains(ectx, rel2)) {
+        print(L_DEBUG, "cpl_get_object_relations --> not found (%lu results) [%d]",
+                ectx.size(), ret);
+        throw CPLException("get object relations result does not contain the relations");
+    }
+    print(L_DEBUG, "cpl_get_object_relations --> found (%lu results) [%d]",
+            ectx.size(), ret);
+	if (with_delays) delay();
+
+	ectx.clear();
+	ret = cpl_get_object_relations(obj1, CPL_D_DESCENDANTS, 0, cb_lookup, &ectx);
+	if (!CPL_IS_OK(ret)) {
+        print(L_DEBUG, "cpl_get_object_relations --> [%d]", ret);
+        CPL_VERIFY(cpl_get_object_relations, ret);
+    }
+    if(ectx.size() != 0){
+    	print(L_DEBUG, "cpl_get_object_relations --> wrong size (%lu results) [%d]",
+    		ectx.size(), ret);
+    	throw CPLException("get object relations result is the wrong size");
+    }
+    print(L_DEBUG, "cpl_get_object_relations --> found (%lu results) [%d]",
+            ectx.size(), ret);
+	if (with_delays) delay();
+
+
+	ectx.clear();
+	ret = cpl_get_object_relations(obj2, CPL_D_ANCESTORS, 0, cb_lookup, &ectx);
+	if (!CPL_IS_OK(ret)) {
+        print(L_DEBUG, "cpl_get_object_relations --> [%d]", ret);
+        CPL_VERIFY(cpl_get_object_relations, ret);
+    }
+    if(ectx.size() != 1){
+    	print(L_DEBUG, "cpl_get_object_relations --> wrong size (%lu results) [%d]",
+    		ectx.size(), ret);
+    	throw CPLException("get object relations result is the wrong size");
+    }
+    if (!contains(ectx, rel3)) {
+        print(L_DEBUG, "cpl_get_object_relations --> not found (%lu results) [%d]",
+                ectx.size(), ret);
+        throw CPLException("get object relations result does not contain the relations");
+    }
+    print(L_DEBUG, "cpl_get_object_relations --> found (%lu results) [%d]",
+            ectx.size(), ret);
+	if (with_delays) delay();
+
+	ectx.clear();
+	ret = cpl_get_object_relations(obj2, CPL_D_DESCENDANTS, 0, cb_lookup, &ectx);
+	if (!CPL_IS_OK(ret)) {
+        print(L_DEBUG, "cpl_get_object_relations --> [%d]", ret);
+        CPL_VERIFY(cpl_get_object_relations, ret);
+    }
+    if(ectx.size() != 1){
+    	print(L_DEBUG, "cpl_get_object_relations --> wrong size (%lu results) [%d]",
+    		ectx.size(), ret);
+    	throw CPLException("get object relations result is the wrong size");
+    }
+    if (!contains(ectx, rel1)) {
+        print(L_DEBUG, "cpl_get_object_relations --> not found (%lu results) [%d]",
+                ectx.size(), ret);
+        throw CPLException("get object relations result does not contain the relations");
+    }
+    print(L_DEBUG, "cpl_get_object_relations --> found (%lu results) [%d]",
+            ectx.size(), ret);
+	if (with_delays) delay();
+
+	ectx.clear();
+	ret = cpl_get_object_relations(obj3, CPL_D_DESCENDANTS, 0, cb_lookup, &ectx);
+	if (!CPL_IS_OK(ret)) {
+        print(L_DEBUG, "cpl_get_object_relations --> [%d]", ret);
+        CPL_VERIFY(cpl_get_object_relations, ret);
+    }
+    if(ectx.size() != 2){
+    	print(L_DEBUG, "cpl_get_object_relations --> wrong size (%lu results) [%d]",
+    		ectx.size(), ret);
+    	throw CPLException("get object relations result is the wrong size");
+    }
+    if (!contains(ectx, rel2) || !contains(ectx, rel3)) {
+        print(L_DEBUG, "cpl_get_object_relations --> not found (%lu results) [%d]",
+                ectx.size(), ret);
+        throw CPLException("get object relations result does not contain the relations");
+    }
+    print(L_DEBUG, "cpl_get_object_relations --> found (%lu results) [%d]",
+            ectx.size(), ret);
+	if (with_delays) delay();
+
+	ectx.clear();
+	ret = cpl_get_object_relations(obj3, CPL_D_ANCESTORS, 0, cb_lookup, &ectx);
+	if (!CPL_IS_OK(ret)) {
+        print(L_DEBUG, "cpl_get_object_relations --> [%d]", ret);
+        CPL_VERIFY(cpl_get_object_relations, ret);
+    }
+    if(ectx.size() != 0){
+    	print(L_DEBUG, "cpl_get_object_relations --> wrong size (%lu results) [%d]",
+    		ectx.size(), ret);
+    	throw CPLException("get object relations result is the wrong size");
+    }
+    print(L_DEBUG, "cpl_get_object_relations --> found (%lu results) [%d]",
+            ectx.size(), ret);
+	if (with_delays) delay();
+	ectx.clear();
+
+	//Bundle relations
+	ret = cpl_get_bundle_relations(bun, cb_lookup_object_ext, &ectx);
+	if (!CPL_IS_OK(ret)) {
+        print(L_DEBUG, "cpl_get_bundle_relations --> [%d]", ret);
+        CPL_VERIFY(cpl_lookup_object, ret);
+    }
+    if(ectx.size() != 3){
+    	print(L_DEBUG, "cpl_get_bundle_relations --> wrong size (%lu results) [%d]",
+    		ectx.size(), ret);
+    	throw CPLException("get bundle relations result is the wrong size");
+    }
+    if (!contains(ectx, rel1) || !contains(ectx, rel2) || !contains(ectx, rel3)) {
+        print(L_DEBUG, "cpl_get_bundle_relations --> not found (%lu results) [%d]",
+                ectx.size(), ret);
+        throw CPLException("get bundle relations result does not contain the relations");
+    }
+    print(L_DEBUG, "cpl_get_bundle_relations --> found (%lu results) [%d]",
+            ectx.size(), ret);
+	if (with_delays) delay();
+
+	print(L_DEBUG, " ");
+
+	// Session info
+
+	cpl_session_info_t* sinfo = NULL;
+
+	ret = cpl_get_session_info(session, &sinfo);
+	print(L_DEBUG, "cpl_get_session_info --> %d", ret);
+	CPL_VERIFY(cpl_get_session_info, ret);
+
+	print_session_info(sinfo);
+	if (sinfo->id != session
+			|| (!with_delays && !check_time(sinfo->start_time))) {
+		throw CPLException("The returned session information is incorrect");
+	}
+	if (with_delays) delay();
+
+	ret = cpl_free_session_info(sinfo);
+	CPL_VERIFY(cpl_free_session_info, ret);
+	if (with_delays) delay();
+
+	print(L_DEBUG, " ");
+
+
+    // Object listing
+    
+    std::vector<cplxx_object_info_t> oiv;
+    ret = cpl_get_all_objects(0, cpl_cb_collect_object_info_vector, &oiv);
+	print(L_DEBUG, "cpl_get_all_objects --> %d objects [%d]",
+          (int) oiv.size(), ret);
+	CPL_VERIFY(cpl_get_all_objects, ret);
+    bool found_bun = false;
+    bool found1 = false;
+    bool found2 = false;
+    bool found3 = false;
+    for (size_t i = 0; i < oiv.size(); i++) {
+        cplxx_object_info_t& info = oiv[i];
+        if (info.id == bun ) found_bun  = true;
+        if (info.id == obj1) found1 = true;
+        if (info.id == obj2) found2 = true;
+        if (info.id == obj3) found3 = true;
+        if (i < 10) {
+            print(L_DEBUG, "  %s : %s : %s", info.originator.c_str(),
+                  info.name.c_str(), info.type.c_str());
+        }
+    }
+    if (oiv.size() > 10) print(L_DEBUG, "  ...");
+    if (!found_bun)
+        throw CPLException("Object listing did not return a certain object");
+    if (!found1)
+        throw CPLException("Object listing did not return a certain object");
+    if (!found2)
+        throw CPLException("Object listing did not return a certain object");
+    if (!found3)
+        throw CPLException("Object listing did not return a certain object");
+	if (with_delays) delay();
+
+	print(L_DEBUG, " ");
+
+
+	// Object info
+
+	cpl_object_info_t* info = NULL;
+
+	ret = cpl_get_object_info(obj1, &info);
+	print(L_DEBUG, "cpl_get_object_info --> %d", ret);
+	CPL_VERIFY(cpl_get_object_info, ret);
+	if (with_delays) delay();
+
+	print_object_info(info);
+	if (info->id != obj
+			|| info->creation_session != session
+			|| (!with_delays && !check_time(info->creation_time))
+			|| strcmp(info->originator, ORIGINATOR) != 0
+			|| strcmp(info->name, "Entity") != 0
+			|| strcmp(info->type, "ENTITY") != 0
+			|| info->container_id != obj) {
+		throw CPLException("The returned object information is incorrect");
+	}
+
+	ret = cpl_free_object_info(info);
+	CPL_VERIFY(cpl_free_object_info, ret);
+	if (with_delays) delay();
+
+	print(L_DEBUG, " ");
+
+	ret = cpl_get_object_info(obj2, &info);
+	print(L_DEBUG, "cpl_get_object_info --> %d", ret);
+	CPL_VERIFY(cpl_get_object_info, ret);
+	if (with_delays) delay();
+
+	print_object_info(info);
+	if (info->id != obj2
+			|| info->creation_session != session
+			|| (!with_delays && !check_time(info->creation_time))
+			|| strcmp(info->originator, ORIGINATOR) != 0
+			|| strcmp(info->name, "Agent") != 0
+			|| strcmp(info->type, "AGENT") != 0
+			|| info->container_id != bun) {
+		throw CPLException("The returned object information is incorrect");
+	}
+
+	ret = cpl_free_object_info(info);
+	CPL_VERIFY(cpl_free_object_info, ret);
+	if (with_delays) delay();
+
+	print(L_DEBUG, " ");
+
+	// Object properties
+
+	ret = cpl_add_object_property(obj1, "LABEL", "1");
+	print(L_DEBUG, "cpl_add_object_property --> %d", ret);
+	CPL_VERIFY(cpl_add_object_property, ret);
+	if (with_delays) delay();
+
+	ret = cpl_add_object_property(obj2, "LABEL", "2");
+	print(L_DEBUG, "cpl_add_object_property --> %d", ret);
+	CPL_VERIFY(cpl_add_object_property, ret);
+	if (with_delays) delay();
+
+	ret = cpl_add_object_property(obj3, "LABEL", "3");
+	print(L_DEBUG, "cpl_add_object_property --> %d", ret);
+	CPL_VERIFY(cpl_add_object_property, ret);
+	if (with_delays) delay();
+
+	ret = cpl_add_object_property(obj3, "TAG", "Hello");
+	print(L_DEBUG, "cpl_add_object_property --> %d", ret);
+	CPL_VERIFY(cpl_add_object_property, ret);
+	if (with_delays) delay();
+
+	print(L_DEBUG, " ");
+
+	print(L_DEBUG, "Properties of object 3:");
+
+	std::multimap<std::string, std::string> pctx;
+
+	print(L_DEBUG, "All:");
+	pctx.clear();
+	ret = cpl_get_object_properties(obj3, NULL,
+			cb_get_properties, &pctx);
+	print(L_DEBUG, "cpl_get_object_properties --> %d", ret);
+	CPL_VERIFY(cpl_get_object_properties, ret);
+	if (!contains(pctx, "LABEL", "3"))
+		throw CPLException("The object is missing a property.");
+	if (!contains(pctx, "TAG", "Hello"))
+		throw CPLException("The object is missing a property.");
+	if (pctx.size() != 2)
+		throw CPLException("The object has unexpected properties.");
+
+	print(L_DEBUG, "LABEL:");
+	pctx.clear();
+	ret = cpl_get_object_properties(obj3, "LABEL",
+			cb_get_properties, &pctx);
+	print(L_DEBUG, "cpl_get_object_properties --> %d", ret);
+	CPL_VERIFY(cpl_get_object_properties, ret);
+	if (!contains(pctx, "LABEL", "3"))
+		throw CPLException("The object is missing a property.");
+	if (pctx.size() != 1)
+		throw CPLException("The object has unexpected properties.");
+	if (with_delays) delay();
+
+	print(L_DEBUG, "HELLO:");
+	pctx.clear();
+	ret = cpl_get_object_properties(obj3, "HELLO",
+			cb_get_properties, &pctx);
+	print(L_DEBUG, "cpl_get_properties --> %d", ret);
+	CPL_VERIFY(cpl_get_object_properties, ret);
+	if (pctx.size() != 0)
+		throw CPLException("The object has unexpected properties.");
+	if (with_delays) delay();
+
+	print(L_DEBUG, " ");
+
+	std::set<cpl_id_t> lctx;
+	ret = cpl_lookup_object_by_property("LABEL", "3",
+			cb_lookup_by_property, &lctx);
+	print(L_DEBUG, "cpl_lookup_object_by_property --> %d", ret);
+	CPL_VERIFY(cpl_lookup_object_by_property, ret);
+	if (!contains(lctx, obj3))
+		throw CPLException("The object is missing in the result set.");
+	if (with_delays) delay();
+
+	print(L_DEBUG, " ");
+
+
+	// Relation properties
+
+	ret = cpl_add_relation_property(rel1, "LABEL", "1");
+	print(L_DEBUG, "cpl_add_relation_property --> %d", ret);
+	CPL_VERIFY(cpl_add_relation_property, ret);
+	if (with_delays) delay();
+
+	ret = cpl_add_relation_property(rel2, "LABEL", "2");
+	print(L_DEBUG, "cpl_add_relation_property --> %d", ret);
+	CPL_VERIFY(cpl_add_relation_property, ret);
+	if (with_delays) delay();
+
+	ret = cpl_add_relation_property(rel3, "LABEL", "3");
+	print(L_DEBUG, "cpl_add_relation_property --> %d", ret);
+	CPL_VERIFY(cpl_add_relation_property, ret);
+	if (with_delays) delay();
+
+	ret = cpl_add_relation_property(rel3, "TAG", "Hello");
+	print(L_DEBUG, "cpl_add_relation_property --> %d", ret);
+	CPL_VERIFY(cpl_add_relation_property, ret);
+	if (with_delays) delay();
+
+	print(L_DEBUG, " ");
+
+	print(L_DEBUG, "Properties of relation 3:");
+
+	std::multimap<std::string, std::string> pctx;
+
+	print(L_DEBUG, "All:");
+	pctx.clear();
+	ret = cpl_get_relation_properties(rel3, NULL,
+			cb_get_properties, &pctx);
+	print(L_DEBUG, "cpl_get_relation_properties --> %d", ret);
+	CPL_VERIFY(cpl_get_relation_properties, ret);
+	if (!contains(pctx, "LABEL", "3"))
+		throw CPLException("The relation is missing a property.");
+	if (!contains(pctx, "TAG", "Hello"))
+		throw CPLException("The relation is missing a property.");
+	if (pctx.size() != 2)
+		throw CPLException("The relation has unexpected properties.");
+
+	print(L_DEBUG, "LABEL:");
+	pctx.clear();
+	ret = cpl_get_relation_properties(rel3, "LABEL",
+			cb_get_properties, &pctx);
+	print(L_DEBUG, "cpl_get_relation_properties --> %d", ret);
+	CPL_VERIFY(cpl_get_relation_properties, ret);
+	if (!contains(pctx, "LABEL", "3"))
+		throw CPLException("The relation is missing a property.");
+	if (pctx.size() != 1)
+		throw CPLException("The relation has unexpected properties.");
+	if (with_delays) delay();
+
+	print(L_DEBUG, "HELLO:");
+	pctx.clear();
+	ret = cpl_get_relation_properties(rel3, "HELLO",
+			cb_get_properties, &pctx);
+	print(L_DEBUG, "cpl_get_properties --> %d", ret);
+	CPL_VERIFY(cpl_get_relation_properties, ret);
+	if (pctx.size() != 0)
+		throw CPLException("The relation has unexpected properties.");
+	if (with_delays) delay();
+
+	print(L_DEBUG, " ");
+
+	std::set<cpl_id_t> lctx;
+	ret = cpl_lookup_relation_by_property("LABEL", "3",
+			cb_lookup_by_property, &lctx);
+	print(L_DEBUG, "cpl_lookup_relation_by_property --> %d", ret);
+	CPL_VERIFY(cpl_lookup_relation_by_property, ret);
+	if (!contains(lctx, rel3))
+		throw CPLException("The relation is missing in the result set.");
+	if (with_delays) delay();
+
+	print(L_DEBUG, " ");
+
+	cpl_delete_bundle(bun);
+}
+
