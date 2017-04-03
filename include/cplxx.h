@@ -193,6 +193,7 @@ cpl_cb_collect_id_timestamp_vector(const cpl_id_t id,
 								   const unsigned long timestamp,
 								   void* context);
 
+
 /**
  * The iterator callback for cpl_get_object_ancestry() that collects
  * the passed-in information in an instance of std::list<cpl_ancestry_entry_t>.

@@ -78,7 +78,7 @@ class JsonUtility {
 		
 		JSONParser parser = new JSONParser();
 
-		String out = "JSON verification failed. Reason unspecif";
+		String out = "JSON verification failed. Reason unspecified";
 
 		try {
 

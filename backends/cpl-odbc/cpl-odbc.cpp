@@ -644,14 +644,14 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 			" LIMIT 1;");
 
 	PREPARE(get_object_ancestors_stmt,
-			"SELECT id, from_id, type, container_id"
-			"  FROM cpl_relations"
-			" WHERE to_id = ?");
-
-	PREPARE(get_object_descendants_stmt,
 			"SELECT id, to_id, type, container_id"
 			"  FROM cpl_relations"
 			" WHERE from_id = ?");
+
+	PREPARE(get_object_descendants_stmt,
+			"SELECT id, from_id, type, container_id"
+			"  FROM cpl_relations"
+			" WHERE to_id = ?");
 
 	PREPARE(get_object_properties_stmt,
 			"SELECT id, name, value"

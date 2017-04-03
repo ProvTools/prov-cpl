@@ -6,21 +6,20 @@
 
 ROOT := .
 
-#TODO add test
 #
 # Subprojects
 #
 
 LIBRARIES := cpl-standalone backends
 HEADERS := include
-PROGRAMS :=
+PROGRAMS := test
+OPTIONAL := bindings/java
 
-#TODO add test back in when that exists
 #
 # Project configuration
 #
 
-RUN_PROGRAM :=
+RUN_PROGRAM := test
 
 
 #

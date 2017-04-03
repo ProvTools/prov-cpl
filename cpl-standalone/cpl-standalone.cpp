@@ -1027,6 +1027,9 @@ cpl_cb_collect_object_info_vector(const cpl_object_info_t* info,
  * @param context the pointer to an instance of the vector 
  * @return CPL_OK or an error code
  */
+#ifdef SWIG
+%constant
+#endif
 EXPORT cpl_return_t
 cpl_cb_collect_id_timestamp_vector(const cpl_id_t id,
 								   const unsigned long timestamp,
@@ -1182,11 +1185,6 @@ cpl_cb_collect_property_lookup_vector(const cpl_id_t id,
 
 	return CPL_OK;
 }
-
-
-/***************************************************************************/
-/** JSON Functions                                                        **/
-/***************************************************************************/
 
 
 
