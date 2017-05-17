@@ -74,7 +74,7 @@ class JsonUtility {
 	 *@param fileName document location
 	 *@return a string detailing errors if any exist
 	 */
-	public String verifyJson(String fileName){
+	public String validateJson(String fileName){
 		
 		JSONParser parser = new JSONParser();
 
@@ -487,7 +487,7 @@ class JsonUtility {
 
 				case CPLRelation.SPECIALIZATIONOF:
 					source = CPLObject.tryLookup(o,
-						(String) relationJson.get("prov:specificlEntity"), "entity");
+						(String) relationJson.get("prov:specificEntity"), "entity");
 					dest = CPLObject.tryLookup(o,
 						(String) relationJson.get("prov:generalEntity"), "entity");
 					relation = pFactory.createSpecializationOf(source, dest);
@@ -662,7 +662,7 @@ class JsonUtility {
 
 	/**
 	 * Import a Prov JSON document into Prov-CPL as a bundle. Does not verify correctness.
-	 * Currently supports only one anchor object.
+	 * Currently supports only one anchor object and no bundles.
 	 *
 	 * @param fileName document location
 	 * @param originator document originator
@@ -796,7 +796,6 @@ class JsonUtility {
 		Vector<CPLRelation> relationsVec = CPLObject.getBundleRelations(bundle);
 
 		if(!relationsVec.isEmpty()){
-			JSONObject relations = new JSONObject();
 			JSONObject alternateOf = new JSONObject();
 			JSONObject derivedByInsertionFrom = new JSONObject();
 			JSONObject derivedByRemovalFrom = new JSONObject();

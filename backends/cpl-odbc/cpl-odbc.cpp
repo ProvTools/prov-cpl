@@ -451,7 +451,7 @@ cpl_odbc_free_statement_handles(cpl_odbc_t* odbc)
 {
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_session_insert_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_object_insert_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_object_insert_container_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_object_insert_bundle_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_object_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_object_ext_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->add_relation_stmt);
@@ -533,7 +533,7 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 	
 	ALLOC_STMT(create_session_insert_stmt);
 	ALLOC_STMT(create_object_insert_stmt);
-	ALLOC_STMT(create_object_insert_container_stmt);
+	ALLOC_STMT(create_object_insert_bundle_stmt);
 	ALLOC_STMT(lookup_object_stmt);
 	ALLOC_STMT(lookup_object_ext_stmt);
 	ALLOC_STMT(add_relation_stmt);
@@ -582,10 +582,10 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 			"     VALUES (DEFAULT, ?, ?, ?, ?)"
 			"   RETURNING id;");
 
-	PREPARE(create_object_insert_container_stmt,
+	PREPARE(create_object_insert_bundle_stmt,
 			"INSERT INTO cpl_objects"
 			"            (id, originator, name, type,"
-			"             container_id,"
+			"             bundle_id,"
 			"             session_id)"
 			"     VALUES (DEFAULT, ?, ?, ?, ?, ?)"
 			"   RETURNING id;");
@@ -605,7 +605,7 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 	PREPARE(add_relation_stmt,
 			"INSERT INTO cpl_relations"
 			"            (id, from_id,"
-			"             to_id, type, container_id)"
+			"             to_id, type, bundle_id)"
 			"     VALUES (DEFAULT, ?, ?, ?, ?);");
 
 	PREPARE(add_object_property_stmt,
@@ -620,18 +620,18 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 
 	PREPARE(get_all_objects_stmt,
 			"SELECT id, creation_time, originator, name, type,"
-			"       container_id"
+			"       bundle_id"
 			"  FROM cpl_objects;");
 
 	PREPARE(get_all_objects_with_session_stmt,
 			"SELECT id, creation_time, originator, name, type,"
-			"       container_id, session_id"
+			"       bundle_id, session_id"
 			"  FROM cpl_objects");
 
 	PREPARE(get_object_info_stmt,
 			"SELECT session_id,"
 			"       creation_time, originator, name, type,"
-			"       container_id"
+			"       bundle_id"
 			"  FROM cpl_objects"
 			" WHERE id = ?"
 			" LIMIT 1;");
@@ -644,12 +644,12 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 			" LIMIT 1;");
 
 	PREPARE(get_object_ancestors_stmt,
-			"SELECT id, to_id, type, container_id"
+			"SELECT id, to_id, type, bundle_id"
 			"  FROM cpl_relations"
 			" WHERE from_id = ?");
 
 	PREPARE(get_object_descendants_stmt,
-			"SELECT id, from_id, type, container_id"
+			"SELECT id, from_id, type, bundle_id"
 			"  FROM cpl_relations"
 			" WHERE to_id = ?");
 
@@ -690,12 +690,12 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 	PREPARE(get_bundle_objects_stmt,
 			"SELECT id, creation_time, originator, name, type"
 			"  FROM cpl_objects"
-			"WHERE container_id = ?;")
+			"WHERE bundle_id = ?;")
 
 	PREPARE(get_bundle_relations_stmt,
 			"SELECT id, from_id, to_id, type"
 			"  FROM cpl_relations"
-			"WHERE container_id = ?;")
+			"WHERE bundle_id = ?;")
 #undef PREPARE
 
 
@@ -1058,8 +1058,8 @@ err:
  * @param originator the originator
  * @param name the object name
  * @param type the object type
- * @param container the ID of the object that should contain this object
- *                  (use CPL_NONE for no container)
+ * @param bundle the ID of the object that should contain this object
+ *                  (use CPL_NONE for no bundle)
  * @param session the session ID responsible for this provenance record
  * @param out_id the pointer to store the object ID
  * @return CPL_OK or an error code
@@ -1069,7 +1069,7 @@ cpl_odbc_create_object(struct _cpl_db_backend_t* backend,
 					   const char* originator,
 					   const char* name,
 					   const char* type,
-					   const cpl_id_t container,
+					   const cpl_id_t bundle,
 					   const cpl_session_t session,
 					   cpl_id_t* out_id)
 {
@@ -1088,17 +1088,17 @@ cpl_odbc_create_object(struct _cpl_db_backend_t* backend,
 	cpl_return_t r = CPL_E_INTERNAL_ERROR;
 
 retry:
-	SQLHSTMT stmt = container == CPL_NONE
+	SQLHSTMT stmt = bundle == CPL_NONE
 		? odbc->create_object_insert_stmt
-		: odbc->create_object_insert_container_stmt;
+		: odbc->create_object_insert_bundle_stmt;
 
 	SQL_BIND_VARCHAR(stmt, 1, ORIGINATOR_LEN, originator);
 	SQL_BIND_VARCHAR(stmt, 2, NAME_LEN, name);
 	SQL_BIND_VARCHAR(stmt, 3, TYPE_LEN, type);
 	SQL_BIND_INTEGER(stmt, 4, session);
 
-	if (container != CPL_NONE) {
-		SQL_BIND_INTEGER(stmt, 5, container);
+	if (bundle != CPL_NONE) {
+		SQL_BIND_INTEGER(stmt, 5, bundle);
 	}
 
 
@@ -1334,7 +1334,7 @@ cpl_odbc_add_relation(struct _cpl_db_backend_t* backend,
 						   const cpl_id_t from_id,
 						   const cpl_id_t to_id,
 						   const int type,
-						   const cpl_id_t container,
+						   const cpl_id_t bundle,
 						   cpl_id_t* out_id)
 {
 	assert(backend != NULL);
@@ -1356,7 +1356,7 @@ retry:
 	SQL_BIND_INTEGER(stmt, 1, from_id);
 	SQL_BIND_INTEGER(stmt, 2, to_id);
 	SQL_BIND_INTEGER(stmt, 3, type);
-	SQL_BIND_INTEGER(stmt, 4, container);
+	SQL_BIND_INTEGER(stmt, 4, bundle);
 
 
 	// Execute
@@ -1679,7 +1679,7 @@ cpl_odbc_get_all_objects(struct _cpl_db_backend_t* backend,
 		return CPL_E_INSUFFICIENT_RESOURCES;
 	}
 
-	SQLLEN cb_container_id = 0;
+	SQLLEN cb_bundle_id = 0;
 	SQLLEN cb_session_id = 0;
 
 	mutex_lock(odbc->get_all_objects_lock);
@@ -1719,8 +1719,8 @@ retry:
 	ret = SQLBindCol(stmt, 5, SQL_C_CHAR, entry_type, type_size, NULL);
 	if (!SQL_SUCCEEDED(ret)) goto err_close;
 
-    ret = SQLBindCol(stmt, 6, SQL_C_UBIGINT, &entry.container_id, 0,
-                     &cb_container_id);
+    ret = SQLBindCol(stmt, 6, SQL_C_UBIGINT, &entry.bundle_id, 0,
+                     &cb_bundle_id);
     if (!SQL_SUCCEEDED(ret)) goto err_close;
 
 
@@ -1762,7 +1762,7 @@ retry:
 		entry.name = entry_name;
 		entry.type = entry_type;
 
-		if (cb_container_id <= 0) entry.container_id = CPL_NONE;
+		if (cb_bundle_id <= 0) entry.bundle_id = CPL_NONE;
 		if (cb_session_id <= 0) entry.creation_session = CPL_NONE;
 
 		entries.push_back(entry);
@@ -1805,7 +1805,7 @@ retry:
 			e.originator = entry_originator;
 			e.name = entry_name;
 			e.type = entry_type;
-			e.container_id = i->container_id;
+			e.bundle_id = i->bundle_id;
 
 			r = callback(&e, context);
 			if (!CPL_IS_OK(r)) return r;
@@ -1884,8 +1884,8 @@ retry:
 	if (r == CPL_E_DB_NULL) p->name = strdup("");
 	CPL_SQL_SIMPLE_FETCH_EXT(dynamically_allocated_string, 5, &p->type, true);
 	if (r == CPL_E_DB_NULL) p->type = strdup("");
-	CPL_SQL_SIMPLE_FETCH_EXT(llong, 6, (long long*) &p->container_id, true);
-	if (r == CPL_E_DB_NULL) p->container_id = CPL_NONE;
+	CPL_SQL_SIMPLE_FETCH_EXT(llong, 6, (long long*) &p->bundle_id, true);
+	if (r == CPL_E_DB_NULL) p->bundle_id = CPL_NONE;
 	
 	ret = SQLCloseCursor(stmt);
 	if (!SQL_SUCCEEDED(ret)) {
@@ -1929,7 +1929,7 @@ typedef struct __get_object_relation__entry {
 	cpl_id_t relation_id;
 	cpl_id_t other_id;
 	long type;
-	cpl_id_t container_id;
+	cpl_id_t bundle_id;
 } __get_object_relation__entry_t;
 
 
@@ -1999,7 +1999,7 @@ retry:
 	ret = SQLBindCol(stmt, 3, SQL_C_SLONG, &entry.type, 0, &ind_type);
 	if (!SQL_SUCCEEDED(ret)) goto err_close;
 
-	ret = SQLBindCol(stmt, 4, SQL_C_UBIGINT, &entry.container_id, 0, NULL);
+	ret = SQLBindCol(stmt, 4, SQL_C_UBIGINT, &entry.bundle_id, 0, NULL);
 	if (!SQL_SUCCEEDED(ret)) goto err_close;
 
 
@@ -2065,7 +2065,8 @@ retry:
 	if (callback != NULL) {
 		std::list<__get_object_relation__entry_t>::iterator i;
 		for (i = entries.begin(); i != entries.end(); i++) {
-			r = callback(i->relation_id, id, i->other_id, (int) i->type, i->container_id, context);
+			if(i->other_id != NULL)
+				r = callback(i->relation_id, id, i->other_id, (int) i->type, i->bundle_id, context);
 			if (!CPL_IS_OK(r)) return r;
 		}
 	}
@@ -2608,7 +2609,7 @@ retry:
 	ret = SQLBindCol(stmt, 5, SQL_C_CHAR, entry_type, type_size, NULL);
 	if (!SQL_SUCCEEDED(ret)) goto err_close;
 
-    entry.container_id = id;
+    entry.bundle_id = id;
 
     entry.creation_session = CPL_NONE;
 
@@ -2679,7 +2680,7 @@ retry:
 			e.originator = entry_originator;
 			e.name = entry_name;
 			e.type = entry_type;
-			e.container_id = i->container_id;
+			e.bundle_id = i->bundle_id;
 
 			r = callback(&e, context);
 			if (!CPL_IS_OK(r)) return r;
@@ -2707,7 +2708,7 @@ typedef struct __get_bundle_relation__entry {
 	cpl_id_t from_id;
 	cpl_id_t to_id;
 	long type;
-	cpl_id_t container_id;
+	cpl_id_t bundle_id;
 } __get_bundle_relation__entry_t;
 
 cpl_return_t
@@ -2760,7 +2761,7 @@ retry:
 	ret = SQLBindCol(stmt, 4, SQL_C_SLONG, &entry.type, 0, &ind_type);
 	if (!SQL_SUCCEEDED(ret)) goto err_close;
 
-	entry.container_id = id;
+	entry.bundle_id = id;
 
 
 	// Fetch the result

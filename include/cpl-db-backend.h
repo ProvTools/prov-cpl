@@ -92,9 +92,9 @@ typedef struct _cpl_db_backend_t {
 	 * @param originator the object originator
 	 * @param name the object name
 	 * @param type the object type
-	 * @param container the ID of the object that should contain this object
-	 *                  (use CPL_NONE for no container)
-	 * @param container_version the version of the container (if not CPL_NONE)
+	 * @param bundle the ID of the object that should contain this object
+	 *                  (use CPL_NONE for no bundle)
+	 * @param bundle_version the version of the bundle (if not CPL_NONE)
 	 * @param session the session ID responsible for this provenance record
 	 * @return CPL_OK or an error code
 	 */
@@ -103,7 +103,7 @@ typedef struct _cpl_db_backend_t {
 							const char* originator,
 							const char* name,
 							const char* type,
-							const cpl_id_t container,
+							const cpl_id_t bundle,
 							const cpl_session_t session,
 							cpl_id_t* out_id);
 
@@ -163,7 +163,7 @@ typedef struct _cpl_db_backend_t {
 								const cpl_id_t from_id,
 								const cpl_id_t to_id,
 								const int type,
-								const cpl_id_t container,
+								const cpl_id_t bundle,
 								cpl_id_t* out_id);
 
 	/**

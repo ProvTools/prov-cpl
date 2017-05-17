@@ -23,6 +23,8 @@ Please make sure that the following packages are installed:
   odbc-postgresql (for PostgreSQL)
   libcurl4-openssl-dev
   libxml2-dev
+  jansson
+  igraph
 
 Please refer to the individual README files for each language binding to
 learn which packages are required for which bindings.

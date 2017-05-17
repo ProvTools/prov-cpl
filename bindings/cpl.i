@@ -203,7 +203,7 @@ cpl_return_t
 cpl_create_object(const char* originator,
                   const char* name,
                   const char* type,
-                  const cpl_id_t container,
+                  const cpl_id_t bundle,
                   unsigned long long* INPUT);
 
 cpl_return_t
@@ -216,14 +216,14 @@ cpl_return_t
 cpl_lookup_or_create_object(const char* originator,
                             const char* name,
                             const char* type,
-                            const cpl_id_t container,
+                            const cpl_id_t bundle,
                             unsigned long long* INPUT);
 
 cpl_return_t
 cpl_add_relation(const cpl_id_t from_id,
                    const cpl_id_t to_id,
                    const int type,
-                   const cpl_id_t container,
+                   const cpl_id_t bundle,
                    unsigned long long* INPUT);
 
 cpl_return_t
@@ -232,7 +232,7 @@ cpl_get_current_session(unsigned long long* INPUT);
 
 
 /*
- * STL containers
+ * STL bundles
  */
 
 %template (cpl_id_timestamp_t_vector) std::vector<cpl_id_timestamp_t>;

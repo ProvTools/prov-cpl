@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS cpl_objects (
        name VARCHAR(255),
        type VARCHAR(100),
        creation_time TIMESTAMP DEFAULT NOW(),
-       container_id BIGINT,
+       bundle_id BIGINT,
        session_id BIGINT,
        PRIMARY KEY(id),
        FOREIGN KEY(session_id)
@@ -88,9 +88,9 @@ CREATE TABLE IF NOT EXISTS cpl_sessions (
 CREATE TABLE IF NOT EXISTS cpl_relations (
        id BIGSERIAL,
        from_id BIGSERIAL NOT NULL,
-       to_id BIGSERIAL NOT NULL,
+       to_id BIGSERIAL,
        type INT,
-       container_id BIGINT,
+       bundle_id BIGINT,
        PRIMARY KEY(id),
        FOREIGN KEY(from_id)
                    REFERENCES cpl_objects(id)
@@ -98,7 +98,7 @@ CREATE TABLE IF NOT EXISTS cpl_relations (
        FOREIGN KEY(to_id)
                    REFERENCES cpl_objects(id)
                    ON DELETE CASCADE,
-       FOREIGN KEY(container_id)
+       FOREIGN KEY(bundle_id)
                    REFERENCES cpl_objects(id)
                    ON DELETE CASCADE);
 
@@ -119,7 +119,7 @@ CREATE TABLE IF NOT EXISTS cpl_object_properties (
            ON DELETE CASCADE);
 
 ALTER TABLE cpl_objects ADD CONSTRAINT cpl_objects_fk
-      FOREIGN KEY (container_id)
+      FOREIGN KEY (bundle_id)
       REFERENCES cpl_objects(id)
       ON DELETE CASCADE;
 

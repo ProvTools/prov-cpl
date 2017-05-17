@@ -36,6 +36,7 @@
 #define __CPL_H__
 
 #include <stddef.h>
+#include <jansson.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -155,8 +156,8 @@ typedef struct cpl_object_info {
 	/// The object type.
 	char* type;
 
-	/// The object ID of the container, or CPL_NONE if none.
-	cpl_id_t container_id;
+	/// The object ID of the bundle, or CPL_NONE if none.
+	cpl_id_t bundle_id;
 
 } cpl_object_info_t;
 
@@ -202,7 +203,7 @@ typedef cpl_return_t (*cpl_relation_iterator_t)
 						 const cpl_id_t query_object_id,
 						 const cpl_id_t other_object_id,
 						 const int type,
-						 const cpl_id_t container_id,
+						 const cpl_id_t bundle_id,
 						 void* context);
 
 /**
@@ -223,8 +224,8 @@ typedef struct cpl_relation {
 	/// The type of the data or the control dependency.
 	int type;
 
-	/// The ID of the container object
-	cpl_id_t container_id;
+	/// The ID of the bundle object
+	cpl_id_t bundle_id;
 
 } cpl_relation_t;
 
@@ -267,56 +268,7 @@ WINDLL_API extern const cpl_id_t CPL_NONE;
 /** Relation Types                                                        **/
 /***************************************************************************/
 
-/*
-/// Macros defining the source and origin of a relation
-#define NOT_SPECIFIED 			0
-#define F_ENT_T_ENT				1
-#define F_ENT_T_ACT				2
-#define F_ENT_T_AGT				3
-#define F_ACT_T_ENT				4
-#define F_ACT_T_ACT				5
-#define F_ACT_T_AGT				6
-#define F_AGT_T_ENT				7
-#define F_AGT_T_ACT				8
-#define F_AGT_T_AGT				9
-
-#define FROM_TO_VAL(t,v)		((t << 8) | v)
-
-/// Types of relation
-#define ALTERNATEOF				FROM_TO_VAL(F_ENT_T_ENT, 1)
-#define	DERIVEDBYINSERTIONFROM	FROM_TO_VAL(F_ENT_T_ENT, 2)
-#define	DERIVEDBYREMOVALFROM	FROM_TO_VAL(F_ENT_T_ENT, 3)
-#define	HADMEMBER 				FROM_TO_VAL(F_ENT_T_ENT, 4)
-#define	HADDICTIONARYMEMBER		FROM_TO_VAL(F_ENT_T_ENT, 5)
-#define	SPECIALIZATIONOF		FROM_TO_VAL(F_ENT_T_ENT, 6)
-#define	WASDERIVEDFROM			FROM_TO_VAL(F_ENT_T_ENT, 7)
-
-#define	WASGENERATEDBY			FROM_TO_VAL(F_ENT_T_ACT, 1)
-#define	WASINVALIDATEDBY		FROM_TO_VAL(F_ENT_T_ACT, 2)
-
-#define	WASATTRIBUTEDTO			FROM_TO_VAL(F_ENT_T_AGT, 1)
-
-
-#define	USED 					FROM_TO_VAL(F_ACT_T_ENT, 1)
-
-#define	WASINFORMEDBY			FROM_TO_VAL(F_ACT_T_ACT, 1)
-
-#define	WASSTARTEDBY			FROM_TO_VAL(F_ACT_T_AGT, 1)
-#define	WASENDEDBY				FROM_TO_VAL(F_ACT_T_AGT, 2)
-
-#define HADPLAN					FROM_TO_VAL(F_AGT_T_ENT, 1)
-
-#define	WASASSOCIATEDWITH		FROM_TO_VAL(F_AGT_T_ACT, 1)
-
-#define ACTEDONBEHALFOF			FROM_TO_VAL(F_AGT_T_AGT, 1)
-
-#define WASINFLUENCEDBY(t)		FROM_TO_VAL(t, 1)
-
-#define GET_RELATION_CATEGORY(n) (n >> 8)
-*/
-
 #define WASINFLUENCEDBY			0
-
 #define ALTERNATEOF				1
 #define	DERIVEDBYINSERTIONFROM	2
 #define	DERIVEDBYREMOVALFROM	3
@@ -324,25 +276,35 @@ WINDLL_API extern const cpl_id_t CPL_NONE;
 #define	HADDICTIONARYMEMBER		5
 #define	SPECIALIZATIONOF		6
 #define	WASDERIVEDFROM			7
-
 #define	WASGENERATEDBY			8
 #define	WASINVALIDATEDBY		9
-
 #define	WASATTRIBUTEDTO			10
-
-
 #define	USED 					11
-
 #define	WASINFORMEDBY			12
-
 #define	WASSTARTEDBY			13
 #define	WASENDEDBY				14
-
 #define HADPLAN					15
-
 #define	WASASSOCIATEDWITH		16
-
 #define ACTEDONBEHALFOF			17
+
+#define WASINFLUENCEDBY_STR			"wasInfluencedBy"
+#define ALTERNATEOF_STR				"alternateOf"
+#define	DERIVEDBYINSERTIONFROM_STR	"derivedByInsertionFrom"
+#define	DERIVEDBYREMOVALFROM_STR	"derivedByRemovalFrom"
+#define	HADMEMBER_STR 				"hadMember"
+#define	HADDICTIONARYMEMBER_STR		"hadDictionaryMember"
+#define	SPECIALIZATIONOF_STR		"specializationOf"
+#define	WASDERIVEDFROM_STR			"wasDerivedFrom"
+#define	WASGENERATEDBY_STR			"wasGeneratedBy"
+#define	WASINVALIDATEDBY_STR		"wasInvalidatedBy"
+#define	WASATTRIBUTEDTO_STR			"wasAttributedTo"
+#define	USED_STR 					"used"
+#define	WASINFORMEDBY_STR			"wasInformedBy"
+#define	WASSTARTEDBY_STR			"wasStartedBy"
+#define	WASENDEDBY_STR				"wasEndedBy"
+#define HADPLAN_STR					"hadPlan"
+#define	WASASSOCIATEDWITH_STR		"wasAssociatedWith"
+#define ACTEDONBEHALFOF_STR			"actedOnBehalfOf"
 /***************************************************************************/
 /** Return Codes                                                          **/
 /***************************************************************************/
@@ -516,24 +478,28 @@ WINDLL_API extern const cpl_id_t CPL_NONE;
 /**
  * The default entity type
  */
-#define ENTITY							"ENTITY"
+#define ENTITY							"entity"
 
 /**
  * The default activity type
  */
-#define ACTIVITY						"ACTIVITY"
+#define ACTIVITY						"activity"
 
 /**
  * The default agent type
  */
-#define AGENT 							"AGENT"
+#define AGENT 							"agent"
 
 /**
  * The default bundle type
  */
-#define BUNDLE							"BUNDLE"
+#define BUNDLE							"bundle"
 
 
+#define ENTITY_STR						"entity"
+#define ACTIVITY_STR					"activity"
+#define AGENT_STR						"agent"
+#define BUNDLE_STR						"bundle"
 
 /***************************************************************************/
 /** Graph Traversal, Query, and Lookup Flags                              **/
@@ -625,8 +591,8 @@ cpl_error_string(cpl_return_t error);
  *                   and generating unique names within its namespace
  * @param name the object name
  * @param type the object type
- * @param container the ID of the object that should contain this object
- *                  (use CPL_NONE for no container)
+ * @param bundle the ID of the object that should contain this object
+ *                  (use CPL_NONE for no bundle)
  * @param out_id the pointer to store the ID of the newly created object
  * @return CPL_OK or an error code
  */
@@ -634,7 +600,7 @@ EXPORT cpl_return_t
 cpl_create_object(const char* originator,
 				  const char* name,
 				  const char* type,
-				  const cpl_id_t container,
+				  const cpl_id_t bundle,
 				  cpl_id_t* out_id);
 
 /**
@@ -680,8 +646,8 @@ cpl_lookup_object_ext(const char* originator,
  *                   and generating unique names within its namespace
  * @param name the object name
  * @param type the object type
- * @param container the ID of the object that should contain this object
- *                  (use CPL_NONE for no container)
+ * @param bundle the ID of the object that should contain this object
+ *                  (use CPL_NONE for no bundle)
  * @param out_id the pointer to store the ID of the newly created object
  * @return CPL_OK or an error code
  */
@@ -689,7 +655,7 @@ EXPORT cpl_return_t
 cpl_lookup_or_create_object(const char* originator,
 							const char* name,
 							const char* type,
-							const cpl_id_t container,
+							const cpl_id_t bundle,
 							cpl_id_t* out_id);
 
 /**
@@ -718,7 +684,7 @@ EXPORT cpl_return_t
 cpl_add_relation(const cpl_id_t from_id,
 			  	   const cpl_id_t to_id,
 				   const int type,
-				   const cpl_id_t container,
+				   const cpl_id_t bundle,
 				   cpl_id_t* out_id);
 
 

@@ -76,11 +76,11 @@ public class CPLObject {
 	/// The object type (cache)
 	private String type = null;
 
-	/// The object container (cache)
-	private BigInteger containerId = null;
+	/// The object bundle (cache)
+	private BigInteger bundleId = null;
 
-	/// Whether we know the container
-	private boolean knowContainer = false;
+	/// Whether we know the bundle
+	private boolean knowbundle = false;
 
 	/// The creation time (cache)
 	private long creationTime = 0;
@@ -117,15 +117,15 @@ public class CPLObject {
 	 * @param originator the originator
 	 * @param name the object name
 	 * @param type the object type
-	 * @param container the object container
+	 * @param bundle the object bundle
      * @return the new object
 	 */
 	public static CPLObject create(String originator, String name, String type,
-			CPLObject container) {
+			CPLObject bundle) {
 
 		BigInteger id = BigInteger.ZERO;
 		int r = CPLDirect.cpl_create_object(originator, name, type,
-				container == null ? nullId : container.id, id);
+				bundle == null ? nullId : bundle.id, id);
 		CPLException.assertSuccess(r);
 
 		CPLObject o = new CPLObject(id);
@@ -263,15 +263,15 @@ public class CPLObject {
 	 * @param originator the originator
 	 * @param name the object name
 	 * @param type the object type
-	 * @param container the object container (if the object does not exist)
+	 * @param bundle the object bundle (if the object does not exist)
 	 * @return the object
 	 */
 	public static CPLObject lookupOrCreate(String originator, String name,
-			String type, CPLObject container) {
+			String type, CPLObject bundle) {
 
 		BigInteger id = BigInteger.ZERO;
 		int r = CPLDirect.cpl_lookup_or_create_object(originator, name, type,
-				container == null ? nullId : container.id, id);
+				bundle == null ? nullId : bundle.id, id);
 
 		if (CPLException.isError(r)) {
 			if (r == CPLDirect.CPL_E_NOT_FOUND) return null;
@@ -331,8 +331,8 @@ public class CPLObject {
                 o.name = e.getName();
                 o.type = e.getType();
                 
-                o.containerId = e.getContainer_id();
-                o.knowContainer = true;
+                o.bundleId = e.getbundle_id();
+                o.knowbundle = true;
 
 				result.add(o);
 			}
@@ -394,7 +394,7 @@ public class CPLObject {
 	 */
 	protected boolean fetchInfo() {
 
-		if (originator != null && knowContainer && knowCreationInfo)
+		if (originator != null && knowbundle && knowCreationInfo)
 			return false;
 
 
@@ -415,7 +415,7 @@ public class CPLObject {
 			name = info.getName();
 			type = info.getType();
 
-			containerId = info.getContainer_id();
+			bundleId = info.getbundle_id();
 
 			BigInteger creationSessionId = info.getCreation_session();
 			if (CPL.isNone(creationSessionId)) {
@@ -427,7 +427,7 @@ public class CPLObject {
 			creationTime = info.getCreation_time();
 
 			knowCreationInfo = true;
-			knowContainer = true;
+			knowbundle = true;
 
 			CPLDirect.cpl_free_object_info(info);
 		}
@@ -482,13 +482,13 @@ public class CPLObject {
 
 
 	/**
-	 * Get the object container
+	 * Get the object bundle
 	 *
-	 * @return the container, or null if none
+	 * @return the bundle, or null if none
 	 */
-	public BigInteger getContainerId() {
-		if (!knowContainer) fetchInfo();
-		return containerId;
+	public BigInteger getbundleId() {
+		if (!knowbundle) fetchInfo();
+		return bundleId;
 	}
 
 
@@ -541,8 +541,8 @@ public class CPLObject {
 
 		if (detail) {
 
-			sb.append("Container ID        : ");
-			sb.append(getContainerId());
+			sb.append("bundle ID        : ");
+			sb.append(getbundleId());
 			sb.append("\n");
 
 			sb.append("Creation session    : ");
@@ -592,7 +592,7 @@ public class CPLObject {
 						this,
 						new CPLObject(e.getOther_object_id()),
 						e.getType(),
-						new CPLObject(e.getContainer_id()),
+						new CPLObject(e.getbundle_id()),
 						direction == D_ANCESTORS));
 			}
 		}
@@ -765,8 +765,8 @@ public class CPLObject {
                 o.name = e.getName();
                 o.type = e.getType();
                 
-                o.containerId = bundle.getId();
-                o.knowContainer = true;
+                o.bundleId = bundle.getId();
+                o.knowbundle = true;
 
 				result.add(o);
 			}
@@ -802,7 +802,7 @@ public class CPLObject {
 						new CPLObject(e.getQuery_object_id()),
 						new CPLObject(e.getOther_object_id()),
 						e.getType(),
-						new CPLObject(e.getContainer_id()),
+						new CPLObject(e.getbundle_id()),
 						true));
 			}
 		}

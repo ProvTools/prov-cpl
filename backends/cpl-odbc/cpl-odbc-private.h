@@ -102,9 +102,9 @@ typedef struct {
 	SQLHSTMT create_object_insert_stmt;
 
 	/**
-	 * The insert statement for object creation - with container
+	 * The insert statement for object creation - with bundle
 	 */
-	SQLHSTMT create_object_insert_container_stmt;
+	SQLHSTMT create_object_insert_bundle_stmt;
 
 	/**
 	 * The lock for lookup_object

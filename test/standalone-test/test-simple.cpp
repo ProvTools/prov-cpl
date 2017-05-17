@@ -88,7 +88,7 @@ print_object_info(cpl_object_info_t* info)
 	print(L_DEBUG, "  Originator       : %s", info->originator);
 	print(L_DEBUG, "  Name             : %s", info->name);
 	print(L_DEBUG, "  Type             : %s", info->type);
-	print(L_DEBUG, "  Container ID     : %llx", info->container_id);
+	print(L_DEBUG, "  bundle ID     : %llx", info->bundle_id);
 }
 
 
@@ -132,7 +132,7 @@ cb_lookup_relations(const cpl_id_t relation_id,
 				   const cpl_id_t query_object_id,
 				   const cpl_id_t other_object_id,
 				   const int type,
-				   const cpl_id_t container_id,
+				   const cpl_id_t bundle_id,
 				   void* context)
 {
 	std::set<cpl_id_t>* s
@@ -668,7 +668,7 @@ test_simple(void)
 			|| strcmp(info->originator, ORIGINATOR) != 0
 			|| strcmp(info->name, "Entity") != 0
 			|| strcmp(info->type, "ENTITY") != 0
-			|| info->container_id != bun) {
+			|| info->bundle_id != bun) {
 		throw CPLException("The returned object information is incorrect");
 	}
 
@@ -690,7 +690,7 @@ test_simple(void)
 			|| strcmp(info->originator, ORIGINATOR) != 0
 			|| strcmp(info->name, "Agent") != 0
 			|| strcmp(info->type, "AGENT") != 0
-			|| info->container_id != bun) {
+			|| info->bundle_id != bun) {
 		throw CPLException("The returned object information is incorrect");
 	}
 

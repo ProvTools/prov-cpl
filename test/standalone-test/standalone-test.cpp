@@ -367,8 +367,7 @@ main(int argc, char** argv)
 
 		cpl_return_t ret = cpl_attach(backend);
 		if (!CPL_IS_OK(ret)) {
-			throw CPLException("Failed to initialize the Core Provenance "
-					"Library");
+			throw CPLException("Failed to initialize Prov-CPL");
 		}
 	}
 	catch (std::exception& e) {

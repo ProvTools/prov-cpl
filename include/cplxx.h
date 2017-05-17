@@ -132,8 +132,8 @@ typedef struct cplxx_object_info {
 	/// The object type.
 	std::string type;
 
-	/// The object ID of the container, or CPL_NONE if none.
-	cpl_id_t container_id;
+	/// The object ID of the bundle, or CPL_NONE if none.
+	cpl_id_t bundle_id;
 
 } cplxx_object_info_t;
 
@@ -152,7 +152,6 @@ typedef struct cplxx_property_entry {
 	std::string value;
 
 } cplxx_property_entry_t;
-
 
 
 /***************************************************************************/
@@ -240,7 +239,7 @@ cpl_cb_collect_relation_vector(const cpl_id_t relation_id,
 							   const cpl_id_t query_object_id,
 							   const cpl_id_t other_object_id,
 							   const int type,
-							   const cpl_id_t container_id,
+							   const cpl_id_t bundle_id,
 							   void* context);
 
 /**
