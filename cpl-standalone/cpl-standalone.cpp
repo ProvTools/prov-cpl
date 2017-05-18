@@ -410,7 +410,7 @@ cpl_error_string(cpl_return_t code)
 
 
 /***************************************************************************/
-/** Public API: Disclosed Provenance API                                  **/
+/** Public API: Provenance API                                            **/
 /***************************************************************************/
 
 
@@ -429,7 +429,7 @@ cpl_error_string(cpl_return_t code)
 extern "C" EXPORT cpl_return_t
 cpl_create_object(const char* originator,
 				  const char* name,
-				  const char* type,
+				  const int type,
 				  const cpl_id_t bundle,
 				  cpl_id_t* out_id)
 {
@@ -478,7 +478,7 @@ cpl_create_object(const char* originator,
 extern "C" EXPORT cpl_return_t
 cpl_lookup_object(const char* originator,
 				  const char* name,
-				  const char* type,
+				  const int type,
 				  cpl_id_t* out_id)
 {
 	CPL_ENSURE_INITIALIZED;
@@ -524,7 +524,7 @@ cpl_lookup_object(const char* originator,
 extern "C" EXPORT cpl_return_t
 cpl_lookup_object_ext(const char* originator,
 					  const char* name,
-					  const char* type,
+					  const int type,
 					  const int flags,
 					  cpl_id_timestamp_iterator_t iterator,
 					  void* context)
@@ -575,7 +575,7 @@ cpl_lookup_object_ext(const char* originator,
 extern "C" EXPORT cpl_return_t
 cpl_lookup_or_create_object(const char* originator,
 							const char* name,
-							const char* type,
+							const int type,
 							const cpl_id_t bundle,
 							cpl_id_t* out_id)
 {
@@ -697,10 +697,6 @@ cpl_add_relation(const cpl_id_t from_id,
 	return CPL_OK;
 }
 
-
-/***************************************************************************/
-/** Public API: Provenance Access API                                     **/
-/***************************************************************************/
 
 /**
  * Get the ID of the current session.
@@ -924,8 +920,6 @@ cpl_lookup_object_by_property(const char* key,
 													 iterator, context);
 }
 
-//TODO filter ancestry by edge property/edge type
-
 
 extern "C" EXPORT cpl_return_t
 cpl_get_relation_properties(const cpl_id_t id,
@@ -944,6 +938,7 @@ cpl_get_relation_properties(const cpl_id_t id,
 												 iterator, context);
 }
 
+
 extern "C" EXPORT cpl_return_t
 cpl_delete_bundle(const cpl_id_t id)
 {
@@ -952,6 +947,7 @@ cpl_delete_bundle(const cpl_id_t id)
 
 	return cpl_db_backend->cpl_db_delete_bundle(cpl_db_backend, id);
 }
+
 
 extern "C" EXPORT cpl_return_t
 cpl_get_bundle_objects(const cpl_id_t id,
@@ -966,6 +962,7 @@ cpl_get_bundle_objects(const cpl_id_t id,
 												iterator, context);
 }
 
+
 extern "C" EXPORT cpl_return_t
 cpl_get_bundle_relations(const cpl_id_t id,
 					cpl_relation_iterator_t iterator,
@@ -978,6 +975,9 @@ cpl_get_bundle_relations(const cpl_id_t id,
 	return cpl_db_backend->cpl_db_get_bundle_relations(cpl_db_backend, id,
 												iterator, context);
 }
+
+
+
 /***************************************************************************/
 /** Public API: Enhanced C++ Functionality                                **/
 /***************************************************************************/
@@ -1186,23 +1186,212 @@ cpl_cb_collect_property_lookup_vector(const cpl_id_t id,
 	return CPL_OK;
 }
 
+
+
 /***************************************************************************/
 /** Public API: Document Handling                                         **/
 /***************************************************************************/
 
-//TODO double check decrefs/general pointer counting, maybe move to C if possible
+//TODO make sure relations go to and from correct types
+int
+validation_helper_json(json_t* document,
+					 const char* type_str,
+					 const char* source_str,
+					 const char* dest_str,
+					 std::vector<std::string> &objects,
+					 igraph_vector_t* edges)
+{
+	json_t* relations;
+	int source_int, dest_int;
+
+	relations = json_object_get(document, type_str);
+	json_object_foreach(relations, name, value){
+
+		std::string source(json_object_get(relations, source_str));
+		std::string dest(json_object_get(relations, dest_str));
+
+		if(!source){
+			json_decref(relations);
+			return -1;
+		}
+
+		if(dest){
+			if (int pos = std::find(objects.begin(), objects.end(), source) != objects.end()){
+				source_int = pos;
+			} else {
+				objects.push_back(source);
+				source_int = objects.size()-1;
+			}
+
+			if (int pos = std::find(objects.begin(), objects.end(), dest) != objects.end()){
+				dest_int = pos;
+			} else {
+				objects.push_back(dest);
+				dest_int = objects.size()-1;
+			}
+
+			igraph_vector_push_back(edges, source_int);
+			igraph_vector_push_back(edges, dest_int);
+		}
+	}
+
+	json_decref(relations);
+	return 0;
+}
+
 #ifdef SWIG
 %constant
 #endif
-cpl_return_t
-validate_json(const char* path)
+int
+validate_json(const char* path,
+	 		  char** out_msg)
 {
-	return NULL;
+	
+	*out_msg = "Validation failed on upload";
+	json_error_t err;
+	json_t* document = json_load_file(filename, 0, &err);
+	if(document == NULL){
+		json_decref(document);
+		return -1;
+	}
+
+	std::vector<std::string> objects;
+
+	igraph_vector_t edges;
+	igraph_vector_init(&edges, 0);
+
+	*out_msg = "Invalid PROV-JSON formatting"
+
+	if(validation_helper_json(document, ALTERNATEOF_STR,
+						 	  "prov:alternate1", "prov:alternate2",
+						 	  objects, &edges)){
+		json_decref(document);
+		return -1;
+	}
+	if(validation_helper_json(document, DERIVEDBYINSERTIONFROM_STR,
+						 	  "prov:after", "prov:before",
+						 	  objects, &edges)){
+		json_decref(document);
+		return -1;
+	}
+	if(validation_helper_json(document, DERIVEDBYREMOVALFROM_STR,
+						 	  "prov:after", "prov:before",
+						 	  objects, &edges)){
+		json_decref(document);
+		return -1;
+	}
+	if(validation_helper_json(document, HADMEMBER_STR,
+						 	  "prov:collection", "prov:entity",
+						 	  objects, &edges)){
+		json_decref(document);
+		return -1;
+	}
+	if(validation_helper_json(document, HADDICTIONARYMEMBER_STR,
+						 	  "prov:dictionary", "prov:entity",
+						 	  objects, &edges)){
+		json_decref(document);
+		return -1;
+	}
+	if(validation_helper_json(document, SPECIALIZATIONOF_STR,
+						 	  "prov:specificEntity", "prov:generalEntity",
+						 	  objects, &edges)){
+		json_decref(document);
+		return -1;
+	}
+	if(validation_helper_json(document, WASDERIVEDFROM_STR,
+						 	  "prov:generatedEntity", "prov:usedEntity",
+						 	  objects, &edges)){
+		json_decref(document);
+		return -1;
+	}
+	if(validation_helper_json(document, WASGENERATEDBY_STR,
+						 	  "prov:entity", "prov:activity",
+						 	  objects, &edges)){
+		json_decref(document);
+		return -1;
+	}
+	if(validation_helper_json(document, WASINVALIDATEDBY_STR,
+						 	  "prov:entity", "prov:activity",
+						 	  objects, &edges)){
+		json_decref(document);
+		return -1;
+	}
+	if(validation_helper_json(document, WASATTRIBUTEDTO_STR,
+						 	  "prov:entity", "prov:agent",
+						 	  objects, &edges)){
+		json_decref(document);
+		return -1;
+	}
+	if(validation_helper_json(document, USED_STR,
+						 	  "prov:activity", "prov:entity",
+						 	  objects, &edges)){
+		json_decref(document);
+		return -1;
+	}
+	if(validation_helper_json(document, WASINFORMEDBY_STR,
+						 	  "prov:informed", "prov:informant",
+						 	  objects, &edges)){
+		json_decref(document);
+		return -1;
+	}
+	if(validation_helper_json(document, WASSTARTEDBY_STR,
+						 	  "prov:activity", "prov:trigger",
+						 	  objects, &edges)){
+		json_decref(document);
+		return -1;
+	}
+	if(validation_helper_json(document, WASENDEDBY_STR,
+						 	  "prov:activity", "prov:trigger",
+						 	  objects, &edges)){
+		json_decref(document);
+		return -1;
+	}
+	if(validation_helper_json(document, HADPLAN_STR,
+						 	  "prov:agent", "prov:plan",
+						 	  objects, &edges)){
+		json_decref(document);
+		return -1;
+	}
+	if(validation_helper_json(document, WASASSOCIATEDWITH_STR,
+						 	  "prov:activity", "prov:agent",
+						 	  objects, &edges)){
+		json_decref(document);
+		return -1;
+	}
+	if(validation_helper_json(document, ACTEDONBEHALFOF_STR,
+						 	  "prov:delegate", "prov:responsible",
+						 	  objects, &edges)){
+		json_decref(document);
+		return -1;
+	}
+	if(validation_helper_json(document, WASINFLUENCEDBY_STR,
+						 	  "prov:influencee", "prov:influencer",
+						 	  objects, &edges)){
+		json_decref(document);
+		return -1;
+	}
+
+	igraph_t graph;
+	igraph_empty(&graph, objects.size(), IGRAPH_DIRECTED);
+	igraph_add_edges(&graph, &edges, 0);
+
+	igraph_bool_t is_dag;
+	igraph_is_dag(&graph, &is_dag);
+
+	if(!is_dag){
+		*out_msg = "PROV-JSON document contains cycles"
+		json_decref(document);
+		return -1
+	}
+
+	*out_msg = "Valid PROV-JSON"
+	json_decref(document);
+	return 0;
 }
 
 cpl_return_t
 import_bundle_prefixes_json(cpl_id_t bundle,
-										 json_t* document)
+							json_t* document)
 {
 
 	json_t* prefixes = json_object_get(document, "prefix");
@@ -1225,10 +1414,10 @@ import_bundle_prefixes_json(cpl_id_t bundle,
 }
 
 cpl_return_t
-import_objects_json(const char* type,
-								 const char* originator,
-								 cpl_id_t bundle_id,
-								 json_t* document)
+import_objects_json(const int type,
+					const char* originator,
+					cpl_id_t bundle_id,
+					json_t* document)
 {
 
 	json_t* objects = json_object_get(document, type);
@@ -1322,9 +1511,9 @@ import_helper_json(const char* originator,
 
 cpl_return_t
 import_relations_json(const char* type_str, 
-								   const char* originator,
-								   cpl_id_t bundle_id,
-								   json_t* document)
+					  const char* originator,
+					  cpl_id_t bundle_id,
+					  json_t* document)
 {
 
 	json_t* relations = json_object_get(document, type_str);
@@ -1509,11 +1698,11 @@ import_relations_json(const char* type_str,
 %constant
 #endif
 cpl_return_t
-import_document_json(char* filename,
-								  char* originator,
-								  char* bundle_name,
-								  cpl_id_t anchor_object,
-								  cpl_id_t bundle_agent)
+import_document_json(const char* filename,
+					 const char* originator,
+					 const char* bundle_name,
+					 cpl_id_t anchor_object,
+					 cpl_id_t bundle_agent)
 {
 
 	json_error_t err;
@@ -1672,7 +1861,7 @@ error:
 
 int
 export_bundle_prefixes_json(cpl_id_t bundle, 
-								json_t* document)
+							json_t* document)
 {
 
 	std::vector<cplxx_property_entry_t> prefix_vec;
@@ -1699,7 +1888,7 @@ export_bundle_prefixes_json(cpl_id_t bundle,
 
 int
 export_objects_json(cpl_id_t bundle, 
-						json_t* document)
+					json_t* document)
 {
 
 	std::vector<cplxx_object_info_vector> object_vec;
@@ -1749,17 +1938,17 @@ export_objects_json(cpl_id_t bundle,
 		}
 
 		if(json_object_size(entities)){
-			if(json_object_set(document, "entity", entities)){
+			if(json_object_set(document, ENTITY_STR, entities)){
 				goto error;
 			}
 		}
 		if(json_object_size(activities)){
-			if(json_object_set(document, "activities", activities)){
+			if(json_object_set(document, ACTIVITY_STR, activities)){
 				goto error;
 			}
 		}
 		if(json_object_size(agents)){
-			if(json_object_set(document, "agents", agents)){
+			if(json_object_set(document, AGENT_STR, agents)){
 				goto error;
 			}
 		}
@@ -2089,4 +2278,3 @@ error:
 }
 
 #endif /* __cplusplus */
-

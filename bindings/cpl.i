@@ -202,20 +202,20 @@ cpl_is_ok(cpl_return_t ret);
 cpl_return_t
 cpl_create_object(const char* originator,
                   const char* name,
-                  const char* type,
+                  const int type,
                   const cpl_id_t bundle,
                   unsigned long long* INPUT);
 
 cpl_return_t
 cpl_lookup_object(const char* originator,
                   const char* name,
-                  const char* type,
+                  const int type,
                   unsigned long long* INPUT);
 
 cpl_return_t
 cpl_lookup_or_create_object(const char* originator,
                             const char* name,
-                            const char* type,
+                            const int type,
                             const cpl_id_t bundle,
                             unsigned long long* INPUT);
 

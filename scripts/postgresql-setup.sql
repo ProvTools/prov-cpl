@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS cpl_objects (
        id BIGSERIAL,
        originator VARCHAR(255),
        name VARCHAR(255),
-       type VARCHAR(100),
+       type INT,
        creation_time TIMESTAMP DEFAULT NOW(),
        bundle_id BIGINT,
        session_id BIGINT,

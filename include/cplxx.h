@@ -130,7 +130,7 @@ typedef struct cplxx_object_info {
     std::string name;
 
 	/// The object type.
-	std::string type;
+	int type;
 
 	/// The object ID of the bundle, or CPL_NONE if none.
 	cpl_id_t bundle_id;
@@ -281,6 +281,32 @@ cpl_cb_collect_property_lookup_vector(const cpl_id_t id,
 									  const char* key,
 									  const char* value,
 									  void* context);
+
+
+#ifdef SWIG
+%constant
+#endif
+EXPORT int
+validate_json(const char* path,
+	 		  char** out_msg);
+
+#ifdef SWIG
+%constant
+#endif
+cpl_return_t
+import_document_json(const char* filename,
+					 const char* originator,
+					 const char* bundle_name,
+					 cpl_id_t anchor_object,
+					 cpl_id_t bundle_agent);
+
+
+#ifdef SWIG
+%constant
+#endif
+cpl_return_t
+export_bundle_json(cpl_id_t bundle, 
+				   const char* path);
 
 #endif /* __cplusplus */
 

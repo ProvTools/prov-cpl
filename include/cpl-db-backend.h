@@ -102,7 +102,7 @@ typedef struct _cpl_db_backend_t {
 	(*cpl_db_create_object)(struct _cpl_db_backend_t* backend,
 							const char* originator,
 							const char* name,
-							const char* type,
+							const int type,
 							const cpl_id_t bundle,
 							const cpl_session_t session,
 							cpl_id_t* out_id);
@@ -122,7 +122,7 @@ typedef struct _cpl_db_backend_t {
 	(*cpl_db_lookup_object)(struct _cpl_db_backend_t* backend,
 							const char* originator,
 							const char* name,
-					   		const char* type,
+					   		const int type,
 							cpl_id_t* out_id);
 
 	/**
@@ -142,7 +142,7 @@ typedef struct _cpl_db_backend_t {
 	(*cpl_db_lookup_object_ext)(struct _cpl_db_backend_t* backend,
 								const char* originator,
 								const char* name,
-								const char* type,
+								const int type,
 								const int flags,
 								cpl_id_timestamp_iterator_t callback,
 								void* context);

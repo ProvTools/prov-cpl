@@ -1068,7 +1068,7 @@ extern "C" cpl_return_t
 cpl_odbc_create_object(struct _cpl_db_backend_t* backend,
 					   const char* originator,
 					   const char* name,
-					   const char* type,
+					   const int type,
 					   const cpl_id_t bundle,
 					   const cpl_session_t session,
 					   cpl_id_t* out_id)
@@ -1094,7 +1094,7 @@ retry:
 
 	SQL_BIND_VARCHAR(stmt, 1, ORIGINATOR_LEN, originator);
 	SQL_BIND_VARCHAR(stmt, 2, NAME_LEN, name);
-	SQL_BIND_VARCHAR(stmt, 3, TYPE_LEN, type);
+	SQL_BIND_INTEGER(stmt, 3, type);
 	SQL_BIND_INTEGER(stmt, 4, session);
 
 	if (bundle != CPL_NONE) {
@@ -1143,7 +1143,7 @@ extern "C" cpl_return_t
 cpl_odbc_lookup_object(struct _cpl_db_backend_t* backend,
 					   const char* originator,
 					   const char* name,
-					   const char* type,
+					   const int type,
 					   cpl_id_t* out_id)
 {
 	assert(backend != NULL);
@@ -1164,7 +1164,7 @@ retry:
 
 	SQL_BIND_VARCHAR(stmt, 1, ORIGINATOR_LEN, originator);
 	SQL_BIND_VARCHAR(stmt, 2, NAME_LEN, name);
-	SQL_BIND_VARCHAR(stmt, 3, TYPE_LEN, type);
+	SQL_BIND_INTEGER(stmt, 3, type);
 
 
 	// Execute
@@ -1214,7 +1214,7 @@ extern "C" cpl_return_t
 cpl_odbc_lookup_object_ext(struct _cpl_db_backend_t* backend,
 						   const char* originator,
 						   const char* name,
-						   const char* type,
+						   const int type,
 						   const int flags,
 						   cpl_id_timestamp_iterator_t callback,
 						   void* context)
@@ -1239,7 +1239,7 @@ retry:
 
 	SQL_BIND_VARCHAR(stmt, 1, ORIGINATOR_LEN, originator);
 	SQL_BIND_VARCHAR(stmt, 2, NAME_LEN, name);
-	SQL_BIND_VARCHAR(stmt, 3, TYPE_LEN, type);
+	SQL_BIND_INTEGER(stmt, 3, type);
 
 
 	// Execute
@@ -1669,11 +1669,9 @@ cpl_odbc_get_all_objects(struct _cpl_db_backend_t* backend,
 
 	size_t originator_size = ORIGINATOR_LEN + 1;
 	size_t name_size = NAME_LEN + 1;
-	size_t type_size = TYPE_LEN + 1;
 
 	char* entry_originator = (char*) alloca(originator_size);
 	char* entry_name = (char*) alloca(name_size);
-	char* entry_type = (char*) alloca(type_size);
 
 	if (entry_originator == NULL || entry_name == NULL || entry_type == NULL) {
 		return CPL_E_INSUFFICIENT_RESOURCES;
@@ -1716,7 +1714,7 @@ retry:
 	ret = SQLBindCol(stmt, 4, SQL_C_CHAR, entry_name, name_size, NULL);
 	if (!SQL_SUCCEEDED(ret)) goto err_close;
 
-	ret = SQLBindCol(stmt, 5, SQL_C_CHAR, entry_type, type_size, NULL);
+	ret = SQLBindCol(stmt, 5, SQL_C_SLONG, &entry.type, 0, NULL);
 	if (!SQL_SUCCEEDED(ret)) goto err_close;
 
     ret = SQLBindCol(stmt, 6, SQL_C_UBIGINT, &entry.bundle_id, 0,
@@ -2017,28 +2015,6 @@ retry:
 		}
 
 		found = true;
-
-		/*
-		int cat = GET_RELATION_CATEGORY((int) entry.type);
-
-		if(direction == CPL_D_ANCESTORS){
-
-			if ((cat == F_ENT_T_ENT | cat == F_ENT_T_ACT | cat == F_ENT_T_AGT)
-					&& (flags & NO_ENTITIES) != 0) continue;
-			if ((cat == F_ACT_T_ENT | cat == F_ACT_T_ACT | cat == F_ACT_T_AGT)
-					&& (flags & NO_ACTIVITIES) != 0) continue;
-			if ((cat == F_AGT_T_ENT | cat == F_AGT_T_ACT | cat == F_AGT_T_AGT)
-					&& (flags & NO_AGENTS) != 0) continue;
-		} else {	
-
-			if ((cat == F_ENT_T_ENT | cat == F_ACT_T_ENT | cat == F_AGT_T_ENT)
-					&& (flags & NO_ENTITIES) != 0) continue;
-			if ((cat == F_ENT_T_ACT | cat == F_ACT_T_ACT | cat == F_AGT_T_ACT)
-					&& (flags & NO_ACTIVITIES) != 0) continue;
-			if ((cat == F_ENT_T_AGT | cat == F_ACT_T_AGT | cat == F_AGT_T_AGT)
-					&& (flags & NO_AGENTS) != 0) continue;
-		}
-	    */
 
 		entries.push_back(entry);
 	}
@@ -2564,11 +2540,9 @@ SQL_START;
 
 	size_t originator_size = ORIGINATOR_LEN + 1;
 	size_t name_size = NAME_LEN + 1;
-	size_t type_size = TYPE_LEN + 1;
 
 	char* entry_originator = (char*) alloca(originator_size);
 	char* entry_name = (char*) alloca(name_size);
-	char* entry_type = (char*) alloca(type_size);
 
 	if (entry_originator == NULL || entry_name == NULL || entry_type == NULL) {
 		return CPL_E_INSUFFICIENT_RESOURCES;
@@ -2606,7 +2580,7 @@ retry:
 	ret = SQLBindCol(stmt, 4, SQL_C_CHAR, entry_name, name_size, NULL);
 	if (!SQL_SUCCEEDED(ret)) goto err_close;
 
-	ret = SQLBindCol(stmt, 5, SQL_C_CHAR, entry_type, type_size, NULL);
+	ret = SQLBindCol(stmt, 5, SQL_C_SLONG, &entry.type, 0, NULL);
 	if (!SQL_SUCCEEDED(ret)) goto err_close;
 
     entry.bundle_id = id;
@@ -2638,7 +2612,6 @@ retry:
 		entry.creation_time = cpl_sql_timestamp_to_unix_time(t);
 		entry.originator = entry_originator;
 		entry.name = entry_name;
-		entry.type = entry_type;
 
 		entries.push_back(entry);
 	}
@@ -2668,10 +2641,8 @@ retry:
 
 			strncpy(entry_originator, i->originator.c_str(), originator_size);
 			strncpy(entry_name, i->name.c_str(), name_size);
-			strncpy(entry_type, i->type.c_str(), type_size);
 			entry_originator[originator_size - 1] = '\0';
 			entry_name[name_size - 1] = '\0';
-			entry_type[type_size - 1] = '\0';
 
 			cpl_object_info_t e;
 			e.id = i->id;
@@ -2679,7 +2650,7 @@ retry:
 			e.creation_time = i->creation_time;
 			e.originator = entry_originator;
 			e.name = entry_name;
-			e.type = entry_type;
+			e.type = i->type;
 			e.bundle_id = i->bundle_id;
 
 			r = callback(&e, context);

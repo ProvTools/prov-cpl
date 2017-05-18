@@ -87,7 +87,6 @@ extern "C" {
 #define CMDLINE_LEN				4095
 #define ORIGINATOR_LEN			255
 #define NAME_LEN				255
-#define TYPE_LEN				100
 #define KEY_LEN					255
 #define VALUE_LEN				4095
 

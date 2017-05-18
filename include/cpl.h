@@ -37,6 +37,7 @@
 
 #include <stddef.h>
 #include <jansson.h>
+#include <igraph.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -154,7 +155,7 @@ typedef struct cpl_object_info {
 	char* name;
 
 	/// The object type.
-	char* type;
+	int type;
 
 	/// The object ID of the bundle, or CPL_NONE if none.
 	cpl_id_t bundle_id;
@@ -478,22 +479,22 @@ WINDLL_API extern const cpl_id_t CPL_NONE;
 /**
  * The default entity type
  */
-#define ENTITY							"entity"
+#define ENTITY							1
 
 /**
  * The default activity type
  */
-#define ACTIVITY						"activity"
+#define ACTIVITY						2
 
 /**
  * The default agent type
  */
-#define AGENT 							"agent"
+#define AGENT 							3
 
 /**
  * The default bundle type
  */
-#define BUNDLE							"bundle"
+#define BUNDLE							4
 
 
 #define ENTITY_STR						"entity"
@@ -599,7 +600,7 @@ cpl_error_string(cpl_return_t error);
 EXPORT cpl_return_t
 cpl_create_object(const char* originator,
 				  const char* name,
-				  const char* type,
+				  const int type,
 				  const cpl_id_t bundle,
 				  cpl_id_t* out_id);
 
@@ -616,7 +617,7 @@ cpl_create_object(const char* originator,
 EXPORT cpl_return_t
 cpl_lookup_object(const char* originator,
 				  const char* name,
-				  const char* type,
+				  const int type,
 				  cpl_id_t* out_id);
 
 /**
@@ -634,7 +635,7 @@ cpl_lookup_object(const char* originator,
 EXPORT cpl_return_t
 cpl_lookup_object_ext(const char* originator,
 					  const char* name,
-					  const char* type,
+					  const int type,
 					  const int flags,
 					  cpl_id_timestamp_iterator_t iterator,
 					  void* context);
@@ -654,7 +655,7 @@ cpl_lookup_object_ext(const char* originator,
 EXPORT cpl_return_t
 cpl_lookup_or_create_object(const char* originator,
 							const char* name,
-							const char* type,
+							const int type,
 							const cpl_id_t bundle,
 							cpl_id_t* out_id);
 
