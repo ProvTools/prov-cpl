@@ -59,10 +59,10 @@ public class CPLObject {
 	/// Traversal direction: Descendants
 	public static final int D_DESCENDANTS = CPLDirectConstants.CPL_D_DESCENDANTS;
 
-	public static final String ENTITY = CPLDirectConstants.ENTITY;
-	public static final String ACTIVITY = CPLDirectConstants.ACTIVITY;
-	public static final String AGENT = CPLDirectConstants.AGENT;	
-	public static final String BUNDLE = CPLDirectConstants.BUNDLE;	
+	public static final int ENTITY = CPLDirectConstants.ENTITY;
+	public static final int ACTIVITY = CPLDirectConstants.ACTIVITY;
+	public static final int AGENT = CPLDirectConstants.AGENT;	
+	public static final int BUNDLE = CPLDirectConstants.BUNDLE;	
 
 	/// The internal object ID
 	BigInteger id;
@@ -74,7 +74,7 @@ public class CPLObject {
 	private String name = null;
 
 	/// The object type (cache)
-	private String type = null;
+	private int type = null;
 
 	/// The object bundle (cache)
 	private BigInteger bundleId = null;
@@ -120,7 +120,7 @@ public class CPLObject {
 	 * @param bundle the object bundle
      * @return the new object
 	 */
-	public static CPLObject create(String originator, String name, String type,
+	public static CPLObject create(String originator, String name, int type,
 			CPLObject bundle) {
 
 		BigInteger id = BigInteger.ZERO;
@@ -146,7 +146,7 @@ public class CPLObject {
      * @return the new object
 	 */
 	public static CPLObject create(String originator, String name,
-            String type) {
+            int type) {
 		return create(originator, name, type, null);
 	}
 
@@ -160,7 +160,7 @@ public class CPLObject {
 	 * @return the object, or null if not found
 	 */
 	public static CPLObject tryLookup(String originator, String name,
-			String type) {
+			int type) {
 
 		BigInteger id = BigInteger.ZERO;
 		int r = CPLDirect.cpl_lookup_object(originator, name, type, id);
@@ -188,7 +188,7 @@ public class CPLObject {
 	 * @return the object
 	 */
 	public static CPLObject lookup(String originator, String name,
-			String type) {
+			int type) {
 		CPLObject o = tryLookup(originator, name, type);
 		if (o == null) throw new CPLException(CPLDirect.CPL_E_NOT_FOUND);
 		return o;
@@ -204,7 +204,7 @@ public class CPLObject {
 	 * @return the collection of objects, or an empty collection if not found
 	 */
 	public static Vector<CPLObject> tryLookupAll(String originator, String name,
-			String type) {
+			int type) {
 
 		SWIGTYPE_p_std_vector_cpl_id_timestamp_t pVector
 			= CPLDirect.new_std_vector_cpl_id_timestamp_tp();
@@ -250,7 +250,7 @@ public class CPLObject {
 	 * @return the collection of objects
 	 */
 	public static Vector<CPLObject> lookupAll(String originator, String name,
-			String type) {
+			int type) {
 		Vector<CPLObject> r = tryLookupAll(originator, name, type);
 		if (r.isEmpty()) throw new CPLException(CPLDirect.CPL_E_NOT_FOUND);
 		return r;
@@ -267,7 +267,7 @@ public class CPLObject {
 	 * @return the object
 	 */
 	public static CPLObject lookupOrCreate(String originator, String name,
-			String type, CPLObject bundle) {
+			int type, CPLObject bundle) {
 
 		BigInteger id = BigInteger.ZERO;
 		int r = CPLDirect.cpl_lookup_or_create_object(originator, name, type,
@@ -296,7 +296,7 @@ public class CPLObject {
 	 * @return the object
 	 */
 	public static CPLObject lookupOrCreate(String originator, String name,
-			String type) {
+			int type) {
 		return lookupOrCreate(originator, name, type, null);
 	}
 
@@ -475,7 +475,7 @@ public class CPLObject {
 	 *
 	 * @return the type
 	 */
-	public String getType() {
+	public int getType() {
 		if (type == null) fetchInfo();
 		return type;
 	}

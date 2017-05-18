@@ -1244,7 +1244,7 @@ validation_helper_json(json_t* document,
 #endif
 int
 validate_json(const char* path,
-	 		  char** out_msg)
+	 		  const char** out_msg)
 {
 	
 	*out_msg = "Validation failed on upload";
@@ -1260,7 +1260,7 @@ validate_json(const char* path,
 	igraph_vector_t edges;
 	igraph_vector_init(&edges, 0);
 
-	*out_msg = "Invalid PROV-JSON formatting"
+	*out_msg = "Invalid PROV-JSON formatting";
 
 	if(validation_helper_json(document, ALTERNATEOF_STR,
 						 	  "prov:alternate1", "prov:alternate2",
@@ -1379,12 +1379,12 @@ validate_json(const char* path,
 	igraph_is_dag(&graph, &is_dag);
 
 	if(!is_dag){
-		*out_msg = "PROV-JSON document contains cycles"
+		*out_msg = "PROV-JSON document contains cycles";
 		json_decref(document);
 		return -1
 	}
 
-	*out_msg = "Valid PROV-JSON"
+	*out_msg = "Valid PROV-JSON";
 	json_decref(document);
 	return 0;
 }
