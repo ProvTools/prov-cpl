@@ -37,7 +37,7 @@
 
 #include <stddef.h>
 #include <jansson.h>
-#include <igraph.h>
+#include <igraph/igraph.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -49,7 +49,6 @@ extern "C" {
 struct _cpl_db_backend_t;
 
 #define EXPORT
-#define WINDLL_API
 
 
 /***************************************************************************/
@@ -260,7 +259,7 @@ extern int __cpl_assert__cpl_id_size[sizeof(cpl_id_t) == 8 ? 1 : -1];
 /**
  * An invalid ID signifying no object
  */
-WINDLL_API extern const cpl_id_t CPL_NONE;
+extern const cpl_id_t CPL_NONE;
 
 
 
@@ -268,8 +267,7 @@ WINDLL_API extern const cpl_id_t CPL_NONE;
 /***************************************************************************/
 /** Relation Types                                                        **/
 /***************************************************************************/
-
-#define WASINFLUENCEDBY			0
+		
 #define ALTERNATEOF				1
 #define	DERIVEDBYINSERTIONFROM	2
 #define	DERIVEDBYREMOVALFROM	3
@@ -287,6 +285,7 @@ WINDLL_API extern const cpl_id_t CPL_NONE;
 #define HADPLAN					15
 #define	WASASSOCIATEDWITH		16
 #define ACTEDONBEHALFOF			17
+#define WASINFLUENCEDBY			18
 
 #define WASINFLUENCEDBY_STR			"wasInfluencedBy"
 #define ALTERNATEOF_STR				"alternateOf"
@@ -306,6 +305,10 @@ WINDLL_API extern const cpl_id_t CPL_NONE;
 #define HADPLAN_STR					"hadPlan"
 #define	WASASSOCIATEDWITH_STR		"wasAssociatedWith"
 #define ACTEDONBEHALFOF_STR			"actedOnBehalfOf"
+
+#define CPL_IS_RELATION_TYPE(r)			((r) >= 1 && (r) <= 18)
+
+
 /***************************************************************************/
 /** Return Codes                                                          **/
 /***************************************************************************/
@@ -457,22 +460,6 @@ WINDLL_API extern const cpl_id_t CPL_NONE;
 
 
 /***************************************************************************/
-/** Standard Object Originators                                           **/
-/***************************************************************************/
-
-/**
- * The file system originator (use for files, set object name to real-path)
- */
-#define CPL_O_FILESYSTEM				"/fs"
-
-/**
- * The Internet originator (use for everything on the Internet)
- */
-#define CPL_O_INTERNET					"/internet"
-
-
-
-/***************************************************************************/
 /** Standard Object Types                                                 **/
 /***************************************************************************/
 
@@ -501,6 +488,9 @@ WINDLL_API extern const cpl_id_t CPL_NONE;
 #define ACTIVITY_STR					"activity"
 #define AGENT_STR						"agent"
 #define BUNDLE_STR						"bundle"
+
+#define CPL_IS_OBJECT_TYPE(r)			((r) >= 1 && (r) <= 4)
+
 
 /***************************************************************************/
 /** Graph Traversal, Query, and Lookup Flags                              **/
@@ -531,15 +521,6 @@ WINDLL_API extern const cpl_id_t CPL_NONE;
  * Get descendants
  */
 #define CPL_D_DESCENDANTS				1
-
-/**
-* Do not return this kind of object
-**/
-#define NO_ENTITIES						(1 << 1)
-#define NO_ACTIVITIES					(1 << 2)
-#define NO_AGENTS						(1 << 3)
-
-
 
 
 /***************************************************************************/

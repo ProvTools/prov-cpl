@@ -304,6 +304,34 @@ cpl_sql_fetch_single_llong(SQLHSTMT stmt, long long* out, int column=1,
 }
 
 /**
+ * Read a single number from the result set. Close the cursor on error,
+ * or if configured to do so (which is the default), also on success
+ *
+ * @param stmt the statement handle
+ * @param out the pointer to the variable to store the output
+ * @param column the column number
+ * @param fetch whether to fetch the new row
+ * @param close_if_ok whether to close the cursor on no error
+ * @param handle_nulls whether to handle null values specially
+ * @return CPL_OK if okay, depending on handle_nulls CPL_E_DB_NULL (if true)
+ *         or CPL_E_NOT_FOUND (if false) if empty or NULL, or an error code
+ */
+static cpl_return_t
+cpl_sql_fetch_single_int(SQLHSTMT stmt, int* out, int column=1,
+		                   bool fetch=true, bool close_if_ok=true,
+						   bool handle_nulls=false)
+{
+	int i = 0;
+
+	cpl_return_t r = cpl_sql_fetch_single_value(stmt, SQL_C_SLONG,
+			&i, 0, column, fetch, close_if_ok, handle_nulls);
+	if (!CPL_IS_OK(r)) return r;
+
+	if (out != NULL) *out = i;
+	return CPL_OK;
+}
+
+/**
  * Convert a SQL timestamp to UNIX time
  *
  * @param t the timestamp
@@ -453,7 +481,9 @@ cpl_odbc_free_statement_handles(cpl_odbc_t* odbc)
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_object_insert_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_object_insert_bundle_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_object_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_object_no_type_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_object_ext_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_object_ext_no_type_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->add_relation_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->add_object_property_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->add_relation_property_stmt);
@@ -535,7 +565,9 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 	ALLOC_STMT(create_object_insert_stmt);
 	ALLOC_STMT(create_object_insert_bundle_stmt);
 	ALLOC_STMT(lookup_object_stmt);
+	ALLOC_STMT(lookup_object_no_type_stmt);
 	ALLOC_STMT(lookup_object_ext_stmt);
+	ALLOC_STMT(lookup_object_ext_no_type_stmt);
 	ALLOC_STMT(add_relation_stmt);
 	ALLOC_STMT(add_object_property_stmt);
 	ALLOC_STMT(add_relation_property_stmt);
@@ -597,10 +629,22 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 			" ORDER BY creation_time DESC"
 			" LIMIT 1;");
 
+	PREPARE(lookup_object_no_type_stmt,
+		"SELECT id"
+		"  FROM cpl_objects"
+		" WHERE originator = ? AND name = ?"
+		" ORDER BY creation_time DESC"
+		" LIMIT 1;");
+
 	PREPARE(lookup_object_ext_stmt,
 			"SELECT id, creation_time"
 			"  FROM cpl_objects"
 			" WHERE originator = ? AND name = ? AND type = ?;");
+
+	PREPARE(lookup_object_ext_no_type_stmt,
+		"SELECT id, creation_time"
+		"  FROM cpl_objects"
+		" WHERE originator = ? AND name = ?;");
 
 	PREPARE(add_relation_stmt,
 			"INSERT INTO cpl_relations"
@@ -1074,7 +1118,7 @@ cpl_odbc_create_object(struct _cpl_db_backend_t* backend,
 					   cpl_id_t* out_id)
 {
 	assert(backend != NULL && originator != NULL
-			&& name != NULL && type != NULL);
+			&& name != NULL && CPL_IS_OBJECT_TYPE(type)); 
 	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
 	
 	mutex_lock(odbc->create_object_lock);
@@ -1160,11 +1204,21 @@ cpl_odbc_lookup_object(struct _cpl_db_backend_t* backend,
 	// Prepare the statement
 
 retry:
-	SQLHSTMT stmt = odbc->lookup_object_stmt;
+	SQLHSTMT stmt;
 
-	SQL_BIND_VARCHAR(stmt, 1, ORIGINATOR_LEN, originator);
-	SQL_BIND_VARCHAR(stmt, 2, NAME_LEN, name);
-	SQL_BIND_INTEGER(stmt, 3, type);
+	if(!CPL_IS_OBJECT_TYPE(type)) {
+		stmt = odbc->lookup_object_no_type_stmt;
+
+		SQL_BIND_VARCHAR(stmt, 1, ORIGINATOR_LEN, originator);
+		SQL_BIND_VARCHAR(stmt, 2, NAME_LEN, name);
+
+	} else {
+		stmt = odbc->lookup_object_stmt;
+
+		SQL_BIND_VARCHAR(stmt, 1, ORIGINATOR_LEN, originator);
+		SQL_BIND_VARCHAR(stmt, 2, NAME_LEN, name);
+		SQL_BIND_INTEGER(stmt, 3, type);
+	}
 
 
 	// Execute
@@ -1235,11 +1289,21 @@ cpl_odbc_lookup_object_ext(struct _cpl_db_backend_t* backend,
 	// Prepare the statement
 
 retry:
-	SQLHSTMT stmt = odbc->lookup_object_ext_stmt;
+	SQLHSTMT stmt;
 
-	SQL_BIND_VARCHAR(stmt, 1, ORIGINATOR_LEN, originator);
-	SQL_BIND_VARCHAR(stmt, 2, NAME_LEN, name);
-	SQL_BIND_INTEGER(stmt, 3, type);
+	if(!CPL_IS_OBJECT_TYPE(type)) {
+		stmt = odbc->lookup_object_ext_no_type_stmt;
+
+		SQL_BIND_VARCHAR(stmt, 1, ORIGINATOR_LEN, originator);
+		SQL_BIND_VARCHAR(stmt, 2, NAME_LEN, name);
+
+	} else {
+		stmt = odbc->lookup_object_ext_stmt;
+
+		SQL_BIND_VARCHAR(stmt, 1, ORIGINATOR_LEN, originator);
+		SQL_BIND_VARCHAR(stmt, 2, NAME_LEN, name);
+		SQL_BIND_INTEGER(stmt, 3, type);
+	}
 
 
 	// Execute
@@ -1337,7 +1401,7 @@ cpl_odbc_add_relation(struct _cpl_db_backend_t* backend,
 						   const cpl_id_t bundle,
 						   cpl_id_t* out_id)
 {
-	assert(backend != NULL);
+	assert(backend != NULL && from_id != CPL_NONE && CPL_IS_RELATION_TYPE(type));
 	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
 
 
@@ -1673,7 +1737,7 @@ cpl_odbc_get_all_objects(struct _cpl_db_backend_t* backend,
 	char* entry_originator = (char*) alloca(originator_size);
 	char* entry_name = (char*) alloca(name_size);
 
-	if (entry_originator == NULL || entry_name == NULL || entry_type == NULL) {
+	if (entry_originator == NULL || entry_name == NULL) {
 		return CPL_E_INSUFFICIENT_RESOURCES;
 	}
 
@@ -1758,7 +1822,6 @@ retry:
 		entry.creation_time = cpl_sql_timestamp_to_unix_time(t);
 		entry.originator = entry_originator;
 		entry.name = entry_name;
-		entry.type = entry_type;
 
 		if (cb_bundle_id <= 0) entry.bundle_id = CPL_NONE;
 		if (cb_session_id <= 0) entry.creation_session = CPL_NONE;
@@ -1791,10 +1854,8 @@ retry:
 
 			strncpy(entry_originator, i->originator.c_str(), originator_size);
 			strncpy(entry_name, i->name.c_str(), name_size);
-			strncpy(entry_type, i->type.c_str(), type_size);
 			entry_originator[originator_size - 1] = '\0';
 			entry_name[name_size - 1] = '\0';
-			entry_type[type_size - 1] = '\0';
 
 			cpl_object_info_t e;
 			e.id = i->id;
@@ -1802,7 +1863,7 @@ retry:
 			e.creation_time = i->creation_time;
 			e.originator = entry_originator;
 			e.name = entry_name;
-			e.type = entry_type;
+			e.type = i->type;
 			e.bundle_id = i->bundle_id;
 
 			r = callback(&e, context);
@@ -1880,8 +1941,7 @@ retry:
 	if (r == CPL_E_DB_NULL) p->originator = strdup("");
 	CPL_SQL_SIMPLE_FETCH_EXT(dynamically_allocated_string, 4, &p->name, true);
 	if (r == CPL_E_DB_NULL) p->name = strdup("");
-	CPL_SQL_SIMPLE_FETCH_EXT(dynamically_allocated_string, 5, &p->type, true);
-	if (r == CPL_E_DB_NULL) p->type = strdup("");
+	CPL_SQL_SIMPLE_FETCH(int, 5, (int*) &p->type);
 	CPL_SQL_SIMPLE_FETCH_EXT(llong, 6, (long long*) &p->bundle_id, true);
 	if (r == CPL_E_DB_NULL) p->bundle_id = CPL_NONE;
 	
@@ -1910,7 +1970,6 @@ err_r:
 
 	if (p->originator != NULL) free(p->originator);
 	if (p->name != NULL) free(p->name);
-	if (p->type != NULL) free(p->type);
 	free(p);
 
 	return r;
@@ -2041,8 +2100,7 @@ retry:
 	if (callback != NULL) {
 		std::list<__get_object_relation__entry_t>::iterator i;
 		for (i = entries.begin(); i != entries.end(); i++) {
-			if(i->other_id != NULL)
-				r = callback(i->relation_id, id, i->other_id, (int) i->type, i->bundle_id, context);
+			r = callback(i->relation_id, id, i->other_id, (int) i->type, i->bundle_id, context);
 			if (!CPL_IS_OK(r)) return r;
 		}
 	}
@@ -2544,7 +2602,7 @@ SQL_START;
 	char* entry_originator = (char*) alloca(originator_size);
 	char* entry_name = (char*) alloca(name_size);
 
-	if (entry_originator == NULL || entry_name == NULL || entry_type == NULL) {
+	if (entry_originator == NULL || entry_name == NULL) {
 		return CPL_E_INSUFFICIENT_RESOURCES;
 	}
 

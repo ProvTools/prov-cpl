@@ -87,7 +87,7 @@ print_object_info(cpl_object_info_t* info)
 	print(L_DEBUG, "  Creation Time    : %s", s_creation_time);
 	print(L_DEBUG, "  Originator       : %s", info->originator);
 	print(L_DEBUG, "  Name             : %s", info->name);
-	print(L_DEBUG, "  Type             : %s", info->type);
+	print(L_DEBUG, "  Type             : %i", info->type);
 	print(L_DEBUG, "  bundle ID     : %llx", info->bundle_id);
 }
 
@@ -349,22 +349,22 @@ test_simple(void)
 
 	// Object creation
 
-	ret = cpl_create_object(ORIGINATOR, "Bundle", "BUNDLE", CPL_NONE, &bun);
+	ret = cpl_create_object(ORIGINATOR, "Bundle", BUNDLE, CPL_NONE, &bun);
 	print(L_DEBUG, "cpl_create_object --> %llx [%d]", bun, ret);
 	CPL_VERIFY(cpl_create_object, ret);
 	if (with_delays) delay();
 
-	ret = cpl_create_object(ORIGINATOR, "Entity", "ENTITY", bun, &obj1);
+	ret = cpl_create_object(ORIGINATOR, "Entity", ENTITY, bun, &obj1);
 	print(L_DEBUG, "cpl_create_object --> %llx [%d]", obj1,ret);
 	CPL_VERIFY(cpl_create_object, ret);
 	if (with_delays) delay();
 
-	ret = cpl_create_object(ORIGINATOR, "Agent", "AGENT", bun, &obj2);
+	ret = cpl_create_object(ORIGINATOR, "Agent", AGENT, bun, &obj2);
 	print(L_DEBUG, "cpl_create_object --> %llx [%d]", obj2,ret);
 	CPL_VERIFY(cpl_create_object, ret);
 	if (with_delays) delay();
 
-	ret = cpl_lookup_or_create_object(ORIGINATOR, "Activity", "ACTIVITY", bun, &obj3);
+	ret = cpl_lookup_or_create_object(ORIGINATOR, "Activity", ACTIVITY, bun, &obj3);
 	print(L_DEBUG, "cpl_lookup_or_create_object --> %llx [%d]",
 			obj3,ret);
 	CPL_VERIFY(cpl_lookup_or_create_object, ret);
@@ -377,26 +377,26 @@ test_simple(void)
 
 	cpl_id_t objx;
 
-	ret = cpl_lookup_object(ORIGINATOR, "Bundle", "BUNDLE", &objx);
+	ret = cpl_lookup_object(ORIGINATOR, "Bundle", BUNDLE, &objx);
 	print(L_DEBUG, "cpl_lookup_object --> %llx [%d]", objx ,ret);
 	CPL_VERIFY(cpl_lookup_object, ret);
 	if (bun!=objx)throw CPLException("Object lookup returned the wrong object");
 	if (with_delays) delay();
 
-	ret = cpl_lookup_object(ORIGINATOR, "Entity", "ENTITY", &objx);
+	ret = cpl_lookup_object(ORIGINATOR, "Entity", ENTITY, &objx);
 	print(L_DEBUG, "cpl_lookup_object --> %llx [%d]", objx ,ret);
 	CPL_VERIFY(cpl_lookup_object, ret);
 	if(obj1!=objx)throw CPLException("Object lookup returned the wrong object");
 	if (with_delays) delay();
 
-	ret = cpl_lookup_object(ORIGINATOR, "Agent", "AGENT", &objx);
+	ret = cpl_lookup_object(ORIGINATOR, "Agent", AGENT, &objx);
 	print(L_DEBUG, "cpl_lookup_object --> %llx [%d]", objx,ret);
 	CPL_VERIFY(cpl_lookup_object, ret);
 	if(obj2!=objx)throw CPLException("Object lookup returned the wrong object");
 	if (with_delays) delay();
 
     std::map<cpl_id_t, unsigned long> ectx;
-	ret = cpl_lookup_object_ext(ORIGINATOR, "Activity", "ACTIVITY", CPL_L_NO_FAIL,
+	ret = cpl_lookup_object_ext(ORIGINATOR, "Activity", ACTIVITY, CPL_L_NO_FAIL,
             cb_lookup_objects, &ectx);
     if (!CPL_IS_OK(ret)) {
         print(L_DEBUG, "cpl_lookup_object_ext --> [%d]", ret);
@@ -634,8 +634,8 @@ test_simple(void)
         if (info.id == obj2) found2 = true;
         if (info.id == obj3) found3 = true;
         if (i < 10) {
-            print(L_DEBUG, "  %s : %s : %s", info.originator.c_str(),
-                  info.name.c_str(), info.type.c_str());
+            print(L_DEBUG, "  %s : %s : %i", info.originator.c_str(),
+                  info.name.c_str(), info.type);
         }
     }
     if (oiv.size() > 10) print(L_DEBUG, "  ...");
@@ -667,7 +667,7 @@ test_simple(void)
 			|| (!with_delays && !check_time(info->creation_time))
 			|| strcmp(info->originator, ORIGINATOR) != 0
 			|| strcmp(info->name, "Entity") != 0
-			|| strcmp(info->type, "ENTITY") != 0
+			|| info->type != ENTITY
 			|| info->bundle_id != bun) {
 		throw CPLException("The returned object information is incorrect");
 	}
@@ -689,7 +689,7 @@ test_simple(void)
 			|| (!with_delays && !check_time(info->creation_time))
 			|| strcmp(info->originator, ORIGINATOR) != 0
 			|| strcmp(info->name, "Agent") != 0
-			|| strcmp(info->type, "AGENT") != 0
+			|| info->type != AGENT
 			|| info->bundle_id != bun) {
 		throw CPLException("The returned object information is incorrect");
 	}

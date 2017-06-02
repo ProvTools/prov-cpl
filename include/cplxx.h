@@ -51,17 +51,8 @@
 #include <string>
 #include <vector>
 
-#ifdef __GNUC__
-#include <ext/hash_map>
-#include <ext/hash_set>
-#else
-#include <hash_map>
-#include <hash_set>
-#endif
-
-#ifdef __GNUC__
-using namespace __gnu_cxx;
-#endif
+#include <unordered_map>
+#include <unordered_set>
 
 
 
@@ -157,7 +148,6 @@ typedef struct cplxx_property_entry {
 /***************************************************************************/
 /** Callbacks                                                             **/
 /***************************************************************************/
-//TODO edit
 /**
  * The iterator callback for cpl_get_all_objects() that collects the returned
  * information in an instance of std::vector<cplxx_object_info_t>.
@@ -283,17 +273,17 @@ cpl_cb_collect_property_lookup_vector(const cpl_id_t id,
 									  void* context);
 
 
-#ifdef SWIG
-%constant
-#endif
+
+/***************************************************************************/
+/** Document Handling                                                     **/
+/***************************************************************************/
+
 EXPORT int
 validate_json(const char* path,
 	 		  char** out_msg);
 
-#ifdef SWIG
-%constant
-#endif
-cpl_return_t
+
+EXPORT cpl_return_t
 import_document_json(const char* filename,
 					 const char* originator,
 					 const char* bundle_name,
@@ -301,10 +291,8 @@ import_document_json(const char* filename,
 					 cpl_id_t bundle_agent);
 
 
-#ifdef SWIG
-%constant
-#endif
-cpl_return_t
+
+EXPORT cpl_return_t
 export_bundle_json(cpl_id_t bundle, 
 				   const char* path);
 

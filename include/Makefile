@@ -22,7 +22,6 @@ HEADER_FILES := $(shell find . \( -name '*.h' -or -name '*.hpp' \) -print \
 							| fgrep -v '/private/' \
 							| sed 's/^\.\///')
 
-
 #
 # Include the magic script
 #

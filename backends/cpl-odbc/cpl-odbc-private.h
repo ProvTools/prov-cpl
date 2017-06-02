@@ -118,6 +118,12 @@ typedef struct {
 	SQLHSTMT lookup_object_stmt;
 
 	/**
+	 * The statement for looking up an object by name (including originator
+	 * and no type)
+	 */
+	SQLHSTMT lookup_object_no_type_stmt;
+
+	/**
 	 * The lock for lookup_object_ext
 	 */
 	mutex_t lookup_object_ext_lock;
@@ -127,6 +133,12 @@ typedef struct {
 	 * and type)
 	 */
 	SQLHSTMT lookup_object_ext_stmt;
+
+	/**
+	 * The statement for looking up an object by name (including originator
+	 * and no type)
+	 */
+	SQLHSTMT lookup_object_ext_no_type_stmt;
 
 	/**
 	 * The lock for add_relation_edge

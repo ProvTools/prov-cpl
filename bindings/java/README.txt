@@ -3,16 +3,16 @@
 ====================================
 
 Contents:
-  1. Required packages on Ubuntu
+  1. Required packages
   2. Compiling and installing the Java bindings
   3. Limitations
   4. Design
 
-Copyright 2012 The President and Fellows of Harvard College.
-Contributor(s): Peter Macko
+Copyright 2017 The President and Fellows of Harvard College.
+Contributor(s): Peter Macko, Jackson Okuhn
 
 
-  1. Required packages on Ubuntu
+  1. Required packages
 ----------------------------------
 
 Please make sure that the following packages are installed:
@@ -22,15 +22,6 @@ Please make sure that the following packages are installed:
 
   2. Compiling and installing the Java bindings
 -------------------------------------------------
-
-If you plan to use the CPL bindings via Maven, please do the following:
-  cd bindings/java      (if necessary)
-  make release
-  sudo make -C CPLDirect install
-  make -C CPL maven-install
-
-The Maven group ID is edu.harvard.pass, and the artifact ID is cpl. You can
-find the most recent version of the project by examining CPL/Makefile.
 
 To use the bindings by manually including the .jar or to use with Ant:
   cd bindings/java      (if necessary)
@@ -49,9 +40,8 @@ Note: If "make release" fails with the "Permission denied" error, please run
   3. Limitations
 ------------------
 
-The bindings have been tested only on Linux (more specifically, on Ubuntu).
-They have not been tested on OS X, and they have not yet been ported to
-Microsoft Windows.
+The bindings have been tested mainly on OS.
+They have not been thoroughly tested on Linux.
 
 
   4. Design

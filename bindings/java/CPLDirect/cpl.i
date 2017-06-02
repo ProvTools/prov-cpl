@@ -32,8 +32,6 @@
  * Contributor(s): Jackson Okuhn, Peter Macko
  */
 
- //TODO fix
-
 %javaconst(1);
 %javaconst(0) bucket_size;
 %javaconst(0) min_buckets;

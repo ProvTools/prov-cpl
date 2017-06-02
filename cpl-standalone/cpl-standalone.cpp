@@ -440,7 +440,6 @@ cpl_create_object(const char* originator,
 
 	CPL_ENSURE_NOT_NULL(originator);
 	CPL_ENSURE_NOT_NULL(name);
-	CPL_ENSURE_NOT_NULL(type);
 
 
 	// Call the backend
@@ -471,7 +470,7 @@ cpl_create_object(const char* originator,
  *
  * @param originator the object originator
  * @param name the object name
- * @param type the object type
+ * @param type the object type, 0 for no type
  * @param out_id the pointer to store the object ID
  * @return CPL_OK or an error code
  */
@@ -488,7 +487,6 @@ cpl_lookup_object(const char* originator,
 
 	CPL_ENSURE_NOT_NULL(originator);
 	CPL_ENSURE_NOT_NULL(name);
-	CPL_ENSURE_NOT_NULL(type);
 
 
 	// Call the backend
@@ -536,7 +534,6 @@ cpl_lookup_object_ext(const char* originator,
 
 	CPL_ENSURE_NOT_NULL(originator);
 	CPL_ENSURE_NOT_NULL(name);
-	CPL_ENSURE_NOT_NULL(type);
 	CPL_ENSURE_NOT_NULL(iterator);
 
 
@@ -814,7 +811,6 @@ cpl_free_object_info(cpl_object_info_t* info)
 
 	if (info->originator != NULL) free(info->originator);
 	if (info->name != NULL) free(info->name);
-	if (info->type != NULL) free(info->type);
 
 	free(info);
 	return CPL_OK;
@@ -1061,6 +1057,9 @@ cpl_cb_collect_id_timestamp_vector(const cpl_id_t id,
  * @param context the pointer to an instance of the list
  * @return CPL_OK or an error code
  */
+#ifdef SWIG
+%constant
+#endif
 EXPORT cpl_return_t
 cpl_cb_collect_relation_list(const cpl_id_t relation_id,
 							 const cpl_id_t query_object_id,
@@ -1096,6 +1095,9 @@ cpl_cb_collect_relation_list(const cpl_id_t relation_id,
  * @param context the pointer to an instance of the vector
  * @return CPL_OK or an error code
  */
+#ifdef SWIG
+%constant
+#endif
 EXPORT cpl_return_t
 cpl_cb_collect_relation_vector(const cpl_id_t relation_id,
 							   const cpl_id_t query_object_id,
@@ -1192,7 +1194,6 @@ cpl_cb_collect_property_lookup_vector(const cpl_id_t id,
 /** Public API: Document Handling                                         **/
 /***************************************************************************/
 
-//TODO make sure relations go to and from correct types
 int
 validation_helper_json(json_t* document,
 					 const char* type_str,
@@ -1205,17 +1206,21 @@ validation_helper_json(json_t* document,
 	int source_int, dest_int;
 
 	relations = json_object_get(document, type_str);
+
+	const char* name;
+	json_t*  value;
+
 	json_object_foreach(relations, name, value){
 
-		std::string source(json_object_get(relations, source_str));
-		std::string dest(json_object_get(relations, dest_str));
+		std::string source(json_string_value(json_object_get(relations, source_str)));
+		std::string dest(json_string_value(json_object_get(relations, dest_str)));
 
-		if(!source){
+		if(source.empty()){
 			json_decref(relations);
 			return -1;
 		}
 
-		if(dest){
+		if(!dest.empty()){
 			if (int pos = std::find(objects.begin(), objects.end(), source) != objects.end()){
 				source_int = pos;
 			} else {
@@ -1239,17 +1244,14 @@ validation_helper_json(json_t* document,
 	return 0;
 }
 
-#ifdef SWIG
-%constant
-#endif
-int
+EXPORT int
 validate_json(const char* path,
-	 		  const char** out_msg)
+	 		  char** out_msg)
 {
 	
 	*out_msg = "Validation failed on upload";
 	json_error_t err;
-	json_t* document = json_load_file(filename, 0, &err);
+	json_t* document = json_load_file(path, 0, &err);
 	if(document == NULL){
 		json_decref(document);
 		return -1;
@@ -1381,7 +1383,7 @@ validate_json(const char* path,
 	if(!is_dag){
 		*out_msg = "PROV-JSON document contains cycles";
 		json_decref(document);
-		return -1
+		return -1;
 	}
 
 	*out_msg = "Valid PROV-JSON";
@@ -1396,12 +1398,14 @@ import_bundle_prefixes_json(cpl_id_t bundle,
 
 	json_t* prefixes = json_object_get(document, "prefix");
 
-	json_object_foreach(prefixes, key, value){
+	const char* key_str;
+	json_t* value;
 
-		const char* key_str = json_string_value(key);
+	json_object_foreach(prefixes, key_str, value){
+
 		const char* val_str = json_string_value(value);
 
-		if(key_str && key_val){
+		if(key_str && val_str){
 			if(!CPL_IS_OK(cpl_add_object_property(bundle, key_str, val_str))){
 				json_decref(prefixes);
 				return CPL_E_INTERNAL_ERROR;
@@ -1414,18 +1418,21 @@ import_bundle_prefixes_json(cpl_id_t bundle,
 }
 
 cpl_return_t
-import_objects_json(const int type,
+import_objects_json(int type,
+					const char* type_str,
 					const char* originator,
 					cpl_id_t bundle_id,
 					json_t* document)
 {
 
-	json_t* objects = json_object_get(document, type);
+	json_t* objects = json_object_get(document, type_str);
 
-	json_object_foreach(objects, name, properties){
+	const char* name_str;
+	json_t* properties;
 
-		const char* name_str = json_string_value(name);
-		cpl_id_t obj_id = NULL;
+	json_object_foreach(objects, name_str, properties){
+
+		cpl_id_t obj_id = CPL_NONE;
 
 		switch(type)
 		{
@@ -1434,22 +1441,30 @@ import_objects_json(const int type,
 					json_decref(objects);
 					return CPL_E_INTERNAL_ERROR;
 				}
+				break;
 			case AGENT:
 				if(!CPL_IS_OK(cpl_create_object(originator, name_str, AGENT, bundle_id, &obj_id))){
 					json_decref(objects);
 					return CPL_E_INTERNAL_ERROR;
 				}
+				break;
 			case ACTIVITY:
 				if(!CPL_IS_OK(cpl_create_object(originator, name_str, ACTIVITY, bundle_id, &obj_id))){
 					json_decref(objects);
 					return CPL_E_INTERNAL_ERROR;
 				}
+				break;
+			default:
+				break;
 		}
 
 		if(obj_id){
-			json_object_foreach(properties, pkey, pval){
 
-				const char* pkey_str = json_string_value(pkey);
+			const char* pkey_str;
+			json_t* pval;
+
+			json_object_foreach(properties, pkey_str, pval){
+
 				const char* pval_str = json_string_value(pval);
 
 				if(pkey_str && pval_str){
@@ -1462,18 +1477,18 @@ import_objects_json(const int type,
 	}
 
 	json_decref(objects);
-	return CPL_IS_OK;
+	return CPL_OK;
 }
 
 cpl_return_t
 import_helper_json(const char* originator,
-										 json_t* relation,
-										 const char* slabel,
-										 int stype,
-										 const char* dlabel,
-										 int dtype,
-										 int rtype,
-										 cpl_id_t bundle_id)
+				   json_t* relation,
+				   cpl_id_t bundle_id,
+				   const char* slabel,
+				   int stype,
+				   const char* dlabel,
+				   int dtype,
+				   int rtype)
 {	
 	cpl_id_t source, dest, relation_id;
 
@@ -1494,19 +1509,21 @@ import_helper_json(const char* originator,
 		return CPL_E_INTERNAL_ERROR;
 	}
 
-	json_object_foreach(relation, key, value){
+	const char* key_str;
+	json_t* value;
 
-		const char* key_str = json_string_value(key);
-		const char* val_str = json_string_value(val);
+	json_object_foreach(relation, key_str, value){
 
-		if(key_str && key_val){
-			if(!CPL_IS_OK(cpl_add_relation_property(relation_id, key_str, key_val))){
+		const char* val_str = json_string_value(value);
+
+		if(key_str && val_str){
+			if(!CPL_IS_OK(cpl_add_relation_property(relation_id, key_str, val_str))){
 				return CPL_E_INTERNAL_ERROR;
 			}
 		}
 	}
 
-	return CPL_IS_OK;
+	return CPL_OK;
 }	
 
 cpl_return_t
@@ -1518,175 +1535,173 @@ import_relations_json(const char* type_str,
 
 	json_t* relations = json_object_get(document, type_str);
 
+	const char* name;
+	json_t* relation;
+
 	json_object_foreach(relations, name, relation){
 
-		cpl_id_t source, dest, relation_id;
-
-		switch(type_str)
-		{
-			case WASINFLUENCEDBY_STR:
-				if(!CPL_IS_OK(import_helper_json(originator,
-												 relation, bundle_id
-												 "prov:influencee", NULL,
-												 "prov:influencer", NULL,
-												 WASINFLUENCEDBY))){
-					json_decref(relations);
-					return CPL_E_INTERNAL_ERROR;
-				}
-			case ALTERNATEOF_STR:
-				if(!CPL_IS_OK(import_helper_json(originator,
-												 relation, bundle_id
-												 "prov:alternate1", ENTITY,
-												 "prov:alternate2", ENTITY,
-												 ALTERNATEOF))){
-					json_decref(relations);
-					return CPL_E_INTERNAL_ERROR;
-				}
-			case DERIVEDBYINSERTIONFROM_STR:
-				if(!CPL_IS_OK(import_helper_json(originator,
-												 relation, bundle_id
-												 "prov:after", ENTITY,
-												 "prov:before", ENTITY,
-												 DERIVEDBYINSERTIONFROM))){
-					json_decref(relations);
-					return CPL_E_INTERNAL_ERROR;
-				}
-			case DERIVEDBYREMOVALFROM_STR:
-				if(!CPL_IS_OK(import_helper_json(originator,
-												 relation, bundle_id
-												 "prov:after", ENTITY,
-												 "prov:before", ENTITY,
-												 DERIVEDBYREMOVALFROM))){
-					json_decref(relations);
-					return CPL_E_INTERNAL_ERROR;
-				}
-			case HADMEMBER_STR:
-				if(!CPL_IS_OK(import_helper_json(originator,
-												 relation, bundle_id
-												 "prov:collection", ENTITY,
-												 "prov:before", ENTITY,
-												 HADMEMBER))){
-					json_decref(relations);
-					return CPL_E_INTERNAL_ERROR;
-				}
-			case HADDICTIONARYMEMBER_STR:
-				if(!CPL_IS_OK(import_helper_json(originator,
-												 relation, bundle_id
-												 "prov:dictionary", ENTITY,
-												 "prov:entity", ENTITY,
-												 HADDICTIONARYMEMBER))){
-					json_decref(relations);
-					return CPL_E_INTERNAL_ERROR;
-				}
-			case SPECIALIZATIONOF_STR:
-				if(!CPL_IS_OK(import_helper_json(originator,
-												 relation, bundle_id
-												 "prov:specificEntity", ENTITY,
-												 "prov:generalEntity", ENTITY,
-												 SPECIALIZATIONOF))){
-					json_decref(relations);
-					return CPL_E_INTERNAL_ERROR;
-				}
-			case WASDERIVEDFROM_STR:
-				if(!CPL_IS_OK(import_helper_json(originator,
-												 relation, bundle_id
-												 "prov:generatedEntity", ENTITY,
-												 "prov:usedEntity", ENTITY,
-												 WASDERIVEDFROM))){
-					json_decref(relations);
-					return CPL_E_INTERNAL_ERROR;
-				}
-			case WASGENERATEDBY_STR:
-				if(!CPL_IS_OK(import_helper_json(originator,
-												 relation, bundle_id
-												 "prov:entity", ENTITY,
-												 "prov:activity", ACTIVITY,
-												 WASGENERATEDBY))){
-					json_decref(relations);
-					return CPL_E_INTERNAL_ERROR;
-				}
-			case WASINVALIDATEDBY_STR:
-				if(!CPL_IS_OK(import_helper_json(originator,
-												 relation, bundle_id
-												 "prov:entity", ENTITY,
-												 "prov:activity", ACTIVITY,
-												 WASINVALIDATEDBY))){
-					json_decref(relations);
-					return CPL_E_INTERNAL_ERROR;
-				}
-			case WASATTRIBUTEDTO_STR:
-				if(!CPL_IS_OK(import_helper_json(originator,
-												 relation, bundle_id
-												 "prov:entity", ENTITY,
-												 "prov:agent", AGENT,
-												 WASATTRIBUTEDTO))){
-					json_decref(relations);
-					return CPL_E_INTERNAL_ERROR;
-				}
-			case USED_STR:
-				if(!CPL_IS_OK(import_helper_json(originator,
-												 relation, bundle_id
-												 "prov:activity", ACTIVITY,
-												 "prov:entity", ENTITY,
-												 USED))){
-					json_decref(relations);
-					return CPL_E_INTERNAL_ERROR;
-				}
-			case WASINFORMEDBY_STR:
-				if(!CPL_IS_OK(import_helper_json(originator,
-												 relation, bundle_id
-												 "prov:informed", ACTIVITY,
-												 "prov:informant", ACTIVITY,
-												 WASINFORMEDBY))){
-					json_decref(relations);
-					return CPL_E_INTERNAL_ERROR;
-				}
-			case WASSTARTEDBY_STR:
-				if(!CPL_IS_OK(import_helper_json(originator,
-												 relation, bundle_id
-												 "prov:activity", ACTIVITY,
-												 "prov:trigger", ENTITY,
-												 WASSTARTEDBY))){
-					json_decref(relations);
-					return CPL_E_INTERNAL_ERROR;
-				}
-			case WASENDEDBY_STR:
-				if(!CPL_IS_OK(import_helper_json(originator,
-												 relation, bundle_id
-												 "prov:activity", ACTIVITY,
-												 "prov:trigger", ENTITY,
-												 rtype))){
-					json_decref(relations);
-					return CPL_E_INTERNAL_ERROR;
-				}
-			case HADPLAN_STR:
-				if(!CPL_IS_OK(import_helper_json(originator,
-												 relation, bundle_id
-												 "prov:agent", AGENT,
-												 "prov:plan", ENTITY,
-												 HADPLAN))){
-					json_decref(relations);
-					return CPL_E_INTERNAL_ERROR;
-				}
-			case WASASSOCIATEDWITH_STR:
-				if(!CPL_IS_OK(import_helper_json(originator,
-												 relation, bundle_id
-												 "prov:activity", ACTIVITY,
-												 "prov:agent", AGENT,
-												 WASASSOCIATEDWITH))){
-					json_decref(relations);
-					return CPL_E_INTERNAL_ERROR;
-				}
-			case ACTEDONBEHALFOF_STR:
-				if(!CPL_IS_OK(import_helper_json(originator,
-												 relation, bundle_id
-												 "prov:delegate", AGENT,
-												 "prov:responsible", AGENT,
-												 rtype))){
-					json_decref(relations);
-					return CPL_E_INTERNAL_ERROR;
-				}
-
+		if(type_str == WASINFLUENCEDBY_STR){
+			if(!CPL_IS_OK(import_helper_json(originator,
+											 relation, bundle_id,
+											 "prov:influencee", NULL,
+											 "prov:influencer", NULL,
+											 WASINFLUENCEDBY))){
+				json_decref(relations);
+				return CPL_E_INTERNAL_ERROR;
+			}
+		} else if (type_str == ALTERNATEOF_STR){
+			if(!CPL_IS_OK(import_helper_json(originator,
+											 relation, bundle_id,
+											 "prov:alternate1", ENTITY,
+											 "prov:alternate2", ENTITY,
+											 ALTERNATEOF))){
+				json_decref(relations);
+				return CPL_E_INTERNAL_ERROR;
+			}
+		} else if (type_str == DERIVEDBYINSERTIONFROM_STR){
+			if(!CPL_IS_OK(import_helper_json(originator,
+											 relation, bundle_id,
+											 "prov:after", ENTITY,
+											 "prov:before", ENTITY,
+											 DERIVEDBYINSERTIONFROM))){
+				json_decref(relations);
+				return CPL_E_INTERNAL_ERROR;
+			}
+		} else if (type_str == DERIVEDBYREMOVALFROM_STR){
+			if(!CPL_IS_OK(import_helper_json(originator,
+											 relation, bundle_id,
+											 "prov:after", ENTITY,
+											 "prov:before", ENTITY,
+											 DERIVEDBYREMOVALFROM))){
+				json_decref(relations);
+				return CPL_E_INTERNAL_ERROR;
+			}
+		} else if (type_str == HADMEMBER_STR){
+			if(!CPL_IS_OK(import_helper_json(originator,
+											 relation, bundle_id,
+											 "prov:collection", ENTITY,
+											 "prov:before", ENTITY,
+											 HADMEMBER))){
+				json_decref(relations);
+				return CPL_E_INTERNAL_ERROR;
+			}
+		} else if (type_str == HADDICTIONARYMEMBER_STR){
+			if(!CPL_IS_OK(import_helper_json(originator,
+											 relation, bundle_id,
+											 "prov:dictionary", ENTITY,
+											 "prov:entity", ENTITY,
+											 HADDICTIONARYMEMBER))){
+				json_decref(relations);
+				return CPL_E_INTERNAL_ERROR;
+			}
+		} else if (type_str == SPECIALIZATIONOF_STR){
+			if(!CPL_IS_OK(import_helper_json(originator,
+											 relation, bundle_id,
+											 "prov:specificEntity", ENTITY,
+											 "prov:generalEntity", ENTITY,
+											 SPECIALIZATIONOF))){
+				json_decref(relations);
+				return CPL_E_INTERNAL_ERROR;
+			}
+		} else if (type_str == WASDERIVEDFROM_STR){
+			if(!CPL_IS_OK(import_helper_json(originator,
+											 relation, bundle_id,
+											 "prov:generatedEntity", ENTITY,
+											 "prov:usedEntity", ENTITY,
+											 WASDERIVEDFROM))){
+				json_decref(relations);
+				return CPL_E_INTERNAL_ERROR;
+			}
+		} else if (type_str == WASGENERATEDBY_STR){
+			if(!CPL_IS_OK(import_helper_json(originator,
+											 relation, bundle_id,
+											 "prov:entity", ENTITY,
+											 "prov:activity", ACTIVITY,
+											 WASGENERATEDBY))){
+				json_decref(relations);
+				return CPL_E_INTERNAL_ERROR;
+			}
+		} else if (type_str == WASINVALIDATEDBY_STR){
+			if(!CPL_IS_OK(import_helper_json(originator,
+											 relation, bundle_id,
+											 "prov:entity", ENTITY,
+											 "prov:activity", ACTIVITY,
+											 WASINVALIDATEDBY))){
+				json_decref(relations);
+				return CPL_E_INTERNAL_ERROR;
+			}
+		} else if (type_str == WASATTRIBUTEDTO_STR){
+			if(!CPL_IS_OK(import_helper_json(originator,
+											 relation, bundle_id,
+											 "prov:entity", ENTITY,
+											 "prov:agent", AGENT,
+											 WASATTRIBUTEDTO))){
+				json_decref(relations);
+				return CPL_E_INTERNAL_ERROR;
+			}
+		} else if (type_str == USED_STR){
+			if(!CPL_IS_OK(import_helper_json(originator,
+											 relation, bundle_id,
+											 "prov:activity", ACTIVITY,
+											 "prov:entity", ENTITY,
+											 USED))){
+				json_decref(relations);
+				return CPL_E_INTERNAL_ERROR;
+			}
+		} else if (type_str == WASINFORMEDBY_STR){
+			if(!CPL_IS_OK(import_helper_json(originator,
+											 relation, bundle_id,
+											 "prov:informed", ACTIVITY,
+											 "prov:informant", ACTIVITY,
+											 WASINFORMEDBY))){
+				json_decref(relations);
+				return CPL_E_INTERNAL_ERROR;
+			}
+		} else if (type_str == WASSTARTEDBY_STR){
+			if(!CPL_IS_OK(import_helper_json(originator,
+											 relation, bundle_id,
+											 "prov:activity", ACTIVITY,
+											 "prov:trigger", ENTITY,
+											 WASSTARTEDBY))){
+				json_decref(relations);
+				return CPL_E_INTERNAL_ERROR;
+			}
+		} else if (type_str == WASENDEDBY_STR){
+			if(!CPL_IS_OK(import_helper_json(originator,
+											 relation, bundle_id,
+											 "prov:activity", ACTIVITY,
+											 "prov:trigger", ENTITY,
+											 WASENDEDBY))){
+				json_decref(relations);
+				return CPL_E_INTERNAL_ERROR;
+			}
+		} else if (type_str == HADPLAN_STR){
+			if(!CPL_IS_OK(import_helper_json(originator,
+											 relation, bundle_id,
+											 "prov:agent", AGENT,
+											 "prov:plan", ENTITY,
+											 HADPLAN))){
+				json_decref(relations);
+				return CPL_E_INTERNAL_ERROR;
+			}
+		} else if (type_str == WASASSOCIATEDWITH_STR){
+			if(!CPL_IS_OK(import_helper_json(originator,
+											 relation, bundle_id,
+											 "prov:activity", ACTIVITY,
+											 "prov:agent", AGENT,
+											 WASASSOCIATEDWITH))){
+				json_decref(relations);
+				return CPL_E_INTERNAL_ERROR;
+			}
+		} else if (type_str == ACTEDONBEHALFOF_STR){
+			if(!CPL_IS_OK(import_helper_json(originator,
+											 relation, bundle_id,
+											 "prov:delegate", AGENT,
+											 "prov:responsible", AGENT,
+											 ACTEDONBEHALFOF))){
+				json_decref(relations);
+				return CPL_E_INTERNAL_ERROR;
+			}
 		}
 	}
 
@@ -1694,10 +1709,7 @@ import_relations_json(const char* type_str,
 	return CPL_OK;
 }
 
-#ifdef SWIG
-%constant
-#endif
-cpl_return_t
+EXPORT cpl_return_t
 import_document_json(const char* filename,
 					 const char* originator,
 					 const char* bundle_name,
@@ -1727,13 +1739,13 @@ import_document_json(const char* filename,
 		}
 	}
 
-	if(!CPL_IS_OK(import_objects_json(ENTITY, originator, bundle_id, document))){
+	if(!CPL_IS_OK(import_objects_json(ENTITY, ENTITY_STR, originator, bundle_id, document))){
 		goto error;
 	}
-	if(!CPL_IS_OK(import_objects_json(AGENT, originator, bundle_id, document))){
+	if(!CPL_IS_OK(import_objects_json(AGENT, AGENT_STR, originator, bundle_id, document))){
 		goto error;
 	}
-	if(!CPL_IS_OK(import_objects_json(ACTIVITY, originator, bundle_id, document))){
+	if(!CPL_IS_OK(import_objects_json(ACTIVITY, ACTIVITY_STR, originator, bundle_id, document))){
 		goto error;
 	}
 
@@ -1746,113 +1758,73 @@ import_document_json(const char* filename,
 
 			cpl_free_object_info(anchor_info);
 			if(dest){
-`				if(!CPL_IS_OK(cpl_add_relation(anchor_object, dest,
-								ALTERNATEOF, bundle_id))){
+					if(!CPL_IS_OK(cpl_add_relation(anchor_object, dest,
+								ALTERNATEOF, bundle_id, NULL))){
 					goto error;
 				}
 			}
 		}
 	}
 
-	if(!CPL_IS_OK(import_relations_json(WASINFLUENCEDBY_STR, WASINFLUENCEDBY))){
+	if(!CPL_IS_OK(import_relations_json(WASINFLUENCEDBY_STR, originator, bundle_id, document))){
 		goto error;
 	}
-	if(!CPL_IS_OK(import_relations_json(ALTERNATEOF_STR, ALTERNATEOF))){
+	if(!CPL_IS_OK(import_relations_json(ALTERNATEOF_STR, originator, bundle_id, document))){
 		goto error;
 	}
-	if(!CPL_IS_OK(import_relations_json(DERIVEDBYINSERTIONFROM_STR, DERIVEDBYINSERTIONFROM))){
+	if(!CPL_IS_OK(import_relations_json(DERIVEDBYINSERTIONFROM_STR, originator, bundle_id, document))){
 		goto error;
 	}
-	if(!CPL_IS_OK(import_relations_json(DERIVEDBYREMOVALFROM_STR, DERIVEDBYREMOVALFROM))){
+	if(!CPL_IS_OK(import_relations_json(DERIVEDBYREMOVALFROM_STR, originator, bundle_id, document))){
 		goto error;
 	}
-	if(!CPL_IS_OK(import_relations_json(HADMEMBER_STR, HADMEMBER))){
+	if(!CPL_IS_OK(import_relations_json(HADMEMBER_STR, originator, bundle_id, document))){
 		goto error;
 	}
-	if(!CPL_IS_OK(import_relations_json(HADDICTIONARYMEMBER_STR, HADDICTIONARYMEMBER))){
+	if(!CPL_IS_OK(import_relations_json(HADDICTIONARYMEMBER_STR, originator, bundle_id, document))){
 		goto error;
 	}
-	if(!CPL_IS_OK(import_relations_json(SPECIALIZATIONOF_STR, SPECIALIZATIONOF))){
+	if(!CPL_IS_OK(import_relations_json(SPECIALIZATIONOF_STR, originator, bundle_id, document))){
 		goto error;
 	}
-	if(!CPL_IS_OK(import_relations_json(WASDERIVEDFROM_STR, WASDERIVEDFROM))){
+	if(!CPL_IS_OK(import_relations_json(WASDERIVEDFROM_STR, originator, bundle_id, document))){
 		goto error;
 	}
-	if(!CPL_IS_OK(import_relations_json(WASGENERATEDBY_STR, WASGENERATEDBY))){
+	if(!CPL_IS_OK(import_relations_json(WASGENERATEDBY_STR, originator, bundle_id, document))){
 		goto error;
 	}
-	if(!CPL_IS_OK(import_relations_json(WASINVALIDATEDBY_STR, WASINVALIDATEDBY))){
+	if(!CPL_IS_OK(import_relations_json(WASINVALIDATEDBY_STR, originator, bundle_id, document))){
 		goto error;
 	}
-	if(!CPL_IS_OK(import_relations_json(WASATTRIBUTEDTO_STR, WASATTRIBUTEDTO))){
+	if(!CPL_IS_OK(import_relations_json(WASATTRIBUTEDTO_STR, originator, bundle_id, document))){
 		goto error;
 	}
-	if(!CPL_IS_OK(import_relations_json(USED_STR, USED))){
+	if(!CPL_IS_OK(import_relations_json(USED_STR, originator, bundle_id, document))){
 		goto error;
 	}
-	if(!CPL_IS_OK(import_relations_json(WASINFORMEDBY_STR, WASINFORMEDBY))){
+	if(!CPL_IS_OK(import_relations_json(WASINFORMEDBY_STR, originator, bundle_id, document))){
 		goto error;
 	}
-	if(!CPL_IS_OK(import_relations_json(WASSTARTEDBY_STR, WASSTARTEDBY))){
+	if(!CPL_IS_OK(import_relations_json(WASSTARTEDBY_STR, originator, bundle_id, document))){
 		goto error;
 	}
-	if(!CPL_IS_OK(import_relations_json(WASENDEDBY_STR, WASENDEDBY))){
+	if(!CPL_IS_OK(import_relations_json(WASENDEDBY_STR, originator, bundle_id, document))){
 		goto error;
 	}
-	if(!CPL_IS_OK(import_relations_json(HADPLAN_STR, HADPLAN))){
+	if(!CPL_IS_OK(import_relations_json(HADPLAN_STR, originator, bundle_id, document))){
 		goto error;
 	}
-	if(!CPL_IS_OK(import_relations_json(WASASSOCIATEDWITH_STR, WASASSOCIATEDWITH))){
+	if(!CPL_IS_OK(import_relations_json(WASASSOCIATEDWITH_STR, originator, bundle_id, document))){
 		goto error;
 	}
-	if(!CPL_IS_OK(import_relations_json(ACTEDONBEHALFOF_STR, ACTEDONBEHALFOF))){
+	if(!CPL_IS_OK(import_relations_json(ACTEDONBEHALFOF_STR, originator, bundle_id, document))){
 		goto error;
 	}
-
-	json_decref(alternateOf);
-	json_decref(derivedByInsertionFrom);
-	json_decref(derivedByRemovalFrom);
-	json_decref(hadMember);
-	json_decref(hadDictionaryMember);
-	json_decref(specializationOf);
-	json_decref(wasDerivedFrom);
-	json_decref(wasGeneratedBy);
-	json_decref(wasInvalidatedBy);
-	json_decref(wasAttributedTo);
-	json_decref(used);
-	json_decref(wasInformedBy);
-	json_decref(wasStartedBy);
-	json_decref(wasEndedBy);
-	json_decref(hadPlan);
-	json_decref(wasAssociatedWith);
-	json_decref(actedOnBehalfOf);
-	json_decref(wasInfluencedBy);
-	json_decref(document);
 
 	return CPL_OK;
+
 error:
-	json_decref(alternateOf);
-	json_decref(derivedByInsertionFrom);
-	json_decref(derivedByRemovalFrom);
-	json_decref(hadMember);
-	json_decref(hadDictionaryMember);
-	json_decref(specializationOf);
-	json_decref(wasDerivedFrom);
-	json_decref(wasGeneratedBy);
-	json_decref(wasInvalidatedBy);
-	json_decref(wasAttributedTo);
-	json_decref(used);
-	json_decref(wasInformedBy);
-	json_decref(wasStartedBy);
-	json_decref(wasEndedBy);
-	json_decref(hadPlan);
-	json_decref(wasAssociatedWith);
-	json_decref(actedOnBehalfOf);
-	json_decref(wasInfluencedBy);
-	json_decref(document);
-
 	cpl_delete_bundle(bundle_id);
-
 	return CPL_E_INTERNAL_ERROR;
 }
 
@@ -1872,7 +1844,7 @@ export_bundle_prefixes_json(cpl_id_t bundle,
 		json_t* prefixes = json_object();
 
 		for(auto & prefix: prefix_vec){
-			if(json_object_set_new(prefixes, prefix->key, json_string(prefix->value))){
+			if(json_object_set_new(prefixes, prefix.key.c_str(), json_string(prefix.value.c_str()))){
 				json_decref(prefixes);
 				return -1;
 			}
@@ -1891,66 +1863,67 @@ export_objects_json(cpl_id_t bundle,
 					json_t* document)
 {
 
-	std::vector<cplxx_object_info_vector> object_vec;
-	cpl_get_bundle_objects(bundle, cpl_cb_collect_object_info_vector, object_vec);
+	std::vector<cplxx_object_info_t> object_vec;
+	cpl_get_bundle_objects(bundle, cpl_cb_collect_object_info_vector, &object_vec);
 
-	if(object_vec.size()){
+	if(object_vec.empty()){
+		return 0;
+	}
 
-		json_t* entities = json_object();
-		json_t* activities = json_object();
-		json_t* agents = json_object();
+	json_t* entities = json_object();
+	json_t* activities = json_object();
+	json_t* agents = json_object();
 
-		std::vector<cplxx_property_entry_t> property_vec;
+	std::vector<cplxx_property_entry_t> property_vec;
 
-		for(auto & obj: object_vec){
-			json_t* properties = json_object();
-			cpl_get_object_properties(obj->id, NULL, 
-				cpl_cb_collect_properties_vector, &property_vec);
+	for(auto & obj: object_vec){
+		json_t* properties = json_object();
+		cpl_get_object_properties(obj.id, NULL, 
+			cpl_cb_collect_properties_vector, &property_vec);
 
-			for(auto & property: property_vec){
-				if(json_object_set_new(properties, property->key, json_string(property->value))){
-					json_decref(properties);
+		for(auto & property: property_vec){
+			if(json_object_set_new(properties, property.key.c_str(), json_string(property.value.c_str()))){
+				json_decref(properties);
+				goto error;
+			}
+		}
+
+		switch(obj.type){
+			case ENTITY: 
+				if(json_object_set(entities, obj.name.c_str(), properties)){
 					goto error;
 				}
-			}
-
-			switch(obj->type){
-				case ENTITY: 
-					if(json_object_set(entities, obj->name, properties)){
-						goto error;
-					}
-					break;
-				case ACTIVITY:
-					if(json_object_set(activities, obj->name, properties)){
-						goto error;
-					}
-					break;
-				case AGENT:
-					if(json_object_set(agents, obj->name, properties)){
-						goto error;
-					}
-					break;
-				default:
-					break;
-			}
-
-			json_decref(properties);
+				break;
+			case ACTIVITY:
+				if(json_object_set(activities, obj.name.c_str(), properties)){
+					goto error;
+				}
+				break;
+			case AGENT:
+				if(json_object_set(agents, obj.name.c_str(), properties)){
+					goto error;
+				}
+				break;
+			default:
+				break;
 		}
 
-		if(json_object_size(entities)){
-			if(json_object_set(document, ENTITY_STR, entities)){
-				goto error;
-			}
+		json_decref(properties);
+	}
+
+	if(json_object_size(entities)){
+		if(json_object_set(document, ENTITY_STR, entities)){
+			goto error;
 		}
-		if(json_object_size(activities)){
-			if(json_object_set(document, ACTIVITY_STR, activities)){
-				goto error;
-			}
+	}
+	if(json_object_size(activities)){
+		if(json_object_set(document, ACTIVITY_STR, activities)){
+			goto error;
 		}
-		if(json_object_size(agents)){
-			if(json_object_set(document, AGENT_STR, agents)){
-				goto error;
-			}
+	}
+	if(json_object_size(agents)){
+		if(json_object_set(document, AGENT_STR, agents)){
+			goto error;
 		}
 	}
 
@@ -1973,249 +1946,251 @@ export_relations_json(cpl_id_t bundle,
 {
 
 	std::vector<cpl_relation_t> relation_vec;
-	cpl_get_bundle_relations(bundle, cpl_cb_collect_relation_vector, relation_vec);
+	cpl_get_bundle_relations(bundle, cpl_cb_collect_relation_vector, &relation_vec);
 
-	if(relation_vec.size())
-	{
-		json_t* alternate_of = json_object();
-		json_t* derived_by_insertion_from = json_object();
-		json_t* derived_by_removal_from = json_object();
-		json_t* had_member = json_object();
-		json_t* had_dictionary_member = json_object();
-		json_t* specialization_of = json_object();
-		json_t* was_derived_from = json_object();
-		json_t* was_generated_by = json_object();
-		json_t* was_invalidated_by = json_object();
-		json_t* was_attributed_to = json_object();
-		json_t* used = json_object();
-		json_t* was_informed_by = json_object();
-		json_t* was_started_by = json_object();
-		json_t* was_ended_by = json_object();
-		json_t* had_plan = json_object();
-		json_t* was_associated_with = json_object();
-		json_t* acted_on_behalf_of = json_object();
-		json_t* was_influenced_by = json_object();
+	if(relation_vec.empty()){
+		return 0;
+	}
 
-		std::vector<cplxx_property_entry_t> property_vec;
+	json_t* alternate_of = json_object();
+	json_t* derived_by_insertion_from = json_object();
+	json_t* derived_by_removal_from = json_object();
+	json_t* had_member = json_object();
+	json_t* had_dictionary_member = json_object();
+	json_t* specialization_of = json_object();
+	json_t* was_derived_from = json_object();
+	json_t* was_generated_by = json_object();
+	json_t* was_invalidated_by = json_object();
+	json_t* was_attributed_to = json_object();
+	json_t* used = json_object();
+	json_t* was_informed_by = json_object();
+	json_t* was_started_by = json_object();
+	json_t* was_ended_by = json_object();
+	json_t* had_plan = json_object();
+	json_t* was_associated_with = json_object();
+	json_t* acted_on_behalf_of = json_object();
+	json_t* was_influenced_by = json_object();
 
-		for(auto & relation: relation_vec){
+	std::vector<cplxx_property_entry_t> property_vec;
 
-			json_t* properties = json_object();
-			cpl_get_relation_properties(relation->id, NULL, 
-				cpl_cb_collect_properties_vector, property_vec);
-			for(auto & property: property_vec){
-				if(json_object_set_new(properties, property->name, json_string(property->value))){
+	for(auto & relation: relation_vec){
+
+		json_t* properties = json_object();
+		cpl_get_relation_properties(relation.id, NULL, 
+			cpl_cb_collect_properties_vector, &property_vec);
+
+		for(auto & property: property_vec){
+			if(json_object_set_new(properties, property.key.c_str(), json_string(property.value.c_str()))){
+				goto error;
+			}
+		}
+
+		switch(relation.type)
+		{
+			case ALTERNATEOF:
+				if(json_object_set(alternate_of, std::to_string(relation.id).c_str(), properties)){
 					goto error;
 				}
-			}
-
-			switch(relation->type)
-			{
-				case ALTERNATEOF:
-					if(json_object_set(alternate_of, to_string(relation->id), properties)){
-						goto error;
-					}
-					break;
-				case DERIVEDBYINSERTIONFROM:
-					if(json_object_set(derived_by_insertion_from, to_string(relation->id), properties)){
-						goto error;
-					}
-					break;
-				case DERIVEDBYREMOVALFROM:
-					if(json_object_set(derived_by_removal_from, to_string(relation->id), properties)){
-						goto error;
-					}
-					break;
-				case HADMEMBER:
-					if(json_object_set(had_member, to_string(relation->id), properties)){
-						goto error;
-					}
-					break;
-				case HADDICTIONARYMEMBER:
-					if(json_object_set(had_dictionary_member, to_string(relation->id), properties)){
-						goto error;
-					}
-					break;
-				case SPECIALIZATIONOF:
-					if(json_object_set(specialization_of, to_string(relation->id), properties)){
-						goto error;
-					}
-					break;
-				case WASDERIVEDFROM:
-					if(json_object_set(was_derived_from, to_string(relation->id), properties)){
-						goto error;
-					}
-					break;
-				case WASGENERATEDBY:
-					if(json_object_set(was_generated_by, to_string(relation->id), properties)){
-						goto error;
-					}
-					break;
-				case WASINVALIDATEDBY:
-					if(json_object_set(was_invalidated_by, to_string(relation->id), properties)){
-						goto error;
-					}
-					break;
-				case WASATTRIBUTEDTO:
-					if(json_object_set(was_attributed_to, to_string(relation->id), properties)){
-						goto error;
-					}
-					break;
-				case USED:
-					if(json_object_set(used, to_string(relation->id), properties)){
-						goto error;
-					}
-					break;
-				case WASINFORMEDBY:
-					if(json_object_set(was_informed_by, to_string(relation->id), properties)){
-						goto error;
-					}
-					break;
-				case WASSTARTEDBY:
-					if(json_object_set(was_started_by, to_string(relation->id), properties)){
-						goto error;
-					}
-					break;
-				case WASENDEDBY:
-					if(json_object_set(was_ended_by, to_string(relation->id), properties)){
-						goto error;
-					}
-					break;
-				case HADPLAN:
-					if(json_object_set(had_plan, to_string(relation->id), properties)){
-						goto error;
-					}
-					break;
-				case WASASSOCIATEDWITH:
-					if(json_object_set(was_associated_with, to_string(relation->id), properties)){
-						goto error;
-					}
-					break;
-				case ACTEDONBEHALFOF:
-					if(json_object_set(acted_on_behalf_of, to_string(relation->id), properties)){
-						goto error;
-					}
-					break;
-				case WASINFLUENCEDBY:
-					if(json_object_set(was_influenced_by, to_string(relation->id), properties)){
-						goto error;
-					}
-					break;
-				default:
-					break;
-			}
+				break;
+			case DERIVEDBYINSERTIONFROM:
+				if(json_object_set(derived_by_insertion_from, std::to_string(relation.id).c_str(), properties)){
+					goto error;
+				}
+				break;
+			case DERIVEDBYREMOVALFROM:
+				if(json_object_set(derived_by_removal_from, std::to_string(relation.id).c_str(), properties)){
+					goto error;
+				}
+				break;
+			case HADMEMBER:
+				if(json_object_set(had_member, std::to_string(relation.id).c_str(), properties)){
+					goto error;
+				}
+				break;
+			case HADDICTIONARYMEMBER:
+				if(json_object_set(had_dictionary_member, std::to_string(relation.id).c_str(), properties)){
+					goto error;
+				}
+				break;
+			case SPECIALIZATIONOF:
+				if(json_object_set(specialization_of, std::to_string(relation.id).c_str(), properties)){
+					goto error;
+				}
+				break;
+			case WASDERIVEDFROM:
+				if(json_object_set(was_derived_from, std::to_string(relation.id).c_str(), properties)){
+					goto error;
+				}
+				break;
+			case WASGENERATEDBY:
+				if(json_object_set(was_generated_by, std::to_string(relation.id).c_str(), properties)){
+					goto error;
+				}
+				break;
+			case WASINVALIDATEDBY:
+				if(json_object_set(was_invalidated_by, std::to_string(relation.id).c_str(), properties)){
+					goto error;
+				}
+				break;
+			case WASATTRIBUTEDTO:
+				if(json_object_set(was_attributed_to, std::to_string(relation.id).c_str(), properties)){
+					goto error;
+				}
+				break;
+			case USED:
+				if(json_object_set(used, std::to_string(relation.id).c_str(), properties)){
+					goto error;
+				}
+				break;
+			case WASINFORMEDBY:
+				if(json_object_set(was_informed_by, std::to_string(relation.id).c_str(), properties)){
+					goto error;
+				}
+				break;
+			case WASSTARTEDBY:
+				if(json_object_set(was_started_by, std::to_string(relation.id).c_str(), properties)){
+					goto error;
+				}
+				break;
+			case WASENDEDBY:
+				if(json_object_set(was_ended_by, std::to_string(relation.id).c_str(), properties)){
+					goto error;
+				}
+				break;
+			case HADPLAN:
+				if(json_object_set(had_plan, std::to_string(relation.id).c_str(), properties)){
+					goto error;
+				}
+				break;
+			case WASASSOCIATEDWITH:
+				if(json_object_set(was_associated_with, std::to_string(relation.id).c_str(), properties)){
+					goto error;
+				}
+				break;
+			case ACTEDONBEHALFOF:
+				if(json_object_set(acted_on_behalf_of, std::to_string(relation.id).c_str(), properties)){
+					goto error;
+				}
+				break;
+			case WASINFLUENCEDBY:
+				if(json_object_set(was_influenced_by, std::to_string(relation.id).c_str(), properties)){
+					goto error;
+				}
+				break;
+			default:
+				break;
 		}
-
-		if(json_object_size(alternate_of)){
-			if(json_object_set(document, ALTERNATEOF_STR, alternate_of)){
-				goto error;
-			}
-		}
-		if(json_object_size(derived_by_insertion_from)){
-			if(json_object_set(document, DERIVEDBYINSERTIONFROM_STR, derived_by_insertion_from)){
-				goto error;
-			}
-		}
-		if(json_object_size(derived_by_removal_from)){
-			if(json_object_set(document, DERIVEDBYREMOVALFROM_STR, derived_by_removal_from)){
-				goto error;
-			}
-		}
-		if(json_object_size(had_member)){
-			if(json_object_set(document, HADMEMBER_STR, had_member)){
-				goto error;
-			}
-		}
-		if(json_object_size(had_dictionary_member)){
-			if(json_object_set(document, HADDICTIONARYMEMBER_STR, had_dictionary_member)){
-				goto error;
-			}
-		}
-		if(json_object_size(specialization_of)){
-			if(json_object_set(document, SPECIALIZATIONOF_STR, specialization_of)){
-				goto error;
-			}
-		}
-		if(json_object_size(was_derived_from)){
-			if(json_object_set(document, WASDERIVEDFROM_STR, was_derived_from)){
-				goto error;
-			}
-		}
-		if(json_object_size(was_generated_by)){
-			if(json_object_set(document, WASGENERATEDBY_STR, was_generated_by)){
-				goto error;
-			}
-		}
-		if(json_object_size(was_invalidated_by)){
-			if(json_object_set(document, WASINVALIDATEDBY_STR, was_invalidated_by)){
-				goto error;
-			}
-		}
-		if(json_object_size(was_attributed_to)){
-			if(json_object_set(document, WASATTRIBUTEDTO_STR, was_attributed_to)){
-				goto error;
-			}
-		}
-		if(json_object_size(used)){
-			if(json_object_set(document, USED_STR, used)){
-				goto error;
-			}
-		}
-		if(json_object_size(was_informed_by)){
-			if(json_object_set(document, WASINFORMEDBY_STR, was_informed_by)){
-				goto error;
-			}
-		}
-		if(json_object_size(was_started_by)){
-			if(json_object_set(document, WASSTARTEDBY_STR, was_started_by)){
-				goto error;
-			}
-		}
-		if(json_object_size(was_ended_by)){
-			if(json_object_set(document, WASENDEDBY_STR, was_ended_by)){
-				goto error;
-			}
-		}
-		if(json_object_size(had_plan)){
-			if(json_object_set(document, HADPLAN_STR, had_plan)){
-				goto error;
-			}
-		}
-		if(json_object_size(was_associated_with)){
-			if(json_object_set(document, WASASSOCIATEDWITH_STR, was_associated_with)){
-				goto error;
-			}
-		}
-		if(json_object_size(acted_on_behalf_of)){
-			if(json_object_set(document, ACTEDONBEHALFOF_STR, acted_on_behalf_of)){
-				goto error;
-			}
-		}
-		if(json_object_size(was_influenced_by)){
-			if(json_object_set(document, WASINFLUENCEDBY_STR, was_influenced_by)){
-				goto error;
-			}
-		}
-
-		json_decref(alternate_of);
-		json_decref(derived_by_insertion_from);
-		json_decref(derived_by_removal_from);
-		json_decref(had_member);
-		json_decref(had_dictionary_member);
-		json_decref(specialization_of);
-		json_decref(was_derived_from);
-		json_decref(was_generated_by);
-		json_decref(was_invalidated_by);
-		json_decref(was_attributed_to);
-		json_decref(used);
-		json_decref(was_informed_by);
-		json_decref(was_started_by);
-		json_decref(was_ended_by);
-		json_decref(had_plan);
-		json_decref(was_associated_with);
-		json_decref(acted_on_behalf_of);
-		json_decref(was_influenced_by);
 	}
+
+	if(json_object_size(alternate_of)){
+		if(json_object_set(document, ALTERNATEOF_STR, alternate_of)){
+			goto error;
+		}
+	}
+	if(json_object_size(derived_by_insertion_from)){
+		if(json_object_set(document, DERIVEDBYINSERTIONFROM_STR, derived_by_insertion_from)){
+			goto error;
+		}
+	}
+	if(json_object_size(derived_by_removal_from)){
+		if(json_object_set(document, DERIVEDBYREMOVALFROM_STR, derived_by_removal_from)){
+			goto error;
+		}
+	}
+	if(json_object_size(had_member)){
+		if(json_object_set(document, HADMEMBER_STR, had_member)){
+			goto error;
+		}
+	}
+	if(json_object_size(had_dictionary_member)){
+		if(json_object_set(document, HADDICTIONARYMEMBER_STR, had_dictionary_member)){
+			goto error;
+		}
+	}
+	if(json_object_size(specialization_of)){
+		if(json_object_set(document, SPECIALIZATIONOF_STR, specialization_of)){
+			goto error;
+		}
+	}
+	if(json_object_size(was_derived_from)){
+		if(json_object_set(document, WASDERIVEDFROM_STR, was_derived_from)){
+			goto error;
+		}
+	}
+	if(json_object_size(was_generated_by)){
+		if(json_object_set(document, WASGENERATEDBY_STR, was_generated_by)){
+			goto error;
+		}
+	}
+	if(json_object_size(was_invalidated_by)){
+		if(json_object_set(document, WASINVALIDATEDBY_STR, was_invalidated_by)){
+			goto error;
+		}
+	}
+	if(json_object_size(was_attributed_to)){
+		if(json_object_set(document, WASATTRIBUTEDTO_STR, was_attributed_to)){
+			goto error;
+		}
+	}
+	if(json_object_size(used)){
+		if(json_object_set(document, USED_STR, used)){
+			goto error;
+		}
+	}
+	if(json_object_size(was_informed_by)){
+		if(json_object_set(document, WASINFORMEDBY_STR, was_informed_by)){
+			goto error;
+		}
+	}
+	if(json_object_size(was_started_by)){
+		if(json_object_set(document, WASSTARTEDBY_STR, was_started_by)){
+			goto error;
+		}
+	}
+	if(json_object_size(was_ended_by)){
+		if(json_object_set(document, WASENDEDBY_STR, was_ended_by)){
+			goto error;
+		}
+	}
+	if(json_object_size(had_plan)){
+		if(json_object_set(document, HADPLAN_STR, had_plan)){
+			goto error;
+		}
+	}
+	if(json_object_size(was_associated_with)){
+		if(json_object_set(document, WASASSOCIATEDWITH_STR, was_associated_with)){
+			goto error;
+		}
+	}
+	if(json_object_size(acted_on_behalf_of)){
+		if(json_object_set(document, ACTEDONBEHALFOF_STR, acted_on_behalf_of)){
+			goto error;
+		}
+	}
+	if(json_object_size(was_influenced_by)){
+		if(json_object_set(document, WASINFLUENCEDBY_STR, was_influenced_by)){
+			goto error;
+		}
+	}
+
+	json_decref(alternate_of);
+	json_decref(derived_by_insertion_from);
+	json_decref(derived_by_removal_from);
+	json_decref(had_member);
+	json_decref(had_dictionary_member);
+	json_decref(specialization_of);
+	json_decref(was_derived_from);
+	json_decref(was_generated_by);
+	json_decref(was_invalidated_by);
+	json_decref(was_attributed_to);
+	json_decref(used);
+	json_decref(was_informed_by);
+	json_decref(was_started_by);
+	json_decref(was_ended_by);
+	json_decref(had_plan);
+	json_decref(was_associated_with);
+	json_decref(acted_on_behalf_of);
+	json_decref(was_influenced_by);
 
 	return 0;
 
@@ -2243,10 +2218,7 @@ error:
 	return -1;
 }
 
-#ifdef SWIG
-%constant
-#endif
-cpl_return_t
+EXPORT cpl_return_t
 export_bundle_json(cpl_id_t bundle, 
 				   const char* path)
 {

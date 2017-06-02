@@ -221,15 +221,17 @@ cpl_lookup_or_create_object(const char* originator,
 
 cpl_return_t
 cpl_add_relation(const cpl_id_t from_id,
-                   const cpl_id_t to_id,
-                   const int type,
-                   const cpl_id_t bundle,
-                   unsigned long long* INPUT);
+                 const cpl_id_t to_id,
+                 const int type,
+                 const cpl_id_t bundle,
+                 unsigned long long* INPUT);
 
 cpl_return_t
 cpl_get_current_session(unsigned long long* INPUT);
 
-
+int
+validate_json(const char* path,
+              char** INPUT);
 
 /*
  * STL bundles
