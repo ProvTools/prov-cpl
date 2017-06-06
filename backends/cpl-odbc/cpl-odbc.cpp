@@ -655,7 +655,7 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 			"     VALUES (DEFAULT, ?, ?, ?, ?)"
 			"     ON CONFLICT (from_id, to_id)"
 			"       DO UPDATE SET from_id = EXCLUDED.from_id"
-			"   RETURNING id;"););
+			"   RETURNING id;");
 
 	PREPARE(add_object_property_stmt,
 			"INSERT INTO cpl_object_properties"
