@@ -280,7 +280,7 @@ cpl_cb_collect_property_lookup_vector(const cpl_id_t id,
 
 EXPORT int
 validate_json(const char* path,
-	 		  char** out_msg);
+			  char** out_msg);
 
 
 EXPORT cpl_return_t

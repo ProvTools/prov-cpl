@@ -439,6 +439,7 @@ test_simple(void)
 	CPL_VERIFY(cpl_add_relation, ret);
 	if (with_delays) delay();
 
+	/*
 	ret = cpl_add_relation(obj1, obj2, WASATTRIBUTEDTO, bun, &rel1);
 	print(L_DEBUG, "cpl_relation --> %d", ret);
 	CPL_VERIFY(cpl_add_relation, ret);
@@ -447,12 +448,14 @@ test_simple(void)
 	}
 	if (with_delays) delay();
 
+	*/
+
 	ret = cpl_add_relation(obj1, obj3, WASGENERATEDBY, bun, &rel2);
 	print(L_DEBUG, "cpl_relation --> %d", ret);
 	CPL_VERIFY(cpl_add_relation, ret);
 	if (with_delays) delay();
 
-	ret = cpl_add_relation(obj2, obj3, WASASSOCIATEDWITH, bun, &rel3);
+	ret = cpl_add_relation(obj3, obj2, WASASSOCIATEDWITH, bun, &rel3);
 	print(L_DEBUG, "cpl_relation --> %d", ret);
 	CPL_VERIFY(cpl_add_relation, ret);
 	if (with_delays) delay();
@@ -466,7 +469,7 @@ test_simple(void)
         print(L_DEBUG, "cpl_get_object_relations --> [%d]", ret);
         CPL_VERIFY(cpl_get_object_relations, ret);
     }
-    if(rctx.size() != 2){
+    if(rctx.size() != 2) {
     	print(L_DEBUG, "cpl_get_object_relations --> wrong size (%lu results) [%d]",
     		rctx.size(), ret);
     	throw CPLException("get object relations result is the wrong size");
@@ -502,7 +505,7 @@ test_simple(void)
         print(L_DEBUG, "cpl_get_object_relations --> [%d]", ret);
         CPL_VERIFY(cpl_get_object_relations, ret);
     }
-    if(rctx.size() != 1){
+    if(rctx.size() != 0){
     	print(L_DEBUG, "cpl_get_object_relations --> wrong size (%lu results) [%d]",
     		rctx.size(), ret);
     	throw CPLException("get object relations result is the wrong size");
@@ -522,7 +525,7 @@ test_simple(void)
         print(L_DEBUG, "cpl_get_object_relations --> [%d]", ret);
         CPL_VERIFY(cpl_get_object_relations, ret);
     }
-    if(rctx.size() != 1){
+    if(rctx.size() != 2){
     	print(L_DEBUG, "cpl_get_object_relations --> wrong size (%lu results) [%d]",
     		rctx.size(), ret);
     	throw CPLException("get object relations result is the wrong size");
@@ -542,7 +545,7 @@ test_simple(void)
         print(L_DEBUG, "cpl_get_object_relations --> [%d]", ret);
         CPL_VERIFY(cpl_get_object_relations, ret);
     }
-    if(rctx.size() != 2){
+    if(rctx.size() != 1){
     	print(L_DEBUG, "cpl_get_object_relations --> wrong size (%lu results) [%d]",
     		rctx.size(), ret);
     	throw CPLException("get object relations result is the wrong size");
@@ -562,7 +565,7 @@ test_simple(void)
         print(L_DEBUG, "cpl_get_object_relations --> [%d]", ret);
         CPL_VERIFY(cpl_get_object_relations, ret);
     }
-    if(rctx.size() != 0){
+    if(rctx.size() != 1){
     	print(L_DEBUG, "cpl_get_object_relations --> wrong size (%lu results) [%d]",
     		rctx.size(), ret);
     	throw CPLException("get object relations result is the wrong size");

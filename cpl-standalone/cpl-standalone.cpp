@@ -670,8 +670,6 @@ cpl_add_relation(const cpl_id_t from_id,
 	CPL_ENSURE_NOT_NONE(to_id);
 	CPL_ENSURE_NOT_NONE(bundle);
 
-	//TODO add verification + caching
-
 
 	cpl_id_t id;
 	cpl_return_t ret;
@@ -685,8 +683,6 @@ cpl_add_relation(const cpl_id_t from_id,
 
 
 	CPL_RUNTIME_VERIFY(ret);
-
-	//TODO verify type
 
 	// Finish
 
@@ -1248,8 +1244,12 @@ EXPORT int
 validate_json(const char* path,
 	 		  char** out_msg)
 {
-	
-	*out_msg = "Validation failed on upload";
+	std::string str_msg;
+	*out_msg = new char[50];
+
+	str_msg = "Validation failed on upload";
+	strncpy(*out_msg, str_msg.c_str(), 50);
+
 	json_error_t err;
 	json_t* document = json_load_file(path, 0, &err);
 	if(document == NULL){
@@ -1262,7 +1262,8 @@ validate_json(const char* path,
 	igraph_vector_t edges;
 	igraph_vector_init(&edges, 0);
 
-	*out_msg = "Invalid PROV-JSON formatting";
+	str_msg = "Invalid PROV-JSON formatting";
+	strncpy(*out_msg, str_msg.c_str(), 50);
 
 	if(validation_helper_json(document, ALTERNATEOF_STR,
 						 	  "prov:alternate1", "prov:alternate2",
@@ -1381,12 +1382,14 @@ validate_json(const char* path,
 	igraph_is_dag(&graph, &is_dag);
 
 	if(!is_dag){
-		*out_msg = "PROV-JSON document contains cycles";
+		str_msg = "PROV-JSON document contains cycles";
+		strncpy(*out_msg, str_msg.c_str(), 50);
 		json_decref(document);
 		return -1;
 	}
 
-	*out_msg = "Valid PROV-JSON";
+	str_msg = "Valid PROV-JSON";
+	strncpy(*out_msg, str_msg.c_str(), 50);
 	json_decref(document);
 	return 0;
 }

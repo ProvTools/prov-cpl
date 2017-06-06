@@ -614,6 +614,7 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 			"     VALUES (DEFAULT, ?, ?, ?, ?)"
 			"   RETURNING id;");
 
+	//figure out ON CONFLICT logic
 	PREPARE(create_object_insert_bundle_stmt,
 			"INSERT INTO cpl_objects"
 			"            (id, originator, name, type,"
@@ -646,11 +647,15 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 		"  FROM cpl_objects"
 		" WHERE originator = ? AND name = ?;");
 
+	//TODO: do we want to update bundle_id on conflict?
 	PREPARE(add_relation_stmt,
 			"INSERT INTO cpl_relations"
 			"            (id, from_id,"
 			"             to_id, type, bundle_id)"
-			"     VALUES (DEFAULT, ?, ?, ?, ?);");
+			"     VALUES (DEFAULT, ?, ?, ?, ?)"
+			"     ON CONFLICT (from_id, to_id)"
+			"       DO UPDATE SET from_id = EXCLUDED.from_id"
+			"   RETURNING id;"););
 
 	PREPARE(add_object_property_stmt,
 			"INSERT INTO cpl_object_properties"

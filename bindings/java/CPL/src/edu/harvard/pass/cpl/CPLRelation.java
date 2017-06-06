@@ -295,12 +295,54 @@ public class CPLRelation {
 
 
 	/**
-	 * Get all properties of an object
+	 * Get all properties of a relation
 	 *
 	 * @return the vector of property entries
 	 */
 	public Vector<CPLRelationPropertyEntry> getProperties() {
 		return getProperties(null);
 	}
+
+	/**
+	 * Get all relations belonging to a bundle
+	 *
+	 * @param bundle the bundle
+	 * @return the vector of matching relations (empty if not found)
+	 */
+	public static Vector<CPLRelation> getBundleRelations(CPLObject bundle) {
+
+		SWIGTYPE_p_std_vector_cpl_relation_t pVector
+			= CPLDirect.new_std_vector_cpl_relation_tp();
+		SWIGTYPE_p_void pv = CPLDirect
+			.cpl_convert_p_std_vector_cpl_relation_t_to_p_void(pVector);
+		Vector<CPLRelation> result = null;
+
+		try {
+			int r = CPLDirect.cpl_get_bundle_relations(bundle.getId(), 
+				CPLDirect.cpl_cb_collect_relation_vector, pv);
+			CPLException.assertSuccess(r);
+
+			cpl_relation_t_vector v = CPLDirect
+				.cpl_dereference_p_std_vector_cpl_relation_t(pVector);
+			long l = v.size();
+			result = new Vector<CPLRelation>((int) l);
+			for (long i = 0; i < l; i++) {
+				cpl_relation_t e = v.get((int) i);
+				result.add(new CPLRelation(
+						e.getId(),
+						new CPLObject(e.getQuery_object_id()),
+						new CPLObject(e.getOther_object_id()),
+						e.getType(),
+						new CPLObject(e.getbundle_id()),
+						true));
+			}
+		}
+		finally {
+			CPLDirect.delete_std_vector_cpl_relation_tp(pVector);
+		}
+
+		return result;
+	}
+
 }
 

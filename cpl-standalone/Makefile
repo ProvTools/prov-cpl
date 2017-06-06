@@ -41,4 +41,3 @@ endif
 #
 
 include ../make/library.mk
-

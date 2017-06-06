@@ -725,13 +725,18 @@ public class CPLObject {
 	 *
 	 * @param key the key
 	 * @param value the value
-	 * @return the vector of matching object-version pairs (empty if not found)
+	 * @return the vector of matching objects (empty if not found)
 	 */
 	public static Vector<CPLObject> tryLookupByProperty(String key,
 			String value) {
 		return lookupByProperty(key, value, false);
 	}
 
+	/**
+	 * Deletes a bundle and all objects and relations belonging to it.
+	 *
+	 * @param bundle the bundle
+	 */
 	public static void deleteBundle(CPLObject bundle) {
 
 		int r = CPLDirect.cpl_delete_bundle(bundle.getId());
@@ -740,6 +745,12 @@ public class CPLObject {
 		}
 	}
 
+	/**
+	 * Get all objects belonging to a bundle
+	 *
+	 * @param bundle the bundle
+	 * @return the vector of matching objects (empty if not found)
+	 */
 	public static Vector<CPLObject> getBundleObjects(CPLObject bundle) {
 
 		SWIGTYPE_p_std_vector_cplxx_object_info_t pVector
@@ -777,41 +788,5 @@ public class CPLObject {
 
 		return result;
 	}
-
-	public static Vector<CPLRelation> getBundleRelations(CPLObject bundle) {
-
-		SWIGTYPE_p_std_vector_cpl_relation_t pVector
-			= CPLDirect.new_std_vector_cpl_relation_tp();
-		SWIGTYPE_p_void pv = CPLDirect
-			.cpl_convert_p_std_vector_cpl_relation_t_to_p_void(pVector);
-		Vector<CPLRelation> result = null;
-
-		try {
-			int r = CPLDirect.cpl_get_bundle_relations(bundle.getId(), 
-				CPLDirect.cpl_cb_collect_relation_vector, pv);
-			CPLException.assertSuccess(r);
-
-			cpl_relation_t_vector v = CPLDirect
-				.cpl_dereference_p_std_vector_cpl_relation_t(pVector);
-			long l = v.size();
-			result = new Vector<CPLRelation>((int) l);
-			for (long i = 0; i < l; i++) {
-				cpl_relation_t e = v.get((int) i);
-				result.add(new CPLRelation(
-						e.getId(),
-						new CPLObject(e.getQuery_object_id()),
-						new CPLObject(e.getOther_object_id()),
-						e.getType(),
-						new CPLObject(e.getbundle_id()),
-						true));
-			}
-		}
-		finally {
-			CPLDirect.delete_std_vector_cpl_relation_tp(pVector);
-		}
-
-		return result;
-	}
-
 }
 

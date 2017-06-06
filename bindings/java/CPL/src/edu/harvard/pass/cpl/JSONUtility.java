@@ -79,7 +79,8 @@ class JsonUtility {
 	}
 
 	/**
-	 * Import a Prov JSON document into Prov-CPL as a bundle. Does not verify correctness.
+	 * Import a Prov JSON document into Prov-CPL as a bundle. 
+	 * Does not verify correctness.
 	 * Currently supports only one anchor object and no bundles.
 	 *
 	 * @param fileName document location
