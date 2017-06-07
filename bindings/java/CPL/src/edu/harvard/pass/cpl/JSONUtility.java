@@ -34,15 +34,7 @@ package edu.harvard.pass.cpl;
  * Contributor(s): Jackson Okuhn
  */
 
-
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
-import org.json.simple.parser.ParseException;
-import java.io.FileReader;
-import java.util.Vector;
-import java.util.Set;
-import java.util.Iterator;
+import swig.direct.CPLDirect.*;
 
 /**
  * A utility for processing Prov JSON
@@ -51,31 +43,27 @@ import java.util.Iterator;
  */
 class JsonUtility {
 
-	ProvFactory pFactory;
-
-	JSONObject document;
-
 	/**
 	 * Create an instance of JsonUtility
 	 */
-	public JsonUtility() {
-		pFactory = null;
-		document = null;
-	}
+	public JsonUtility() {}
 
 	/**
 	 * Verify the correctness of a Prov JSON document
 	 *
-	 *@param fileName document location
-	 *@return a string detailing errors if any exist
+	 *@param fileName document path
+	 *@return a string detailing errors if any exist or NULL on success
 	 */
-	public String validateJson(String fileName){
+	public static String validateJson(String fileName){
 		
-		String errorString = NULL;
+		String stringOutArray[] = { "" };
 
-		CPLDirect.validate_json(fileName, errorString);
+		int r = CPLDirect.validate_json(fileName, stringOutArray);
+		if(r == 0){
+			return null;
+		}
 
-		return errorString;
+		return stringOutArray[0];
 	}
 
 	/**
@@ -83,28 +71,30 @@ class JsonUtility {
 	 * Does not verify correctness.
 	 * Currently supports only one anchor object and no bundles.
 	 *
-	 * @param fileName document location
+	 * @param fileName document path
 	 * @param originator document originator
-	 * @param bundleName name of document bundle
+	 * @param bundleName desired name of document bundle
 	 * @param anchorObject Prov-CPL object identical to an object in the document
 	 * @param bundleAgent agent responsible for the document bundle
 	 */
 
-	public void importJson(String fileName, String originator, 
+	public static void importJson(String fileName, String originator, 
 			String bundleName, CPLObject anchorObject, CPLObject bundleAgent) {
 
-		CPLDirect.import_document_json(fileName, originator, bundleName,
+		int r = CPLDirect.import_document_json(fileName, originator, bundleName,
 									   anchorObject.getId(), bundleAgent.getId());
+		CPLException.assertSuccess(r);
 	}
 
 	/**
 	 * Export a Prov bundle as a JSON document
 	 *
 	 * @param bundle bundle to export
-	 * @return a JSONObject containing the bundle as a document
+	 * @param filepath path to desired output file, overwrites if file already exists
 	 */
 	public void exportBundleJson(CPLObject bundle, String filepath) {
 
-		CPLDirect.export_bundle_json(bundle.getId(), filepath);
+		int r = CPLDirect.export_bundle_json(bundle.getId(), filepath);
+		CPLException.assertSuccess(r);
 	}
 }

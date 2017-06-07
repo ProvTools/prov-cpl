@@ -591,7 +591,8 @@ cpl_create_object(const char* originator,
  *
  * @param originator the object originator
  * @param name the object name
- * @param type the object type
+ * @param type the object type, 0 for no type
+ * @param bundle_id the bundle ID, 0 for no ID
  * @param out_id the pointer to store the object ID
  * @return CPL_OK or an error code
  */
@@ -599,6 +600,7 @@ EXPORT cpl_return_t
 cpl_lookup_object(const char* originator,
 				  const char* name,
 				  const int type,
+				  const cpl_id_t bundle_id,
 				  cpl_id_t* out_id);
 
 /**
@@ -607,7 +609,8 @@ cpl_lookup_object(const char* originator,
  *
  * @param originator the object originator
  * @param name the object name
- * @param type the object type
+ * @param type the object type, 0 for no type
+ * @param bundle_id the bundle ID, 0 for no ID
  * @param flags a logical combination of CPL_L_* flags
  * @param iterator the iterator to be called for each matching object
  * @param context the caller-provided iterator context
@@ -617,6 +620,7 @@ EXPORT cpl_return_t
 cpl_lookup_object_ext(const char* originator,
 					  const char* name,
 					  const int type,
+					  const cpl_id_t bundle_id,
 					  const int flags,
 					  cpl_id_timestamp_iterator_t iterator,
 					  void* context);

@@ -123,6 +123,7 @@ typedef struct _cpl_db_backend_t {
 							const char* originator,
 							const char* name,
 					   		const int type,
+					   		const cpl_id_t bundle_id,
 							cpl_id_t* out_id);
 
 	/**
@@ -143,6 +144,7 @@ typedef struct _cpl_db_backend_t {
 								const char* originator,
 								const char* name,
 								const int type,
+					   		    const cpl_id_t bundle_id,
 								const int flags,
 								cpl_id_timestamp_iterator_t callback,
 								void* context);
@@ -311,6 +313,16 @@ typedef struct _cpl_db_backend_t {
 								 cpl_property_iterator_t callback,
 								 void* context);
 
+	/**
+	 * Get the properties associated with the given provenance relation.
+	 *
+	 * @param backend the pointer to the backend structure
+	 * @param id the the relation ID
+	 * @param key the property to fetch - or NULL for all properties
+	 * @param iterator the iterator callback function
+	 * @param context the user context to be passed to the iterator function
+	 * @return CPL_OK, CPL_S_NO_DATA, or an error code
+	 */
 	cpl_return_t
 	(*cpl_db_get_relation_properties)(struct _cpl_db_backend_t* backend,
 								 const cpl_id_t id,
@@ -318,16 +330,40 @@ typedef struct _cpl_db_backend_t {
 								 cpl_property_iterator_t callback,
 								 void* context);
 
+	/**
+	 * Deletes a bundle along with all objects and relations it contains.
+	 *
+	 * @param backend the pointer to the backend structure
+	 * @param id the bundle ID
+	 */
 	cpl_return_t
 	(*cpl_db_delete_bundle)(struct _cpl_db_backend_t* backend,
 								 const cpl_id_t id);
-
+	
+	/**
+	 * Returns all objects contained in a bundle.
+	 *
+	 * @param backend the pointer to the backend structure
+	 * @param id the bundle ID
+	 * @param callback the iterator to be called for each matching object
+	 * @param context the caller-provided iterator context
+	 * @return CPL_OK or an error code
+	 */
 	cpl_return_t
 	(*cpl_db_get_bundle_objects)(struct _cpl_db_backend_t* backend,
 								 const cpl_id_t id,
                                  cpl_object_info_iterator_t callback,
                                  void* context);
 
+	/**
+	 * Returns all relations contained in a bundle.
+	 *
+	 * @param backend the pointer to the backend structure
+	 * @param id the bundle ID
+	 * @param callback the iterator to be called for each matching object
+	 * @param context the caller-provided iterator context
+	 * @return CPL_OK or an error code
+	 */
 	cpl_return_t
 	(*cpl_db_get_bundle_relations)(struct _cpl_db_backend_t* backend,
 								 const cpl_id_t id,

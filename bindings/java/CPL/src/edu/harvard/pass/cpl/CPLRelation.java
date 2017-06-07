@@ -333,7 +333,7 @@ public class CPLRelation {
 						new CPLObject(e.getQuery_object_id()),
 						new CPLObject(e.getOther_object_id()),
 						e.getType(),
-						new CPLObject(e.getbundle_id()),
+						new CPLObject(e.getBundle_id()),
 						true));
 			}
 		}

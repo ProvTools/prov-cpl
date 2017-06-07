@@ -481,9 +481,13 @@ cpl_odbc_free_statement_handles(cpl_odbc_t* odbc)
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_object_insert_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_object_insert_bundle_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_object_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_object_no_type_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_object_nt_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_object_nb_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_object_ntnb_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_object_ext_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_object_ext_no_type_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_object_nt_ext_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_object_nb_ext_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_object_ntnb_ext_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->add_relation_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->add_object_property_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->add_relation_property_stmt);
@@ -565,9 +569,14 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 	ALLOC_STMT(create_object_insert_stmt);
 	ALLOC_STMT(create_object_insert_bundle_stmt);
 	ALLOC_STMT(lookup_object_stmt);
-	ALLOC_STMT(lookup_object_no_type_stmt);
+	ALLOC_STMT(lookup_object_nt_stmt);
+	ALLOC_STMT(lookup_object_nb_stmt);
+	ALLOC_STMT(lookup_object_ntnb_stmt);
 	ALLOC_STMT(lookup_object_ext_stmt);
-	ALLOC_STMT(lookup_object_ext_no_type_stmt);
+	ALLOC_STMT(lookup_object_ext_stmt);
+	ALLOC_STMT(lookup_object_nt_ext_stmt);
+	ALLOC_STMT(lookup_object_nb_ext_stmt);
+	ALLOC_STMT(lookup_object_ntnb_ext_stmt);
 	ALLOC_STMT(add_relation_stmt);
 	ALLOC_STMT(add_object_property_stmt);
 	ALLOC_STMT(add_relation_property_stmt);
@@ -599,7 +608,6 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 		goto err_stmts; \
 	}}
 
-	//TODO document parameter numbers and what people will be filling in... also results
 	PREPARE(create_session_insert_stmt,
 			"INSERT INTO cpl_sessions"
 			"            (id, mac_address, username, pid, program,"
@@ -614,7 +622,7 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 			"     VALUES (DEFAULT, ?, ?, ?, ?)"
 			"   RETURNING id;");
 
-	//figure out ON CONFLICT logic
+	//TODO potentially figure out ON CONFLICT logic
 	PREPARE(create_object_insert_bundle_stmt,
 			"INSERT INTO cpl_objects"
 			"            (id, originator, name, type,"
@@ -626,35 +634,57 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 	PREPARE(lookup_object_stmt,
 			"SELECT id"
 			"  FROM cpl_objects"
+			" WHERE originator = ? AND name = ? AND type = ? AND bundle_id = ?"
+			" ORDER BY creation_time DESC"
+			" LIMIT 1;");
+
+	PREPARE(lookup_object_nt_stmt,
+			"SELECT id"
+			"  FROM cpl_objects"
+			" WHERE originator = ? AND name = ? AND bundle_id = ?"
+			" ORDER BY creation_time DESC"
+			" LIMIT 1;");
+
+	PREPARE(lookup_object_nb_stmt,
+			"SELECT id"
+			"  FROM cpl_objects"
 			" WHERE originator = ? AND name = ? AND type = ?"
 			" ORDER BY creation_time DESC"
 			" LIMIT 1;");
 
-	PREPARE(lookup_object_no_type_stmt,
-		"SELECT id"
-		"  FROM cpl_objects"
-		" WHERE originator = ? AND name = ?"
-		" ORDER BY creation_time DESC"
-		" LIMIT 1;");
+	PREPARE(lookup_object_ntnb_stmt,
+			"SELECT id"
+			"  FROM cpl_objects"
+			" WHERE originator = ? AND name = ?"
+			" ORDER BY creation_time DESC"
+			" LIMIT 1;");
 
 	PREPARE(lookup_object_ext_stmt,
 			"SELECT id, creation_time"
 			"  FROM cpl_objects"
 			" WHERE originator = ? AND name = ? AND type = ?;");
 
-	PREPARE(lookup_object_ext_no_type_stmt,
-		"SELECT id, creation_time"
-		"  FROM cpl_objects"
-		" WHERE originator = ? AND name = ?;");
+	PREPARE(lookup_object_nt_ext_stmt,
+			"SELECT id, creation_time"
+			"  FROM cpl_objects"
+			" WHERE originator = ? AND name = ? AND bundle_id = ?;");
 
-	//TODO: do we want to update bundle_id on conflict?
+	PREPARE(lookup_object_nb_ext_stmt,
+			"SELECT id, creation_time"
+			"  FROM cpl_objects"
+			" WHERE originator = ? AND name = ? AND type = ?;");
+
+	PREPARE(lookup_object_ntnb_ext_stmt,
+			"SELECT id, creation_time"
+			"  FROM cpl_objects"
+			" WHERE originator = ? AND name = ? AND type = ? AND bundle_id = ?;");
+
+	//TODO: do we want to explicitly handle conflicts
 	PREPARE(add_relation_stmt,
 			"INSERT INTO cpl_relations"
 			"            (id, from_id,"
 			"             to_id, type, bundle_id)"
 			"     VALUES (DEFAULT, ?, ?, ?, ?)"
-			"     ON CONFLICT (from_id, to_id)"
-			"       DO UPDATE SET from_id = EXCLUDED.from_id"
 			"   RETURNING id;");
 
 	PREPARE(add_object_property_stmt,
@@ -1193,6 +1223,7 @@ cpl_odbc_lookup_object(struct _cpl_db_backend_t* backend,
 					   const char* originator,
 					   const char* name,
 					   const int type,
+					   const cpl_id_t bundle_id,
 					   cpl_id_t* out_id)
 {
 	assert(backend != NULL);
@@ -1211,18 +1242,38 @@ cpl_odbc_lookup_object(struct _cpl_db_backend_t* backend,
 retry:
 	SQLHSTMT stmt;
 
-	if(!CPL_IS_OBJECT_TYPE(type)) {
-		stmt = odbc->lookup_object_no_type_stmt;
+	if(type == 0){
+		if(bundle_id == CPL_NONE){
+			stmt = odbc->lookup_object_ntnb_stmt;
 
-		SQL_BIND_VARCHAR(stmt, 1, ORIGINATOR_LEN, originator);
-		SQL_BIND_VARCHAR(stmt, 2, NAME_LEN, name);
+			SQL_BIND_VARCHAR(stmt, 1, ORIGINATOR_LEN, originator);
+			SQL_BIND_VARCHAR(stmt, 2, NAME_LEN, name);
 
+		} else {
+			stmt = odbc->lookup_object_nt_stmt;
+
+			SQL_BIND_VARCHAR(stmt, 1, ORIGINATOR_LEN, originator);
+			SQL_BIND_VARCHAR(stmt, 2, NAME_LEN, name);
+			SQL_BIND_INTEGER(stmt, 3, bundle_id);
+
+		}
 	} else {
-		stmt = odbc->lookup_object_stmt;
+		if(bundle_id == CPL_NONE){
+			stmt = odbc->lookup_object_nb_stmt;
 
-		SQL_BIND_VARCHAR(stmt, 1, ORIGINATOR_LEN, originator);
-		SQL_BIND_VARCHAR(stmt, 2, NAME_LEN, name);
-		SQL_BIND_INTEGER(stmt, 3, type);
+			SQL_BIND_VARCHAR(stmt, 1, ORIGINATOR_LEN, originator);
+			SQL_BIND_VARCHAR(stmt, 2, NAME_LEN, name);
+			SQL_BIND_INTEGER(stmt, 3, type);
+
+		} else {
+			stmt = odbc->lookup_object_stmt;
+
+			SQL_BIND_VARCHAR(stmt, 1, ORIGINATOR_LEN, originator);
+			SQL_BIND_VARCHAR(stmt, 2, NAME_LEN, name);
+			SQL_BIND_INTEGER(stmt, 3, type);
+			SQL_BIND_INTEGER(stmt, 4, bundle_id);
+
+		}
 	}
 
 
@@ -1274,6 +1325,7 @@ cpl_odbc_lookup_object_ext(struct _cpl_db_backend_t* backend,
 						   const char* originator,
 						   const char* name,
 						   const int type,
+					       const cpl_id_t bundle_id,
 						   const int flags,
 						   cpl_id_timestamp_iterator_t callback,
 						   void* context)
@@ -1296,18 +1348,38 @@ cpl_odbc_lookup_object_ext(struct _cpl_db_backend_t* backend,
 retry:
 	SQLHSTMT stmt;
 
-	if(!CPL_IS_OBJECT_TYPE(type)) {
-		stmt = odbc->lookup_object_ext_no_type_stmt;
+	if(type == 0){
+		if(bundle_id == CPL_NONE){
+			stmt = odbc->lookup_object_ntnb_ext_stmt;
 
-		SQL_BIND_VARCHAR(stmt, 1, ORIGINATOR_LEN, originator);
-		SQL_BIND_VARCHAR(stmt, 2, NAME_LEN, name);
+			SQL_BIND_VARCHAR(stmt, 1, ORIGINATOR_LEN, originator);
+			SQL_BIND_VARCHAR(stmt, 2, NAME_LEN, name);
 
+		} else {
+			stmt = odbc->lookup_object_nt_ext_stmt;
+
+			SQL_BIND_VARCHAR(stmt, 1, ORIGINATOR_LEN, originator);
+			SQL_BIND_VARCHAR(stmt, 2, NAME_LEN, name);
+			SQL_BIND_INTEGER(stmt, 3, bundle_id);
+
+		}
 	} else {
-		stmt = odbc->lookup_object_ext_stmt;
+		if(bundle_id == CPL_NONE){
+			stmt = odbc->lookup_object_nb_ext_stmt;
 
-		SQL_BIND_VARCHAR(stmt, 1, ORIGINATOR_LEN, originator);
-		SQL_BIND_VARCHAR(stmt, 2, NAME_LEN, name);
-		SQL_BIND_INTEGER(stmt, 3, type);
+			SQL_BIND_VARCHAR(stmt, 1, ORIGINATOR_LEN, originator);
+			SQL_BIND_VARCHAR(stmt, 2, NAME_LEN, name);
+			SQL_BIND_INTEGER(stmt, 3, type);
+
+		} else {
+			stmt = odbc->lookup_object_ext_stmt;
+
+			SQL_BIND_VARCHAR(stmt, 1, ORIGINATOR_LEN, originator);
+			SQL_BIND_VARCHAR(stmt, 2, NAME_LEN, name);
+			SQL_BIND_INTEGER(stmt, 3, type);
+			SQL_BIND_INTEGER(stmt, 4, bundle_id);
+			
+		}
 	}
 
 
@@ -1716,7 +1788,7 @@ err_r:
  *
  * @param backend the pointer to the backend structure
  * @param flags a logical combination of CPL_I_* flags
- * @param iterator the iterator to be called for each matching object
+ * @param callback the iterator to be called for each matching object
  * @param context the caller-provided iterator context
  * @return CPL_OK or an error code
  */
@@ -2004,7 +2076,7 @@ typedef struct __get_object_relation__entry {
  *                  or CPL_D_DESCENDANTS)
  * @param flags the bitwise combination of flags describing how should
  *              the graph be traversed
- * @param iterator the iterator callback function
+ * @param callback the iterator callback function
  * @param context the user context to be passed to the iterator function
  * @return CPL_OK, CPL_S_NO_DATA, or an error code
  */
@@ -2144,7 +2216,7 @@ typedef struct __get_properties__entry {
  * @param backend the pointer to the backend structure
  * @param id the the object ID
  * @param key the property to fetch - or NULL for all properties
- * @param iterator the iterator callback function
+ * @param callback the iterator callback function
  * @param context the user context to be passed to the iterator function
  * @return CPL_OK, CPL_S_NO_DATA, or an error code
  */
@@ -2290,7 +2362,7 @@ err:
  * @param backend the pointer to the backend structure
  * @param key the property name
  * @param value the property value
- * @param iterator the iterator callback function
+ * @param callback the iterator callback function
  * @param context the user context to be passed to the iterator function
  * @return CPL_OK, CPL_E_NOT_FOUND, or an error code
  */
@@ -2548,7 +2620,12 @@ err:
 }
 
 
-
+/**
+ * Deletes a bundle along with all objects and relations it contains.
+ *
+ * @param backend the pointer to the backend structure
+ * @param id the bundle ID
+ */
 cpl_return_t
 cpl_odbc_delete_bundle(struct _cpl_db_backend_t* backend,
 						const cpl_id_t id)
@@ -2586,6 +2663,15 @@ err:
 
 }
 
+/**
+ * Returns all objects contained in a bundle.
+ *
+ * @param backend the pointer to the backend structure
+ * @param id the bundle ID
+ * @param callback the iterator to be called for each matching object
+ * @param context the caller-provided iterator context
+ * @return CPL_OK or an error code
+ */
 cpl_return_t
 cpl_odbc_get_bundle_objects(struct _cpl_db_backend_t* backend,
 						     const cpl_id_t id,
@@ -2745,6 +2831,15 @@ typedef struct __get_bundle_relation__entry {
 	cpl_id_t bundle_id;
 } __get_bundle_relation__entry_t;
 
+/**
+ * Returns all relations contained in a bundle.
+ *
+ * @param backend the pointer to the backend structure
+ * @param id the bundle ID
+ * @param callback the iterator to be called for each matching object
+ * @param context the caller-provided iterator context
+ * @return CPL_OK or an error code
+ */
 cpl_return_t
 cpl_odbc_get_bundle_relations(struct _cpl_db_backend_t* backend,
 						     const cpl_id_t id,

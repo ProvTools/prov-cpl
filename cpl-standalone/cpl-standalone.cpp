@@ -471,6 +471,7 @@ cpl_create_object(const char* originator,
  * @param originator the object originator
  * @param name the object name
  * @param type the object type, 0 for no type
+ * @param bundle_id the bundle ID, 0 for no bundle
  * @param out_id the pointer to store the object ID
  * @return CPL_OK or an error code
  */
@@ -478,6 +479,7 @@ extern "C" EXPORT cpl_return_t
 cpl_lookup_object(const char* originator,
 				  const char* name,
 				  const int type,
+				  const cpl_id_t bundle_id,
 				  cpl_id_t* out_id)
 {
 	CPL_ENSURE_INITIALIZED;
@@ -498,6 +500,7 @@ cpl_lookup_object(const char* originator,
 											   originator,
 											   name,
 											   type,
+											   bundle_id,
 											   &id);
 	CPL_RUNTIME_VERIFY(ret);
 
@@ -513,7 +516,8 @@ cpl_lookup_object(const char* originator,
  *
  * @param originator the object originator
  * @param name the object name
- * @param type the object type
+ * @param type the object type, 0 for no type
+ * @param bundle_id the bundle ID, 0 for no bundle
  * @param flags a logical combination of CPL_L_* flags
  * @param iterator the iterator to be called for each matching object
  * @param context the caller-provided iterator context
@@ -523,6 +527,7 @@ extern "C" EXPORT cpl_return_t
 cpl_lookup_object_ext(const char* originator,
 					  const char* name,
 					  const int type,
+				  	  const cpl_id_t bundle_id,
 					  const int flags,
 					  cpl_id_timestamp_iterator_t iterator,
 					  void* context)
@@ -546,6 +551,7 @@ cpl_lookup_object_ext(const char* originator,
 												   originator,
 												   name,
 												   type,
+												   bundle_id,
 												   flags,
 												   iterator,
 												   context);
@@ -582,7 +588,7 @@ cpl_lookup_or_create_object(const char* originator,
 	//TODO think about locks here
 	cpl_shared_semaphore_wait(cpl_lookup_or_create_object_semaphore);
 
-	r = cpl_lookup_object(originator, name, type, out_id);
+	r = cpl_lookup_object(originator, name, type, bundle, out_id);
 	if (r != CPL_E_NOT_FOUND) goto out;
 
 	r = cpl_create_object(originator, name, type, bundle, out_id);
@@ -1190,6 +1196,9 @@ cpl_cb_collect_property_lookup_vector(const cpl_id_t id,
 /** Public API: Document Handling                                         **/
 /***************************************************************************/
 
+/*
+ * validate_json helper function
+ */
 int
 validation_helper_json(json_t* document,
 					 const char* type_str,
@@ -1240,15 +1249,22 @@ validation_helper_json(json_t* document,
 	return 0;
 }
 
+/*
+ * Verifies the correctness of a PROV-JSON document. Not currently exhaustive.
+ * 
+ * @param path the JSON file path
+ * @param string_out error output string
+ * @return 0 on successful validation or -1 on failure
+ */
 EXPORT int
 validate_json(const char* path,
-	 		  char** out_msg)
+	 		  char** string_out)
 {
 	std::string str_msg;
-	*out_msg = new char[50];
+	*string_out = new char[50];
 
 	str_msg = "Validation failed on upload";
-	strncpy(*out_msg, str_msg.c_str(), 50);
+	strncpy(*string_out, str_msg.c_str(), 50);
 
 	json_error_t err;
 	json_t* document = json_load_file(path, 0, &err);
@@ -1263,7 +1279,7 @@ validate_json(const char* path,
 	igraph_vector_init(&edges, 0);
 
 	str_msg = "Invalid PROV-JSON formatting";
-	strncpy(*out_msg, str_msg.c_str(), 50);
+	strncpy(*string_out, str_msg.c_str(), 50);
 
 	if(validation_helper_json(document, ALTERNATEOF_STR,
 						 	  "prov:alternate1", "prov:alternate2",
@@ -1383,17 +1399,20 @@ validate_json(const char* path,
 
 	if(!is_dag){
 		str_msg = "PROV-JSON document contains cycles";
-		strncpy(*out_msg, str_msg.c_str(), 50);
+		strncpy(*string_out, str_msg.c_str(), 50);
 		json_decref(document);
 		return -1;
 	}
 
 	str_msg = "Valid PROV-JSON";
-	strncpy(*out_msg, str_msg.c_str(), 50);
+	strncpy(*string_out, str_msg.c_str(), 50);
 	json_decref(document);
 	return 0;
 }
 
+/*
+ * import_document_json helper function
+ */
 cpl_return_t
 import_bundle_prefixes_json(cpl_id_t bundle,
 							json_t* document)
@@ -1420,6 +1439,10 @@ import_bundle_prefixes_json(cpl_id_t bundle,
 	return CPL_OK;
 }
 
+
+/*
+ * import_document_json helper function
+ */
 cpl_return_t
 import_objects_json(int type,
 					const char* type_str,
@@ -1483,6 +1506,9 @@ import_objects_json(int type,
 	return CPL_OK;
 }
 
+/*
+ * import_document_json helper function
+ */
 cpl_return_t
 import_helper_json(const char* originator,
 				   json_t* relation,
@@ -1498,12 +1524,14 @@ import_helper_json(const char* originator,
 	if(!CPL_IS_OK(cpl_lookup_object(originator, 
 									json_string_value(json_object_get(relation, slabel)),
 									stype,
+									bundle_id,
 									&source))){
 		return CPL_E_INTERNAL_ERROR;
 	}
 	if(!CPL_IS_OK(cpl_lookup_object(originator, 
 									json_string_value(json_object_get(relation, dlabel)),
 									dtype,
+									bundle_id,
 									&dest))){
 		return CPL_E_INTERNAL_ERROR;
 	}
@@ -1529,6 +1557,9 @@ import_helper_json(const char* originator,
 	return CPL_OK;
 }	
 
+/*
+ * import_document_json helper function
+ */
 cpl_return_t
 import_relations_json(const char* type_str, 
 					  const char* originator,
@@ -1712,6 +1743,16 @@ import_relations_json(const char* type_str,
 	return CPL_OK;
 }
 
+/*
+ * Imports a PROV-JSON document into PROV-CPL.
+ *
+ * @param filename file path to document
+ * @param originator document originator
+ * @param bundle_name desired name of document bundle
+ * @param anchor_object optional PROV_CPL object identical to an object in the document
+ * @param bundle_agent optional agent responsible for the document bundle
+ * @return CPL_OK or an error code
+ */
 EXPORT cpl_return_t
 import_document_json(const char* filename,
 					 const char* originator,
@@ -1726,6 +1767,7 @@ import_document_json(const char* filename,
 		return CPL_E_INTERNAL_ERROR;
 	}
 
+	// Create bundle
 	cpl_id_t bundle_id;
 	if(!CPL_IS_OK(cpl_create_object(originator, bundle_name, BUNDLE, NULL, &bundle_id))){
 		goto error;
@@ -1735,6 +1777,7 @@ import_document_json(const char* filename,
 		goto error;
 	}
 
+	// Connect bundle_agent to bundle
 	if(bundle_agent){
 		if(!CPL_IS_OK(cpl_add_relation(bundle_id, bundle_agent, 
 						WASATTRIBUTEDTO, bundle_id, NULL))){
@@ -1742,6 +1785,7 @@ import_document_json(const char* filename,
 		}
 	}
 
+	// Import objects
 	if(!CPL_IS_OK(import_objects_json(ENTITY, ENTITY_STR, originator, bundle_id, document))){
 		goto error;
 	}
@@ -1752,12 +1796,13 @@ import_document_json(const char* filename,
 		goto error;
 	}
 
+	// Connect anchor object to new object from document
 	if(anchor_object){
 		cpl_object_info_t* anchor_info;
 		cpl_get_object_info(anchor_object, &anchor_info);
 		cpl_id_t dest;
 		if(CPL_IS_OK(cpl_lookup_object(originator, 
-						anchor_info->name, anchor_info->type, &dest))){
+						anchor_info->name, anchor_info->type, bundle_id, &dest))){
 
 			cpl_free_object_info(anchor_info);
 			if(dest){
@@ -1832,8 +1877,9 @@ error:
 }
 
 
-
-
+/*
+ * Retrieves bundle prefixes. export_bundle_json helper function.
+ */
 int
 export_bundle_prefixes_json(cpl_id_t bundle, 
 							json_t* document)
@@ -1861,6 +1907,9 @@ export_bundle_prefixes_json(cpl_id_t bundle,
 	return 0;
 }
 
+/*
+ * Retrieves bundle objects. export_bundle_json helper function.
+ */
 int
 export_objects_json(cpl_id_t bundle, 
 					json_t* document)
@@ -1943,6 +1992,9 @@ error:
 
 }
 
+/*
+ * Retrieves bundle relations. export_bundle_json helper function.
+ */
 int
 export_relations_json(cpl_id_t bundle,
 				      json_t* document)
@@ -2221,6 +2273,13 @@ error:
 	return -1;
 }
 
+/*
+ * Exports a PROV-CPL bundle as a PROV-JSON document.
+ *
+ * @param bundle the bundle ID
+ * @param path path to desired output file, overwrites if file already exists
+ * @return CPL_OK or an error code
+ */
 EXPORT cpl_return_t
 export_bundle_json(cpl_id_t bundle, 
 				   const char* path)

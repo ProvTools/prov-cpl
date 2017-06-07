@@ -39,7 +39,6 @@
 #include <private/cpl-platform.h>
 #include <cplxx.h>
 
-// TODO figure out wtf is wrong with gcc
 #include </usr/local/include/sql.h>
 #include </usr/local/include/sqlext.h>
 
@@ -112,16 +111,13 @@ typedef struct {
 	mutex_t lookup_object_lock;
 
 	/**
-	 * The statement for looking up an object by name (including originator
-	 * and type)
+	 * The statements for looking up an object by name and originator
+	 * and optionally type and bundle_id
 	 */
 	SQLHSTMT lookup_object_stmt;
-
-	/**
-	 * The statement for looking up an object by name (including originator
-	 * and no type)
-	 */
-	SQLHSTMT lookup_object_no_type_stmt;
+	SQLHSTMT lookup_object_nt_stmt;
+	SQLHSTMT lookup_object_nb_stmt;
+	SQLHSTMT lookup_object_ntnb_stmt;
 
 	/**
 	 * The lock for lookup_object_ext
@@ -129,16 +125,13 @@ typedef struct {
 	mutex_t lookup_object_ext_lock;
 
 	/**
-	 * The statement for looking up an object by name (including originator
-	 * and type)
+	 * The statements for looking up objects by name and originator
+	 * and optionally type and bundle_id
 	 */
 	SQLHSTMT lookup_object_ext_stmt;
-
-	/**
-	 * The statement for looking up an object by name (including originator
-	 * and no type)
-	 */
-	SQLHSTMT lookup_object_ext_no_type_stmt;
+	SQLHSTMT lookup_object_nt_ext_stmt;
+	SQLHSTMT lookup_object_nb_ext_stmt;
+	SQLHSTMT lookup_object_ntnb_ext_stmt;
 
 	/**
 	 * The lock for add_relation_edge
@@ -205,7 +198,6 @@ typedef struct {
 	 * The statement that returns information about a provenance object
 	 */
 	SQLHSTMT get_object_info_stmt;
-
 
 	/**
 	 * The mutex for get_object_relations
@@ -282,12 +274,24 @@ typedef struct {
 	*/
 	SQLHSTMT delete_bundle_stmt;
 
+	/**
+	* The mutex for get_bundle_objects
+	*/
 	mutex_t get_bundle_objects_lock;
 
+	/**
+	* The statement for getting bundle objects
+	*/
 	SQLHSTMT get_bundle_objects_stmt;
 
+	/**
+	* The mutex for get_bundle_relations
+	*/
 	mutex_t get_bundle_relations_lock;
-	
+
+	/**
+	* The statement for getting bundle relations
+	*/
 	SQLHSTMT get_bundle_relations_stmt;
 
 } cpl_odbc_t;
