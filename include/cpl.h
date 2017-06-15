@@ -267,25 +267,25 @@ extern const cpl_id_t CPL_NONE;
 /***************************************************************************/
 /** Relation Types                                                        **/
 /***************************************************************************/
-		
-#define ALTERNATEOF				1
-#define	DERIVEDBYINSERTIONFROM	2
-#define	DERIVEDBYREMOVALFROM	3
-#define	HADMEMBER 				4
-#define	HADDICTIONARYMEMBER		5
-#define	SPECIALIZATIONOF		6
-#define	WASDERIVEDFROM			7
-#define	WASGENERATEDBY			8
-#define	WASINVALIDATEDBY		9
-#define	WASATTRIBUTEDTO			10
-#define	USED 					11
-#define	WASINFORMEDBY			12
-#define	WASSTARTEDBY			13
-#define	WASENDEDBY				14
-#define HADPLAN					15
-#define	WASASSOCIATEDWITH		16
-#define ACTEDONBEHALFOF			17
-#define WASINFLUENCEDBY			18
+
+#define WASINFLUENCEDBY  		1
+#define ALTERNATEOF				2
+#define	DERIVEDBYINSERTIONFROM	3
+#define	DERIVEDBYREMOVALFROM	4
+#define	HADMEMBER 				5
+#define	HADDICTIONARYMEMBER		6
+#define	SPECIALIZATIONOF		7
+#define	WASDERIVEDFROM			8
+#define	WASGENERATEDBY			9
+#define	WASINVALIDATEDBY		10
+#define	WASATTRIBUTEDTO			11
+#define	USED 					12
+#define	WASINFORMEDBY			13
+#define	WASSTARTEDBY			14
+#define	WASENDEDBY				15
+#define HADPLAN					16
+#define	WASASSOCIATEDWITH		17
+#define ACTEDONBEHALFOF			18
 
 #define WASINFLUENCEDBY_STR			"wasInfluencedBy"
 #define ALTERNATEOF_STR				"alternateOf"
@@ -308,7 +308,7 @@ extern const cpl_id_t CPL_NONE;
 
 #define CPL_IS_RELATION_TYPE(r)			((r) >= 1 && (r) <= 18)
 
-
+#define NUM_R_TYPES					18
 /***************************************************************************/
 /** Return Codes                                                          **/
 /***************************************************************************/
@@ -491,7 +491,7 @@ extern const cpl_id_t CPL_NONE;
 
 #define CPL_IS_OBJECT_TYPE(r)			((r) >= 1 && (r) <= 4)
 
-
+#define NUM_O_TYPES						4
 /***************************************************************************/
 /** Graph Traversal, Query, and Lookup Flags                              **/
 /***************************************************************************/
@@ -804,20 +804,51 @@ cpl_lookup_object_by_property(const char* key,
 					   cpl_property_iterator_t iterator,
 					   void* context);
 
+/**
+ * Get the properties associated with the given provenance object.
+ * 
+ * @param id the the object ID
+ * @param key the property to fetch - or NULL for all properties
+ * @param iterator the iterator callback function
+ * @param context the user context to be passed to the iterator function
+ * @return CPL_OK, CPL_S_NO_DATA, or an error code
+ */
 EXPORT cpl_return_t
 cpl_get_relation_properties(const cpl_id_t id,
 				   const char* key,
 				   cpl_property_iterator_t iterator,
 				   void* context);
 
+/**
+ * Deletes a bundle and all objects and relations belonging to it.
+ *
+ * @param id the bundle ID
+ * @return CPL_OK, or an error code
+ */
 EXPORT cpl_return_t
 cpl_delete_bundle(const cpl_id_t id);
 
+/**
+ * Get all objects belonging to a bundle
+ *
+ * @paramID the bundle ID
+ * @param iterator the iterator callback function
+ * @param context the user context to be passed to the iterator function
+ * @return CPL_OK, or an error code
+ */
 EXPORT cpl_return_t
 cpl_get_bundle_objects(const cpl_id_t id,
 					cpl_object_info_iterator_t iterator,
 					void* context);
 
+/**
+ * Get all relations belonging to a bundle
+ *
+ * @paramID the bundle ID
+ * @param iterator the iterator callback function
+ * @param context the user context to be passed to the iterator function
+ * @return CPL_OK, or an error code
+ */
 EXPORT cpl_return_t
 cpl_get_bundle_relations(const cpl_id_t id,
 					cpl_relation_iterator_t iterator,

@@ -34,9 +34,6 @@ package edu.harvard.pass.cpl;
  * Contributor(s): Jackson Okuhn, Peter Macko
  */
 
-
-//TODO figure out if cpl_id_t works the way i think it does
-
 import swig.direct.CPLDirect.*;
 
 import java.util.Vector;
@@ -123,7 +120,7 @@ public class CPLObject {
 	public static CPLObject create(String originator, String name, int type,
 			CPLObject bundle) {
 
-		BigInteger id = BigInteger.ZERO;
+		BigInteger id = nullId;
 		int r = CPLDirect.cpl_create_object(originator, name, type,
 				bundle == null ? nullId : bundle.id, id);
 		CPLException.assertSuccess(r);

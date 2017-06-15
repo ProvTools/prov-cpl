@@ -631,6 +631,7 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 			"     VALUES (DEFAULT, ?, ?, ?, ?, ?)"
 			"   RETURNING id;");
 
+	//TODO try merging with "where column is not null"
 	PREPARE(lookup_object_stmt,
 			"SELECT id"
 			"  FROM cpl_objects"
@@ -679,7 +680,7 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 			"  FROM cpl_objects"
 			" WHERE originator = ? AND name = ? AND type = ? AND bundle_id = ?;");
 
-	//TODO: do we want to explicitly handle conflicts
+	//TODO do we want to explicitly handle conflicts
 	PREPARE(add_relation_stmt,
 			"INSERT INTO cpl_relations"
 			"            (id, from_id,"
@@ -1529,7 +1530,7 @@ err:
 
 /**
  * Determine whether the given object has the given ancestor
- * TODO maybe change to descendant?
+ * 
  * @param backend the pointer to the backend structure
  * @param object_id the object ID
  * @param query_object_id the object that we want to determine whether it
@@ -1878,7 +1879,6 @@ retry:
 
 
 	// Fetch the result
-	// TODO think about merging into one loop
 
 	while (true) {
 

@@ -576,6 +576,7 @@ test_simple(void)
 	rctx.clear();
 
 	//Bundle relations
+	
 	ret = cpl_get_bundle_relations(bun, cb_lookup_relations, &rctx);
 	if (!CPL_IS_OK(ret)) {
         print(L_DEBUG, "cpl_get_bundle_relations --> [%d]", ret);

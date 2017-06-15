@@ -71,6 +71,7 @@ public class CPLObjectPropertyEntry {
         this.value = value;
 	}
 
+
 	/**
 	 * Determine whether this and the other object are equal
 	 *
@@ -124,6 +125,7 @@ public class CPLObjectPropertyEntry {
 	public CPLObject getObject() {
 		return object;
 	}
+
 
 	/**
 	 * Get the property name (key)

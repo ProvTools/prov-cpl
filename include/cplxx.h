@@ -144,6 +144,18 @@ typedef struct cplxx_property_entry {
 
 } cplxx_property_entry_t;
 
+/**
+ * General information about PROV relation type
+ */
+
+typedef struct prov_relation_data {
+	int type;
+	std::string type_str;
+	std::string source_str;
+	int source_t;
+	std::string dest_str;
+	int dest_t;
+} prov_relation_data_t;
 
 /***************************************************************************/
 /** Callbacks                                                             **/
@@ -278,11 +290,27 @@ cpl_cb_collect_property_lookup_vector(const cpl_id_t id,
 /** Document Handling                                                     **/
 /***************************************************************************/
 
+/*
+ * Verifies the correctness of a Prov-JSON document. Not currently exhaustive.
+ * 
+ * @param path the JSON file path
+ * @param string_out error output string
+ * @return 0 on successful validation or -1 on failure
+ */
 EXPORT int
 validate_json(const char* path,
 			  char** string_out);
 
-
+/*
+ * Imports a Prov-JSON document into Prov-CPL.
+ *
+ * @param filename file path to document
+ * @param originator document originator
+ * @param bundle_name desired name of document bundle
+ * @param anchor_object optional PROV_CPL object identical to an object in the document
+ * @param bundle_agent optional agent responsible for the document bundle
+ * @return CPL_OK or an error code
+ */
 EXPORT cpl_return_t
 import_document_json(const char* filename,
 					 const char* originator,
@@ -291,7 +319,13 @@ import_document_json(const char* filename,
 					 cpl_id_t bundle_agent);
 
 
-
+/*
+ * Exports a Prov-CPL bundle as a Prov-JSON document.
+ *
+ * @param bundle the bundle ID
+ * @param path path to desired output file, overwrites if file already exists
+ * @return CPL_OK or an error code
+ */
 EXPORT cpl_return_t
 export_bundle_json(cpl_id_t bundle, 
 				   const char* path);
