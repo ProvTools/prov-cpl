@@ -1,0 +1,3 @@
+cpl-standalone/build
+backends/cpl-odbc/build
+test/standalone-test/build
