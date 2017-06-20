@@ -62,6 +62,15 @@ GRANT ALL PRIVILEGES ON DATABASE cpl TO cpl WITH GRANT OPTION;
 --
 -- Create the schema
 --
+CREATE TABLE IF NOT EXISTS cpl_sessions (
+       id BIGSERIAL,
+       mac_address VARCHAR(18),
+       username VARCHAR(255),
+       pid INT,
+       program VARCHAR(4095),
+       cmdline VARCHAR(4095),
+       initialization_time TIMESTAMP DEFAULT NOW(),
+       PRIMARY KEY (id));
 
 CREATE TABLE IF NOT EXISTS cpl_objects (
        id BIGSERIAL,
@@ -75,20 +84,10 @@ CREATE TABLE IF NOT EXISTS cpl_objects (
        FOREIGN KEY(session_id)
                    REFERENCES cpl_sessions(id));
 
-CREATE TABLE IF NOT EXISTS cpl_sessions (
-       id BIGSERIAL,
-       mac_address VARCHAR(18),
-       username VARCHAR(255),
-       pid INT,
-       program VARCHAR(4095),
-       cmdline VARCHAR(4095),
-       initialization_time TIMESTAMP DEFAULT NOW(),
-       PRIMARY KEY (id));
-
 CREATE TABLE IF NOT EXISTS cpl_relations (
        id BIGSERIAL,
-       from_id BIGSERIAL NOT NULL,
-       to_id BIGSERIAL,
+       from_id BIGINT,
+       to_id BIGINT,
        type INT,
        bundle_id BIGINT,
        PRIMARY KEY(id),
@@ -123,11 +122,12 @@ ALTER TABLE cpl_objects ADD CONSTRAINT cpl_objects_fk
       REFERENCES cpl_objects(id)
       ON DELETE CASCADE;
 
-ALTER SEQUENCE cpl_objects_id_seq RESTART WITH 1;
-
-ALTER SEQUENCE cpl_sessions_id_seq RESTART WITH 1;
-
-ALTER SEQUENCE cpl_relations_id_seq RESTART WITH 1;
+INSERT INTO cpl_sessions (id, mac_address, username, pid, program, cmdline)
+  VALUES (0, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO cpl_objects (id, originator, name, type, bundle_id, session_id)
+  VALUES (0, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO cpl_relations (id, from_id, to_id, type, bundle_id)
+  VALUES (0, NULL, NULL, NULL, NULL);
 
 CREATE OR REPLACE RULE cpl_relation_properties_ignore_duplicate_inserts AS
     ON INSERT TO cpl_relation_properties
@@ -148,10 +148,11 @@ CREATE OR REPLACE RULE cpl_object_properties_ignore_duplicate_inserts AS
 --
 -- Grant the appropriate privileges
 --
-
+GRANT ALL PRIVILEGES ON TABLE cpl_sessions TO cpl WITH GRANT OPTION; 
 GRANT ALL PRIVILEGES ON TABLE cpl_objects TO cpl WITH GRANT OPTION;
-GRANT ALL PRIVILEGES ON TABLE cpl_sessions TO cpl WITH GRANT OPTION;
 GRANT ALL PRIVILEGES ON TABLE cpl_relations TO cpl WITH GRANT OPTION;
 GRANT ALL PRIVILEGES ON TABLE cpl_relation_properties TO cpl WITH GRANT OPTION;
 GRANT ALL PRIVILEGES ON TABLE cpl_object_properties TO cpl WITH GRANT OPTION;
-
+GRANT ALL PRIVILEGES ON SEQUENCE cpl_objects_id_seq TO cpl WITH GRANT OPTION;
+GRANT ALL PRIVILEGES ON SEQUENCE cpl_sessions_id_seq TO cpl WITH GRANT OPTION;
+GRANT ALL PRIVILEGES ON SEQUENCE cpl_relations_id_seq TO cpl WITH GRANT OPTION;

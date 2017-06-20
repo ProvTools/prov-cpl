@@ -261,7 +261,7 @@ extern int __cpl_assert__cpl_id_size[sizeof(cpl_id_t) == 8 ? 1 : -1];
  */
 extern const cpl_id_t CPL_NONE;
 
-
+extern cpl_session_t cpl_session;
 
 
 /***************************************************************************/

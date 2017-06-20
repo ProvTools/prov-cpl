@@ -128,7 +128,7 @@ static cpl_db_backend_t* cpl_db_backend = NULL;
 /**
  * The current session ID
  */
-static cpl_session_t cpl_session = CPL_NONE;
+cpl_session_t cpl_session = CPL_NONE;
 
 
 /***************************************************************************/
@@ -323,6 +323,8 @@ cpl_attach(struct _cpl_db_backend_t* backend)
 		mac_string_ptr = NULL;
 	}
 
+	//currently no support for sessions 
+	
 	ret = cpl_db_backend->cpl_db_create_session(cpl_db_backend,
 												NULL,
 												mac_string_ptr,

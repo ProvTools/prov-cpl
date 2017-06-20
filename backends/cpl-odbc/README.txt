@@ -75,6 +75,7 @@ Please download and install the ODBC Administrator Tool for Mac OS X from:
 And install the appropriate ODBC drivers:
 
     For MySQL: http://dev.mysql.com/downloads/connector/odbc/
+    For PostgreSQL: https://odbc.postgresql.org/
 
 Alternatively, you can use purchase and use commercial ODBC drivers, such as:
 

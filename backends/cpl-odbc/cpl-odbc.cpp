@@ -626,8 +626,8 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 	PREPARE(create_object_insert_bundle_stmt,
 			"INSERT INTO cpl_objects"
 			"            (id, originator, name, type,"
-			"             bundle_id,"
-			"             session_id)"
+			"             session_id,"
+			"             bundle_id)"
 			"     VALUES (DEFAULT, ?, ?, ?, ?, ?)"
 			"   RETURNING id;");
 
@@ -751,7 +751,7 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 	PREPARE(get_relation_properties_stmt,
 			"SELECT id, name, value"
 			" FROM cpl_relation_properties"
-			"WHERE id = ?");
+			" WHERE id = ?");
 
 	PREPARE(get_relation_properties_with_key_stmt,
 			"SELECT id, name, value"
@@ -765,17 +765,17 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 
 	PREPARE(delete_bundle_stmt,
 			"DELETE FROM cpl_objects"
-			"	WHERE id = ? AND type = 'BUNDLE';");
+			"	WHERE id = ? AND type = 4;");
 
 	PREPARE(get_bundle_objects_stmt,
 			"SELECT id, creation_time, originator, name, type"
 			"  FROM cpl_objects"
-			"WHERE bundle_id = ?;")
+			" WHERE bundle_id = ?;")
 
 	PREPARE(get_bundle_relations_stmt,
 			"SELECT id, from_id, to_id, type"
 			"  FROM cpl_relations"
-			"WHERE bundle_id = ?;")
+			" WHERE bundle_id = ?;")
 #undef PREPARE
 
 
@@ -1158,7 +1158,6 @@ cpl_odbc_create_object(struct _cpl_db_backend_t* backend,
 	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
 	
 	mutex_lock(odbc->create_object_lock);
-
 	
 	// Bind the statement parameters
 
@@ -2676,7 +2675,8 @@ cpl_return_t
 cpl_odbc_get_bundle_objects(struct _cpl_db_backend_t* backend,
 						     const cpl_id_t id,
 						     cpl_object_info_iterator_t callback,
-						     void* context){
+						     void* context)
+{
 	assert(backend != NULL);
 	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
 
@@ -2740,7 +2740,6 @@ retry:
 
 
 	// Fetch the result
-	// TODO think about merging into one loop
 
 	while (true) {
 
