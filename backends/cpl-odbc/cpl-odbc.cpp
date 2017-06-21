@@ -701,12 +701,14 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 	PREPARE(get_all_objects_stmt,
 			"SELECT id, creation_time, originator, name, type,"
 			"       bundle_id"
-			"  FROM cpl_objects;");
+			"  FROM cpl_objects"
+			" WHERE id > 0;");
 
 	PREPARE(get_all_objects_with_session_stmt,
 			"SELECT id, creation_time, originator, name, type,"
 			"       bundle_id, session_id"
-			"  FROM cpl_objects");
+			"  FROM cpl_objects"
+			" WHERE id > 0;");
 
 	PREPARE(get_object_info_stmt,
 			"SELECT session_id,"
@@ -2570,13 +2572,6 @@ retry:
 	// Unlock
 
 	mutex_unlock(odbc->get_relation_properties_lock);
-
-
-	// If we did not get any data back, check for whether the object exists.
-
-	if (!found) {
-		goto err_free;
-	}
 
 
 	// If we did not get any data back, terminate

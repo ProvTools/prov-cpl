@@ -510,11 +510,6 @@ test_simple(void)
     		rctx.size(), ret);
     	throw CPLException("get object relations result is the wrong size");
     }
-    if (!contains(rctx, rel3)) {
-        print(L_DEBUG, "cpl_get_object_relations --> not found (%lu results) [%d]",
-                rctx.size(), ret);
-        throw CPLException("get object relations result does not contain the relations");
-    }
     print(L_DEBUG, "cpl_get_object_relations --> found (%lu results) [%d]",
             rctx.size(), ret);
 	if (with_delays) delay();
@@ -530,7 +525,7 @@ test_simple(void)
     		rctx.size(), ret);
     	throw CPLException("get object relations result is the wrong size");
     }
-    if (!contains(rctx, rel1)) {
+    if (!contains(rctx, rel1) || !contains(rctx, rel3)) {
         print(L_DEBUG, "cpl_get_object_relations --> not found (%lu results) [%d]",
                 rctx.size(), ret);
         throw CPLException("get object relations result does not contain the relations");
@@ -550,7 +545,7 @@ test_simple(void)
     		rctx.size(), ret);
     	throw CPLException("get object relations result is the wrong size");
     }
-    if (!contains(rctx, rel2) || !contains(rctx, rel3)) {
+    if (!contains(rctx, rel2)) {
         print(L_DEBUG, "cpl_get_object_relations --> not found (%lu results) [%d]",
                 rctx.size(), ret);
         throw CPLException("get object relations result does not contain the relations");
@@ -569,6 +564,11 @@ test_simple(void)
     	print(L_DEBUG, "cpl_get_object_relations --> wrong size (%lu results) [%d]",
     		rctx.size(), ret);
     	throw CPLException("get object relations result is the wrong size");
+    }
+    if (!contains(rctx, rel3)) {
+	    print(L_DEBUG, "cpl_get_object_relations --> not found (%lu results) [%d]",
+	            rctx.size(), ret);
+	    throw CPLException("get object relations result does not contain the relations");
     }
     print(L_DEBUG, "cpl_get_object_relations --> found (%lu results) [%d]",
             rctx.size(), ret);
@@ -600,24 +600,26 @@ test_simple(void)
 
 	// Session info
 
-	cpl_session_info_t* sinfo = NULL;
+	if(session){
+		cpl_session_info_t* sinfo = NULL;
 
-	ret = cpl_get_session_info(session, &sinfo);
-	print(L_DEBUG, "cpl_get_session_info --> %d", ret);
-	CPL_VERIFY(cpl_get_session_info, ret);
+		ret = cpl_get_session_info(session, &sinfo);
+		print(L_DEBUG, "cpl_get_session_info --> %d", ret);
+		CPL_VERIFY(cpl_get_session_info, ret);
 
-	print_session_info(sinfo);
-	if (sinfo->id != session
-			|| (!with_delays && !check_time(sinfo->start_time))) {
-		throw CPLException("The returned session information is incorrect");
+		print_session_info(sinfo);
+		if (sinfo->id != session
+				|| (!with_delays && !check_time(sinfo->start_time))) {
+			throw CPLException("The returned session information is incorrect");
+		}
+		if (with_delays) delay();
+
+		ret = cpl_free_session_info(sinfo);
+		CPL_VERIFY(cpl_free_session_info, ret);
+		if (with_delays) delay();
+
+		print(L_DEBUG, " ");
 	}
-	if (with_delays) delay();
-
-	ret = cpl_free_session_info(sinfo);
-	CPL_VERIFY(cpl_free_session_info, ret);
-	if (with_delays) delay();
-
-	print(L_DEBUG, " ");
 
 
     // Object listing
@@ -761,7 +763,7 @@ test_simple(void)
 	pctx.clear();
 	ret = cpl_get_object_properties(obj3, "HELLO",
 			cb_get_properties, &pctx);
-	print(L_DEBUG, "cpl_get_properties --> %d", ret);
+	print(L_DEBUG, "cpl_get_object_properties --> %d", ret);
 	CPL_VERIFY(cpl_get_object_properties, ret);
 	if (pctx.size() != 0)
 		throw CPLException("The object has unexpected properties.");
@@ -836,7 +838,7 @@ test_simple(void)
 	pctx.clear();
 	ret = cpl_get_relation_properties(rel3, "HELLO",
 			cb_get_properties, &pctx);
-	print(L_DEBUG, "cpl_get_properties --> %d", ret);
+	print(L_DEBUG, "cpl_get_relation_properties --> %d", ret);
 	CPL_VERIFY(cpl_get_relation_properties, ret);
 	if (pctx.size() != 0)
 		throw CPLException("The relation has unexpected properties.");
