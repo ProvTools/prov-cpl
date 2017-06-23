@@ -122,7 +122,7 @@ public class CPLObject {
 
 		BigInteger id = nullId;
 		int r = CPLDirect.cpl_create_object(originator, name, type,
-				bundle == null ? nullId : bundle.id, id);
+				bundle == null ? nullId : bundle.getId(), id);
 		CPLException.assertSuccess(r);
 
 		CPLObject o = new CPLObject(id);
@@ -154,7 +154,7 @@ public class CPLObject {
 	 * @param originator the originator
 	 * @param name the object name
 	 * @param type the object type, 0 if none
-	 * @param bundle the object bundle, 0 if none
+	 * @param bundle the object bundle, null if none
 	 * @return the object, or null if not found
 	 */
 	public static CPLObject tryLookup(String originator, String name,
@@ -162,7 +162,8 @@ public class CPLObject {
 
 		BigInteger id = BigInteger.ZERO;
 		int r = CPLDirect.cpl_lookup_object(originator, name, type,
-											bundle.getId(), id);
+											bundle == null ? nullId : bundle.getId(),
+											id);
 
 		if (CPLException.isError(r)) {
 			if (r == CPLDirect.CPL_E_NOT_FOUND) return null;
@@ -177,14 +178,13 @@ public class CPLObject {
 		return o;
 	}
 
-
 	/**
 	 * Lookup an existing object
 	 *
 	 * @param originator the originator
 	 * @param name the object name
 	 * @param type the object type, 0 if none
-	 * @param bundle the object bundle, 0 if none
+	 * @param bundle the object bundle, null if none
 	 * @return the object
 	 */
 	public static CPLObject lookup(String originator, String name,
@@ -200,7 +200,8 @@ public class CPLObject {
 	 *
 	 * @param originator the originator
 	 * @param name the object name
-	 * @param type the object type
+	 * @param type the object type, 0 if none
+	 * @param bundle the object bundle, null if none
 	 * @return the collection of objects, or an empty collection if not found
 	 */
 	public static Vector<CPLObject> tryLookupAll(String originator, String name,
@@ -214,7 +215,7 @@ public class CPLObject {
 
 		try {
             int r = CPLDirect.cpl_lookup_object_ext(originator, name, type,
-            		bundle.getId(),
+            		bundle == null ? nullId : bundle.getId(),
                     CPLDirect.CPL_L_NO_FAIL,
 					CPLDirect.cpl_cb_collect_id_timestamp_vector, pv);
 			CPLException.assertSuccess(r);
@@ -247,7 +248,8 @@ public class CPLObject {
 	 *
 	 * @param originator the originator
 	 * @param name the object name
-	 * @param type the object type
+	 * @param type the object type, 0 if none
+	 * @param bundle the object bundle, null if none
 	 * @return the collection of objects
 	 */
 	public static Vector<CPLObject> lookupAll(String originator, String name,
@@ -272,7 +274,7 @@ public class CPLObject {
 
 		BigInteger id = BigInteger.ZERO;
 		int r = CPLDirect.cpl_lookup_or_create_object(originator, name, type,
-				bundle == null ? nullId : bundle.id, id);
+				bundle == null ? nullId : bundle.getId(), id);
 
 		if (CPLException.isError(r)) {
 			if (r == CPLDirect.CPL_E_NOT_FOUND) return null;
@@ -666,7 +668,7 @@ public class CPLObject {
 	 * @param key the property name or null for all entries
 	 * @return the vector of property entries
 	 */
-	Vector<CPLObjectPropertyEntry> getProperties(String key) {
+	public Vector<CPLObjectPropertyEntry> getProperties(String key) {
 
 		SWIGTYPE_p_std_vector_cplxx_property_entry_t pVector
 			= CPLDirect.new_std_vector_cplxx_property_entry_tp();

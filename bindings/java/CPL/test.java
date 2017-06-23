@@ -103,7 +103,7 @@ public class test {
 
 		System.out.print("CPLObject.create(\"Entity\", bundle)");
 		CPLObject entity = CPLObject.create(ORIGINATOR, "Entity",
-										  CPLObject.ENTITY,bundle);
+										  CPLObject.ENTITY, bundle);
 		System.out.println(": " + entity);
 
 		System.out.print("CPLObject.create(\"Agent\", bundle)");
@@ -131,39 +131,39 @@ public class test {
 		 */
 
 		System.out.print("CPLObject.lookup(\"Bundle\")");
-		CPLObject bundlex = CPLObject.lookup(ORIGINATOR, "Bundle", CPLObject.BUNDLE);
+		CPLObject bundlex = CPLObject.lookup(ORIGINATOR, "Bundle", CPLObject.BUNDLE, null);
 		System.out.println(": " + bundlex);
 		if (!bundle.equals(bundlex))
 			throw new RuntimeException("Object lookup returned the wrong object");
 
 		System.out.print("CPLObject.lookup(\"Entity\")");
-		CPLObject entityx = CPLObject.lookup(ORIGINATOR, "Entity", CPLObject.ENTITY);
+		CPLObject entityx = CPLObject.lookup(ORIGINATOR, "Entity", CPLObject.ENTITY, bundle);
 		System.out.println(": " + entityx);
 		if (!entity.equals(entityx))
 			throw new RuntimeException("Object lookup returned the wrong object");
 
 		System.out.print("CPLObject.tryLookup(\"Agent\")");
-		CPLObject agentx = CPLObject.tryLookup(ORIGINATOR, "Agent", CPLObject.AGENT);
+		CPLObject agentx = CPLObject.tryLookup(ORIGINATOR, "Agent", CPLObject.AGENT, bundle);
 		System.out.println(": " + agentx);
 		if (!agent.equals(agentx))
 			throw new RuntimeException("Object lookup returned the wrong object");
 
 		System.out.print("CPLObject.tryLookup(\"Activity\")");
-		CPLObject activityx = CPLObject.tryLookup(ORIGINATOR, "Activity", CPLObject.ACTIVITY);
+		CPLObject activityx = CPLObject.tryLookup(ORIGINATOR, "Activity", CPLObject.ACTIVITY, bundle);
 		System.out.println(": " + activityx);
 		if (!activity.equals(activityx))
 			throw new RuntimeException("Object lookup returned the wrong object");
 
 		System.out.print("CPLObject.tryLookup(...should fail...)");
-		CPLObject objfx = CPLObject.tryLookup(ORIGINATOR, "%%%%%%", "****");
+		CPLObject objfx = CPLObject.tryLookup(ORIGINATOR, "%%%%%%", 42, null);
 		if (objfx == null) System.out.println(": OK");
 		if (objfx != null)
 			throw new RuntimeException("Object lookup did not fail as expected");
 
 		System.out.print("CPLObject.lookupAll(\"Entity\")");
-		Vector<CPLObject> entityv = CPLObject.lookupAll(ORIGINATOR, "Entity", CPLObject.ENTITY);
+		Vector<CPLObject> entityv = CPLObject.lookupAll(ORIGINATOR, "Entity", CPLObject.ENTITY, bundle);
 		System.out.println(": " + (entityv.contains(entity) ? "" : "not ") + "found "
-                + "(" + objv.size() + " result" + (objv.size() == 1 ? "" : "s")
+                + "(" + entityv.size() + " result" + (entityv.size() == 1 ? "" : "s")
                 + ")");
 		if (!entityv.contains(entity))
 			throw new RuntimeException("Object lookup did not return the right object");
@@ -182,25 +182,25 @@ public class test {
 		 */
 
 		System.out.print("new CPLObject(new CPLId(bundle.getId().toString()))");
-		bundlex = new CPLObject(new CPLId(bundle.getId().toString()));
+		bundlex = new CPLObject(bundle.getId());
 		System.out.println(": " + bundlex);
 		if (!bundle.equals(bundlex))
 			throw new RuntimeException("Object recreation from ID failed");
 
 		System.out.print("new CPLObject(new CPLId(entity.getId().toString()))");
-		entityx = new CPLObject(new CPLId(entity.getId().toString()));
+		entityx = new CPLObject(entity.getId());
 		System.out.println(": " + entityx);
 		if (!entity.equals(entityx))
 			throw new RuntimeException("Object recreation from ID failed");
 
 		System.out.print("new CPLObject(new CPLId(agent.getId().toString()))");
-		agentx = new CPLObject(new CPLId(agent.getId().toString()));
+		agentx = new CPLObject(agent.getId());
 		System.out.println(": " + agentx);
 		if (!agent.equals(agentx))
 			throw new RuntimeException("Object recreation from ID failed");
 
 		System.out.print("new CPLObject(new CPLId(activity.getId().toString()))");
-		activityx = new CPLObject(new CPLId(activity.getId().toString()));
+		activityx = new CPLObject(activity.getId());
 		System.out.println(": " + activityx);
 		if (!activity.equals(activityx))
 			throw new RuntimeException("Object recreation from ID failed");
@@ -244,45 +244,45 @@ public class test {
 		 */
 
 		System.out.print("entity.getRelations(D_ANCESTORS)");
-		Vector<CPLRelations> rvec = entity.getRelations(CPLObject.D_ANCESTORS, 0);
+		Vector<CPLRelation> rvec = entity.getRelations(CPLObject.D_ANCESTORS, 0);
 		System.out.println(": " + rvec.size() + " results");
 		if(rvec.size() != 2) {
-			Throw new RuntimeException("Relation lookup returned an incorrect vector");
+			throw new RuntimeException("Relation lookup returned an incorrect vector");
 		}
 
 		System.out.print("entity.getRelations(D_DESCENDANTS)");
 		rvec = entity.getRelations(CPLObject.D_DESCENDANTS, 0);
 		System.out.println(": " + rvec.size() + " results");
 		if(rvec.size() != 0) {
-			Throw new RuntimeException("Relation lookup returned an incorrect vector");
+			throw new RuntimeException("Relation lookup returned an incorrect vector");
 		}
 
 		System.out.print("agent.getRelations(D_ANCESTORS)");
 		rvec = agent.getRelations(CPLObject.D_ANCESTORS, 0);
 		System.out.println(": " + rvec.size() + " results");
 		if(rvec.size() != 0) {
-			Throw new RuntimeException("Relation lookup returned an incorrect vector");
+			throw new RuntimeException("Relation lookup returned an incorrect vector");
 		}
 
 		System.out.print("agent.getRelations(D_DESCENDANTS)");
 		rvec = agent.getRelations(CPLObject.D_DESCENDANTS, 0);
 		System.out.println(": " + rvec.size() + " results");
 		if(rvec.size() != 2) {
-			Throw new RuntimeException("Relation lookup returned an incorrect vector");
+			throw new RuntimeException("Relation lookup returned an incorrect vector");
 		}
 
 		System.out.print("activity.getRelations(D_ANCESTORS)");
 		rvec = activity.getRelations(CPLObject.D_ANCESTORS, 0);
 		System.out.println(": " + rvec.size() + " results");
 		if(rvec.size() != 1) {
-			Throw new RuntimeException("Relation lookup returned an incorrect vector");
+			throw new RuntimeException("Relation lookup returned an incorrect vector");
 		}
 
 		System.out.print("activity.getRelations(D_DESCENDANTS)");
-		Vector<CPLRelations> rvec = activity.getRelations(CPLObject.D_DESCENDANTS, 0);
-		System.out.println(": " + rvec.size() + " results");
-		if(rvec.size() != 0) {
-			Throw new RuntimeException("Relation lookup returned an incorrect vector");
+		Vector<CPLRelation> rlvec = activity.getRelations(CPLObject.D_DESCENDANTS, 0);
+		System.out.println(": " + rlvec.size() + " results");
+		if(rlvec.size() != 0) {
+			throw new RuntimeException("Relation lookup returned an incorrect vector");
 		}
 		System.out.println();
 
@@ -291,7 +291,7 @@ public class test {
 		 */
 
 		System.out.print("CPLObject.getBundleRelations(bundle)");
-		Vector<CPLObject> brvec = CPLRelation.getBundleRelations(bundle);
+		Vector<CPLRelation> brvec = CPLRelation.getBundleRelations(bundle);
 		System.out.println(": " + bovec.size() + " results");
 		if(bovec.size() != 3){
 			throw new RuntimeException("getBundleRelations() returned an incorrect vector");
@@ -347,17 +347,17 @@ public class test {
 		System.out.println("Properties of activity:");
 
 		System.out.println("activity.getProperties():");
-		for (CPLPropertyEntry e : activity.getProperties()) {
+		for (CPLObjectPropertyEntry e : activity.getProperties()) {
 			System.out.println("  " + e);
 		}
 
 		System.out.println("activity.getProperties(\"LABEL\"):");
-		for (CPLPropertyEntry e : activity.getProperties("LABEL")) {
+		for (CPLObjectPropertyEntry e : activity.getProperties("LABEL")) {
 			System.out.println("  " + e);
 		}
 
 		System.out.println("activity.getProperties(\"HELLO\"):");
-		for (CPLPropertyEntry e : activity.getProperties("HELLO")) {
+		for (CPLObjectPropertyEntry e : activity.getProperties("HELLO")) {
 			System.out.println("  " + e);
 		}
 
@@ -412,17 +412,17 @@ public class test {
 		System.out.println("Properties of r3:");
 
 		System.out.println("r3.getProperties():");
-		for (CPLPropertyEntry e : r3.getProperties()) {
+		for (CPLRelationPropertyEntry e : r3.getProperties()) {
 			System.out.println("  " + e);
 		}
 
 		System.out.println("r3.getProperties(\"LABEL\"):");
-		for (CPLPropertyEntry e : r3.getProperties("LABEL")) {
+		for (CPLRelationPropertyEntry e : r3.getProperties("LABEL")) {
 			System.out.println("  " + e);
 		}
 
 		System.out.println("r3.getProperties(\"HELLO\"):");
-		for (CPLPropertyEntry e : r3.getProperties("HELLO")) {
+		for (CPLRelationPropertyEntry e : r3.getProperties("HELLO")) {
 			System.out.println("  " + e);
 		}
 

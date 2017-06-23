@@ -263,7 +263,7 @@ public class CPLRelation {
 	 * @param key the property name or null for all entries
 	 * @return the vector of property entries
 	 */
-	Vector<CPLRelationPropertyEntry> getProperties(String key) {
+	public Vector<CPLRelationPropertyEntry> getProperties(String key) {
 				SWIGTYPE_p_std_vector_cplxx_property_entry_t pVector
 			= CPLDirect.new_std_vector_cplxx_property_entry_tp();
 		SWIGTYPE_p_void pv = CPLDirect

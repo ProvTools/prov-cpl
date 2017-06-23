@@ -3,3 +3,4 @@ backends/cpl-odbc/build
 test/standalone-test/build
 bindings/java/CPLdirect/build
 bindings/java/CPL/build
+bindings/java/CPL/test.class
