@@ -79,7 +79,9 @@ public class CPL {
         // Attempt to load the shared library
 
         try {
-            System.loadLibrary("CPLDirect-java");
+        	//Temporary hack for OS X
+        	System.load("/Users/jacksonokuhn/Projects/prov-cpl/bindings/java/CPL/build/release/libCPLDirect-java.dylib");
+            //System.loadLibrary("CPLDirect-java");
             cplInstalled = true;
         }
         catch (Throwable t) {

@@ -120,12 +120,12 @@ public class CPLObject {
 	public static CPLObject create(String originator, String name, int type,
 			CPLObject bundle) {
 
-		BigInteger id = nullId;
+		BigInteger[] id = {nullId};
 		int r = CPLDirect.cpl_create_object(originator, name, type,
 				bundle == null ? nullId : bundle.getId(), id);
 		CPLException.assertSuccess(r);
 
-		CPLObject o = new CPLObject(id);
+		CPLObject o = new CPLObject(id[0]);
 		o.originator = originator;
 		o.name = name;
 		o.type = type;
@@ -160,7 +160,7 @@ public class CPLObject {
 	public static CPLObject tryLookup(String originator, String name,
 			int type, CPLObject bundle) {
 
-		BigInteger id = BigInteger.ZERO;
+		BigInteger[] id = {nullId};
 		int r = CPLDirect.cpl_lookup_object(originator, name, type,
 											bundle == null ? nullId : bundle.getId(),
 											id);
@@ -170,7 +170,7 @@ public class CPLObject {
 			throw new CPLException(r);
 		}
 
-		CPLObject o = new CPLObject(id);
+		CPLObject o = new CPLObject(id[0]);
 		o.originator = originator;
 		o.name = name;
 		o.type = type;
@@ -272,7 +272,7 @@ public class CPLObject {
 	public static CPLObject lookupOrCreate(String originator, String name,
 			int type, CPLObject bundle) {
 
-		BigInteger id = BigInteger.ZERO;
+		BigInteger[] id = {nullId};
 		int r = CPLDirect.cpl_lookup_or_create_object(originator, name, type,
 				bundle == null ? nullId : bundle.getId(), id);
 
@@ -281,7 +281,7 @@ public class CPLObject {
 			throw new CPLException(r);
 		}
 
-		CPLObject o = new CPLObject(id);
+		CPLObject o = new CPLObject(id[0]);
 		o.originator = originator;
 		o.name = name;
 		o.type = type;
@@ -359,7 +359,7 @@ public class CPLObject {
 	public boolean equals(Object other) {
 		if (other instanceof CPLObject) {
 			CPLObject o = (CPLObject) other;
-			return o.id.equals(this.id);
+			return this.id.equals(o.id);
 		}
 		else {
 			return false;

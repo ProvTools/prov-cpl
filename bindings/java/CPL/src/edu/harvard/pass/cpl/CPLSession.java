@@ -95,10 +95,10 @@ public class CPLSession {
 		// even in the case of a race condition.
 
 		if (current == null) {
-			BigInteger id = BigInteger.ZERO;
+			BigInteger[] id = {BigInteger.ZERO};
 			int r = CPLDirect.cpl_get_current_session(id);
 			CPLException.assertSuccess(r);
-			current = new CPLSession(id);
+			current = new CPLSession(id[0]);
 		}
 
 		return current;

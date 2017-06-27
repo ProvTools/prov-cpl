@@ -121,11 +121,11 @@ public class CPLRelation {
 	// TODO dest == null case
 	public static CPLRelation create(CPLObject source, CPLObject dest,  int type, CPLObject bundle){
 
-		BigInteger id = BigInteger.ZERO;
+		BigInteger[] id = {nullId};
 		int r = CPLDirect.cpl_add_relation(source.getId(), dest.getId(), type, bundle.getId(), id);
 		CPLException.assertSuccess(r);
 
-		CPLRelation a = new CPLRelation(id);
+		CPLRelation a = new CPLRelation(id[0]);
 		a.base = source;
 		a.other = dest;
 		a.type = type;

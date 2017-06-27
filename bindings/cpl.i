@@ -206,31 +206,31 @@ cpl_create_object(const char* originator,
                   const char* name,
                   const int type,
                   const cpl_id_t bundle,
-                  unsigned long long* INPUT);
+                  unsigned long long* OUTPUT);
 
 cpl_return_t
 cpl_lookup_object(const char* originator,
                   const char* name,
                   const int type,
                   const cpl_id_t bundle_id,
-                  unsigned long long* INPUT);
+                  unsigned long long* OUTPUT);
 
 cpl_return_t
 cpl_lookup_or_create_object(const char* originator,
                             const char* name,
                             const int type,
                             const cpl_id_t bundle,
-                            unsigned long long* INPUT);
+                            unsigned long long* OUTPUT);
 
 cpl_return_t
 cpl_add_relation(const cpl_id_t from_id,
                  const cpl_id_t to_id,
                  const int type,
                  const cpl_id_t bundle,
-                 unsigned long long* INPUT);
+                 unsigned long long* OUTPUT);
 
 cpl_return_t
-cpl_get_current_session(unsigned long long* INPUT);
+cpl_get_current_session(unsigned long long* OUTPUT);
 
 /*
  * STL bundles

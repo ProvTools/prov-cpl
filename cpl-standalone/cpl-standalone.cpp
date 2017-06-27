@@ -1619,7 +1619,7 @@ import_document_json(const char* filename,
 
 	// Create bundle
 	cpl_id_t bundle_id;
-	if(!CPL_IS_OK(cpl_create_object(originator, bundle_name, BUNDLE, NULL, &bundle_id))){
+	if(!CPL_IS_OK(cpl_create_object(originator, bundle_name, BUNDLE, 0, &bundle_id))){
 		goto error;
 	}
 
