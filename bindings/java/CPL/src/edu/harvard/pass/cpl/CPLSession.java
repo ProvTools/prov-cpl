@@ -186,6 +186,14 @@ public class CPLSession {
 		return true;
 	}
 
+	/**
+	 * Get the ID of the session
+	 *
+	 * @return the internal ID of this session
+	 */
+	public BigInteger getId() {
+		return id;
+	}
 
 	/**
 	 * Get the MAC address of the computer associated with the session

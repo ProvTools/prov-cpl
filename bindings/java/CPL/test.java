@@ -36,6 +36,7 @@ import edu.harvard.pass.cpl.*;
 
 import java.io.File;
 import java.util.Vector;
+import java.math.BigInteger;
 
 
 /**
@@ -281,7 +282,7 @@ public class test {
 		System.out.print("activity.getRelations(D_DESCENDANTS)");
 		Vector<CPLRelation> rlvec = activity.getRelations(CPLObject.D_DESCENDANTS, 0);
 		System.out.println(": " + rlvec.size() + " results");
-		if(rlvec.size() != 0) {
+		if(rlvec.size() != 1) {
 			throw new RuntimeException("Relation lookup returned an incorrect vector");
 		}
 		System.out.println();
@@ -300,9 +301,10 @@ public class test {
 		 * Session info
 		 */
 
-		System.out.println("Current Session");
-		System.out.println(session.toString(true));
-
+		if(!session.getId().equals(BigInteger.ZERO)){
+			System.out.println("Current Session");
+			System.out.println(session.toString(true));
+		}
 
 		/*
 		 * Object infos
