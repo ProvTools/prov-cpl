@@ -80,8 +80,12 @@ public class CPL {
 
         try {
         	//Temporary hack for OS X
-        	System.load("/Users/jacksonokuhn/Projects/prov-cpl/bindings/java/CPL/build/release/libCPLDirect-java.dylib");
-            //System.loadLibrary("CPLDirect-java");
+        	String osName = System.getProperty("os.name").toLowerCase();
+        	if((osName.indexOf("mac") >= 0) || (osName.indexOf("darwin") >= 0)){
+        		System.load("/usr/local/lib/libCPLDirect-java.dylib");
+        	} else {
+            System.loadLibrary("CPLDirect-java");
+        	}
             cplInstalled = true;
         }
         catch (Throwable t) {
