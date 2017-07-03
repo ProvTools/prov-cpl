@@ -39,8 +39,14 @@
 #include <private/cpl-platform.h>
 #include <cplxx.h>
 
-#include </usr/local/include/sql.h>
-#include </usr/local/include/sqlext.h>
+#ifdef __APPLE__
+	#include </usr/local/include/sql.h>
+	#include </usr/local/include/sqlext.h>
+#else
+	#include <sql.h>
+	#include <sqlext.h>
+#endif
+	
 
 #include <string>
 
