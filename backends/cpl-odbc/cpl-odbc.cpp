@@ -2099,7 +2099,6 @@ cpl_odbc_get_object_relations(struct _cpl_db_backend_t* backend,
 	std::list<__get_object_relation__entry_t> entries;
 	__get_object_relation__entry_t entry;
 	SQLLEN ind_type;
-	bool found = false;
 
 	mutex_lock(odbc->get_object_relations_lock);
 
@@ -2150,8 +2149,6 @@ retry:
 			}
 			break;
 		}
-
-		found = true;
 
 		entries.push_back(entry);
 	}
@@ -2238,7 +2235,6 @@ cpl_odbc_get_object_properties(struct _cpl_db_backend_t* backend,
 	SQL_START;
 
 	cpl_return_t r = CPL_E_INTERNAL_ERROR;
-	bool found = false;
 	std::list<__get_properties__entry_t*>::iterator i;
 
 	mutex_lock(odbc->get_object_properties_lock);
@@ -2293,8 +2289,6 @@ retry:
 			}
 			break;
 		}
-
-		found = true;
 
 		if (ind_key == SQL_NULL_DATA || ind_value == SQL_NULL_DATA) {
 			// NULLs should never occur here
@@ -2492,7 +2486,6 @@ cpl_odbc_get_relation_properties(struct _cpl_db_backend_t* backend,
 	SQL_START;
 
 	cpl_return_t r = CPL_E_INTERNAL_ERROR;
-	bool found = false;
 	std::list<__get_properties__entry_t*>::iterator i;
 
 	mutex_lock(odbc->get_relation_properties_lock);
@@ -2548,8 +2541,6 @@ retry:
 			}
 			break;
 		}
-
-		found = true;
 
 		if (ind_key == SQL_NULL_DATA || ind_value == SQL_NULL_DATA) {
 			// NULLs should never occur here
@@ -2850,7 +2841,6 @@ cpl_odbc_get_bundle_relations(struct _cpl_db_backend_t* backend,
 	std::list<__get_bundle_relation__entry_t> entries;
 	__get_bundle_relation__entry_t entry;
 	SQLLEN ind_type;
-	bool found = false;
 
 	mutex_lock(odbc->get_bundle_relations_lock);
 
@@ -2899,8 +2889,6 @@ retry:
 			}
 			break;
 		}
-
-		found = true;
 
 		entries.push_back(entry);
 	}

@@ -653,6 +653,7 @@ test_simple(void)
         throw CPLException("Object listing did not return a certain object");
     if (!found3)
         throw CPLException("Object listing did not return a certain object");
+	
 	if (with_delays) delay();
 
 	print(L_DEBUG, " ");

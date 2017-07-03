@@ -26,6 +26,8 @@ Please make sure that the following packages are installed:
   jansson
   igraph
 
+Compilation also requires Clang 3.3+ or g++ 5.0+
+
 Please refer to the individual README files for each language binding to
 learn which packages are required for which bindings.
 
@@ -35,7 +37,7 @@ learn which packages are required for which bindings.
 
 To compile and install CPL, please type the following commands:
   make release
-  sudo make install
+  [sudo] (for linux) make install
 
 The default installation directory is /usr.
 
@@ -45,4 +47,3 @@ binding.
 To clean the compile, please use the "clean" or "distclean" make targets.
 To uninstall, please use the "uninstall" target - separately for the main
 CPL build and for the language-specific bindings.
-
