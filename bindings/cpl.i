@@ -232,6 +232,13 @@ cpl_add_relation(const cpl_id_t from_id,
 cpl_return_t
 cpl_get_current_session(unsigned long long* OUTPUT);
 
+cpl_return_t
+import_document_json(const char* filename,
+                     const char* originator,
+                     const char* bundle_name,
+                     const cpl_id_t anchor_object,
+                     const cpl_id_t bundle_agent,
+                     unsigned long long* OUTPUT)
 /*
  * STL bundles
  */

@@ -37,7 +37,7 @@
 
 #include <sys/time.h>
 #include <backends/cpl-odbc.h>
-#//include <backends/cpl-rdf.h>
+//#include <backends/cpl-rdf.h>
 #include <unistd.h>
 #include <getopt.h>
 

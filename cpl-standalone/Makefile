@@ -27,7 +27,7 @@ SO_MINOR_VERSION := $(shell cat "$(ROOT)/include/cpl.h" \
 
 DEPENDENCIES := $(ROOT)/include/*.h
 INCLUDE_FLAGS := $(INCLUDE_FLAGS) -I$(ROOT)/include
-CXXFLAGS := -std=c++11
+CXXFLAGS := -std=c++11 -g
 
 ifeq ($(OSTYPE),darwin)
 LIBRARIES := -framework IOKit -framework CoreFoundation -ligraph -ljansson

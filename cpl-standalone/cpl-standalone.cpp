@@ -1361,9 +1361,11 @@ validate_json(const char* path,
 	strncpy(*string_out, str_msg.c_str(), 50);
 
 	json_error_t err;
-	json_t* document = json_load_file(path, 0, &err);
+	FILE* fp = fopen(path, "r");
+		json_t* document = json_loadf(fp, 0, &err);
+	fclose(fp);
+
 	if(document == NULL){
-		json_decref(document);
 		return -1;
 	}
 
@@ -1384,9 +1386,9 @@ validate_json(const char* path,
 
 		json_object_foreach(relations, name, value){
 
-			std::string source(json_string_value(json_object_get(relations, 
+			std::string source(json_string_value(json_object_get(value, 
 													entry.source_str.c_str())));
-			std::string dest(json_string_value(json_object_get(relations, 
+			std::string dest(json_string_value(json_object_get(value, 
 													entry.dest_str.c_str())));
 
 			if(source.empty()){
@@ -1438,7 +1440,7 @@ validate_json(const char* path,
 
 	str_msg = "Valid Prov-JSON";
 	strncpy(*string_out, str_msg.c_str(), 50);
-	json_decref(document);
+	//json_decref(document);
 	return 0;
 }
 
@@ -1490,17 +1492,7 @@ import_objects_json(int type,
 
 		cpl_id_t obj_id = CPL_NONE;
 
-		if(!CPL_IS_OK(cpl_create_object(originator, name_str, ENTITY, bundle_id, &obj_id))){
-			json_decref(objects);
-			return CPL_E_INTERNAL_ERROR;
-		}
-
-		if(!CPL_IS_OK(cpl_create_object(originator, name_str, AGENT, bundle_id, &obj_id))){
-			json_decref(objects);
-			return CPL_E_INTERNAL_ERROR;
-		}
-
-		if(!CPL_IS_OK(cpl_create_object(originator, name_str, ACTIVITY, bundle_id, &obj_id))){
+		if(!CPL_IS_OK(cpl_create_object(originator, name_str, type, bundle_id, &obj_id))){
 			json_decref(objects);
 			return CPL_E_INTERNAL_ERROR;
 		}
@@ -1600,17 +1592,23 @@ import_relations_json(const char* originator,
  * @param bundle_name desired name of document bundle
  * @param anchor_object optional PROV_CPL object identical to an object in the document
  * @param bundle_agent optional agent responsible for the document bundle
+ * @param out_id the ID of the imported bundle
  * @return CPL_OK or an error code
  */
 EXPORT cpl_return_t
 import_document_json(const char* filename,
 					 const char* originator,
 					 const char* bundle_name,
-					 cpl_id_t anchor_object,
-					 cpl_id_t bundle_agent)
+					 const cpl_id_t anchor_object,
+					 const cpl_id_t bundle_agent,
+					 cpl_id_t* out_id)
 {
 	json_error_t err;
-	json_t* document = json_load_file(filename, 0, &err);
+
+	FILE* fp = fopen(filename, "r");
+		json_t* document = json_loadf(fp, 0, &err);
+	fclose(fp);
+
 	if(document == NULL){
 		return CPL_E_INTERNAL_ERROR;
 	}
@@ -1636,7 +1634,6 @@ import_document_json(const char* filename,
 	}
 
 	// Import objects
-	//TODO do I need STR?
 	if(!CPL_IS_OK(import_objects_json(ENTITY, ENTITY_STR, originator, bundle_id, document))){
 		goto error;
 	}
@@ -1669,6 +1666,8 @@ import_document_json(const char* filename,
 	if(!CPL_IS_OK(import_relations_json(originator, bundle_id, document))){
 		goto error;
 	}
+
+	if (out_id != NULL) *out_id = bundle_id;
 
 	return CPL_OK;
 
@@ -1743,13 +1742,11 @@ export_objects_json(cpl_id_t bundle,
 			}
 		}
 
-		json_t* entry = json_type_array[obj.type-1];
-
-		if(!entry){
-			entry = json_object();
+		if(!json_type_array[obj.type-1]){
+			json_type_array[obj.type-1] = json_object();
 		}
 
-		if(json_object_set(entry, obj.name.c_str(), properties)){
+		if(json_object_set(json_type_array[obj.type-1], obj.name.c_str(), properties)){
 			goto error;
 		}
 	}
@@ -1815,13 +1812,13 @@ export_relations_json(cpl_id_t bundle,
 			}
 		}
 
-		json_t* entry = json_type_array[relation.type-1];
+		property_vec.clear();
 
-		if(!entry){
-			entry = json_object();
+		if(!json_type_array[relation.type-1]){
+			json_type_array[relation.type-1] = json_object();
 		}
 
-		if(json_object_set_new(entry, std::to_string(relation.id).c_str(), properties)){
+		if(json_object_set_new(json_type_array[relation.type-1], std::to_string(relation.id).c_str(), properties)){
 			goto error;
 		}
 	}
@@ -1853,7 +1850,7 @@ error:
  * @return CPL_OK or an error code
  */
 EXPORT cpl_return_t
-export_bundle_json(cpl_id_t bundle, 
+export_bundle_json(const cpl_id_t bundle, 
 				   const char* path)
 {
 

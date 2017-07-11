@@ -310,14 +310,16 @@ validate_json(const char* path,
  * @param bundle_name desired name of document bundle
  * @param anchor_object optional PROV_CPL object identical to an object in the document
  * @param bundle_agent optional agent responsible for the document bundle
+ * @param bundle_id the ID of the imported bundle
  * @return CPL_OK or an error code
  */
 EXPORT cpl_return_t
 import_document_json(const char* filename,
 					 const char* originator,
 					 const char* bundle_name,
-					 cpl_id_t anchor_object,
-					 cpl_id_t bundle_agent);
+					 const cpl_id_t anchor_object,
+					 const cpl_id_t bundle_agent,
+					 cpl_id_t* bundle_id);
 
 
 /*
@@ -328,7 +330,7 @@ import_document_json(const char* filename,
  * @return CPL_OK or an error code
  */
 EXPORT cpl_return_t
-export_bundle_json(cpl_id_t bundle, 
+export_bundle_json(const cpl_id_t bundle, 
 				   const char* path);
 
 #endif /* __cplusplus */

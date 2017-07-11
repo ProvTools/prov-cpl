@@ -78,12 +78,17 @@ class JsonUtility {
 	 * @param bundleAgent agent responsible for the document bundle
 	 */
 
-	public static void importJson(String fileName, String originator, 
+	public static CPLObject importJson(String fileName, String originator, 
 			String bundleName, CPLObject anchorObject, CPLObject bundleAgent) {
 
+		BigInteger[] id = {nullId};
 		int r = CPLDirect.import_document_json(fileName, originator, bundleName,
-									   anchorObject.getId(), bundleAgent.getId());
+									   anchorObject.getId(), bundleAgent.getId(), id);
 		CPLException.assertSuccess(r);
+		
+		CPLObject o = new CPLObject(id[0]);
+
+		return o;
 	}
 
 	/**

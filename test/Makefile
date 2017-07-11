@@ -13,7 +13,6 @@ ROOT := ..
 
 PROGRAMS := standalone-test
 
-
 #
 # The test target
 #
