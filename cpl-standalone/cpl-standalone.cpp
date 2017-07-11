@@ -48,7 +48,6 @@
 
 /**
  * An invalid ID signifying no object
- * TODO is this ok
  */
 EXPORT const cpl_id_t CPL_NONE = 0;
 

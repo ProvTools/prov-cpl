@@ -58,7 +58,7 @@ struct _cpl_db_backend_t;
 /**
  * The CPL version - major number
  */
-#define CPL_VERSION_MAJOR		1
+#define CPL_VERSION_MAJOR		2
 
 /**
  * The CPL version - minor number (two digits)
@@ -68,7 +68,7 @@ struct _cpl_db_backend_t;
 /**
  * The CPL version - as a string
  */
-#define CPL_VERSION_STR			"1.0"
+#define CPL_VERSION_STR			"2.0"
 
 
 /***************************************************************************/
