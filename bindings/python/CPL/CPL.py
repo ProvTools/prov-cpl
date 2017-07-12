@@ -253,18 +253,20 @@ def p_session(session):
 
 class cpl_relation:
 	'''
-	Stores the same data as a cpl_ancestry_entry_t, but in a Python
+	Stores the same data as a cpl_relation_t, but in a Python
 	class that we manage.
 	'''
 
 
-	def __init__(self, aid, aversion, did, dversion, type, direction):
+	def __init__(self, id, aid, did, type, bundle, direction):
 		'''
-		Create an instance of cpl_ancestor
+		Create an instance of cpl_relation_t
 		'''
-		self.ancestor = cpl_object_version(cpl_object(aid), aversion)
-		self.descendant = cpl_object_version(cpl_object(did), dversion)
+		self.id = id
+		self.ancestor = cpl_object(cpl_object(aid))
+		self.descendant = cpl_object(cpl_object(did))
 		self.type = type
+		self.bundle = bundle
 
 		if direction == D_ANCESTORS:
 			self.base  = self.descendant
@@ -285,8 +287,37 @@ class cpl_relation:
 		else:
 			arrow = ' <-- '
 		return (str(self.base) + arrow + str(self.other) +
-			' type:' + dependency_type_to_str(self.type))
+			' [type:' + dependency_type_to_str(self.type))+
+			'; id: ' + self.id + ']'
 
+	def properties(self, key=None, version=None):
+		'''
+		Return all the properties associated with the current relation.
+
+		If key is set to something other than None, return only those
+		properties matching key.
+		'''
+		vp = CPLDirect.new_std_vector_cplxx_r_property_entry_tp()
+
+		ret = CPLDirect.cpl_get_relation_properties(self.id, key,
+		    CPLDirect.cpl_cb_collect_properties_vector, vp)
+		if not CPLDirect.cpl_is_ok(ret):
+			CPLDirect.delete_std_vector_cplxx_property_entry_tp(vp)
+			raise Exception('Error retrieving properties: ' +
+					CPLDirect.cpl_error_string(ret))
+
+		v = CPLDirect.cpl_dereference_p_std_vector_cplxx_property_entry_t(vp)
+		l = []
+		for e in v:
+			l.append([e.key, e.value])
+		CPLDirect.delete_std_vector_cplxx_property_entry_tp(vp)
+		return l
+
+	def add_property(self, name, value):
+		'''
+		Add name/value pair as a property to current object.
+		'''
+		return CPLDirect.cpl_add_relation_property(self.id, name, value)
 
 
 #
@@ -318,7 +349,6 @@ class cpl_connection:
 		self.closed = False
 
 		def get_current_session():
-			idp = CPLDirect.new_cpl_id_tp()
 			ret = CPLDirect.cpl_get_current_session(idp)
 
 			if not CPLDirect.cpl_is_ok(ret):
@@ -357,50 +387,46 @@ class cpl_connection:
 
 
 	def __create_or_lookup_cpl_object(self, originator,
-		     name, type, create=None, container=None):
+		     name, type=None, create=None, bundle=None):
 		'''
 		Create or lookup a CPL object
 
 		** Parameters **
 			originator 
 			name: originator-local name
-			type: originator-local type
+			type: originator-local type, type can be none for lookup
 			create:
 				None: lookup or create
 				True: create only
 				False: lookup only
-			container:
-				Id of container into which to place this object.
+			bundle:
+				Id of bundle into which to place this object.
 				Only applies to create
 		'''
-		if container is None:
-			container_id = NONE
+		if bundle == None:
+			bundle_id = NONE
 		else:
-			container_id = container.id
+			bundle_id = bundle.id
 
-		idp = CPLDirect.new_cpl_id_tp()
+		idp = NONE
 		if create == None:
 			ret = CPLDirect.cpl_lookup_or_create_object(originator, name,
-							  type, container_id, idp)
+							  type, bundle_id, idp)
 			if ret == S_OBJECT_CREATED:
 				ret = S_OK
 		elif create:
 			ret = CPLDirect.cpl_create_object(originator,
-						name, type, container_id, idp)
+						name, type, bundle_id, idp)
 		else:
 			ret = CPLDirect.cpl_lookup_object(originator, name, type, idp)
 
-		if ret == E_NOT_FOUND:
-			CPLDirect.delete_cpl_id_tp(idp)
 			raise LookupError('Not found')
 		if not CPLDirect.cpl_is_ok(ret):
-			CPLDirect.delete_cpl_id_tp(idp)
 			raise Exception('Could not find or create' +
 			    ' provenance object: ' + CPLDirect.cpl_error_string(ret))
 			
 		r = cpl_object(idp)
 
-		CPLDirect.delete_cpl_id_tp(idp)
 		return r
 
 
@@ -429,45 +455,44 @@ class cpl_connection:
 		l = []
 		if v != S_NO_DATA :
 			for e in v:
-				if e.container_id == NONE or e.container_version < 0:
-					container = None
+				if e.bundler_id == NONE:
+					bundle = None
 				else:
-					container = cpl_object_version(cpl_object(e.container_id),
-							e.container_version)
+					bundle = cpl_object(e.bundle_id)
 				if e.creation_session == NONE:
 					creation_session = None
 				else:
 					creation_session = cpl_session(e.creation_session)
-				l.append(cpl_object_info(cpl_object(e.id), e.version,
+				l.append(cpl_object_info(cpl_object(e.id),
 					creation_session, e.creation_time, e.originator, e.name,
-					e.type, container))
+					e.type, bundle))
 
 		CPLDirect.delete_std_vector_cplxx_object_info_tp(vp)
 		return l
 			
 
-	def get_object(self, originator, name, type, container=None):
+	def get_object(self, originator, name, type, bundle=None):
 		'''
 		Get the object, with the designated originator (string),
-		name (string), and type (string), creating it if necessary.
+		name (int), and type (int), creating it if necessary.
 
-		If you want an object in a specific container, set the container
+		If you want an object in a specific bundle, set the bundle
 		parameter to the ID of the object in which you want this object
 		created.
 		'''
 		return self.__create_or_lookup_cpl_object(originator, name, type,
-				create=None, container=container)
+				create=None, bundle=bundle)
 
 
-	def create_object(self, originator, name, type, container=None):
+	def create_object(self, originator, name, type, bundle=None):
 		'''
 		Create object, returns None if object already exists.
 		'''
 		return self.__create_or_lookup_cpl_object(originator, name, type,
-				create=True, container=container)
+				create=True, bundle=bundle)
 
 
-	def lookup_object(self, originator, name, type):
+	def lookup_object(self, originator, name, type, bundle=None):
 		'''
 		Look up object; raise LookupError if the object does not exist.
 		'''
@@ -476,7 +501,7 @@ class cpl_connection:
 		return o
 
 
-	def try_lookup_object(self, originator, name, type):
+	def try_lookup_object(self, originator, name, type. bundle=None):
 		'''
 		Look up object; returns None if the object does not exist.
 		'''
@@ -493,24 +518,24 @@ class cpl_connection:
 		Return all objects that have the key/value property specified; raise
 		LookupError if no such object is found.
 		'''
-		vp = CPLDirect.new_std_vector_cpl_id_version_tp()
+		vp = CPLDirect.new_std_vector_cpl_id_tp()
 		ret = CPLDirect.cpl_lookup_by_property(key, value,
 			CPLDirect.cpl_cb_collect_property_lookup_vector, vp)
 
 		if ret == E_NOT_FOUND:
-			CPLDirect.delete_std_vector_cpl_id_version_tp(vp)
+			CPLDirect.delete_std_vector_cpl_id_tp(vp)
 			raise LookupError('Not found')
 		if not CPLDirect.cpl_is_ok(ret):
-			CPLDirect.delete_std_vector_cpl_id_version_tp(vp)
+			CPLDirect.delete_std_vector_cpl_id_tp(vp)
 			raise Exception('Unable to lookup by property ' +
 					CPLDirect.cpl_error_string(ret))
 
-		v = CPLDirect.cpl_dereference_p_std_vector_cpl_id_version_t(vp)
+		v = CPLDirect.cpl_dereference_p_std_vector_cpl_id_t(vp)
 		l = []
 		for e in v:
-			l.append(cpl_object_version(cpl_object(e.id), e.version))
+			l.append(cpl_object(e.id))
 
-		CPLDirect.delete_std_vector_cpl_id_version_tp(vp)
+		CPLDirect.delete_std_vector_cpl_id_tp(vp)
 		return l
 
 
@@ -526,13 +551,13 @@ class cpl_connection:
 		return o
 
 
-	def lookup_all(self, originator, name, type):
+	def lookup_all(self, originator, name, type, bundle):
 		'''
 		Return all objects that have the specified originator, name,
-		and type (they might differ by container).
+		type, or bundle.
 		'''
 		vp = CPLDirect.new_std_vector_cpl_id_timestamp_tp()
-		ret = CPLDirect.cpl_lookup_object_ext(originator, name, type,
+		ret = CPLDirect.cpl_lookup_object_ext(originator, name, type, bundle
 			L_NO_FAIL, CPLDirect.cpl_cb_collect_id_timestamp_vector, vp)
 
 		if not CPLDirect.cpl_is_ok(ret):
@@ -550,52 +575,27 @@ class cpl_connection:
 		return l
 
 
-	def get_object_for_file(self, file_name, mode=F_CREATE_IF_DOES_NOT_EXIST):
-		'''
-		Get or create (depending on the value of mode) a provenance object
-		that corresponds to the given file on the file system. The file must
-		already exist.
-
-		Please note that the CPL internally refers to the files using their
-		full path, so if you move the file by a utility that is not CPL-aware,
-		a subsequent call to this function with the same file (after it has
-		been moved or renamed) will not find the return back the same
-		provenance object. Furthermore, beware that if you use hard links,
-		you will get different provenance objects for different names/paths
-		of the file.
-		
-		The mode can be one of the following values:
-			* F_LOOKUP_ONLY: Perform only the lookup -- do not create the
-			  corresponding provenance object if it does not already exists.
-			* F_CREATE_IF_DOES_NOT_EXIST: Create the corresponding provenance
-			  object if it does not already exist (this is the default).
-			* F_ALWAYS_CREATE: Always create a new corresponding provenance
-			  object, even if it already exists. Use this if you completely
-			  overwrite the file.
-		'''
-
-		idp = CPLDirect.new_cpl_id_tp()
-		vp  = CPLDirect.new_cpl_version_tp()
-
-		ret = CPLDirect.cpl_lookup_file(file_name, mode, idp, vp)
-		if not CPLDirect.cpl_is_ok(ret):
-			raise Exception('Could not find or create provenance object' +
-			    ' for a file: ' + CPLDirect.cpl_error_string(ret))
-			
-		r = cpl_object(idp)
-
-		CPLDirect.delete_cpl_id_tp(idp)
-		CPLDirect.delete_cpl_version_tp(vp)
-		return r
+	def get_bundle_properties():
+		#TODO
 
 
-	def create_object_for_file(self, file_name):
-		'''
-		Create a provenance object that corresponds to the specified file.
-		This function is equivalent to calling get_object_for_file() with
-		mode = F_ALWAYS_CREATE.
-		'''
-		return self.get_object_for_file(file_name, F_ALWAYS_CREATE)
+	def get_bundle_relations():
+		#TODO
+
+	def delete_bundle():
+		#TODO
+
+
+	def validate_json():
+		#TODO
+
+
+	def import_document_json():
+		#TODO
+
+
+	def export_bundle_json():
+		#TODO
 
 
 	def close(self):
@@ -715,20 +715,19 @@ class cpl_object_info:
 	Information about a provenance object
 	'''
 
-	def __init__(self, object, version, creation_session, creation_time,
-			originator, name, type, container):
+	def __init__(self, object, creation_session, creation_time,
+			originator, name, type, bundle):
 		'''
 		Create an instance of this object
 		'''
 
 		self.object = object
-		self.version = version
 		self.creation_session = creation_session
 		self.creation_time = creation_time
 		self.originator = originator
 		self.name = name
 		self.type = type
-		self.container = container
+		self.bundle = bundle
 
 
 
@@ -770,170 +769,32 @@ class cpl_object:
 		return str(self.id)
 
 
-	def version(self):
+	def relation_to(self, dest, type, bundle):
 		'''
-		Determine the current version of this provenance object
+		Add relation type from self to dest.
 		'''
-		vp = CPLDirect.new_cpl_version_tp()
-
-		ret = CPLDirect.cpl_get_version(self.id, vp)
+		ret = CPLDirect.cpl_add_relation(self.id, dest.id, type, bundle, rid)
 		if not CPLDirect.cpl_is_ok(ret):
-			CPLDirect.delete_cpl_version_tp(vp)
-			raise Exception('Could not determine the version of an object: ' +
+			raise Exception('Could not add relation: ' +
 					CPLDirect.cpl_error_string(ret))
 
-		v = CPLDirect.cpl_version_tp_value(vp)
-		CPLDirect.delete_cpl_version_tp(vp)
-		return v
+		r = cpl_relation(rid, dest.id, self.id, type, bundle, D_ANCESTORS)
+
+		return r
 
 
-	def new_version(self):
+	def relation_from(self, src, type, bundle):
 		'''
-		Create a new version of this object and return the new version.
+		Add relation type from src to self.
 		'''
-		vp = CPLDirect.new_cpl_version_tp()
-
-		ret = CPLDirect.cpl_new_version(self.id, vp)
+		ret = CPLDirect.cpl_add_relation(src.id, self.id, type, bundle, rid)
 		if not CPLDirect.cpl_is_ok(ret):
-			CPLDirect.delete_cpl_version_tp(vp)
-			raise Exception('Could not createa a new version of an object: ' +
+			raise Exception('Could not add relation: ' +
 					CPLDirect.cpl_error_string(ret))
 
-		v = CPLDirect.cpl_version_tp_value(vp)
-		CPLDirect.delete_cpl_version_tp(vp)
-		return v
+		r = cpl_relation(rid, self.id, src.id, type, bundle, D_DESCENDANTS)
 
-
-	def current_version(self):
-		'''
-		Get a cpl_object_version object for the current version.
-		'''
-		return cpl_object_version(self, self.version())
-
-
-	def specific_version(self, version):
-		'''
-		Get a cpl_object_version object for the specified version. Note that
-		the specified version number does not get validated until info() is
-		called.
-		'''
-		return cpl_object_version(self, version)
-
-
-	def control_flow_to(self, dest, type=CONTROL_OP, version=None):
-		'''
-		Add control flow edge of type from self to dest. If version
-		is specified, then add flow to dest with explicit version,
-		else add to most recent version.
-
-		Allowed types:
-			CPL.CONTROL_OP (default)
-			CPL.CONTROL_START
-
-		CPL.CONTROL_GENERIC is an alias for CPL.CONTROL_OP.
-		'''
-
-		if version is None or version == VERSION_NONE:
-			version = self.version()
-
-		ret = CPLDirect.cpl_control_flow_ext(dest.id, self.id, version, type)
-		if not CPLDirect.cpl_is_ok(ret):
-			raise Exception('Could not add control dependency: ' +
-					CPLDirect.cpl_error_string(ret))
-		return not ret == S_DUPLICATE_IGNORED
-
-
-	def data_flow_to(self, dest, type=DATA_INPUT, version=None):
-		'''
-		Add data flow edge of type from self to dest. If version
-		is specified, then add flow to dest with explicit version,
-		else add to most recent version.
-
-		Allowed types:
-			CPL.DATA_INPUT (default)
-			CPL.DATA_IPC
-			CPL.DATA_TRANSLATION
-			CPL.DATA_COPY
-
-		CPL.DATA_GENERIC is an alias for CPL.DATA_INPUT.
-		'''
-
-		if version is None or version == VERSION_NONE:
-			version = self.version()
-
-		ret = CPLDirect.cpl_data_flow_ext(dest.id, self.id, version, type)
-		if not CPLDirect.cpl_is_ok(ret):
-			raise Exception('Could not add data dependency ' +
-					CPLDirect.cpl_error_string(ret))
-		return not ret == S_DUPLICATE_IGNORED
-
-
-	def control_flow_from(self, src, type=CONTROL_OP, version=None):
-		'''
-		Add control flow edge of the given type from src to self. If version
-		is specified, then add flow to dest with explicit version, else add
-		to most recent version.
-
-		Allowed types:
-			CPL.CONTROL_OP (default)
-			CPL.CONTROL_START
-
-		CPL.CONTROL_GENERIC is an alias for CPL.CONTROL_OP.
-		'''
-
-		if isinstance(src, cpl_object_version):
-			if version is not None and version != VERSION_NONE:
-				raise Exception('The version argument must be None if ' +
-					'src is of type cpl_object_version')
-			_version = src.version
-			_src = src.object
-		elif version is None or version == VERSION_NONE:
-			_version = src.version()
-			_src = src
-		else:
-			_version = version
-			_src = src
-
-		ret = CPLDirect.cpl_control_flow_ext(self.id, _src.id, _version, type)
-		if not CPLDirect.cpl_is_ok(ret):
-			raise Exception('Could not add control dependency: ' +
-					CPLDirect.cpl_error_string(ret))
-		return not ret == S_DUPLICATE_IGNORED
-
-
-	def data_flow_from(self, src, type=DATA_INPUT, version=None):
-		'''
-		Add data flow edge of the given type from src to self. If version
-		is specified, then add flow to dest with explicit version, else add
-		to most recent version.
-
-		Allowed types:
-			CPL.DATA_INPUT (default)
-			CPL.DATA_IPC
-			CPL.DATA_TRANSLATION
-			CPL.DATA_COPY
-
-		CPL.DATA_GENERIC is an alias for CPL.DATA_INPUT.
-		'''
-
-		if isinstance(src, cpl_object_version):
-			if version is not None and version != VERSION_NONE:
-				raise Exception('The version argument must be None if ' +
-					'src is of type cpl_object_version')
-			_version = src.version
-			_src = src.object
-		elif version is None or version == VERSION_NONE:
-			_version = src.version()
-			_src = src
-		else:
-			_version = version
-			_src = src
-
-		ret = CPLDirect.cpl_data_flow_ext(self.id, _src.id, _version, type)
-		if not CPLDirect.cpl_is_ok(ret):
-			raise Exception('Could not add data dependency ' +
-					CPLDirect.cpl_error_string(ret))
-		return not ret == S_DUPLICATE_IGNORED
+		return r
 
 
 	def has_ancestor(self, other):
@@ -951,7 +812,7 @@ class cpl_object:
 		'''
 		Add name/value pair as a property to current object.
 		'''
-		return CPLDirect.cpl_add_property(self.id, name, value)
+		return CPLDirect.cpl_add_object_property(self.id, name, value)
 
 
 	def info(self):
@@ -970,15 +831,14 @@ class cpl_object:
 		op = CPLDirect.cpl_dereference_pp_cpl_object_info_t(objectpp)
 		object = CPLDirect.cpl_object_info_tp_value(op)
 
-		if object.container_id == NONE or object.container_version < 0:
-			container = None
+		if object.bundle_id == NONE:
+			bundle = None
 		else:
-			container = cpl_object_version(cpl_object(object.container_id),
-					object.container_version)
+			bundle = cpl_object(object.bundle_id)
 
-		_info = cpl_object_info(self, object.version,
+		_info = cpl_object_info(self,
 				cpl_session(object.creation_session), object.creation_time,
-				object.originator, object.name, object.type, container)
+				object.originator, object.name, object.type, bundle)
 
 		CPLDirect.cpl_free_object_info(op)
 		CPLDirect.delete_cpl_object_info_tpp(objectpp)
@@ -986,40 +846,38 @@ class cpl_object:
 		return _info
 
 
-	def ancestry(self, version=None, direction=D_ANCESTORS, flags=0):
+	def relations(self, direction=D_ANCESTORS, flags=0):
 		'''
 		Return a list of cpl_ancestor objects
 		'''
 		if version is None:
 			version = VERSION_NONE
-		vp = CPLDirect.new_std_vector_cpl_ancestry_entry_tp()
+		vp = CPLDirect.new_std_vector_cpl_relation_tp()
 
-		ret = CPLDirect.cpl_get_object_ancestry(self.id, version,
-		    direction, flags, CPLDirect.cpl_cb_collect_ancestry_vector, vp)
+		ret = CPLDirect.cpl_get_object_relations(self.id,
+		    direction, flags, CPLDirect.cpl_cb_collect_relation_vector, vp)
 		if not CPLDirect.cpl_is_ok(ret):
-			CPLDirect.delete_std_vector_cpl_ancestry_entry_tp(vp)
-			raise Exception('Error retrieving ancestry: ' +
+			CPLDirect.delete_std_vector_cpl_relation_tp(vp)
+			raise Exception('Error retrieving relations: ' +
 					CPLDirect.cpl_error_string(ret))
 			return None
 
-		v = CPLDirect.cpl_dereference_p_std_vector_cpl_ancestry_entry_t(vp)
+		v = CPLDirect.cpl_dereference_p_std_vector_cpl_relation_t(vp)
 		l = []
 		if direction == D_ANCESTORS:
 			for entry in v:
-				a = cpl_ancestor(entry.other_object_id,
-					entry.other_object_version,
-					entry.query_object_id,
-					entry.query_object_version, entry.type, direction)
+				a = cpl_relation(entry.id, entry.other_object_id,
+					entry.query_object_id, entry.type, 
+					entry.bundle, direction)
 				l.append(a)
 		else:
 			for entry in v:
-				a = cpl_ancestor(entry.query_object_id,
-					entry.query_object_version,
-					entry.other_object_id,
-					entry.other_object_version, entry.type, direction)
+				a = cpl_ancestor(entry.id, entry.query_object_id,
+					entry.other_object_id, entry.type, 
+					entry.bundle, direction)
 				l.append(a)
 
-		CPLDirect.delete_std_vector_cpl_ancestry_entry_tp(vp)
+		CPLDirect.delete_std_vector_cpl_relation_tp(vp)
 		return l
 
 
@@ -1029,17 +887,11 @@ class cpl_object:
 
 		If key is set to something other than None, return only those
 		properties matching key.
-
-		By default, returns properties for the current version of
-		the object, but if version is set to a value other than
-		CPL.VERSION_NONE, then will return properties for that version.
 		'''
-		if version is None:
-			version = VERSION_NONE
 		vp = CPLDirect.new_std_vector_cplxx_property_entry_tp()
 
-		ret = CPLDirect.cpl_get_properties(self.id, version,
-		    key, CPLDirect.cpl_cb_collect_properties_vector, vp)
+		ret = CPLDirect.cpl_get_object_properties(self.id, key,
+		    CPLDirect.cpl_cb_collect_properties_vector, vp)
 		if not CPLDirect.cpl_is_ok(ret):
 			CPLDirect.delete_std_vector_cplxx_property_entry_tp(vp)
 			raise Exception('Error retrieving properties: ' +

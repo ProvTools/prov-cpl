@@ -218,10 +218,10 @@ typedef struct cpl_relation {
 	/// The ID of the object on which we are querying.
 	cpl_id_t query_object_id;
 
-	/// The ID of the object on the other end of the dependency/ancestry edge.
+	/// The ID of the object on the other end of the relation.
 	cpl_id_t other_object_id;
 
-	/// The type of the data or the control dependency.
+	/// The type of the relation.
 	int type;
 
 	/// The ID of the bundle object

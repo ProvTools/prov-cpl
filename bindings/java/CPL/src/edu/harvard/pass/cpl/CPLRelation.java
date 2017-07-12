@@ -173,7 +173,7 @@ public class CPLRelation {
 		String id = this.id.toString(16);
 		String arrow = otherIsAncestor ? " --> " : " <-- ";
 		return "" + base + arrow + other
-			 + " [type " + Integer.toHexString(type) + "; id " + id + "]";
+			 + " [type: " + Integer.toHexString(type) + "; id: " + id + "]";
 	}
 
 

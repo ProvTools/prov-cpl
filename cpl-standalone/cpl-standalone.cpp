@@ -117,7 +117,7 @@ static bool cpl_initialized = false;
  */
 static cpl_shared_semaphore_t cpl_lookup_or_create_object_semaphore;
 
-//TODO Add some ancestry locks
+//TODO Add some relation locks
 
 /**
  * The database backend
@@ -1076,13 +1076,13 @@ cpl_cb_collect_id_timestamp_vector(const cpl_id_t id,
 
 
 /**
- * The iterator callback for cpl_get_object_ancestry() that collects
- * the passed-in information in an instance of std::list<cpl_ancestry_entry_t>.
+ * The iterator callback for cpl_get_object_relations() that collects
+ * the passed-in information in an instance of std::list<cpl_relation_t>.
  *
  * @param relation_id the ID of the relation
  * @param query_object_id the ID of the object on which we are querying
  * @param other_object_id the ID of the object on the other end of the
- *                        dependency/ancestry edge
+ *                        relation
  * @param type the type of the data or the control dependency
  * @param context the pointer to an instance of the list
  * @return CPL_OK or an error code
@@ -1115,12 +1115,12 @@ cpl_cb_collect_relation_list(const cpl_id_t relation_id,
 
 /**
  * The iterator callback for cpl_get_object_relations() that collects
- * the information in an instance of std::vector<cpl_ancestry_entry_t>.
+ * the information in an instance of std::vector<cpl_relation_t>.
  *
  * @param relation_id the ID of the relation
  * @param query_object_id the ID of the object on which we are querying
  * @param other_object_id the ID of the object on the other end of the
- *                        dependency/ancestry edge
+ *                        relation
  * @param type the type of the relation
  * @param context the pointer to an instance of the vector
  * @return CPL_OK or an error code
