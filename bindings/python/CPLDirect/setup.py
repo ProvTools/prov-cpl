@@ -49,6 +49,7 @@ cpl = Extension('_CPLDirect',
 		language='c++',
 		library_dirs = ['.'],
 		libraries = ['cpl-odbc', 'cpl'],
+		extra_compile_args = ['-std=c++11']
 		)
 
 setup(name='CPLDirect',
