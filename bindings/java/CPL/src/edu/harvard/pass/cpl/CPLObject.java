@@ -90,16 +90,6 @@ public class CPLObject {
 
 
 	/**
-	 * Initialize
-	 */
-	static {
-		if (CPL.isInstalled()) {
-			nullId = CPLDirect.getCPL_NONE();
-		}
-	}
-
-
-	/**
 	 * Create an instance of CPLObject from its ID
 	 *
 	 * @param id the internal CPL object ID

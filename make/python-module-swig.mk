@@ -38,7 +38,7 @@ include $(ROOT)/make/python-module-header.mk
 #   http://www.swig.org/Doc1.3/Python.html#Python_nn6
 
 WRAP_SOURCE := $(patsubst %.i,%_wrap.cxx,$(notdir $(INTERFACE)))
-WRAP_LIBRARY := _$(PROJECT).$(SOLIBRARY_EXT)
+WRAP_LIBRARY := _$(PROJECT).$(SOLIBRARY_EXT_PY)
 
 $(BUILD_DIR)/$(PROJECT).py $(BUILD_DIR)/$(WRAP_SOURCE): \
 		$(INTERFACE) $(DEPENDENCIES)
@@ -66,6 +66,7 @@ ifeq ($(OUTPUT_TYPE),kernel)
 	@echo '  PYTHON  $(PWD_REL_SEP)setup.py'
 	@cd $(BUILD_DIR) && python $(abspath setup.py) build
 	@cd $(BUILD_DIR) \
+		&& echo $(WRAP_LIBRARY) \
 		&& /bin/cp -f $(CP_UPDATE_FLAG) "`find build -name $(WRAP_LIBRARY)`" .
 else
 	cd $(BUILD_DIR) && python $(abspath setup.py) build

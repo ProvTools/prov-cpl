@@ -192,9 +192,9 @@ def relation_type_to_str(val):
 	Given a dependency (edge) type, convert it to a string
 
 	Method calls::
-		strval = dependency_type_to_str(val)
+		strval = relation_type_to_str(val)
 	'''
-	if val > 0 && val < NUM_R_TYPES :
+	if val > 0 and val < NUM_R_TYPES :
 		return __relation_dict[val];
 	else:
 		return 'unknown'
@@ -287,8 +287,8 @@ class cpl_relation:
 		else:
 			arrow = ' <-- '
 		return (str(self.base) + arrow + str(self.other) +
-			' [type:' + dependency_type_to_str(self.type))+
-			'; id: ' + self.id + ']'
+			' [type:' + relation_type_to_str(self.type) +
+			'; id: ' + self.id + ']')
 
 	def properties(self, key=None, version=None):
 		'''
@@ -501,7 +501,7 @@ class cpl_connection:
 		return o
 
 
-	def try_lookup_object(self, originator, name, type. bundle=None):
+	def try_lookup_object(self, originator, name, type, bundle=None):
 		'''
 		Look up object; returns None if the object does not exist.
 		'''
@@ -557,7 +557,7 @@ class cpl_connection:
 		type, or bundle.
 		'''
 		vp = CPLDirect.new_std_vector_cpl_id_timestamp_tp()
-		ret = CPLDirect.cpl_lookup_object_ext(originator, name, type, bundle
+		ret = CPLDirect.cpl_lookup_object_ext(originator, name, type, bundle,
 			L_NO_FAIL, CPLDirect.cpl_cb_collect_id_timestamp_vector, vp)
 
 		if not CPLDirect.cpl_is_ok(ret):
@@ -575,27 +575,79 @@ class cpl_connection:
 		return l
 
 
-	def get_bundle_properties():
-		#TODO
+	def get_bundle_objects(bundle):
+		vp = CPLDirect.new_std_vector_cpl_id_timestamp_tp()
+		ret = CPLDirect.cpl_get_bundle_objects(bundle.id, CPLDirect.cpl_cb_collect_id_timestamp_vector, vp)
+
+		if not CPLDirect.cpl_is_ok(ret):
+			CPLDirect.delete_std_vector_cpl_id_timestamp_tp(vp)
+			raise Exception('Unable to lookup all objects: ' +
+					CPLDirect.cpl_error_string(ret))
+
+		v = CPLDirect.cpl_dereference_p_std_vector_cpl_id_timestamp_t(vp)
+		l = []
+		if v != S_NO_DATA :
+			for e in v:
+				l.append(cpl_object(e.id))
+
+		CPLDirect.delete_std_vector_cpl_id_timestamp_tp(vp)
+		return l
+		
 
 
-	def get_bundle_relations():
-		#TODO
+	def get_bundle_relations(bundle):
+		vp = CPLDirect.new_std_vector_cpl_relation_tp()
 
-	def delete_bundle():
-		#TODO
+		ret = CPLDirect.cpl_get_bundle_relations(bundle.id,
+			CPLDirect.cpl_cb_collect_relation_vector, vp)
+		if not CPLDirect.cpl_is_ok(ret):
+			CPLDirect.delete_std_vector_cpl_relation_tp(vp)
+			raise Exception('Error retrieving relations: ' +
+					CPLDirect.cpl_error_string(ret))
+			return None
+
+		v = CPLDirect.cpl_dereference_p_std_vector_cpl_relation_t(vp)
+		l = []
+		for entry in v:
+			a = cpl_ancestor(entry.id, entry.query_object_id,
+				entry.other_object_id, entry.type, 
+				entry.bundle, D_DESCENDANTS)
+			l.append(a)
+
+		CPLDirect.delete_std_vector_cpl_relation_tp(vp)
+		return l
+
+	def delete_bundle(bundle):
+		ret = CPLDirect.cpl_delete_bundle(bundle.id)
+		if not CPLDirect.cpl_is_ok(ret):
+			raise Exception('Error deleting bundle: ' +
+					CPLDirect.cpl_error_string(ret))
+		return None
 
 
-	def validate_json():
-		#TODO
+	def validate_json(filepath):
+		ret = CPLDirect.validate_json(filepath, stringout)
+		if not r:
+			return None
+		return stringout
 
 
-	def import_document_json():
-		#TODO
+	def import_document_json(filepath, originator, 
+			bundle_name, anchor_object, bundle_agent):
+		ret = CPLDirect.import_document_json(filepath, originator, bundle_name,
+			  anchor_object.id, bundle_agent.id, out_id)
+		if not CPLDirect.cpl_is_ok(ret): 
+			raise Exception('Error importing document:' +
+					CPLDirect.cpl_error_string(ret))
+		return out_id
+		
 
-
-	def export_bundle_json():
-		#TODO
+	def export_bundle_json(bundle, filepath):
+		ret = CPLDirect.export_bundle_json(bundle.id, filepath)
+		if not CPLDirect.cpl_is_ok(ret):
+			raise Exception('Error exporting bundle:' +
+					CPLDirect.cpl_error_string(ret))
+		return None
 
 
 	def close(self):
@@ -850,8 +902,6 @@ class cpl_object:
 		'''
 		Return a list of cpl_ancestor objects
 		'''
-		if version is None:
-			version = VERSION_NONE
 		vp = CPLDirect.new_std_vector_cpl_relation_tp()
 
 		ret = CPLDirect.cpl_get_object_relations(self.id,

@@ -35,6 +35,12 @@
 #
 
 from distutils.core import setup, Extension
+import sys
+
+#if sys.platform == 'darwin':
+#    from distutils import sysconfig
+#    vars = sysconfig.get_config_vars()
+#    vars['LDSHARED'] = vars['LDSHARED'].replace('-bundle', '-dynamiclib')
 
 cpl = Extension('_CPLDirect',
 		sources = ['cpl_wrap.cxx'],
@@ -51,6 +57,6 @@ setup(name='CPLDirect',
 	description = """Python interface to CPL""",
 	ext_modules = [cpl],
 	py_modules = ["CPLDirect"],
-	options={'build_ext':{'swig_opts':'-c++'}},
+	options={'build_ext':{'swig_opts':'-c++'}}
 	)
 

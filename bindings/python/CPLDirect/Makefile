@@ -14,7 +14,6 @@ ROOT := ../../..
 INSTALL := yes
 DEPENDENCIES := ../../cpl.i $(ROOT)/include/cpl.h $(ROOT)/include/cplxx.h
 
-
 #
 # Include the magic script
 #

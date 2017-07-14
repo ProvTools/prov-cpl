@@ -35,6 +35,7 @@ package edu.harvard.pass.cpl;
  */
 
 import swig.direct.CPLDirect.*;
+import java.math.BigInteger;
 
 /**
  * A utility for processing Prov JSON
@@ -42,6 +43,8 @@ import swig.direct.CPLDirect.*;
  * @author Jackson Okuhn
  */
 class JsonUtility {
+
+	private static BigInteger nullId = BigInteger.ZERO;
 
 	/**
 	 * Create an instance of JsonUtility
@@ -54,11 +57,11 @@ class JsonUtility {
 	 *@param fileName document path
 	 *@return a string detailing errors if any exist or NULL on success
 	 */
-	public static String validateJson(String fileName){
+	public static String validateJson(String filepath){
 		
 		String stringOutArray[] = { "" };
 
-		int r = CPLDirect.validate_json(fileName, stringOutArray);
+		int r = CPLDirect.validate_json(filepath, stringOutArray);
 		if(r == 0){
 			return null;
 		}
@@ -78,11 +81,11 @@ class JsonUtility {
 	 * @param bundleAgent agent responsible for the document bundle
 	 */
 
-	public static CPLObject importJson(String fileName, String originator, 
+	public static CPLObject importJson(String filepath, String originator, 
 			String bundleName, CPLObject anchorObject, CPLObject bundleAgent) {
 
 		BigInteger[] id = {nullId};
-		int r = CPLDirect.import_document_json(fileName, originator, bundleName,
+		int r = CPLDirect.import_document_json(filepath, originator, bundleName,
 									   anchorObject.getId(), bundleAgent.getId(), id);
 		CPLException.assertSuccess(r);
 		

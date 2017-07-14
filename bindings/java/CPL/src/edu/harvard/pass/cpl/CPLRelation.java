@@ -68,7 +68,7 @@ public class CPLRelation {
 	public static final int WASINFLUENCEDBY			= CPLDirectConstants.WASINFLUENCEDBY;
 
 	/// The null object
-	private static BigInteger nullId = null;
+	private static BigInteger nullId = BigInteger.ZERO;
 
 	/// The queried object
 	private CPLObject base;
@@ -87,12 +87,6 @@ public class CPLRelation {
 
 	/// The internal object ID
 	BigInteger id;
-
-	static {
-		if (CPL.isInstalled()) {
-			nullId = CPLDirect.getCPL_NONE();
-		}
-	}
 
 	/**
 	 * Create an instance of CPLRelation

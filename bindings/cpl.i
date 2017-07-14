@@ -39,7 +39,7 @@
 /*%include std_list.i*/
 %include std_vector.i
 %include std_string.i
-%include various.i
+%include various.i 
 %apply char **STRING_OUT { char **string_out };
 
 
@@ -238,7 +238,7 @@ import_document_json(const char* filename,
                      const char* bundle_name,
                      const cpl_id_t anchor_object,
                      const cpl_id_t bundle_agent,
-                     unsigned long long* OUTPUT)
+                     unsigned long long* OUTPUT);
 /*
  * STL bundles
  */

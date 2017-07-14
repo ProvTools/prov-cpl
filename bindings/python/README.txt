@@ -7,8 +7,8 @@ Contents:
   2. Limitations
   3. Design
 
-Copyright 2012 The President and Fellows of Harvard College.
-Contributor(s): Margo Seltzer, Peter Macko
+Copyright 2017 The President and Fellows of Harvard College.
+Contributor(s): Jackson Okuhn, Margo Seltzer, Peter Macko
 
 
   1. Required packages on Ubuntu

@@ -195,10 +195,12 @@ ifeq ($(OSTYPE),darwin)
 	SONAME_OPTION := -WL,-install_name,
 	SHARED_OPTION := -dynamiclib
 	SOLIBRARY_EXT := dylib
+	SOLIBRARY_EXT_PY := so #gross hack
 else
 	SONAME_OPTION := -Wl,-soname,
 	SHARED_OPTION := -shared
 	SOLIBRARY_EXT := so
+	SOLIBRARY_EXT_PY := so
 endif
 
 
