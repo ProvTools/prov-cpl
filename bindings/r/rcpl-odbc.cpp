@@ -38,6 +38,9 @@
 #include <list>
 #include <vector>
 
+#include <Rcpp.h>
+using namespace Rcpp;
+
 // NOTE: The locking is currently too conservative -- we should improve this.
 // The reason is that we want to lock a prepare statement while we are using
 // it in order to prevent race conditions. Perhaps we can prepare multiple
@@ -515,6 +518,7 @@ cpl_odbc_free_statement_handles(cpl_odbc_t* odbc)
  * @param odbc an initialized backend structure
  * @return the error code
  */
+// [[Rcpp::export]]
 static cpl_return_t
 cpl_odbc_connect(cpl_odbc_t* odbc)
 {
@@ -805,6 +809,7 @@ err_handles:
  * @param odbc the backend structure
  * @return the error code
  */
+// [[Rcpp::export]]
 static cpl_return_t cpl_odbc_disconnect(cpl_odbc_t* odbc)
 {
 	cpl_return_t r = CPL_OK;
@@ -829,6 +834,7 @@ static cpl_return_t cpl_odbc_disconnect(cpl_odbc_t* odbc)
  * @param odbc the backend structure
  * @return the error code
  */
+// [[Rcpp::export]]
 static cpl_return_t
 cpl_odbc_reconnect(cpl_odbc_t* odbc)
 {
@@ -851,6 +857,7 @@ cpl_odbc_reconnect(cpl_odbc_t* odbc)
  * @param out the pointer to the database backend variable
  * @return the error code
  */
+// [[Rcpp::export]]
 extern "C" EXPORT cpl_return_t
 cpl_create_odbc_backend(const char* connection_string,
 						int db_type,
@@ -939,6 +946,7 @@ err_sync:
  * @param out the pointer to the database backend variable
  * @return the error code
  */
+// [[Rcpp::export]]
 extern "C" EXPORT cpl_return_t
 cpl_create_odbc_backend_dsn(const char* dsn,
 							int db_type,

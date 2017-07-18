@@ -40,6 +40,9 @@
 #include <mach-o/dyld.h>
 #endif
 
+#include <Rcpp.h>
+using namespace Rcpp;
+
 /***************************************************************************/
 /** Constants                                                             **/
 /***************************************************************************/
@@ -153,6 +156,7 @@ cpl_session_t cpl_session = CPL_NONE;
  * @param backend the database backend
  * @return the error code
  */
+// [[Rcpp::export]]
 extern "C" EXPORT cpl_return_t
 cpl_attach(struct _cpl_db_backend_t* backend)
 {
@@ -393,6 +397,7 @@ cpl_detach(void)
  * @param code the return (success or error) code
  * @return the error or success string (the function always succeeds)
  */
+// [[Rcpp::export]]
 extern "C" EXPORT const char*
 cpl_error_string(cpl_return_t code)
 {
@@ -425,6 +430,7 @@ cpl_error_string(cpl_return_t code)
  * @param out_id the pointer to store the ID of the newly created object
  * @return CPL_OK or an error code
  */
+// [[Rcpp::export]]
 extern "C" EXPORT cpl_return_t
 cpl_create_object(const char* originator,
 				  const char* name,
@@ -474,6 +480,7 @@ cpl_create_object(const char* originator,
  * @param out_id the pointer to store the object ID
  * @return CPL_OK or an error code
  */
+// [[Rcpp::export]]
 extern "C" EXPORT cpl_return_t
 cpl_lookup_object(const char* originator,
 				  const char* name,
@@ -522,6 +529,7 @@ cpl_lookup_object(const char* originator,
  * @param context the caller-provided iterator context
  * @return CPL_OK or an error code
  */
+// [[Rcpp::export]]
 extern "C" EXPORT cpl_return_t
 cpl_lookup_object_ext(const char* originator,
 					  const char* name,
@@ -574,6 +582,7 @@ cpl_lookup_object_ext(const char* originator,
  * @param out_id the pointer to store the ID of the newly created object
  * @return CPL_OK or an error code
  */
+// [[Rcpp::export]]
 extern "C" EXPORT cpl_return_t
 cpl_lookup_or_create_object(const char* originator,
 							const char* name,
@@ -606,6 +615,7 @@ out:
  * @param value the value
  * @return CPL_OK or an error code
  */
+// [[Rcpp::export]]
 extern "C" EXPORT cpl_return_t
 cpl_add_object_property(const cpl_id_t id,
 				 const char* key,
@@ -638,6 +648,7 @@ cpl_add_object_property(const cpl_id_t id,
  * @param value the value
  * @return CPL_OK or an error code
  */
+// [[Rcpp::export]]
 extern "C" EXPORT cpl_return_t
 cpl_add_relation_property(const cpl_id_t id,
 						  const char* key,
@@ -666,6 +677,7 @@ cpl_add_relation_property(const cpl_id_t id,
  * @param type the data dependency edge type
  * @return CPL_OK, CPL_S_DUPLICATE_IGNORED, or an error code
  */
+// [[Rcpp::export]]
 extern "C" EXPORT cpl_return_t
 cpl_add_relation(const cpl_id_t from_id,
 			  	   const cpl_id_t to_id,
@@ -708,6 +720,7 @@ cpl_add_relation(const cpl_id_t from_id,
  * @param out_session the pointer to store the ID of the current session
  * @return CPL_OK or an error code
  */
+// [[Rcpp::export]]
 extern "C" EXPORT cpl_return_t
 cpl_get_current_session(cpl_session_t* out_session)
 {
@@ -725,6 +738,7 @@ cpl_get_current_session(cpl_session_t* out_session)
  * @param out_info the pointer to store the session info structure
  * @return CPL_OK or an error code
  */
+// [[Rcpp::export]]
 extern "C" EXPORT cpl_return_t
 cpl_get_session_info(const cpl_session_t id,
 					 cpl_session_info_t** out_info)
@@ -747,6 +761,7 @@ cpl_get_session_info(const cpl_session_t id,
  * @param info the pointer to the session info structure
  * @return CPL_OK or an error code
  */
+// [[Rcpp::export]]
 extern "C" EXPORT cpl_return_t
 cpl_free_session_info(cpl_session_info_t* info)
 {
@@ -770,6 +785,7 @@ cpl_free_session_info(cpl_session_info_t* info)
  * @param context the caller-provided iterator context
  * @return CPL_OK or an error code
  */
+// [[Rcpp::export]]
 extern "C" EXPORT cpl_return_t
 cpl_get_all_objects(const int flags,
 					cpl_object_info_iterator_t iterator,
@@ -790,6 +806,7 @@ cpl_get_all_objects(const int flags,
  * @param out_info the pointer to store the object info structure
  * @return CPL_OK or an error code
  */
+// [[Rcpp::export]]
 extern "C" EXPORT cpl_return_t
 cpl_get_object_info(const cpl_id_t id,
 					cpl_object_info_t** out_info)
@@ -811,6 +828,7 @@ cpl_get_object_info(const cpl_id_t id,
  * @param info the pointer to the object info structure.
  * @return CPL_OK or an error code
  */
+// [[Rcpp::export]]
 extern "C" EXPORT cpl_return_t
 cpl_free_object_info(cpl_object_info_t* info)
 {
@@ -837,6 +855,7 @@ cpl_free_object_info(cpl_object_info_t* info)
  * @param context the user context to be passed to the iterator function
  * @return CPL_OK, CPL_S_NO_DATA, or an error code
  */
+// [[Rcpp::export]]
 extern "C" EXPORT cpl_return_t
 cpl_get_object_relations(const cpl_id_t id,
 						const int direction,
@@ -875,6 +894,7 @@ cpl_get_object_relations(const cpl_id_t id,
  * @param context the user context to be passed to the iterator function
  * @return CPL_OK, CPL_S_NO_DATA, or an error code
  */
+// [[Rcpp::export]]
 extern "C" EXPORT cpl_return_t
 cpl_get_object_properties(const cpl_id_t id,
 				   const char* key,
@@ -904,6 +924,7 @@ cpl_get_object_properties(const cpl_id_t id,
  * @param context the user context to be passed to the iterator function
  * @return CPL_OK, CPL_E_NOT_FOUND, or an error code
  */
+// [[Rcpp::export]]
 extern "C" EXPORT cpl_return_t
 cpl_lookup_object_by_property(const char* key,
 					   const char* value,
@@ -932,6 +953,7 @@ cpl_lookup_object_by_property(const char* key,
  * @param context the user context to be passed to the iterator function
  * @return CPL_OK, CPL_S_NO_DATA, or an error code
  */
+// [[Rcpp::export]]
 extern "C" EXPORT cpl_return_t
 cpl_get_relation_properties(const cpl_id_t id,
 				   const char* key,
@@ -955,6 +977,7 @@ cpl_get_relation_properties(const cpl_id_t id,
  * @param id the bundle ID
  * @return CPL_OK, or an error code
  */
+// [[Rcpp::export]]
 extern "C" EXPORT cpl_return_t
 cpl_delete_bundle(const cpl_id_t id)
 {
@@ -972,6 +995,7 @@ cpl_delete_bundle(const cpl_id_t id)
  * @param context the user context to be passed to the iterator function
  * @return CPL_OK, or an error code
  */
+// [[Rcpp::export]]
 extern "C" EXPORT cpl_return_t
 cpl_get_bundle_objects(const cpl_id_t id,
 					cpl_object_info_iterator_t iterator,
@@ -993,6 +1017,7 @@ cpl_get_bundle_objects(const cpl_id_t id,
  * @param context the user context to be passed to the iterator function
  * @return CPL_OK, or an error code
  */
+// [[Rcpp::export]]
 extern "C" EXPORT cpl_return_t
 cpl_get_bundle_relations(const cpl_id_t id,
 					cpl_relation_iterator_t iterator,
@@ -1022,6 +1047,7 @@ cpl_get_bundle_relations(const cpl_id_t id,
  * @param context the pointer to an instance of the vector 
  * @return CPL_OK or an error code
  */
+// [[Rcpp::export]]
 #ifdef SWIG
 %constant
 #endif
@@ -1057,6 +1083,7 @@ cpl_cb_collect_object_info_vector(const cpl_object_info_t* info,
  * @param context the pointer to an instance of the vector 
  * @return CPL_OK or an error code
  */
+// [[Rcpp::export]]
 #ifdef SWIG
 %constant
 #endif
@@ -1091,6 +1118,7 @@ cpl_cb_collect_id_timestamp_vector(const cpl_id_t id,
  * @param context the pointer to an instance of the list
  * @return CPL_OK or an error code
  */
+// [[Rcpp::export]]
 #ifdef SWIG
 %constant
 #endif
@@ -1129,6 +1157,7 @@ cpl_cb_collect_relation_list(const cpl_id_t relation_id,
  * @param context the pointer to an instance of the vector
  * @return CPL_OK or an error code
  */
+// [[Rcpp::export]]
 #ifdef SWIG
 %constant
 #endif
@@ -1167,6 +1196,7 @@ cpl_cb_collect_relation_vector(const cpl_id_t relation_id,
  * @param context the pointer to an instance of the vector 
  * @return CPL_OK or an error code
  */
+// [[Rcpp::export]]
 #ifdef SWIG
 %constant
 #endif
@@ -1201,6 +1231,7 @@ cpl_cb_collect_properties_vector(const cpl_id_t id,
  * @param context the pointer to an instance of the vector 
  * @return CPL_OK or an error code
  */
+// [[Rcpp::export]]
 #ifdef SWIG
 %constant
 #endif
@@ -1351,6 +1382,7 @@ prov_relation_data_t rdata_array[] =
  * @param string_out error output string
  * @return 0 on successful validation or -1 on failure
  */
+// [[Rcpp::export]]
 EXPORT int
 validate_json(const char* path,
 	 		  char** string_out)
@@ -1598,6 +1630,7 @@ import_relations_json(const char* originator,
  * @param out_id the ID of the imported bundle
  * @return CPL_OK or an error code
  */
+// [[Rcpp::export]]
 EXPORT cpl_return_t
 import_document_json(const char* filename,
 					 const char* originator,
@@ -1851,6 +1884,7 @@ error:
  * @param path path to desired output file, overwrites if file already exists
  * @return CPL_OK or an error code
  */
+// [[Rcpp::export]]
 EXPORT cpl_return_t
 export_bundle_json(const cpl_id_t bundle, 
 				   const char* path)
