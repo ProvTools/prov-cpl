@@ -349,6 +349,7 @@ class cpl_connection:
 		self.closed = False
 
 		def get_current_session():
+			idp = NONE
 			ret = CPLDirect.cpl_get_current_session(idp)
 
 			if not CPLDirect.cpl_is_ok(ret):
