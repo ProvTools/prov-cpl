@@ -46,13 +46,13 @@ To verify that the drivers are installed, please execute: odbcinst -q -d
 
 The easiest way to add a data source is to use ODBCConfig available from
 the unixodbc-bin package. Alternatively, you can edit the /etc/odbc.ini file
-manually. For example, if you use the MySQL ODBC driver, the database is
+manually. For example, if you use the PostgreSQL ODBC driver, the database is
 running locally, and the database name is cpl, the appropriate configuration
 entry would be:
 
 [CPL]
-Description     = MySQL Core Provenance Library
-Driver          = MySQL
+Description     = PostgreSQL Core Provenance Library
+Driver          = PostgreSQL
 Server          = localhost
 Database        = cpl
 Port            = 
