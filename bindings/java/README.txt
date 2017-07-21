@@ -27,7 +27,8 @@ To use the bindings by manually including the .jar or to use with Ant:
   cd bindings/java      (if necessary)
   make release
   sudo make install
-  finally, move libCPLDirect-java.dylib into your java.library.path
+  finally, move libCPLDirect-java.dylib into your java.library.path or change 
+  your java.library.path to include /usr/local/lib
 
 This will (among other things) create /usr/local/java/CPL.jar, which you can
 then include in your project. You do not need to include CPLDirect.jar, since

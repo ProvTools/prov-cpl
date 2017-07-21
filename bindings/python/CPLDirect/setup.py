@@ -37,11 +37,6 @@
 from distutils.core import setup, Extension
 import sys
 
-#if sys.platform == 'darwin':
-#    from distutils import sysconfig
-#    vars = sysconfig.get_config_vars()
-#    vars['LDSHARED'] = vars['LDSHARED'].replace('-bundle', '-dynamiclib')
-
 cpl = Extension('_CPLDirect',
 		sources = ['cpl_wrap.cxx'],
 		swig_opts=['-c++'],
