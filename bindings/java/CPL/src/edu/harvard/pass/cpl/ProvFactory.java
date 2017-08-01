@@ -105,6 +105,15 @@ public class ProvFactory{
     }
 
     /**
+     * Set the bundle
+     *
+     * @param bun a bundle object
+     */
+    public void setBundle(CPLObject bun){
+        bundle = bun;
+    }
+    
+    /**
      * Create prov:Entity
      *
      * @param name
