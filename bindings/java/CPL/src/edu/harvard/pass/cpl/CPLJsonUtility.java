@@ -42,14 +42,14 @@ import java.math.BigInteger;
  *
  * @author Jackson Okuhn
  */
-class JsonUtility {
+public class CPLJsonUtility {
 
 	private static BigInteger nullId = BigInteger.ZERO;
 
 	/**
 	 * Create an instance of JsonUtility
 	 */
-	public JsonUtility() {}
+	public CPLJsonUtility() {}
 
 	/**
 	 * Verify the correctness of a Prov JSON document
@@ -100,7 +100,7 @@ class JsonUtility {
 	 * @param bundle bundle to export
 	 * @param filepath path to desired output file, overwrites if file already exists
 	 */
-	public void exportBundleJson(CPLObject bundle, String filepath) {
+	public static void exportBundleJson(CPLObject bundle, String filepath) {
 
 		int r = CPLDirect.export_bundle_json(bundle.getId(), filepath);
 		CPLException.assertSuccess(r);

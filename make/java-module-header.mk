@@ -277,13 +277,16 @@ ifeq ($(OUTPUT_TYPE),kernel)
 		-DgroupId=$(MAVEN_GROUP_ID) \
 		-DartifactId=$(MAVEN_ARTIFACT_ID) \
 		-Dversion=$(MAVEN_VERSION) \
-		-Dpackaging=$(MAVEN_PACKAGING)
+		-Dpackaging=$(MAVEN_PACKAGING)\
+		-DgeneratePom=true
+
 else
 	mvn install:install-file -Dfile=$(BUILD_DIR)/$(TARGET) \
 		-DgroupId=$(MAVEN_GROUP_ID) \
 		-DartifactId=$(MAVEN_ARTIFACT_ID) \
 		-Dversion=$(MAVEN_VERSION) \
-		-Dpackaging=$(MAVEN_PACKAGING)
+		-Dpackaging=$(MAVEN_PACKAGING)\
+		-DgeneratePom=true
 endif
 else
 	@$(MAKE) --no-print-directory RELEASE=yes maven-install

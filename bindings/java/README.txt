@@ -23,16 +23,26 @@ Please make sure that the following packages are installed:
   2. Compiling and installing the Java bindings
 -------------------------------------------------
 
+If you plan to use the CPL bindings via Maven, please do the following:
+  cd bindings/java      (if necessary)
+  make release
+  sudo make -C CPLDirect install
+  make -C CPL maven-install
+
+The Maven group ID is edu.harvard.pass, and the artifact ID is cpl. You can
+find the most recent version of the project by examining CPL/Makefile.
+
 To use the bindings by manually including the .jar or to use with Ant:
   cd bindings/java      (if necessary)
   make release
   sudo make install
-  finally, move libCPLDirect-java.dylib into your java.library.path or change 
-  your java.library.path to include /usr/local/lib
 
 This will (among other things) create /usr/local/java/CPL.jar, which you can
 then include in your project. You do not need to include CPLDirect.jar, since
 it is statically included in CPL.jar.
+
+In both cases, you will also need to move libCPLDirect-java.dylib into your java.library.path 
+or change your java.library.path to include /usr/local/lib
 
 Note: If "make release" fails with the "Permission denied" error, please run
 "sudo make distclean" first. If "make release" fails mysteriously, perhaps
@@ -41,8 +51,7 @@ Note: If "make release" fails with the "Permission denied" error, please run
   3. Limitations
 ------------------
 
-The bindings have been tested mainly on OS X.
-They have not been thoroughly tested on Linux.
+The bindings have been tested on OS X and Linux.
 
 
   4. Design

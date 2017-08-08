@@ -39,7 +39,7 @@ To compile and install CPL, please type the following commands:
   make release
   [sudo] (for linux) make install
 
-The default installation directory is /usr.
+The default installation directory is /usr/local.
 
 For the other language bindings, please refer to the README files for each 
 binding.

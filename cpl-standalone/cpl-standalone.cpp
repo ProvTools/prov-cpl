@@ -1816,6 +1816,18 @@ export_relations_json(cpl_id_t bundle,
 
 		property_vec.clear();
 
+		cpl_object_info_t* from_info = (cpl_object_info_t*) malloc(sizeof(cpl_object_info_t));
+		cpl_object_info_t* to_info = (cpl_object_info_t*) malloc(sizeof(cpl_object_info_t));
+
+		cpl_get_object_info(relation.query_object_id, &from_info);
+		cpl_get_object_info(relation.other_object_id, &to_info);
+
+		json_object_set_new(properties, rdata_array[relation.type-1].source_str.c_str(), json_string(from_info->name));
+		json_object_set_new(properties, rdata_array[relation.type-1].dest_str.c_str(), json_string(to_info->name));
+
+		cpl_free_object_info(from_info);
+		cpl_free_object_info(to_info);
+
 		if(!json_type_array[relation.type-1]){
 			json_type_array[relation.type-1] = json_object();
 		}
