@@ -50,7 +50,6 @@ ifndef SO_MINOR_VERSION
 	SO_MINOR_VERSION := 0
 endif
 
-
 #
 # Configure the compile
 #

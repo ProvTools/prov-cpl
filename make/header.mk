@@ -192,7 +192,7 @@ CXXFLAGS := -Wall -Wno-deprecated $(CXXFLAGS)
 #
 
 ifeq ($(OSTYPE),darwin)
-	SONAME_OPTION := -WL,-install_name,
+	SONAME_OPTION := -Wl,-install_name,
 	SHARED_OPTION := -dynamiclib
 	SOLIBRARY_EXT := dylib
 	SOLIBRARY_EXT_PY := so #gross hack
