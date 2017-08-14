@@ -848,5 +848,6 @@ test_simple(void)
 	print(L_DEBUG, " ");
 
 	cpl_delete_bundle(bun);
+	cpl_detach();
 }
 

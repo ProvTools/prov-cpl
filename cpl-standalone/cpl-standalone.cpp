@@ -1679,7 +1679,6 @@ error:
 	return CPL_E_INTERNAL_ERROR;
 }
 
-
 /*
  * Retrieves bundle prefixes. export_bundle_json helper function.
  */

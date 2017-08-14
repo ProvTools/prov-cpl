@@ -400,8 +400,7 @@ class cpl_connection:
 				True: create only
 				False: lookup only
 			bundle:
-				Id of bundle into which to place this object.
-				Only applies to create
+				Id of bundle into which to place this object, can be none
 		'''
 		if bundle == None:
 			bundle_id = NONE
@@ -579,6 +578,9 @@ class cpl_connection:
 
 
 	def get_bundle_objects(self, bundle):
+		'''
+		Return all objects in the specified bundle.
+		'''
 		vp = CPLDirect.new_std_vector_cplxx_object_info_tp()
 		ret = CPLDirect.cpl_get_bundle_objects(bundle.id, CPLDirect.cpl_cb_collect_object_info_vector, vp)
 
@@ -599,6 +601,9 @@ class cpl_connection:
 
 
 	def get_bundle_relations(self, bundle):
+		'''
+		Return all relations in the specified bundle.
+		'''
 		vp = CPLDirect.new_std_vector_cpl_relation_tp()
 
 		ret = CPLDirect.cpl_get_bundle_relations(bundle.id,
@@ -621,6 +626,9 @@ class cpl_connection:
 		return l
 
 	def delete_bundle(self, bundle):
+		'''
+		Delete the specified bundle and everything in it.
+		'''
 		ret = CPLDirect.cpl_delete_bundle(bundle.id)
 		if not CPLDirect.cpl_is_ok(ret):
 			raise Exception('Error deleting bundle: ' +
@@ -629,6 +637,9 @@ class cpl_connection:
 
 
 	def validate_json(self, filepath):
+		'''
+		Checks a Prov-JSON document (at filepath) for cycles and correctness.
+		'''
 		ret = CPLDirect.validate_json(filepath, stringout)
 		if not r:
 			return None
@@ -637,6 +648,17 @@ class cpl_connection:
 
 	def import_document_json(self, filepath, originator, 
 			bundle_name, anchor_object, bundle_agent):
+		'''
+		Imports a Prov-JSON document into the CPL as a bundle.
+
+		** Parameters **
+			filepath
+			originator
+			bundle_name
+			anchor_object: an existing CPL object that matches the name and type of 
+			an object in the document, can be none
+			bundle_agent: the agent responsible for uploading the bundle, can be none
+		'''
 		ret, idp = CPLDirect.import_document_json(filepath, originator, bundle_name,
 			  anchor_object.id, bundle_agent.id)
 		if not CPLDirect.cpl_is_ok(ret): 
@@ -646,6 +668,9 @@ class cpl_connection:
 		
 
 	def export_bundle_json(self, bundle, filepath):
+	'''
+	Exports a bundle as a Prov-JSON document.
+	'''
 		ret = CPLDirect.export_bundle_json(bundle.id, filepath)
 		if not CPLDirect.cpl_is_ok(ret):
 			raise Exception('Error exporting bundle:' +
