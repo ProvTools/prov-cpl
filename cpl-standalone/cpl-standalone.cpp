@@ -35,6 +35,7 @@
 #include "stdafx.h"
 #include "cpl-private.h"
 #include "cpl-platform.h"
+#include <private/cpl-platform.h>
 
 #ifdef __APPLE__
 #include <mach-o/dyld.h>
@@ -115,8 +116,6 @@ static bool cpl_initialized = false;
  */
 static cpl_shared_semaphore_t cpl_lookup_or_create_object_semaphore;
 
-//TODO Add some relation locks
-
 /**
  * The database backend
  */
@@ -128,6 +127,10 @@ static cpl_db_backend_t* cpl_db_backend = NULL;
 cpl_session_t cpl_session = CPL_NONE;
 
 
+/**
+* attach and detach lock
+*/
+static mutex_t cpl_backend_lock = PTHREAD_MUTEX_INITIALIZER;
 /***************************************************************************/
 /** Basic Private API                                                     **/
 /***************************************************************************/
@@ -147,19 +150,28 @@ cpl_session_t cpl_session = CPL_NONE;
 
 
 /**
- * Initialize the library and attach it to the database backend. Please note
- * that this function is not thread-safe.
+ * Initialize the library and attach it to the database backend.
  *
  * @param backend the database backend
  * @return the error code
  */
 extern "C" EXPORT cpl_return_t
 cpl_attach(struct _cpl_db_backend_t* backend)
-{
-	CPL_ENSURE_NOT_NULL(backend);
-	if (cpl_initialized) return CPL_E_ALREADY_INITIALIZED;
+{	
+	mutex_lock(cpl_backend_lock);
 
-	if (cpl_db_backend != NULL) return CPL_E_INTERNAL_ERROR; // race condition
+	CPL_ENSURE_NOT_NULL(backend);
+	if (cpl_initialized){
+		mutex_unlock(cpl_backend_lock);
+		return CPL_E_ALREADY_INITIALIZED;
+	}
+
+	// impossible race condition
+	if (cpl_db_backend != NULL){ 
+		mutex_unlock(cpl_backend_lock);
+		return CPL_E_INTERNAL_ERROR;
+	}
+
 	cpl_db_backend = backend;
 
 
@@ -168,6 +180,7 @@ cpl_attach(struct _cpl_db_backend_t* backend)
 	cpl_return_t ret = cpl_lock_initialize();
 	if (!CPL_IS_OK(ret)) {
 		cpl_db_backend = NULL;
+		mutex_unlock(cpl_backend_lock);
 		return ret;
 	}
 
@@ -183,13 +196,17 @@ cpl_attach(struct _cpl_db_backend_t* backend)
 
 	user = getenv("USER");
 	pid = getpid();
-	if (user == NULL) return CPL_E_PLATFORM_ERROR;
+	if (user == NULL){
+		mutex_unlock(cpl_backend_lock);
+		return CPL_E_PLATFORM_ERROR;
+	}
 
 	uint32_t _program_size = 8192;
 	char* _program_exe_path = new char[_program_size + 1];
 
 	if (_NSGetExecutablePath(_program_exe_path, &_program_size) != 0) {
 		delete[] _program_exe_path;
+		mutex_unlock(cpl_backend_lock);
 		return CPL_E_PLATFORM_ERROR;
 	}
 
@@ -204,6 +221,7 @@ cpl_attach(struct _cpl_db_backend_t* backend)
 	FILE* f = popen(_ps, "r");
 	if (f == NULL) {
 		delete _program;
+		mutex_unlock(cpl_backend_lock);
 		return CPL_E_PLATFORM_ERROR;
 	}
 
@@ -211,6 +229,7 @@ cpl_attach(struct _cpl_db_backend_t* backend)
 	if (fgets(ps_header, sizeof(ps_header), f) == NULL) {
 		delete _program;
 		fclose(f);
+		mutex_unlock(cpl_backend_lock);
 		return CPL_E_PLATFORM_ERROR;
 	}
 
@@ -218,6 +237,7 @@ cpl_attach(struct _cpl_db_backend_t* backend)
 	if (cmd_pos == NULL) {
 		delete _program;
 		fclose(f);
+		mutex_unlock(cpl_backend_lock);
 		return CPL_E_PLATFORM_ERROR;
 	}
 
@@ -225,12 +245,14 @@ cpl_attach(struct _cpl_db_backend_t* backend)
 	if (cmd_offset >= strlen(ps_header)) {
 		delete _program;
 		fclose(f);
+		mutex_unlock(cpl_backend_lock);
 		return CPL_E_PLATFORM_ERROR;
 	}
 
 	if (fgets(ps_header, cmd_offset + 1, f) == NULL) {
 		delete _program;
 		fclose(f);
+		mutex_unlock(cpl_backend_lock);
 		return CPL_E_PLATFORM_ERROR;
 	}
 
@@ -240,6 +262,7 @@ cpl_attach(struct _cpl_db_backend_t* backend)
 		if (fgets(buf, sizeof(buf), f) == NULL) {
 		delete _program;
 			fclose(f);
+			mutex_unlock(cpl_backend_lock);
 			return CPL_E_PLATFORM_ERROR;
 		}
 		size_t l = strlen(buf);
@@ -258,13 +281,26 @@ cpl_attach(struct _cpl_db_backend_t* backend)
 	user = getenv("USER");
 	pid = getpid();
 	program = program_invocation_name;
-	if (user == NULL) return CPL_E_PLATFORM_ERROR;
-	if (program == NULL) return CPL_E_PLATFORM_ERROR;
+	if (user == NULL){
+		mutex_unlock(cpl_backend_lock);
+		return CPL_E_PLATFORM_ERROR;
+	}
+	if (program == NULL){
+		mutex_unlock(cpl_backend_lock);
+		return CPL_E_PLATFORM_ERROR;
+	}
 
 	FILE* f = fopen("/proc/self/cmdline", "rb");
-	if (f == NULL) return CPL_E_PLATFORM_ERROR;
+	if (f == NULL){
+		mutex_unlock(cpl_backend_lock);
+		return CPL_E_PLATFORM_ERROR;
+	}
 	char* _cmdbuf = new char[4096 + 4];
-	if (_cmdbuf == NULL) { fclose(f); return CPL_E_INSUFFICIENT_RESOURCES; }
+	if (_cmdbuf == NULL){ 
+		fclose(f);
+		mutex_unlock(cpl_backend_lock);
+		return CPL_E_INSUFFICIENT_RESOURCES;
+	}
 	size_t l = fread(_cmdbuf, 1, 4096, f);
 	_cmdbuf[l] = '\0';
 	fclose(f);
@@ -337,6 +373,7 @@ cpl_attach(struct _cpl_db_backend_t* backend)
 
 	if (!CPL_IS_OK(ret)) {
 		cpl_db_backend = NULL;
+		mutex_unlock(cpl_backend_lock);
 		return ret;
 	}
 
@@ -348,6 +385,7 @@ cpl_attach(struct _cpl_db_backend_t* backend)
 	if (cpl_lookup_or_create_object_semaphore == NULL) {
 		ret = CPL_E_PLATFORM_ERROR;
 		cpl_db_backend = NULL;
+		mutex_unlock(cpl_backend_lock);
 		return ret;
 	}
 
@@ -355,19 +393,36 @@ cpl_attach(struct _cpl_db_backend_t* backend)
 	// Finish
 
 	cpl_initialized = true;
+	mutex_unlock(cpl_backend_lock);
 	return CPL_OK;
 }
 
+/**
+ * Initialize the library and attach it to the database backend, 
+ * ignoring the errors if already initialized or attached
+ *
+ * @param backend the database backend
+ * @return the error code
+ */
+extern "C" EXPORT cpl_return_t
+cpl_try_attach(struct _cpl_db_backend_t* backend){
+	
+	cpl_return_t ret = cpl_attach(backend);
+	if(ret == CPL_E_ALREADY_INITIALIZED){
+		return CPL_OK;
+	}
+	return ret;
+}
 
 /**
  * Perform the cleanup and detach the library from the database backend.
- * Please note that this function is not thread-safe.
  *
  * @return the error code
  */
 extern "C" EXPORT cpl_return_t
 cpl_detach(void)
 {
+	mutex_lock(cpl_backend_lock);
 	CPL_ENSURE_INITIALIZED;
 	cpl_initialized = false;
 
@@ -377,11 +432,9 @@ cpl_detach(void)
 	cpl_shared_semaphore_close(cpl_lookup_or_create_object_semaphore);
 	cpl_lock_cleanup();
 
+	mutex_unlock(cpl_backend_lock);
 	return CPL_OK;
 }
-
-
-
 /***************************************************************************/
 /** Public API: Helpers                                                   **/
 /***************************************************************************/
@@ -421,7 +474,7 @@ cpl_error_string(cpl_return_t code)
  * @param name the object name
  * @param type the object type
  * @param bundle the ID of the object that should contain this object
- *                  (use CPL_NONE for no bundle)
+ *                  (use CPL_NONE for no bundle, bundles may not be nested)
  * @param out_id the pointer to store the ID of the newly created object
  * @return CPL_OK or an error code
  */
@@ -440,7 +493,9 @@ cpl_create_object(const char* originator,
 	CPL_ENSURE_NOT_NULL(originator);
 	CPL_ENSURE_NOT_NULL(name);
 
-
+	if(type == BUNDLE && bundle != CPL_NONE){
+		return CPL_E_INVALID_ARGUMENT;
+	}
 	// Call the backend
 
 	cpl_id_t id;

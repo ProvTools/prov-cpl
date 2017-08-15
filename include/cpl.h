@@ -52,7 +52,7 @@ struct _cpl_db_backend_t;
 
 
 /***************************************************************************/
-/** Standard types                                                        **/
+/** Versioning                                                      **/
 /***************************************************************************/
 
 /**
@@ -262,7 +262,6 @@ extern int __cpl_assert__cpl_id_size[sizeof(cpl_id_t) == 8 ? 1 : -1];
 extern const cpl_id_t CPL_NONE;
 
 extern cpl_session_t cpl_session;
-
 
 /***************************************************************************/
 /** Relation Types                                                        **/
@@ -536,6 +535,16 @@ extern cpl_session_t cpl_session;
  */
 EXPORT cpl_return_t
 cpl_attach(struct _cpl_db_backend_t* backend);
+
+/**
+ * Initialize the library and attach it to the database backend, 
+ * ignoring the errors if already initialized or attached
+ *
+ * @param backend the database backend
+ * @return the error code
+ */
+EXPORT cpl_return_t
+cpl_try_attach(struct _cpl_db_backend_t* backend);
 
 /**
  * Perform the cleanup and detach the library from the database backend.

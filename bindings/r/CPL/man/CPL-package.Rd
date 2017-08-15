@@ -6,8 +6,9 @@
   R bindings for Prov-CPL
 }
 \description{
-  Contains R functions more or less identical to those in the Prov-CPL 
-  C++ library. 
+  Provides basic Prov-CPL functionality around the upload
+  and download of JSON documents. Full library support not yet 
+  complete. 
 }
 \details{
   TODO

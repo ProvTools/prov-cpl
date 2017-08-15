@@ -5,8 +5,9 @@ Version: 1.0
 Date: 2017-07-18
 Author: Jackson Okuhn
 Maintainer: Jackson Okuhn <jpokuhn@gmail.com>
-Description: One paragraph description of what the package does as one
-        or more full sentences.
-License: GPL (>= 2)
+Description: Provides basic Prov-CPL functionality around the upload
+		and download of JSON documents. Full library support not yet 
+		complete.
+License: Harvard University
 Imports: Rcpp (>= 0.12.11)
 LinkingTo: Rcpp
