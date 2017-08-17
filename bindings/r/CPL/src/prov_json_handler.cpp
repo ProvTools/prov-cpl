@@ -12,20 +12,15 @@ cpl_attach_r(){
 }
 
 // [[Rcpp::export]]
-cpl_id_t
+unsigned long long
 import_document_json_r(const char* filename,
 					 const char* originator,
 					 const char* bundle_name,
-					 const cpl_id_t anchor_object,
-					 const cpl_id_t bundle_agent,
-					 cpl_id_t* out_id)
+					 const unsigned long long anchor_object,
+					 const unsigned long long bundle_agent)
 {	
-	cpl_db_backend_t* backend = NULL;
-	cpl_create_odbc_backend_dsn("CPL",
-						CPL_ODBC_POSTGRESQL, &backend);
-	cpl_return_t ret = cpl_attach(backend);
 
-	cpl_id_t out_id;
+	unsigned long long out_id;
 	import_document_json(filename, originator, bundle_name, anchor_object, bundle_agent, &out_id);
 
 	return out_id;
@@ -33,20 +28,11 @@ import_document_json_r(const char* filename,
 
 // [[Rcpp::export]]
 void
-export_bundle_json_r(const cpl_id_t bundle, 
+export_bundle_json_r(const unsigned long long bundle, 
 				   const char* path)
 {
-
-	cpl_db_backend_t* backend = NULL;
-	cpl_create_odbc_backend_dsn("CPL",
-						CPL_ODBC_POSTGRESQL, &backend);
-	cpl_attach(backend);
-
-	cpl_id_t out_id;
-	import_document_json(filename, originator, bundle_name, anchor_object, bundle_agent, &out_id);
-
-
-	export_bundle_json_r(bundle, path)
+	
+	export_bundle_json(bundle, path)
 }
 
 // [[Rcpp::export]]
