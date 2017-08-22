@@ -5,8 +5,8 @@ cpl_attach_r <- function() {
     invisible(.Call(CPL_cpl_attach_r))
 }
 
-import_document_json_r <- function(filename, originator, bundle_name, anchor_object, bundle_agent, out_id) {
-    .Call(CPL_import_document_json_r, filename, originator, bundle_name, anchor_object, bundle_agent, out_id)
+import_document_json_r <- function(filename, originator, bundle_name, anchor_object, bundle_agent) {
+    .Call(CPL_import_document_json_r, filename, originator, bundle_name, anchor_object, bundle_agent)
 }
 
 export_bundle_json_r <- function(bundle, path) {

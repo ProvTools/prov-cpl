@@ -114,9 +114,8 @@ typedef struct cplxx_object_info {
 	/// The object creation time expressed as UNIX time.
 	unsigned long creation_time;
 
-	/// The string that uniquely identifies the application that created
-	/// the object in the first place (this string also acts as a namespace).
-    std::string originator;
+	/// Namespace prefix
+    std::string prefix;
 
 	/// The object name.
     std::string name;
@@ -137,6 +136,9 @@ typedef struct cplxx_property_entry {
 	/// The object ID
 	cpl_id_t id;
 
+	/// Namespace prefix
+	std::string prefix;
+
 	/// The property key (name)
 	std::string key;
 
@@ -144,6 +146,23 @@ typedef struct cplxx_property_entry {
 	std::string value;
 
 } cplxx_property_entry_t;
+
+/**
+ * An entry in the collection of prefixes
+ */
+typedef struct cplxx_prefix_entry {
+
+	/// The object ID
+	cpl_id_t id;
+
+	/// Namespace prefix
+	std::string prefix;
+
+	/// The namespace iri
+	std::string iri;
+
+} cplxx_prefix_entry_t;
+
 
 /**
  * General information about PROV relation type
@@ -181,7 +200,6 @@ cpl_cb_collect_object_info_vector(const cpl_object_info_t* info,
  * information in an instance of std::vector<cpl_id_timestamp_t>.
  *
  * @param id the object ID
- * @param version the object version
  * @param key the property name
  * @param value the property value
  * @param context the pointer to an instance of the vector 
@@ -202,9 +220,8 @@ cpl_cb_collect_id_timestamp_vector(const cpl_id_t id,
  *
  * @param relation_id the ID of the relation
  * @param query_object_id the ID of the object on which we are querying
- * @param query_object_verson the version of the queried object
  * @param other_object_id the ID of the object on the other end of the
- *                        dependency/ancestry edge
+ *                        relation
  * @param other_object_version the version of the other object
  * @param type the type of the data or the control dependency
  * @param context the pointer to an instance of the list
@@ -218,6 +235,7 @@ cpl_cb_collect_relation_list(const cpl_id_t relation_id,
 							 const cpl_id_t query_object_id,
 							 const cpl_id_t other_object_id,
 							 const int type,
+							 const cpl_id_t bundle_id,
 							 void* context);
 
 /**
@@ -226,11 +244,10 @@ cpl_cb_collect_relation_list(const cpl_id_t relation_id,
  *
  * @param relation_id the ID of the relation
  * @param query_object_id the ID of the object on which we are querying
- * @param query_object_verson the version of the queried object
  * @param other_object_id the ID of the object on the other end of the
- *                        dependency/ancestry edge
+ *                        relation
  * @param other_object_version the version of the other object
- * @param type the type of the data or the control dependency
+ * @param type the type of the relation
  * @param context the pointer to an instance of the vector 
  * @return CPL_OK or an error code
  */
@@ -250,7 +267,7 @@ cpl_cb_collect_relation_vector(const cpl_id_t relation_id,
  * information in an instance of std::vector<cplxx_property_entry_t>.
  *
  * @param id the object ID
- * @param version the object version
+ * @param prefix the namespace prefix
  * @param key the property name
  * @param value the property value
  * @param context the pointer to an instance of the vector 
@@ -261,16 +278,36 @@ cpl_cb_collect_relation_vector(const cpl_id_t relation_id,
 #endif
 EXPORT cpl_return_t
 cpl_cb_collect_properties_vector(const cpl_id_t id,
+								 const char* prefix,
 								 const char* key,
 								 const char* value,
 								 void* context);
 
 /**
- * The iterator callback for cpl_lookup_by_property() that collects
- * the returned information in an instance of std::vector<cpl_id_version_t>.
+ * The iterator callback for cpl_get_prefixes() that collects the returned
+ * information in an instance of std::vector<cplxx_prefix_entry_t>.
  *
  * @param id the object ID
- * @param version the object version
+ * @param prefix the namespace prefix
+ * @param iri the namespace iri
+ * @param context the pointer to an instance of the vector 
+ * @return CPL_OK or an error code
+ */
+#ifdef SWIG
+%constant
+#endif
+EXPORT cpl_return_t
+cpl_cb_collect_prefixes_vector(const cpl_id_t id,
+                               const char* prefix,
+							   const char* iri,
+							   void* context);
+
+/**
+ * The iterator callback for cpl_lookup_by_property() that collects
+ * the returned information in an instance of std::vector<cpl_id_t>.
+ *
+ * @param id the object ID
+ * @param prefix the namespace prefix
  * @param key the property name
  * @param value the property value
  * @param context the pointer to an instance of the vector 
@@ -281,10 +318,10 @@ cpl_cb_collect_properties_vector(const cpl_id_t id,
 #endif
 EXPORT cpl_return_t
 cpl_cb_collect_property_lookup_vector(const cpl_id_t id,
+									  const char* prefix,
 									  const char* key,
 									  const char* value,
 									  void* context);
-
 
 
 /***************************************************************************/
@@ -307,7 +344,7 @@ validate_json(const char* path,
  *
  * @param filename file path to document
  * @param originator document originator
- * @param bundle_name desired name of document bundle
+ * @param bundle_name desired name of document bundle, must be unique
  * @param anchor_object optional PROV_CPL object identical to an object in the document
  * @param bundle_agent optional agent responsible for the document bundle
  * @param bundle_id the ID of the imported bundle

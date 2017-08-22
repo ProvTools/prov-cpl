@@ -39,6 +39,6 @@
 
 \connect cpl
 ALTER TABLE cpl_objects DROP CONSTRAINT IF EXISTS cpl_objects_fk;
-DROP TABLE IF EXISTS cpl_objects, cpl_sessions, cpl_relations,
-                     cpl_relation_properties, cpl_object_properties CASCADE;
+DROP TABLE IF EXISTS cpl_objects, cpl_sessions, cpl_relations, cpl_bundles, cpl_prefixes,
+                     cpl_relation_properties, cpl_object_properties, cpl_bundle_properties CASCADE;
 

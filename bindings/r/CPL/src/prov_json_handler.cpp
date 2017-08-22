@@ -1,5 +1,5 @@
 #include <cplxx.h>
-#include <rcpp.h>
+#include <Rcpp.h>
 using namespace Rcpp;
 
 // [[Rcpp::export]]
@@ -31,7 +31,7 @@ void
 export_bundle_json_r(const unsigned long long bundle, 
 				   const char* path)
 {
-	
+
 	export_bundle_json(bundle, path)
 }
 

@@ -15,27 +15,26 @@ BEGIN_RCPP
 END_RCPP
 }
 // import_document_json_r
-cpl_id_t import_document_json_r(const char* filename, const char* originator, const char* bundle_name, const cpl_id_t anchor_object, const cpl_id_t bundle_agent, cpl_id_t* out_id);
-RcppExport SEXP CPL_import_document_json_r(SEXP filenameSEXP, SEXP originatorSEXP, SEXP bundle_nameSEXP, SEXP anchor_objectSEXP, SEXP bundle_agentSEXP, SEXP out_idSEXP) {
+unsigned long long import_document_json_r(const char* filename, const char* originator, const char* bundle_name, const unsigned long long anchor_object, const unsigned long long bundle_agent);
+RcppExport SEXP CPL_import_document_json_r(SEXP filenameSEXP, SEXP originatorSEXP, SEXP bundle_nameSEXP, SEXP anchor_objectSEXP, SEXP bundle_agentSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const char* >::type filename(filenameSEXP);
     Rcpp::traits::input_parameter< const char* >::type originator(originatorSEXP);
     Rcpp::traits::input_parameter< const char* >::type bundle_name(bundle_nameSEXP);
-    Rcpp::traits::input_parameter< const cpl_id_t >::type anchor_object(anchor_objectSEXP);
-    Rcpp::traits::input_parameter< const cpl_id_t >::type bundle_agent(bundle_agentSEXP);
-    Rcpp::traits::input_parameter< cpl_id_t* >::type out_id(out_idSEXP);
-    rcpp_result_gen = Rcpp::wrap(import_document_json_r(filename, originator, bundle_name, anchor_object, bundle_agent, out_id));
+    Rcpp::traits::input_parameter< const unsigned long long >::type anchor_object(anchor_objectSEXP);
+    Rcpp::traits::input_parameter< const unsigned long long >::type bundle_agent(bundle_agentSEXP);
+    rcpp_result_gen = Rcpp::wrap(import_document_json_r(filename, originator, bundle_name, anchor_object, bundle_agent));
     return rcpp_result_gen;
 END_RCPP
 }
 // export_bundle_json_r
-void export_bundle_json_r(const cpl_id_t bundle, const char* path);
+void export_bundle_json_r(const unsigned long long bundle, const char* path);
 RcppExport SEXP CPL_export_bundle_json_r(SEXP bundleSEXP, SEXP pathSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const cpl_id_t >::type bundle(bundleSEXP);
+    Rcpp::traits::input_parameter< const unsigned long long >::type bundle(bundleSEXP);
     Rcpp::traits::input_parameter< const char* >::type path(pathSEXP);
     export_bundle_json_r(bundle, path);
     return R_NilValue;
@@ -53,7 +52,7 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"CPL_cpl_attach_r", (DL_FUNC) &CPL_cpl_attach_r, 0},
-    {"CPL_import_document_json_r", (DL_FUNC) &CPL_import_document_json_r, 6},
+    {"CPL_import_document_json_r", (DL_FUNC) &CPL_import_document_json_r, 5},
     {"CPL_export_bundle_json_r", (DL_FUNC) &CPL_export_bundle_json_r, 2},
     {"CPL_cpl_detach_r", (DL_FUNC) &CPL_cpl_detach_r, 0},
     {NULL, NULL, 0}

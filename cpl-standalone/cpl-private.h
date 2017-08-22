@@ -76,6 +76,11 @@
 #define CPL_ENSURE_NOT_NONE(n) { \
 	if ((n) == CPL_NONE) return CPL_E_INVALID_ARGUMENT; }
 
+#define CPL_ENSURE_O_TYPE(n) { \
+	if ((n) < 1 || (n) > 3) return CPL_E_INVALID_ARGUMENT; }
+
+#define CPL_ENSURE_R_TYPE(n) { \
+	if ((n) < 1 || (n) > 18) return CPL_E_INVALID_ARGUMENT; }
 /**
  * Ensure that the originator is valid
  *

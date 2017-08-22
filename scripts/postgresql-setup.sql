@@ -72,24 +72,38 @@ CREATE TABLE IF NOT EXISTS cpl_sessions (
        initialization_time TIMESTAMP DEFAULT NOW(),
        PRIMARY KEY (id));
 
-CREATE TABLE IF NOT EXISTS cpl_objects (
+CREATE TABLE IF NOT EXISTS cpl_bundles (
        id BIGSERIAL,
-       originator VARCHAR(255),
        name VARCHAR(255),
-       type INT,
        creation_time TIMESTAMP DEFAULT NOW(),
-       bundle_id BIGINT,
        session_id BIGINT,
        PRIMARY KEY(id),
        FOREIGN KEY(session_id)
                    REFERENCES cpl_sessions(id));
+
+CREATE TABLE IF NOT EXISTS cpl_objects (
+       id BIGSERIAL,
+       prefix VARCHAR(255),
+       name VARCHAR(255),
+       type INT,
+       creation_time TIMESTAMP DEFAULT NOW(),
+       bundle_id BIGINT NOT NULL,
+       session_id BIGINT,
+       PRIMARY KEY(id),
+       FOREIGN KEY(session_id)
+                   REFERENCES cpl_sessions(id),
+       FOREIGN KEY(bundle_id)
+                   REFERENCES cpl_bundles(id)
+                   ON DELETE CASCADE)
+       FOREIGN KEY(bundle_id, prefix)
+                   REFERENCES cpl_prefixes(id, prefix));
 
 CREATE TABLE IF NOT EXISTS cpl_relations (
        id BIGSERIAL,
        from_id BIGINT,
        to_id BIGINT,
        type INT,
-       bundle_id BIGINT,
+       bundle_id BIGINT NOT NULL,
        PRIMARY KEY(id),
        FOREIGN KEY(from_id)
                    REFERENCES cpl_objects(id)
@@ -101,8 +115,26 @@ CREATE TABLE IF NOT EXISTS cpl_relations (
                    REFERENCES cpl_objects(id)
                    ON DELETE CASCADE);
 
+CREATE TABLE IF NOT EXISTS cpl_prefixes (
+      id BIGINT,
+      prefix VARCHAR(255) NOT NULL,
+      iri VARCHAR(4095) NOT NULL,
+      FOREIGN KEY(id)
+            REFERENCES cpl_bundles(id)
+            ON DELETE CASCADE);
+
+CREATE TABLE IF NOT EXISTS cpl_bundle_properties (
+      id BIGINT,
+      prefix VARCHAR(255) NOT NULL,
+      name VARCHAR(255) NOT NULL,
+      value VARCHAR(4095) NOT NULL,
+      FOREIGN KEY(id)
+            REFERENCES cpl_relations(id)
+            ON DELETE CASCADE);
+
 CREATE TABLE IF NOT EXISTS cpl_relation_properties (
       id BIGINT,
+      prefix VARCHAR(255) NOT NULL,
       name VARCHAR(255) NOT NULL,
       value VARCHAR(4095) NOT NULL,
       FOREIGN KEY(id)
@@ -111,20 +143,16 @@ CREATE TABLE IF NOT EXISTS cpl_relation_properties (
 
 CREATE TABLE IF NOT EXISTS cpl_object_properties (
        id BIGINT,
+       prefix VARCHAR(255) NOT NULL,
        name VARCHAR(255) NOT NULL,
        value VARCHAR(4095) NOT NULL,
        FOREIGN KEY(id)
            REFERENCES cpl_objects(id)
            ON DELETE CASCADE);
 
-ALTER TABLE cpl_objects ADD CONSTRAINT cpl_objects_fk
-      FOREIGN KEY (bundle_id)
-      REFERENCES cpl_objects(id)
-      ON DELETE CASCADE;
-
 INSERT INTO cpl_sessions (id, mac_address, username, pid, program, cmdline)
   VALUES (0, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO cpl_objects (id, originator, name, type, bundle_id, session_id)
+INSERT INTO cpl_objects (id, prefix, name, type, bundle_id, session_id)
   VALUES (0, NULL, NULL, NULL, NULL, NULL);
 INSERT INTO cpl_relations (id, from_id, to_id, type, bundle_id)
   VALUES (0, NULL, NULL, NULL, NULL);
@@ -149,10 +177,12 @@ CREATE OR REPLACE RULE cpl_object_properties_ignore_duplicate_inserts AS
 -- Grant the appropriate privileges
 --
 GRANT ALL PRIVILEGES ON TABLE cpl_sessions TO cpl WITH GRANT OPTION; 
+GRANT ALL PRIVILEGES ON TABLE cpl_bundles TO cpl WITH GRANT OPTION; 
 GRANT ALL PRIVILEGES ON TABLE cpl_objects TO cpl WITH GRANT OPTION;
 GRANT ALL PRIVILEGES ON TABLE cpl_relations TO cpl WITH GRANT OPTION;
 GRANT ALL PRIVILEGES ON TABLE cpl_relation_properties TO cpl WITH GRANT OPTION;
 GRANT ALL PRIVILEGES ON TABLE cpl_object_properties TO cpl WITH GRANT OPTION;
+GRANT ALL PRIVILEGES ON TABLE cpl_prefixes TO cpl WITH GRANT OPTION;
 GRANT ALL PRIVILEGES ON SEQUENCE cpl_objects_id_seq TO cpl WITH GRANT OPTION;
 GRANT ALL PRIVILEGES ON SEQUENCE cpl_sessions_id_seq TO cpl WITH GRANT OPTION;
 GRANT ALL PRIVILEGES ON SEQUENCE cpl_relations_id_seq TO cpl WITH GRANT OPTION;

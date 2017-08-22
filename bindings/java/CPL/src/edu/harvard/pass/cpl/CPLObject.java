@@ -56,10 +56,10 @@ public class CPLObject {
 	/// Traversal direction: Descendants
 	public static final int D_DESCENDANTS = CPLDirectConstants.CPL_D_DESCENDANTS;
 
-	public static final int ENTITY = CPLDirectConstants.ENTITY;
-	public static final int ACTIVITY = CPLDirectConstants.ACTIVITY;
-	public static final int AGENT = CPLDirectConstants.AGENT;	
-	public static final int BUNDLE = CPLDirectConstants.BUNDLE;	
+	public static final int ENTITY = CPLDirectConstants.CPL_ENTITY;
+	public static final int ACTIVITY = CPLDirectConstants.CPL_ACTIVITY;
+	public static final int AGENT = CPLDirectConstants.CPL_AGENT;	
+	public static final int BUNDLE = CPLDirectConstants.CPL_BUNDLE;	
 
 	/// The internal object ID
 	BigInteger id;

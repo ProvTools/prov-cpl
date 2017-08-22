@@ -81,14 +81,14 @@ extern "C" {
      | CPL_A_NO_DATA_DEPENDENCIES)
 */
 
-#define MAC_ADDR_LEN			18
-#define USER_LEN				255
-#define PROGRAM_LEN				4095
-#define CMDLINE_LEN				4095
-#define ORIGINATOR_LEN			255
-#define NAME_LEN				255
-#define KEY_LEN					255
-#define VALUE_LEN				4095
+#define CPL_MAC_ADDR_LEN			18
+#define CPL_USER_LEN				255
+#define CPL_PROGRAM_LEN				4095
+#define CPL_CMDLINE_LEN				4095
+#define CPL_PREFIX_LEN				255
+#define CPL_NAME_LEN				255
+#define CPL_KEY_LEN					255
+#define CPL_VALUE_LEN				4095
 
 
 

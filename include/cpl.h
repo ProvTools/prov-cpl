@@ -58,7 +58,7 @@ struct _cpl_db_backend_t;
 /**
  * The CPL version - major number
  */
-#define CPL_VERSION_MAJOR		2
+#define CPL_VERSION_MAJOR		3
 
 /**
  * The CPL version - minor number (two digits)
@@ -68,7 +68,7 @@ struct _cpl_db_backend_t;
 /**
  * The CPL version - as a string
  */
-#define CPL_VERSION_STR			"2.0"
+#define CPL_VERSION_STR			"3.0"
 
 
 /***************************************************************************/
@@ -133,6 +133,25 @@ typedef struct cpl_session_info {
 } cpl_session_info_t;
 
 /**
+ * Information about a provenance bundle.
+ */
+typedef struct cpl_bundle_info {
+	
+	/// The bundle ID.
+	cpl_id_t id;
+
+	/// The session ID of the process that created the object
+	cpl_session_t creation_session;
+
+	/// The object creation time expressed as UNIX time.
+	unsigned long creation_time;
+
+	/// The object name.
+	char* name;
+
+} cpl_bundle_info_t;
+
+/**
  * Information about a provenance object.
  */
 typedef struct cpl_object_info {
@@ -146,9 +165,8 @@ typedef struct cpl_object_info {
 	/// The object creation time expressed as UNIX time.
 	unsigned long creation_time;
 
-	/// The string that uniquely identifies the application that created
-	/// the object in the first place (this string also acts as a namespace).
-	char* originator;
+	/// Namespace prefix
+	char* prefix;
 
 	/// The object name.
 	char* name;
@@ -156,7 +174,7 @@ typedef struct cpl_object_info {
 	/// The object type.
 	int type;
 
-	/// The object ID of the bundle, or CPL_NONE if none.
+	/// The object ID of the bundle
 	cpl_id_t bundle_id;
 
 } cpl_object_info_t;
@@ -188,13 +206,13 @@ typedef cpl_return_t (*cpl_id_timestamp_iterator_t)
 						 void* context);
 
 /**
- * The iterator callback function used by cpl_get_object_ancestry().
+ * The iterator callback function used by cpl_get_object_relations().
  *
  * @param relation_id the ID of the relation
  * @param query_object_id the ID of the object on which we are querying
  * @param other_object_id the ID of the object on the other end of the
- *                        dependency/ancestry edge
- * @param type the type of the data or the control dependency
+ *                        ancestry edge
+ * @param type the type of the relation
  * @param context the application-provided context
  * @return CPL_OK or an error code (the caller should fail on this error)
  */
@@ -207,7 +225,7 @@ typedef cpl_return_t (*cpl_relation_iterator_t)
 						 void* context);
 
 /**
- * The arguments of cpl_ancestry_iterator_t() expressed as a struct (excluding
+ * The arguments of cpl_relation_iterator_t() expressed as a struct (excluding
  * the caller-provided context).
  */
 typedef struct cpl_relation {
@@ -240,16 +258,10 @@ typedef struct cpl_relation {
  */
 typedef cpl_return_t (*cpl_property_iterator_t)
 						(const cpl_id_t id,
+						 const char* prefix,
 						 const char* key,
 						 const char* value,
 						 void* context);
-
-/*
- * Static assertions
- */
-#ifdef _DEBUG
-extern int __cpl_assert__cpl_id_size[sizeof(cpl_id_t) == 8 ? 1 : -1];
-#endif
 
 
 /***************************************************************************/
@@ -305,9 +317,9 @@ extern cpl_session_t cpl_session;
 #define	WASASSOCIATEDWITH_STR		"wasAssociatedWith"
 #define ACTEDONBEHALFOF_STR			"actedOnBehalfOf"
 
-#define CPL_IS_RELATION_TYPE(r)			((r) >= 1 && (r) <= 18)
+#define CPL_IS_RELATION_TYPE(r)			((r) > 0 && (r) < 19)
 
-#define NUM_R_TYPES					18
+#define CPL_NUM_R_TYPES					18
 /***************************************************************************/
 /** Return Codes                                                          **/
 /***************************************************************************/
@@ -465,32 +477,26 @@ extern cpl_session_t cpl_session;
 /**
  * The default entity type
  */
-#define ENTITY							1
+#define CPL_ENTITY							1
 
 /**
  * The default activity type
  */
-#define ACTIVITY						2
+#define CPL_ACTIVITY						2
 
 /**
  * The default agent type
  */
-#define AGENT 							3
-
-/**
- * The default bundle type
- */
-#define BUNDLE							4
+#define CPL_AGENT 							3
 
 
-#define ENTITY_STR						"entity"
-#define ACTIVITY_STR					"activity"
-#define AGENT_STR						"agent"
-#define BUNDLE_STR						"bundle"
+#define CPL_ENTITY_STR						"entity"
+#define CPL_ACTIVITY_STR					"activity"
+#define CPL_AGENT_STR						"agent"
 
-#define CPL_IS_OBJECT_TYPE(r)			((r) >= 1 && (r) <= 4)
+#define CPL_IS_OBJECT_TYPE(r)			((r) > 0 && (r) < 4)
 
-#define NUM_O_TYPES						4
+#define CPL_NUM_O_TYPES						3
 /***************************************************************************/
 /** Graph Traversal, Query, and Lookup Flags                              **/
 /***************************************************************************/
@@ -537,16 +543,6 @@ EXPORT cpl_return_t
 cpl_attach(struct _cpl_db_backend_t* backend);
 
 /**
- * Initialize the library and attach it to the database backend, 
- * ignoring the errors if already initialized or attached
- *
- * @param backend the database backend
- * @return the error code
- */
-EXPORT cpl_return_t
-cpl_try_attach(struct _cpl_db_backend_t* backend);
-
-/**
  * Perform the cleanup and detach the library from the database backend.
  * Please note that this function is not thread-safe.
  *
@@ -574,21 +570,18 @@ cpl_error_string(cpl_return_t error);
 /** Disclosed Provenance API                                              **/
 /***************************************************************************/
 
-//TODO edit function headers
 /**
  * Create an object.
  *
- * @param originator the application responsible for creating the object
- *                   and generating unique names within its namespace
+ * @param prefix the object prefix, must be an existing bundle prefix
  * @param name the object name
  * @param type the object type
- * @param bundle the ID of the object that should contain this object
- *                  (use CPL_NONE for no bundle)
+ * @param bundle the ID of the bundle that should contain this object
  * @param out_id the pointer to store the ID of the newly created object
  * @return CPL_OK or an error code
  */
 EXPORT cpl_return_t
-cpl_create_object(const char* originator,
+cpl_create_object(const char* prefix,
 				  const char* name,
 				  const int type,
 				  const cpl_id_t bundle,
@@ -598,15 +591,15 @@ cpl_create_object(const char* originator,
  * Look up an object by name. If multiple objects share the same name,
  * get the latest one.
  *
- * @param originator the object originator
+ * @param prefix the object prefix
  * @param name the object name
- * @param type the object type, 0 for no type
- * @param bundle_id the bundle ID, 0 for no ID
+ * @param type the object type, CPL_NONE for no type
+ * @param bundle_id the bundle ID, CPL_NONE for no ID
  * @param out_id the pointer to store the object ID
  * @return CPL_OK or an error code
  */
 EXPORT cpl_return_t
-cpl_lookup_object(const char* originator,
+cpl_lookup_object(const char* prefix,
 				  const char* name,
 				  const int type,
 				  const cpl_id_t bundle_id,
@@ -616,17 +609,17 @@ cpl_lookup_object(const char* originator,
  * Look up an object by name. If multiple objects share the same name,
  * return all of them.
  *
- * @param originator the object originator
+ * @param prefix the object prefix
  * @param name the object name
- * @param type the object type, 0 for no type
- * @param bundle_id the bundle ID, 0 for no ID
+ * @param type the object type, CPL_NONE for no type
+ * @param bundle_id the bundle ID, CPL_NONE for no ID
  * @param flags a logical combination of CPL_L_* flags
  * @param iterator the iterator to be called for each matching object
  * @param context the caller-provided iterator context
  * @return CPL_OK or an error code
  */
 EXPORT cpl_return_t
-cpl_lookup_object_ext(const char* originator,
+cpl_lookup_object_ext(const char* prefix,
 					  const char* name,
 					  const int type,
 					  const cpl_id_t bundle_id,
@@ -637,17 +630,15 @@ cpl_lookup_object_ext(const char* originator,
 /**
  * Lookup or create an object if it does not exist.
  *
- * @param originator the application responsible for creating the object
- *                   and generating unique names within its namespace
+ * @param prefix the object prefix
  * @param name the object name
  * @param type the object type
- * @param bundle the ID of the object that should contain this object
- *                  (use CPL_NONE for no bundle)
+ * @param bundle the ID of the bundle that should contain this object
  * @param out_id the pointer to store the ID of the newly created object
  * @return CPL_OK or an error code
  */
 EXPORT cpl_return_t
-cpl_lookup_or_create_object(const char* originator,
+cpl_lookup_or_create_object(const char* prefix,
 							const char* name,
 							const int type,
 							const cpl_id_t bundle,
@@ -657,14 +648,16 @@ cpl_lookup_or_create_object(const char* originator,
  * Add a property to the given object.
  *
  * @param id the object ID
+ * @param prefix the prefix
  * @param key the key
  * @param value the value
  * @return CPL_OK or an error code
  */
 EXPORT cpl_return_t
 cpl_add_object_property(const cpl_id_t id,
-				 const char* key,
-                 const char* value);
+					    const char* prefix,
+					    const char* key,
+	                    const char* value);
 
 /**
 * Add a relation
@@ -672,29 +665,96 @@ cpl_add_object_property(const cpl_id_t id,
 * @param from_id the source's ID
 * @param to_id the destination's ID
 * @param type the relation's PROV type
+* @param bundle the ID of the bundle that should contain this relation
 * @param out_id the pointer to store the ID of the newly created relation
 * @return CPL_OK or an error code
 **/
 EXPORT cpl_return_t
 cpl_add_relation(const cpl_id_t from_id,
-			  	   const cpl_id_t to_id,
-				   const int type,
-				   const cpl_id_t bundle,
-				   cpl_id_t* out_id);
-
+		  	     const cpl_id_t to_id,
+			     const int type,
+			     const cpl_id_t bundle,
+			     cpl_id_t* out_id);
 
 /**
  * Add a property to the given relation.
  *
  * @param id the object ID
+  * @param prefix the prefix
  * @param key the key
  * @param value the value
  * @return CPL_OK or an error code
  */
 EXPORT cpl_return_t
 cpl_add_relation_property(const cpl_id_t id,
-				 const char* key,
-                 const char* value);
+						  const char* prefix,
+						  const char* key,
+		                  const char* value);
+
+/**
+ * Create a bundle.
+ *
+ * @param name the object name
+ * @param out_id the pointer to store the ID of the newly created object
+ * @return CPL_OK or an error code
+ */
+EXPORT cpl_return_t
+cpl_create_bundle(const char* name,
+				  cpl_id_t* out_id);
+
+/**
+ * Look up a bundle by name. If multiple bundles share the same name,
+ * get the latest one.
+ *
+ * @param name the bundle name
+ * @param out_id the pointer to store the object ID
+ * @return CPL_OK or an error code
+ */
+EXPORT cpl_return_t
+cpl_lookup_bundle(const char* name,
+				  cpl_id_t* out_id);
+
+/**
+ * Look up a bundle by name. If multiple bundles share the same name,
+ * return all of them.
+ *
+ * @param name the bundle name
+ * @param flags a logical combination of CPL_L_* flags
+ * @param iterator the iterator to be called for each matching bundle
+ * @param context the caller-provided iterator context
+ * @return CPL_OK or an error code
+ */
+EXPORT cpl_return_t
+cpl_lookup_bundle_ext(const char* name,
+				      cpl_id_t* out_id);
+
+/**
+ * Add a property to the given relation.
+ *
+ * @param id the object ID
+ * @param prefix the namespace prefix
+ * @param key the key
+ * @param value the value
+ * @return CPL_OK or an error code
+ */
+EXPORT cpl_return_t
+cpl_add_bundle_property(const cpl_id_t id,
+					    const char* prefix,
+					    const char* key,
+	                    const char* value);
+
+/**
+ * Add a prefix to a bundle.
+ *
+ * @param prefix the namespace prefix
+ * @param iri the namespace iri
+ * @param value the value
+ * @return CPL_OK or an error code
+ */
+EXPORT cpl_return_t
+cpl_add_prefix(const cpl_id_t id,
+			   const char* prefix,
+               const char* iri);
 
 /***************************************************************************/
 /** Provenance Access API                                                 **/
@@ -778,29 +838,34 @@ cpl_free_object_info(cpl_object_info_t* info);
  */
 EXPORT cpl_return_t
 cpl_get_object_relations(const cpl_id_t id,
-						const int direction,
-						const int flags,
-						cpl_relation_iterator_t iterator,
-						void* context);
+						 const int direction,
+						 const int flags,
+						 cpl_relation_iterator_t iterator,
+						 void* context);
 
 /**
  * Get the properties associated with the given provenance object.
  *
  * @param id the the object ID
- * @param key the property to fetch - or NULL for all properties
+ * @param prefix the property prefix to fetch - or NULL 
+ *               (along with key)for all properties
+ * @param key the property key to fetch - or NULL 
+ *            (along with prefix) for all keys
  * @param iterator the iterator callback function
  * @param context the user context to be passed to the iterator function
  * @return CPL_OK, CPL_S_NO_DATA, or an error code
  */
 EXPORT cpl_return_t
 cpl_get_object_properties(const cpl_id_t id,
-				   const char* key,
-				   cpl_property_iterator_t iterator,
-				   void* context);
+	                      const char* prefix,
+				          const char* key,
+				          cpl_property_iterator_t iterator,
+				          void* context);
 
 /**
  * Lookup an object based on a property value.
  *
+ * @param prefix the property prefix
  * @param key the property name
  * @param value the property value
  * @param iterator the iterator callback function
@@ -808,25 +873,30 @@ cpl_get_object_properties(const cpl_id_t id,
  * @return CPL_OK, CPL_E_NOT_FOUND, or an error code
  */
 EXPORT cpl_return_t
-cpl_lookup_object_by_property(const char* key,
-					   const char* value,
-					   cpl_property_iterator_t iterator,
-					   void* context);
+cpl_lookup_object_by_property(const char* prefix,
+							  const char* key,
+					          const char* value,
+					          cpl_property_iterator_t iterator,
+					          void* context);
 
 /**
  * Get the properties associated with the given provenance object.
  * 
  * @param id the the object ID
- * @param key the property to fetch - or NULL for all properties
+ * @param prefix the property prefix to fetch - or NULL 
+ *               (along with key)for all properties
+ * @param key the property key to fetch - or NULL 
+ *            (along with prefix) for all keys
  * @param iterator the iterator callback function
  * @param context the user context to be passed to the iterator function
  * @return CPL_OK, CPL_S_NO_DATA, or an error code
  */
 EXPORT cpl_return_t
 cpl_get_relation_properties(const cpl_id_t id,
-				   const char* key,
-				   cpl_property_iterator_t iterator,
-				   void* context);
+							const char* prefix,
+				            const char* key,
+				            cpl_property_iterator_t iterator,
+				            void* context);
 
 /**
  * Deletes a bundle and all objects and relations belonging to it.
@@ -847,21 +917,54 @@ cpl_delete_bundle(const cpl_id_t id);
  */
 EXPORT cpl_return_t
 cpl_get_bundle_objects(const cpl_id_t id,
-					cpl_object_info_iterator_t iterator,
-					void* context);
+					   cpl_object_info_iterator_t iterator,
+					   void* context);
 
 /**
  * Get all relations belonging to a bundle
  *
- * @paramID the bundle ID
+ * @param ID the bundle ID
  * @param iterator the iterator callback function
  * @param context the user context to be passed to the iterator function
  * @return CPL_OK, or an error code
  */
 EXPORT cpl_return_t
 cpl_get_bundle_relations(const cpl_id_t id,
-					cpl_relation_iterator_t iterator,
-					void* context);
+					     cpl_relation_iterator_t iterator,
+					     void* context);
+
+/**
+ * Get the properties associated with the given provenance bundle.
+ *
+ * @param id the the bundle ID
+ * @param prefix the property prefix to fetch - or NULL 
+ *               (along with key)for all properties
+ * @param key the property key to fetch - or NULL 
+ *            (along with prefix) for all keys
+ * @param iterator the iterator callback function
+ * @param context the user context to be passed to the iterator function
+ * @return CPL_OK, CPL_S_NO_DATA, or an error code
+ */
+EXPORT cpl_return_t
+cpl_get_bundle_properties(const cpl_id_t id,
+						  const char* prefix,
+			              const char* key,
+			              cpl_property_iterator_t iterator,
+			              void* context);
+
+/**
+ * Get the prefixes associated with the given provenance bundle.
+ *
+ * @param id the the bundle ID
+ * @param prefix the property prefix to fetch - or NULL for all prefixes
+ * @param iterator the iterator callback function
+ * @param context the user context to be passed to the iterator function
+ * @return CPL_OK, CPL_S_NO_DATA, or an error code
+ */
+EXPORT cpl_return_t
+cpl_get_bundle_prefixes(const cpl_id_t id,
+			            cpl_property_iterator_t iterator,
+			            void* context);
 /***************************************************************************/
 /** Utility functions                                                     **/
 /***************************************************************************/

@@ -1100,11 +1100,11 @@ cpl_odbc_create_session(struct _cpl_db_backend_t* backend,
 retry:
 	SQLHSTMT stmt = odbc->create_session_insert_stmt;
 
-	SQL_BIND_VARCHAR(stmt, 1, MAC_ADDR_LEN, mac_address);
-	SQL_BIND_VARCHAR(stmt, 2, USER_LEN, user);
+	SQL_BIND_VARCHAR(stmt, 1, CPL_MAC_ADDR_LEN, mac_address);
+	SQL_BIND_VARCHAR(stmt, 2, CPL_USER_LEN, user);
 	SQL_BIND_INTEGER(stmt, 3, pid);
-	SQL_BIND_VARCHAR(stmt, 4, PROGRAM_LEN, program);
-	SQL_BIND_VARCHAR(stmt, 5, CMDLINE_LEN, cmdline);
+	SQL_BIND_VARCHAR(stmt, 4, CPL_PROGRAM_LEN, program);
+	SQL_BIND_VARCHAR(stmt, 5, CPL_CMDLINE_LEN, cmdline);
 
 
 	// Insert the new row to the sessions table
@@ -1172,8 +1172,8 @@ retry:
 		? odbc->create_object_insert_stmt
 		: odbc->create_object_insert_bundle_stmt;
 
-	SQL_BIND_VARCHAR(stmt, 1, ORIGINATOR_LEN, originator);
-	SQL_BIND_VARCHAR(stmt, 2, NAME_LEN, name);
+	SQL_BIND_VARCHAR(stmt, 1, CPL_ORIGINATOR_LEN, originator);
+	SQL_BIND_VARCHAR(stmt, 2, CPL_NAME_LEN, name);
 	SQL_BIND_INTEGER(stmt, 3, type);
 	SQL_BIND_INTEGER(stmt, 4, session);
 
@@ -1247,14 +1247,14 @@ retry:
 		if(bundle_id == CPL_NONE){
 			stmt = odbc->lookup_object_ntnb_stmt;
 
-			SQL_BIND_VARCHAR(stmt, 1, ORIGINATOR_LEN, originator);
-			SQL_BIND_VARCHAR(stmt, 2, NAME_LEN, name);
+			SQL_BIND_VARCHAR(stmt, 1, CPL_ORIGINATOR_LEN, originator);
+			SQL_BIND_VARCHAR(stmt, 2, CPL_NAME_LEN, name);
 
 		} else {
 			stmt = odbc->lookup_object_nt_stmt;
 
-			SQL_BIND_VARCHAR(stmt, 1, ORIGINATOR_LEN, originator);
-			SQL_BIND_VARCHAR(stmt, 2, NAME_LEN, name);
+			SQL_BIND_VARCHAR(stmt, 1, CPL_ORIGINATOR_LEN, originator);
+			SQL_BIND_VARCHAR(stmt, 2, CPL_NAME_LEN, name);
 			SQL_BIND_INTEGER(stmt, 3, bundle_id);
 
 		}
@@ -1262,15 +1262,15 @@ retry:
 		if(bundle_id == CPL_NONE){
 			stmt = odbc->lookup_object_nb_stmt;
 
-			SQL_BIND_VARCHAR(stmt, 1, ORIGINATOR_LEN, originator);
-			SQL_BIND_VARCHAR(stmt, 2, NAME_LEN, name);
+			SQL_BIND_VARCHAR(stmt, 1, CPL_ORIGINATOR_LEN, originator);
+			SQL_BIND_VARCHAR(stmt, 2, CPL_NAME_LEN, name);
 			SQL_BIND_INTEGER(stmt, 3, type);
 
 		} else {
 			stmt = odbc->lookup_object_stmt;
 
-			SQL_BIND_VARCHAR(stmt, 1, ORIGINATOR_LEN, originator);
-			SQL_BIND_VARCHAR(stmt, 2, NAME_LEN, name);
+			SQL_BIND_VARCHAR(stmt, 1, CPL_ORIGINATOR_LEN, originator);
+			SQL_BIND_VARCHAR(stmt, 2, CPL_NAME_LEN, name);
 			SQL_BIND_INTEGER(stmt, 3, type);
 			SQL_BIND_INTEGER(stmt, 4, bundle_id);
 
@@ -1353,14 +1353,14 @@ retry:
 		if(bundle_id == CPL_NONE){
 			stmt = odbc->lookup_object_ntnb_ext_stmt;
 
-			SQL_BIND_VARCHAR(stmt, 1, ORIGINATOR_LEN, originator);
-			SQL_BIND_VARCHAR(stmt, 2, NAME_LEN, name);
+			SQL_BIND_VARCHAR(stmt, 1, CPL_ORIGINATOR_LEN, originator);
+			SQL_BIND_VARCHAR(stmt, 2, CPL_NAME_LEN, name);
 
 		} else {
 			stmt = odbc->lookup_object_nt_ext_stmt;
 
-			SQL_BIND_VARCHAR(stmt, 1, ORIGINATOR_LEN, originator);
-			SQL_BIND_VARCHAR(stmt, 2, NAME_LEN, name);
+			SQL_BIND_VARCHAR(stmt, 1, CPL_ORIGINATOR_LEN, originator);
+			SQL_BIND_VARCHAR(stmt, 2, CPL_NAME_LEN, name);
 			SQL_BIND_INTEGER(stmt, 3, bundle_id);
 
 		}
@@ -1368,15 +1368,15 @@ retry:
 		if(bundle_id == CPL_NONE){
 			stmt = odbc->lookup_object_nb_ext_stmt;
 
-			SQL_BIND_VARCHAR(stmt, 1, ORIGINATOR_LEN, originator);
-			SQL_BIND_VARCHAR(stmt, 2, NAME_LEN, name);
+			SQL_BIND_VARCHAR(stmt, 1, CPL_ORIGINATOR_LEN, originator);
+			SQL_BIND_VARCHAR(stmt, 2, CPL_NAME_LEN, name);
 			SQL_BIND_INTEGER(stmt, 3, type);
 
 		} else {
 			stmt = odbc->lookup_object_ext_stmt;
 
-			SQL_BIND_VARCHAR(stmt, 1, ORIGINATOR_LEN, originator);
-			SQL_BIND_VARCHAR(stmt, 2, NAME_LEN, name);
+			SQL_BIND_VARCHAR(stmt, 1, CPL_ORIGINATOR_LEN, originator);
+			SQL_BIND_VARCHAR(stmt, 2, CPL_NAME_LEN, name);
 			SQL_BIND_INTEGER(stmt, 3, type);
 			SQL_BIND_INTEGER(stmt, 4, bundle_id);
 			
@@ -1624,8 +1624,8 @@ retry:
 	SQLHSTMT stmt = odbc->add_object_property_stmt;
 
 	SQL_BIND_INTEGER(stmt, 1, id);
-	SQL_BIND_VARCHAR(stmt, 2, KEY_LEN, key);
-	SQL_BIND_VARCHAR(stmt, 3, VALUE_LEN, value);
+	SQL_BIND_VARCHAR(stmt, 2, CPL_KEY_LEN, key);
+	SQL_BIND_VARCHAR(stmt, 3, CPL_VALUE_LEN, value);
 
 
 	// Execute
@@ -1676,8 +1676,8 @@ retry:
 	SQLHSTMT stmt = odbc->add_relation_property_stmt;
 
 	SQL_BIND_INTEGER(stmt, 1, id);
-	SQL_BIND_VARCHAR(stmt, 2, KEY_LEN, key);
-	SQL_BIND_VARCHAR(stmt, 3, VALUE_LEN, value);
+	SQL_BIND_VARCHAR(stmt, 2, CPL_KEY_LEN, key);
+	SQL_BIND_VARCHAR(stmt, 3, CPL_VALUE_LEN, value);
 
 
 	// Execute
@@ -1809,8 +1809,8 @@ cpl_odbc_get_all_objects(struct _cpl_db_backend_t* backend,
 	std::list<cplxx_object_info_t> entries;
 	SQL_TIMESTAMP_STRUCT t;
 
-	size_t originator_size = ORIGINATOR_LEN + 1;
-	size_t name_size = NAME_LEN + 1;
+	size_t originator_size = CPL_ORIGINATOR_LEN + 1;
+	size_t name_size = CPL_NAME_LEN + 1;
 
 	char* entry_originator = (char*) alloca(originator_size);
 	char* entry_name = (char*) alloca(name_size);
@@ -2505,7 +2505,7 @@ retry:
 	SQL_BIND_INTEGER(stmt, 1, id);
 
 	if (key != NULL) {
-		SQL_BIND_VARCHAR(stmt, 2, KEY_LEN, key);
+		SQL_BIND_VARCHAR(stmt, 2, CPL_KEY_LEN, key);
 	}
 
 
@@ -2672,8 +2672,8 @@ SQL_START;
 	std::list<cplxx_object_info_t> entries;
 	SQL_TIMESTAMP_STRUCT t;
 
-	size_t originator_size = ORIGINATOR_LEN + 1;
-	size_t name_size = NAME_LEN + 1;
+	size_t originator_size = CPL_ORIGINATOR_LEN + 1;
+	size_t name_size = CPL_NAME_LEN + 1;
 
 	char* entry_originator = (char*) alloca(originator_size);
 	char* entry_name = (char*) alloca(name_size);

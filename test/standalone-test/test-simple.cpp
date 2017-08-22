@@ -349,22 +349,22 @@ test_simple(void)
 
 	// Object creation
 
-	ret = cpl_create_object(ORIGINATOR, "Bundle", BUNDLE, CPL_NONE, &bun);
+	ret = cpl_create_object(ORIGINATOR, "Bundle", CPL_BUNDLE, CPL_NONE, &bun);
 	print(L_DEBUG, "cpl_create_object --> %llx [%d]", bun, ret);
 	CPL_VERIFY(cpl_create_object, ret);
 	if (with_delays) delay();
 
-	ret = cpl_create_object(ORIGINATOR, "Entity", ENTITY, bun, &obj1);
+	ret = cpl_create_object(ORIGINATOR, "Entity", CPL_ENTITY, bun, &obj1);
 	print(L_DEBUG, "cpl_create_object --> %llx [%d]", obj1,ret);
 	CPL_VERIFY(cpl_create_object, ret);
 	if (with_delays) delay();
 
-	ret = cpl_create_object(ORIGINATOR, "Agent", AGENT, bun, &obj2);
+	ret = cpl_create_object(ORIGINATOR, "Agent", CPL_AGENT, bun, &obj2);
 	print(L_DEBUG, "cpl_create_object --> %llx [%d]", obj2,ret);
 	CPL_VERIFY(cpl_create_object, ret);
 	if (with_delays) delay();
 
-	ret = cpl_lookup_or_create_object(ORIGINATOR, "Activity", ACTIVITY, bun, &obj3);
+	ret = cpl_lookup_or_create_object(ORIGINATOR, "Activity", CPL_ACTIVITY, bun, &obj3);
 	print(L_DEBUG, "cpl_lookup_or_create_object --> %llx [%d]",
 			obj3,ret);
 	CPL_VERIFY(cpl_lookup_or_create_object, ret);
@@ -377,26 +377,26 @@ test_simple(void)
 
 	cpl_id_t objx;
 
-	ret = cpl_lookup_object(ORIGINATOR, "Bundle", BUNDLE, CPL_NONE, &objx);
+	ret = cpl_lookup_object(ORIGINATOR, "Bundle", CPL_BUNDLE, CPL_NONE, &objx);
 	print(L_DEBUG, "cpl_lookup_object --> %llx [%d]", objx ,ret);
 	CPL_VERIFY(cpl_lookup_object, ret);
 	if (bun!=objx)throw CPLException("Object lookup returned the wrong object");
 	if (with_delays) delay();
 
-	ret = cpl_lookup_object(ORIGINATOR, "Entity", ENTITY, bun, &objx);
+	ret = cpl_lookup_object(ORIGINATOR, "Entity", CPL_ENTITY, bun, &objx);
 	print(L_DEBUG, "cpl_lookup_object --> %llx [%d]", objx ,ret);
 	CPL_VERIFY(cpl_lookup_object, ret);
 	if(obj1!=objx)throw CPLException("Object lookup returned the wrong object");
 	if (with_delays) delay();
 
-	ret = cpl_lookup_object(ORIGINATOR, "Agent", AGENT, bun, &objx);
+	ret = cpl_lookup_object(ORIGINATOR, "Agent", CPL_AGENT, bun, &objx);
 	print(L_DEBUG, "cpl_lookup_object --> %llx [%d]", objx,ret);
 	CPL_VERIFY(cpl_lookup_object, ret);
 	if(obj2!=objx)throw CPLException("Object lookup returned the wrong object");
 	if (with_delays) delay();
 
     std::map<cpl_id_t, unsigned long> ectx;
-	ret = cpl_lookup_object_ext(ORIGINATOR, "Activity", ACTIVITY, bun, CPL_L_NO_FAIL,
+	ret = cpl_lookup_object_ext(ORIGINATOR, "Activity", CPL_ACTIVITY, bun, CPL_L_NO_FAIL,
             cb_lookup_objects, &ectx);
     if (!CPL_IS_OK(ret)) {
         print(L_DEBUG, "cpl_lookup_object_ext --> [%d]", ret);
@@ -674,7 +674,7 @@ test_simple(void)
 			|| (!with_delays && !check_time(info->creation_time))
 			|| strcmp(info->originator, ORIGINATOR) != 0
 			|| strcmp(info->name, "Entity") != 0
-			|| info->type != ENTITY
+			|| info->type != CPL_ENTITY
 			|| info->bundle_id != bun) {
 		throw CPLException("The returned object information is incorrect");
 	}
@@ -696,7 +696,7 @@ test_simple(void)
 			|| (!with_delays && !check_time(info->creation_time))
 			|| strcmp(info->originator, ORIGINATOR) != 0
 			|| strcmp(info->name, "Agent") != 0
-			|| info->type != AGENT
+			|| info->type != CPL_AGENT
 			|| info->bundle_id != bun) {
 		throw CPLException("The returned object information is incorrect");
 	}
