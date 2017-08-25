@@ -769,6 +769,7 @@ cpl_create_bundle(const char* name,
 
 	ret = cpl_db_backend->cpl_db_create_bundle(cpl_db_backend,
 											   name,
+											   cpl_session,
 											   &id);
 	CPL_RUNTIME_VERIFY(ret);
 
@@ -1029,7 +1030,7 @@ cpl_free_object_info(cpl_object_info_t* info)
 {
 	CPL_ENSURE_NOT_NULL(info);
 
-	if (info->originator != NULL) free(info->originator);
+	if (info->prefix != NULL) free(info->prefix);
 	if (info->name != NULL) free(info->name);
 
 	free(info);
@@ -1091,7 +1092,7 @@ cpl_get_object_relations(const cpl_id_t id,
  */
 extern "C" EXPORT cpl_return_t
 cpl_get_object_properties(const cpl_id_t id,
-						  const char* prefix
+						  const char* prefix,
 						  const char* key,
 						  cpl_property_iterator_t iterator,
 						  void* context)
@@ -1240,7 +1241,7 @@ cpl_get_bundle_relations(const cpl_id_t id,
  */
 extern "C" EXPORT cpl_return_t
 cpl_get_bundle_properties(const cpl_id_t id,
-						  const char* prefix
+						  const char* prefix,
 						  const char* key,
 						  cpl_property_iterator_t iterator,
 						  void* context)
@@ -1269,7 +1270,7 @@ cpl_get_bundle_properties(const cpl_id_t id,
 extern "C" EXPORT cpl_return_t
 cpl_get_prefixes(const cpl_id_t id,
 			     const char* prefix,
-			     cpl_property_iterator_t iterator,
+			     cpl_prefix_iterator_t iterator,
 			     void* context)
 {
 	CPL_ENSURE_INITIALIZED;
@@ -1491,7 +1492,7 @@ cpl_cb_collect_prefixes_vector(const cpl_id_t id,
 {
 	if (context == NULL) return CPL_E_INVALID_ARGUMENT;
 
-	cplxx_property_entry_t e;
+	cplxx_prefix_entry_t e;
 	e.id = id;
 	e.prefix = prefix;
 	e.iri = iri;
@@ -1547,114 +1548,60 @@ cpl_cb_collect_property_lookup_vector(const cpl_id_t id,
  */
 prov_relation_data_t rdata_array[] =
 { 
-	{WASINFLUENCEDBY,
-	WASINFLUENCEDBY_STR,
-	"prov:influencee",
-	0,
-	"prov:influencer",
-	0},
-	{ALTERNATEOF,
-	ALTERNATEOF_STR,
-	"prov:alternate1",
-	CPL_ENTITY,
-	"prov:alternate2",
-	CPL_ENTITY},
-	{DERIVEDBYINSERTIONFROM,
-	DERIVEDBYINSERTIONFROM_STR,
-	"prov:after",
-	CPL_ENTITY,
-	"prov:before",
-	CPL_ENTITY},
-	{DERIVEDBYREMOVALFROM,
-	DERIVEDBYREMOVALFROM_STR,
-	"prov:after",
-	CPL_ENTITY,
-	"prov:before",
-	CPL_ENTITY},
-	{HADMEMBER,
-	HADMEMBER_STR,
-	"prov:collection",
-	CPL_ENTITY,
-	"prov:before",
-	CPL_ENTITY},
-	{HADDICTIONARYMEMBER,
-	HADDICTIONARYMEMBER_STR,
-	"prov:dictionary",
-	CPL_ENTITY,
-	"prov:entity",
-	CPL_ENTITY},
-	{SPECIALIZATIONOF,
-	SPECIALIZATIONOF_STR,
-	"prov:specificEntity",
-	CPL_ENTITY,
-	"prov:generalEntity",
-	CPL_ENTITY},
-	{WASDERIVEDFROM,
-	WASDERIVEDFROM_STR,
-	"prov:generatedEntity",
-	CPL_ENTITY,
-	"prov:usedEntity",
-	CPL_ENTITY},
-	{WASGENERATEDBY,
-	WASGENERATEDBY_STR,
-	"prov:entity",
-	CPL_ENTITY,
-	"prov:activity",
-	CPL_ACTIVITY},
-	{WASINVALIDATEDBY,
-	WASINVALIDATEDBY_STR,
-	"prov:entity",
-	CPL_ENTITY,
-	"prov:activity",
-	CPL_ACTIVITY},
-	{WASATTRIBUTEDTO,
-	WASATTRIBUTEDTO_STR,
-	"prov:entity",
-	CPL_ENTITY,
-	"prov:agent",
-	CPL_AGENT},
-	{USED,
-	USED_STR,
-	"prov:activity",
-	CPL_ACTIVITY,
-	"prov:entity",
-	CPL_ENTITY},
-	{WASINFORMEDBY,
-	WASINFORMEDBY_STR,
-	"prov:informed",
-	CPL_ACTIVITY,
-	"prov:informant",
-	CPL_ACTIVITY},
-	{WASSTARTEDBY,
-	WASSTARTEDBY_STR,
-	"prov:activity",
-	CPL_ACTIVITY,
-	"prov:trigger",
-	CPL_ENTITY},
-	{WASENDEDBY,
-	WASENDEDBY_STR,
-	"prov:activity",
-	CPL_ACTIVITY,
-	"prov:trigger",
-	CPL_ENTITY},
-	{HADPLAN,
-	HADPLAN_STR,
-	"prov:agent",
-	CPL_AGENT,
-	"prov:plan",
-	CPL_ENTITY},
-	{WASASSOCIATEDWITH,
-	WASASSOCIATEDWITH_STR,
-	"prov:activity",
-	CPL_ACTIVITY,
-	"prov:agent",
-	CPL_AGENT},
-	{ACTEDONBEHALFOF,
-	ACTEDONBEHALFOF_STR,
-	"prov:delegate",
-	CPL_AGENT,
-	"prov:responsible",
-	CPL_AGENT}
+	{WASINFLUENCEDBY, WASINFLUENCEDBY_STR,
+	"prov:influencee", CPL_NONE,
+	"prov:influencer", CPL_NONE},
+	{ALTERNATEOF, ALTERNATEOF_STR,
+	"prov:alternate1", CPL_ENTITY,
+	"prov:alternate2", CPL_ENTITY},
+	{DERIVEDBYINSERTIONFROM, DERIVEDBYINSERTIONFROM_STR,
+	"prov:after", CPL_ENTITY,
+	"prov:before", CPL_ENTITY},
+	{DERIVEDBYREMOVALFROM, DERIVEDBYREMOVALFROM_STR,
+	"prov:after", CPL_ENTITY,
+	"prov:before", CPL_ENTITY},
+	{HADMEMBER, HADMEMBER_STR,
+	"prov:collection", CPL_ENTITY,
+	"prov:before", CPL_ENTITY},
+	{HADDICTIONARYMEMBER, HADDICTIONARYMEMBER_STR,
+	"prov:dictionary", CPL_ENTITY,
+	"prov:entity", CPL_ENTITY},
+	{SPECIALIZATIONOF, SPECIALIZATIONOF_STR,
+	"prov:specificEntity", CPL_ENTITY,
+	"prov:generalEntity", CPL_ENTITY},
+	{WASDERIVEDFROM, WASDERIVEDFROM_STR,
+	"prov:generatedEntity", CPL_ENTITY,
+	"prov:usedEntity", CPL_ENTITY},
+	{WASGENERATEDBY, WASGENERATEDBY_STR,
+	"prov:entity", CPL_ENTITY,
+	"prov:activity", CPL_ACTIVITY},
+	{WASINVALIDATEDBY, WASINVALIDATEDBY_STR,
+	"prov:entity", CPL_ENTITY,
+	"prov:activity", CPL_ACTIVITY},
+	{WASATTRIBUTEDTO, WASATTRIBUTEDTO_STR,
+	"prov:entity", CPL_ENTITY,
+	"prov:agent", CPL_AGENT},
+	{USED, USED_STR,
+	"prov:activity", CPL_ACTIVITY,
+	"prov:entity", CPL_ENTITY},
+	{WASINFORMEDBY, WASINFORMEDBY_STR,
+	"prov:informed", CPL_ACTIVITY,
+	"prov:informant", CPL_ACTIVITY},
+	{WASSTARTEDBY, WASSTARTEDBY_STR,
+	"prov:activity", CPL_ACTIVITY,
+	"prov:trigger", CPL_ENTITY},
+	{WASENDEDBY, WASENDEDBY_STR,
+	"prov:activity", CPL_ACTIVITY,
+	"prov:trigger", CPL_ENTITY},
+	{HADPLAN, HADPLAN_STR,
+	"prov:agent", CPL_AGENT,
+	"prov:plan", CPL_ENTITY},
+	{WASASSOCIATEDWITH, WASASSOCIATEDWITH_STR,
+	"prov:activity", CPL_ACTIVITY,
+	"prov:agent", CPL_AGENT},
+	{ACTEDONBEHALFOF, ACTEDONBEHALFOF_STR,
+	"prov:delegate", CPL_AGENT,
+	"prov:responsible", CPL_AGENT}
 };
 
 /*
@@ -1778,7 +1725,7 @@ import_bundle_prefixes_json(cpl_id_t bundle,
 		const char* val_str = json_string_value(value);
 
 		if(key_str && val_str){
-			if(!CPL_IS_OK(cpl_add_object_property(bundle, key_str, val_str))){
+			if(!CPL_IS_OK(cpl_add_prefix(bundle, key_str, val_str))){
 				json_decref(prefixes);
 				return CPL_E_INTERNAL_ERROR;
 			}
@@ -1796,35 +1743,53 @@ import_bundle_prefixes_json(cpl_id_t bundle,
 cpl_return_t
 import_objects_json(int type,
 					const char* type_str,
-					const char* originator,
 					cpl_id_t bundle_id,
 					json_t* document)
 {
 	json_t* objects = json_object_get(document, type_str);
 
-	const char* name_str;
+	const char* full_str;
 	json_t* properties;
+	char* copy, *tok_1, *tok_2;
 
-	json_object_foreach(objects, name_str, properties){
+	json_object_foreach(objects, full_str, properties){
 
 		cpl_id_t obj_id = CPL_NONE;
 
-		if(!CPL_IS_OK(cpl_create_object(originator, name_str, type, bundle_id, &obj_id))){
+		copy = strdup(full_str);
+		tok_1 = strtok_r(copy, ":", &copy);
+		tok_2 = strtok_r(copy, "", &copy);
+		if(!tok_2){
+			tok_2 = tok_1; 
+			const char* empty = ""; 
+			tok_1 = strdup(empty);
+		}
+
+		if(!CPL_IS_OK(cpl_create_object(tok_1, tok_2, type, bundle_id, &obj_id))){
 			json_decref(objects);
 			return CPL_E_INTERNAL_ERROR;
 		}
 
 		if(obj_id){
 
-			const char* pkey_str;
-			json_t* pval;
+			const char* key_str;
+			json_t* val;
 
-			json_object_foreach(properties, pkey_str, pval){
+			json_object_foreach(properties, key_str, val){
 
-				const char* pval_str = json_string_value(pval);
+				const char* val_str = json_string_value(val);
+				
+				copy = strdup(key_str);
+				tok_1 = strtok_r(copy, ":", &copy);
+				tok_2 = strtok_r(copy, "", &copy);
+				if(!tok_2){
+					tok_2 = tok_1;
+					const char* empty = ""; 
+					tok_1 = strdup(empty);
+				}
 
-				if(pkey_str && pval_str){
-					if(!CPL_IS_OK(cpl_add_object_property(obj_id, pkey_str, pval_str))){
+				if(tok_1 && tok_2 && val_str){
+					if(!CPL_IS_OK(cpl_add_object_property(obj_id, tok_1, tok_2, val_str))){
 						return CPL_E_INTERNAL_ERROR;
 					}
 				}
@@ -1840,34 +1805,52 @@ import_objects_json(int type,
  * Imports relations. import_document_json helper function.
  */
 cpl_return_t
-import_relations_json(const char* originator,
-					  cpl_id_t bundle_id,
+import_relations_json(cpl_id_t bundle_id,
 					  json_t* document)
 {
 	for(int i=0; i<CPL_NUM_R_TYPES; i++){
 		prov_relation_data_t entry = rdata_array[i];
 		json_t* relations = json_object_get(document, entry.type_str.c_str());
 
-		const char* name;
+		const char* full_str;
 		json_t* relation;
+		char* name;
+		char* tok_1;
+		char* tok_2;
 
-
-		json_object_foreach(relations, name, relation){
+		json_object_foreach(relations, full_str, relation){
 
 			cpl_id_t source, dest, relation_id;
 
-			if(!CPL_IS_OK(cpl_lookup_object(originator, 
-											json_string_value(json_object_get(relation, 
-																entry.source_str.c_str())),
+			name = (char*) json_string_value(json_object_get(relation, entry.source_str.c_str()));
+			tok_1 = strtok_r(name, ":", &name);
+			tok_2 = strtok_r(name, "", &name);
+			if(!tok_2){
+				tok_2 = tok_1;
+				const char* empty = ""; 
+				tok_1 = strdup(empty);
+			}
+
+			if(!CPL_IS_OK(cpl_lookup_object(tok_1, 
+											tok_2,
 											entry.source_t,
 											bundle_id,
 											&source))){
 				json_decref(relations);
 				return CPL_E_INTERNAL_ERROR;
 			}
-			if(!CPL_IS_OK(cpl_lookup_object(originator, 
-											json_string_value(json_object_get(relation,
-																entry.dest_str.c_str())),
+
+			name = (char*) json_string_value(json_object_get(relation, entry.dest_str.c_str()));
+			tok_1 = strtok_r(name, ":", &name);
+			tok_2 = strtok_r(name, "", &name);
+			if(!tok_2){
+				tok_2 = tok_1;
+				const char* empty = ""; 
+				tok_1 = strdup(empty);
+			}
+
+			if(!CPL_IS_OK(cpl_lookup_object(tok_1, 
+											tok_2,
 											entry.dest_t,
 											bundle_id,
 											&dest))){
@@ -1880,14 +1863,24 @@ import_relations_json(const char* originator,
 			}
 
 			const char* key_str;
+			char* copy;
 			json_t* value;
 
 			json_object_foreach(relation, key_str, value){
 
 				const char* val_str = json_string_value(value);
+				
+				copy = strdup(full_str);
+				tok_1 = strtok_r(copy, ":", &copy);
+				tok_2 = strtok_r(copy, "", &copy);
+				if(!tok_2){
+					tok_2 = tok_1;
+					const char* empty = ""; 
+					tok_1 = strdup(empty);
+				}
 
 				if(key_str && val_str){
-					if(!CPL_IS_OK(cpl_add_relation_property(relation_id, key_str, val_str))){
+					if(!CPL_IS_OK(cpl_add_relation_property(relation_id, tok_1, tok_2, val_str))){
 						json_decref(relations);
 						return CPL_E_INTERNAL_ERROR;
 					}
@@ -1905,19 +1898,15 @@ import_relations_json(const char* originator,
  * Imports a Prov-JSON document into Prov-CPL.
  *
  * @param filename file path to document
- * @param originator document originator
  * @param bundle_name desired name of document bundle
- * @param anchor_object optional PROV_CPL object identical to an object in the document
- * @param bundle_agent optional agent responsible for the document bundle
+ * @param anchor_object optional PROV-CPL object identical to an object in the document
  * @param out_id the ID of the imported bundle
  * @return CPL_OK or an error code
  */
 EXPORT cpl_return_t
 import_document_json(const char* filename,
-					 const char* originator,
 					 const char* bundle_name,
-					 const cpl_id_t anchor_object,
-					 const cpl_id_t bundle_agent,
+					 const cpl_id_t anchor_object, //TODO make an array?
 					 cpl_id_t* out_id)
 {
 	json_error_t err;
@@ -1930,11 +1919,9 @@ import_document_json(const char* filename,
 		return CPL_E_INTERNAL_ERROR;
 	}
 
-	// TODO maybe call validate_json
-
 	// Create bundle
 	cpl_id_t bundle_id;
-	if(!CPL_IS_OK(cpl_create_object(originator, bundle_name, CPL_BUNDLE, 0, &bundle_id))){
+	if(!CPL_IS_OK(cpl_create_bundle(bundle_name, &bundle_id))){
 		goto error;
 	}
 
@@ -1942,32 +1929,25 @@ import_document_json(const char* filename,
 		goto error;
 	}
 
-	// Connect bundle_agent to bundle
-	if(bundle_agent){
-		if(!CPL_IS_OK(cpl_add_relation(bundle_id, bundle_agent, 
-						WASATTRIBUTEDTO, bundle_id, NULL))){
-			goto error;
-		}
-	}
-
 	// Import objects
-	if(!CPL_IS_OK(import_objects_json(CPL_ENTITY, CPL_ENTITY_STR, originator, bundle_id, document))){
+	if(!CPL_IS_OK(import_objects_json(CPL_ENTITY, CPL_ENTITY_STR, bundle_id, document))){
 		goto error;
 	}
-	if(!CPL_IS_OK(import_objects_json(CPL_AGENT, CPL_AGENT_STR, originator, bundle_id, document))){
+	if(!CPL_IS_OK(import_objects_json(CPL_AGENT, CPL_AGENT_STR, bundle_id, document))){
 		goto error;
 	}
-	if(!CPL_IS_OK(import_objects_json(CPL_ACTIVITY, CPL_ACTIVITY_STR, originator, bundle_id, document))){
+	if(!CPL_IS_OK(import_objects_json(CPL_ACTIVITY, CPL_ACTIVITY_STR, bundle_id, document))){
 		goto error;
 	}
 
 	// Connect anchor object to new object from document
-	// TODO possible that originator is different
+	// TODO sort this business out, may require some thought
+	/**
 	if(anchor_object){
 		cpl_object_info_t* anchor_info;
 		cpl_get_object_info(anchor_object, &anchor_info);
 		cpl_id_t dest;
-		if(CPL_IS_OK(cpl_lookup_object(originator, 
+		if(CPL_IS_OK(cpl_lookup_object(prefix, 
 						anchor_info->name, anchor_info->type, bundle_id, &dest))){
 
 			cpl_free_object_info(anchor_info);
@@ -1979,8 +1959,9 @@ import_document_json(const char* filename,
 			}
 		}
 	}
+	**/
 
-	if(!CPL_IS_OK(import_relations_json(originator, bundle_id, document))){
+	if(!CPL_IS_OK(import_relations_json(bundle_id, document))){
 		goto error;
 	}
 
@@ -2001,15 +1982,15 @@ export_bundle_prefixes_json(cpl_id_t bundle,
 							json_t* document)
 {
 
-	std::vector<cplxx_property_entry_t> prefix_vec;
-	cpl_get_object_properties(bundle, NULL, cpl_cb_collect_properties_vector, &prefix_vec);
+	std::vector<cplxx_prefix_entry_t> prefix_vec;
+	cpl_get_prefixes(bundle, NULL, cpl_cb_collect_prefixes_vector, &prefix_vec);
 
 	if (prefix_vec.size()){
 
 		json_t* prefixes = json_object();
 
 		for(auto & prefix: prefix_vec){
-			if(json_object_set_new(prefixes, prefix.key.c_str(), json_string(prefix.value.c_str()))){
+			if(json_object_set_new(prefixes, prefix.prefix.c_str(), json_string(prefix.iri.c_str()))){
 				json_decref(prefixes);
 				return -1;
 			}
@@ -2043,16 +2024,17 @@ export_objects_json(cpl_id_t bundle,
 	std::vector<cplxx_property_entry_t> property_vec;
 
 	for(auto & obj: object_vec){
-		if(obj.type == CPL_BUNDLE){
-			break;
-		}
 
 		json_t* properties = json_object();
-		cpl_get_object_properties(obj.id, NULL, 
+		cpl_get_object_properties(obj.id, NULL, NULL, 
 			cpl_cb_collect_properties_vector, &property_vec);
 
 		for(auto & property: property_vec){
-			if(json_object_set_new(properties, property.key.c_str(), json_string(property.value.c_str()))){
+			std::string full_prop_name(property.prefix);
+			full_prop_name.append(":");
+			full_prop_name.append(property.key);
+			if(json_object_set_new(properties, full_prop_name.c_str(), 
+								   json_string(property.value.c_str()))){
 				json_decref(properties);
 				goto error;
 			}
@@ -2062,7 +2044,11 @@ export_objects_json(cpl_id_t bundle,
 			json_type_array[obj.type-1] = json_object();
 		}
 
-		if(json_object_set(json_type_array[obj.type-1], obj.name.c_str(), properties)){
+		std::string full_obj_name(obj.prefix);
+		full_obj_name.append(":");
+		full_obj_name.append(obj.name);
+		if(json_object_set(json_type_array[obj.type-1], full_obj_name.c_str(),
+						   properties)){
 			goto error;
 		}
 	}
@@ -2117,11 +2103,15 @@ export_relations_json(cpl_id_t bundle,
 	for(auto & relation: relation_vec){
 
 		json_t* properties = json_object();
-		cpl_get_relation_properties(relation.id, NULL, 
+		cpl_get_relation_properties(relation.id, NULL, NULL,
 			cpl_cb_collect_properties_vector, &property_vec);
 
 		for(auto & property: property_vec){
-			if(json_object_set_new(properties, property.key.c_str(), json_string(property.value.c_str()))){
+			std::string full_prop_name(property.prefix);
+			full_prop_name.append(":");
+			full_prop_name.append(property.key);
+			if(json_object_set_new(properties, full_prop_name.c_str(),
+								   json_string(property.value.c_str()))){
 				json_decref(properties);
 				goto error;
 			}

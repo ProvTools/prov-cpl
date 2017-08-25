@@ -478,7 +478,6 @@ cpl_odbc_free_statement_handles(cpl_odbc_t* odbc)
 {
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_session_insert_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_object_insert_stmt);
-	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_object_insert_bundle_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_object_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_object_nt_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_object_nb_stmt);
@@ -488,8 +487,13 @@ cpl_odbc_free_statement_handles(cpl_odbc_t* odbc)
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_object_nb_ext_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_object_ntnb_ext_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->add_relation_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->create_bundle_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_bundle_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->lookup_bundle_ext_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->add_object_property_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->add_relation_property_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->add_bundle_property_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->add_prefix_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_session_info_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_all_objects_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_all_objects_with_session_stmt);
@@ -505,6 +509,10 @@ cpl_odbc_free_statement_handles(cpl_odbc_t* odbc)
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->delete_bundle_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_bundle_objects_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_bundle_relations_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_bundle_properties_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_bundle_properties_with_key_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_prefixes_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_prefixes_with_key_stmt);
 
 }
 
@@ -566,7 +574,6 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 	
 	ALLOC_STMT(create_session_insert_stmt);
 	ALLOC_STMT(create_object_insert_stmt);
-	ALLOC_STMT(create_object_insert_bundle_stmt);
 	ALLOC_STMT(lookup_object_stmt);
 	ALLOC_STMT(lookup_object_nt_stmt);
 	ALLOC_STMT(lookup_object_nb_stmt);
@@ -577,8 +584,13 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 	ALLOC_STMT(lookup_object_nb_ext_stmt);
 	ALLOC_STMT(lookup_object_ntnb_ext_stmt);
 	ALLOC_STMT(add_relation_stmt);
+	ALLOC_STMT(create_bundle_stmt);
+	ALLOC_STMT(lookup_bundle_stmt);
+	ALLOC_STMT(lookup_bundle_ext_stmt);
 	ALLOC_STMT(add_object_property_stmt);
 	ALLOC_STMT(add_relation_property_stmt);
+	ALLOC_STMT(add_bundle_property_stmt);
+	ALLOC_STMT(add_prefix_stmt);
 	ALLOC_STMT(get_session_info_stmt);
 	ALLOC_STMT(get_all_objects_stmt);
 	ALLOC_STMT(get_all_objects_with_session_stmt);
@@ -594,6 +606,11 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 	ALLOC_STMT(delete_bundle_stmt);
 	ALLOC_STMT(get_bundle_objects_stmt);
 	ALLOC_STMT(get_bundle_relations_stmt);
+	ALLOC_STMT(get_bundle_properties_stmt);
+	ALLOC_STMT(get_bundle_properties_with_key_stmt);
+	ALLOC_STMT(get_prefixes_stmt);
+	ALLOC_STMT(get_prefixes_with_key_stmt);
+
 #undef ALLOC_STMT
 
 
@@ -616,70 +633,60 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 
 	PREPARE(create_object_insert_stmt,
 			"INSERT INTO cpl_objects"
-			"            (id, originator, name, type,"
-			"			  session_id)"
-			"     VALUES (DEFAULT, ?, ?, ?, ?)"
-			"   RETURNING id;");
-
-	//TODO potentially figure out ON CONFLICT logic
-	PREPARE(create_object_insert_bundle_stmt,
-			"INSERT INTO cpl_objects"
-			"            (id, originator, name, type,"
+			"            (id, prefix, name, type,"
 			"             session_id,"
 			"             bundle_id)"
 			"     VALUES (DEFAULT, ?, ?, ?, ?, ?)"
 			"   RETURNING id;");
 
-	//TODO try merging with "where column is not null"
 	PREPARE(lookup_object_stmt,
 			"SELECT id"
 			"  FROM cpl_objects"
-			" WHERE originator = ? AND name = ? AND type = ? AND bundle_id = ?"
+			" WHERE prefix = ? AND name = ? AND type = ? AND bundle_id = ?"
 			" ORDER BY creation_time DESC"
 			" LIMIT 1;");
 
 	PREPARE(lookup_object_nt_stmt,
 			"SELECT id"
 			"  FROM cpl_objects"
-			" WHERE originator = ? AND name = ? AND bundle_id = ?"
+			" WHERE prefix = ? AND name = ? AND bundle_id = ?"
 			" ORDER BY creation_time DESC"
 			" LIMIT 1;");
 
 	PREPARE(lookup_object_nb_stmt,
 			"SELECT id"
 			"  FROM cpl_objects"
-			" WHERE originator = ? AND name = ? AND type = ?"
+			" WHERE prefix = ? AND name = ? AND type = ?"
 			" ORDER BY creation_time DESC"
 			" LIMIT 1;");
 
 	PREPARE(lookup_object_ntnb_stmt,
 			"SELECT id"
 			"  FROM cpl_objects"
-			" WHERE originator = ? AND name = ?"
+			" WHERE prefix = ? AND name = ?"
 			" ORDER BY creation_time DESC"
 			" LIMIT 1;");
 
 	PREPARE(lookup_object_ext_stmt,
 			"SELECT id, creation_time"
 			"  FROM cpl_objects"
-			" WHERE originator = ? AND name = ? AND type = ?;");
+			" WHERE prefix = ? AND name = ? AND type = ? AND bundle_id = ?;");
 
 	PREPARE(lookup_object_nt_ext_stmt,
 			"SELECT id, creation_time"
 			"  FROM cpl_objects"
-			" WHERE originator = ? AND name = ? AND bundle_id = ?;");
+			" WHERE prefix = ? AND name = ? AND bundle_id = ?;");
 
 	PREPARE(lookup_object_nb_ext_stmt,
 			"SELECT id, creation_time"
 			"  FROM cpl_objects"
-			" WHERE originator = ? AND name = ? AND type = ?;");
+			" WHERE prefix = ? AND name = ? AND type = ?;");
 
 	PREPARE(lookup_object_ntnb_ext_stmt,
 			"SELECT id, creation_time"
 			"  FROM cpl_objects"
-			" WHERE originator = ? AND name = ? AND type = ? AND bundle_id = ?;");
+			" WHERE prefix = ? AND name = ?;");
 
-	//TODO do we want to explicitly handle conflicts
 	PREPARE(add_relation_stmt,
 			"INSERT INTO cpl_relations"
 			"            (id, from_id,"
@@ -687,31 +694,59 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 			"     VALUES (DEFAULT, ?, ?, ?, ?)"
 			"   RETURNING id;");
 
+	PREPARE(create_bundle_stmt,
+			"INSERT INTO cpl_bundles"
+			"            (id, name, session_id)"
+			"     VALUES (DEFAULT, ?, ?)"
+			"   RETURNING id;");
+
+	PREPARE(lookup_bundle_stmt,
+			"SELECT id"
+			"  FROM cpl_bundles"
+			" WHERE name = ?"
+			" ORDER BY creation_time DESC"
+			" LIMIT 1;");
+
+	PREPARE(lookup_bundle_ext_stmt,
+			"SELECT id, creation_time"
+			"  FROM cpl_bundles"
+			" WHERE name = ?;");
+
 	PREPARE(add_object_property_stmt,
 			"INSERT INTO cpl_object_properties"
-			"            (id, name, value)"
-			"     VALUES (?, ?, ?);");
+			"            (id, prefix, name, value)"
+			"     VALUES (?, ?, ?, ?);");
 
 	PREPARE(add_relation_property_stmt,
 		"INSERT INTO cpl_relation_properties"
-		"            (id, name, value)"
+		"            (id, prefix, name, value)"
+		"     VALUES (?, ?, ?, ?);");
+
+	PREPARE(add_bundle_property_stmt,
+		"INSERT INTO cpl_bundle_properties"
+		"            (id, prefix, name, value)"
+		"     VALUES (?, ?, ?, ?);");
+
+	PREPARE(add_prefix_stmt,
+		"INSERT INTO cpl_prefixes"
+		"            (id, prefix, iri)"
 		"     VALUES (?, ?, ?);");
 
 	PREPARE(get_all_objects_stmt,
-			"SELECT id, creation_time, originator, name, type,"
+			"SELECT id, creation_time, prefix, name, type,"
 			"       bundle_id"
 			"  FROM cpl_objects"
 			" WHERE id > 0;");
 
 	PREPARE(get_all_objects_with_session_stmt,
-			"SELECT id, creation_time, originator, name, type,"
+			"SELECT id, creation_time, prefix, name, type,"
 			"       bundle_id, session_id"
 			"  FROM cpl_objects"
 			" WHERE id > 0;");
 
 	PREPARE(get_object_info_stmt,
 			"SELECT session_id,"
-			"       creation_time, originator, name, type,"
+			"       creation_time, prefix, name, type,"
 			"       bundle_id"
 			"  FROM cpl_objects"
 			" WHERE id = ?"
@@ -735,29 +770,29 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 			" WHERE to_id = ?");
 
 	PREPARE(get_object_properties_stmt,
-			"SELECT id, name, value"
+			"SELECT id, prefix, name, value"
 			"  FROM cpl_object_properties"
 			" WHERE id = ?;");
 
 	PREPARE(get_object_properties_with_key_stmt,
-			"SELECT id, name, value"
+			"SELECT id, prefix, name, value"
 			"  FROM cpl_object_properties"
-			" WHERE id = ? AND name = ?;");
+			" WHERE id = ? AND prefix = ? AND name = ?;");
 
 	PREPARE(lookup_object_by_property_stmt,
 			"SELECT id"
 			"  FROM cpl_object_properties"
-			" WHERE name = ? AND value = ?;");
+			" WHERE prefix = ? AND name = ? AND value = ?;");
 
 	PREPARE(get_relation_properties_stmt,
-			"SELECT id, name, value"
+			"SELECT id, prefix, name, value"
 			" FROM cpl_relation_properties"
 			" WHERE id = ?");
 
 	PREPARE(get_relation_properties_with_key_stmt,
-			"SELECT id, name, value"
+			"SELECT id, prefix, name, value"
 			"  FROM cpl_relation_properties"
-			" WHERE id = ? AND name = ?;");
+			" WHERE id = ? AND prefix AND name = ?;");
 
 	PREPARE(has_immediate_ancestor_stmt,
 			"SELECT id"
@@ -765,11 +800,11 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 			" WHERE from_id = ? AND to_id = ?;");
 
 	PREPARE(delete_bundle_stmt,
-			"DELETE FROM cpl_objects"
-			"	WHERE id = ? AND type = 4;");
+			"DELETE FROM cpl_bundles"
+			"	WHERE id = ?");
 
 	PREPARE(get_bundle_objects_stmt,
-			"SELECT id, creation_time, originator, name, type"
+			"SELECT id, creation_time, prefix, name, type"
 			"  FROM cpl_objects"
 			" WHERE bundle_id = ?;")
 
@@ -777,6 +812,27 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 			"SELECT id, from_id, to_id, type"
 			"  FROM cpl_relations"
 			" WHERE bundle_id = ?;")
+
+	PREPARE(get_bundle_properties_stmt,
+			"SELECT id, prefix, name, value"
+			"  FROM cpl_bundle_properties"
+			" WHERE id = ?;");
+
+	PREPARE(get_bundle_properties_with_key_stmt,
+			"SELECT id, prefix, name, value"
+			"  FROM cpl_bundle_properties"
+			" WHERE id = ? AND prefix = ? AND name = ?;");
+
+	PREPARE(get_prefixes_stmt,
+			"SELECT id, prefix, iri"
+			"  FROM cpl_prefixes"
+			" WHERE id = ?;");
+
+	PREPARE(get_prefixes_with_key_stmt,
+			"SELECT id, prefix, iri"
+			"  FROM cpl_bundle_properties"
+			" WHERE id = ? AND prefix = ?;");
+
 #undef PREPARE
 
 
@@ -878,8 +934,13 @@ cpl_create_odbc_backend(const char* connection_string,
 	mutex_init(odbc->lookup_object_lock);
 	mutex_init(odbc->lookup_object_ext_lock);
 	mutex_init(odbc->add_relation_lock);
+	mutex_init(odbc->create_bundle_lock);
+	mutex_init(odbc->lookup_bundle_lock);
+	mutex_init(odbc->lookup_bundle_ext_lock);
 	mutex_init(odbc->add_object_property_lock);
 	mutex_init(odbc->add_relation_property_lock);
+	mutex_init(odbc->add_bundle_property_lock);
+	mutex_init(odbc->add_prefix_lock);
 	mutex_init(odbc->get_session_info_lock);
 	mutex_init(odbc->get_all_objects_lock);
 	mutex_init(odbc->get_object_info_lock);
@@ -891,6 +952,8 @@ cpl_create_odbc_backend(const char* connection_string,
 	mutex_init(odbc->delete_bundle_lock);
 	mutex_init(odbc->get_bundle_objects_lock);
 	mutex_init(odbc->get_bundle_relations_lock);
+	mutex_init(odbc->get_bundle_properties_lock);
+	mutex_init(odbc->get_prefixes_lock);
 
 	// Open the database connection
 	
@@ -912,8 +975,13 @@ err_sync:
 	mutex_destroy(odbc->lookup_object_lock);
 	mutex_destroy(odbc->lookup_object_ext_lock);
 	mutex_destroy(odbc->add_relation_lock);
+	mutex_destroy(odbc->create_bundle_lock);
+	mutex_destroy(odbc->lookup_bundle_lock);
+	mutex_destroy(odbc->lookup_bundle_ext_lock);
 	mutex_destroy(odbc->add_object_property_lock);
 	mutex_destroy(odbc->add_relation_property_lock);
+	mutex_destroy(odbc->add_bundle_property_lock);
+	mutex_destroy(odbc->add_prefix_lock);
 	mutex_destroy(odbc->get_session_info_lock);
 	mutex_destroy(odbc->get_all_objects_lock);
 	mutex_destroy(odbc->get_object_info_lock);
@@ -925,7 +993,8 @@ err_sync:
 	mutex_destroy(odbc->delete_bundle_lock);
 	mutex_destroy(odbc->get_bundle_objects_lock);
 	mutex_destroy(odbc->get_bundle_relations_lock);
-
+	mutex_destroy(odbc->get_bundle_properties_lock);
+	mutex_destroy(odbc->get_prefixes_lock);
 	delete odbc;
 	return r;
 }
@@ -995,8 +1064,13 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
 	mutex_destroy(odbc->lookup_object_lock);
 	mutex_destroy(odbc->lookup_object_ext_lock);
 	mutex_destroy(odbc->add_relation_lock);
+	mutex_destroy(odbc->create_bundle_lock);
+	mutex_destroy(odbc->lookup_bundle_lock);
+	mutex_destroy(odbc->lookup_bundle_ext_lock);
 	mutex_destroy(odbc->add_object_property_lock);
 	mutex_destroy(odbc->add_relation_property_lock);
+	mutex_destroy(odbc->add_bundle_property_lock);
+	mutex_destroy(odbc->add_prefix_lock);
 	mutex_destroy(odbc->get_session_info_lock);
 	mutex_destroy(odbc->get_all_objects_lock);
 	mutex_destroy(odbc->get_object_info_lock);
@@ -1005,8 +1079,11 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
 	mutex_destroy(odbc->lookup_object_by_property_lock);
 	mutex_destroy(odbc->get_relation_properties_lock);
 	mutex_destroy(odbc->has_immediate_ancestor_lock);
+	mutex_destroy(odbc->delete_bundle_lock);
 	mutex_destroy(odbc->get_bundle_objects_lock);
 	mutex_destroy(odbc->get_bundle_relations_lock);
+	mutex_destroy(odbc->get_bundle_properties_lock);
+	mutex_destroy(odbc->get_prefixes_lock);
 	
 	delete odbc;
 	
@@ -1136,26 +1213,26 @@ err:
  * Create an object.
  *
  * @param backend the pointer to the backend structure
- * @param originator the originator
+ * @param prefix the namespace prefix
  * @param name the object name
  * @param type the object type
  * @param bundle the ID of the object that should contain this object
- *                  (use CPL_NONE for no bundle)
  * @param session the session ID responsible for this provenance record
  * @param out_id the pointer to store the object ID
  * @return CPL_OK or an error code
  */
 extern "C" cpl_return_t
 cpl_odbc_create_object(struct _cpl_db_backend_t* backend,
-					   const char* originator,
+					   const char* prefix,
 					   const char* name,
 					   const int type,
 					   const cpl_id_t bundle,
 					   const cpl_session_t session,
 					   cpl_id_t* out_id)
 {
-	assert(backend != NULL && originator != NULL
-			&& name != NULL && CPL_IS_OBJECT_TYPE(type)); 
+	assert(backend != NULL && prefix != NULL
+			&& name != NULL && CPL_IS_OBJECT_TYPE(type)
+			&& bundle > 0); 
 	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
 	
 	mutex_lock(odbc->create_object_lock);
@@ -1168,19 +1245,13 @@ cpl_odbc_create_object(struct _cpl_db_backend_t* backend,
 	cpl_return_t r = CPL_E_INTERNAL_ERROR;
 
 retry:
-	SQLHSTMT stmt = bundle == CPL_NONE
-		? odbc->create_object_insert_stmt
-		: odbc->create_object_insert_bundle_stmt;
+	SQLHSTMT stmt = odbc->create_object_insert_stmt;
 
-	SQL_BIND_VARCHAR(stmt, 1, CPL_ORIGINATOR_LEN, originator);
+	SQL_BIND_VARCHAR(stmt, 1, CPL_PREFIX_LEN, prefix);
 	SQL_BIND_VARCHAR(stmt, 2, CPL_NAME_LEN, name);
 	SQL_BIND_INTEGER(stmt, 3, type);
 	SQL_BIND_INTEGER(stmt, 4, session);
-
-	if (bundle != CPL_NONE) {
-		SQL_BIND_INTEGER(stmt, 5, bundle);
-	}
-
+	SQL_BIND_INTEGER(stmt, 5, bundle);
 
 	// Insert the new row to the objects table
 
@@ -1189,7 +1260,7 @@ retry:
 
 	r = cpl_sql_fetch_single_llong(stmt, (long long*) &id, 1);
 	if (!CPL_IS_OK(r)) {
-		mutex_unlock(odbc->create_session_lock);
+		mutex_unlock(odbc->create_object_lock);
 		return r;
 	}
 	// Finish
@@ -1213,7 +1284,7 @@ err:
  * get one.
  *
  * @param backend the pointer to the backend structure
- * @param originator the object originator (namespace)
+ * @param prefix the namespace prefix
  * @param name the object name
  * @param type the object type
  * @param out_id the pointer to store the object ID
@@ -1221,7 +1292,7 @@ err:
  */
 extern "C" cpl_return_t
 cpl_odbc_lookup_object(struct _cpl_db_backend_t* backend,
-					   const char* originator,
+					   const char* prefix,
 					   const char* name,
 					   const int type,
 					   const cpl_id_t bundle_id,
@@ -1247,13 +1318,13 @@ retry:
 		if(bundle_id == CPL_NONE){
 			stmt = odbc->lookup_object_ntnb_stmt;
 
-			SQL_BIND_VARCHAR(stmt, 1, CPL_ORIGINATOR_LEN, originator);
+			SQL_BIND_VARCHAR(stmt, 1, CPL_PREFIX_LEN, prefix);
 			SQL_BIND_VARCHAR(stmt, 2, CPL_NAME_LEN, name);
 
 		} else {
 			stmt = odbc->lookup_object_nt_stmt;
 
-			SQL_BIND_VARCHAR(stmt, 1, CPL_ORIGINATOR_LEN, originator);
+			SQL_BIND_VARCHAR(stmt, 1, CPL_PREFIX_LEN, prefix);
 			SQL_BIND_VARCHAR(stmt, 2, CPL_NAME_LEN, name);
 			SQL_BIND_INTEGER(stmt, 3, bundle_id);
 
@@ -1262,14 +1333,14 @@ retry:
 		if(bundle_id == CPL_NONE){
 			stmt = odbc->lookup_object_nb_stmt;
 
-			SQL_BIND_VARCHAR(stmt, 1, CPL_ORIGINATOR_LEN, originator);
+			SQL_BIND_VARCHAR(stmt, 1, CPL_PREFIX_LEN, prefix);
 			SQL_BIND_VARCHAR(stmt, 2, CPL_NAME_LEN, name);
 			SQL_BIND_INTEGER(stmt, 3, type);
 
 		} else {
 			stmt = odbc->lookup_object_stmt;
 
-			SQL_BIND_VARCHAR(stmt, 1, CPL_ORIGINATOR_LEN, originator);
+			SQL_BIND_VARCHAR(stmt, 1, CPL_PREFIX_LEN, prefix);
 			SQL_BIND_VARCHAR(stmt, 2, CPL_NAME_LEN, name);
 			SQL_BIND_INTEGER(stmt, 3, type);
 			SQL_BIND_INTEGER(stmt, 4, bundle_id);
@@ -1313,7 +1384,7 @@ err:
  * get all of them
  *
  * @param backend the pointer to the backend structure
- * @param originator the object originator (namespace)
+ * @param prefix the object namespace prefix
  * @param name the object name
  * @param type the object type
  * @param flags a logical combination of CPL_L_* flags (currently unused)
@@ -1323,7 +1394,7 @@ err:
  */
 extern "C" cpl_return_t
 cpl_odbc_lookup_object_ext(struct _cpl_db_backend_t* backend,
-						   const char* originator,
+						   const char* prefix,
 						   const char* name,
 						   const int type,
 					       const cpl_id_t bundle_id,
@@ -1353,13 +1424,13 @@ retry:
 		if(bundle_id == CPL_NONE){
 			stmt = odbc->lookup_object_ntnb_ext_stmt;
 
-			SQL_BIND_VARCHAR(stmt, 1, CPL_ORIGINATOR_LEN, originator);
+			SQL_BIND_VARCHAR(stmt, 1, CPL_PREFIX_LEN, prefix);
 			SQL_BIND_VARCHAR(stmt, 2, CPL_NAME_LEN, name);
 
 		} else {
 			stmt = odbc->lookup_object_nt_ext_stmt;
 
-			SQL_BIND_VARCHAR(stmt, 1, CPL_ORIGINATOR_LEN, originator);
+			SQL_BIND_VARCHAR(stmt, 1, CPL_PREFIX_LEN, prefix);
 			SQL_BIND_VARCHAR(stmt, 2, CPL_NAME_LEN, name);
 			SQL_BIND_INTEGER(stmt, 3, bundle_id);
 
@@ -1368,14 +1439,14 @@ retry:
 		if(bundle_id == CPL_NONE){
 			stmt = odbc->lookup_object_nb_ext_stmt;
 
-			SQL_BIND_VARCHAR(stmt, 1, CPL_ORIGINATOR_LEN, originator);
+			SQL_BIND_VARCHAR(stmt, 1, CPL_PREFIX_LEN, prefix);
 			SQL_BIND_VARCHAR(stmt, 2, CPL_NAME_LEN, name);
 			SQL_BIND_INTEGER(stmt, 3, type);
 
 		} else {
 			stmt = odbc->lookup_object_ext_stmt;
 
-			SQL_BIND_VARCHAR(stmt, 1, CPL_ORIGINATOR_LEN, originator);
+			SQL_BIND_VARCHAR(stmt, 1, CPL_PREFIX_LEN, prefix);
 			SQL_BIND_VARCHAR(stmt, 2, CPL_NAME_LEN, name);
 			SQL_BIND_INTEGER(stmt, 3, type);
 			SQL_BIND_INTEGER(stmt, 4, bundle_id);
@@ -1600,6 +1671,7 @@ err:
  *
  * @param backend the pointer to the backend structure
  * @param id the object ID
+ * @param prefix the namespace prefix
  * @param key the key
  * @param value the value
  * @return CPL_OK or an error code
@@ -1607,6 +1679,7 @@ err:
 extern "C" cpl_return_t
 cpl_odbc_add_object_property(struct _cpl_db_backend_t* backend,
                       const cpl_id_t id,
+                      const char* prefix,
                       const char* key,
                       const char* value)
 {
@@ -1624,8 +1697,9 @@ retry:
 	SQLHSTMT stmt = odbc->add_object_property_stmt;
 
 	SQL_BIND_INTEGER(stmt, 1, id);
-	SQL_BIND_VARCHAR(stmt, 2, CPL_KEY_LEN, key);
-	SQL_BIND_VARCHAR(stmt, 3, CPL_VALUE_LEN, value);
+	SQL_BIND_VARCHAR(stmt, 2, CPL_PREFIX_LEN, key);
+	SQL_BIND_VARCHAR(stmt, 3, CPL_KEY_LEN, key);
+	SQL_BIND_VARCHAR(stmt, 4, CPL_VALUE_LEN, value);
 
 
 	// Execute
@@ -1652,6 +1726,7 @@ err:
  *
  * @param backend the pointer to the backend structure
  * @param id the edge ID
+ * @param prefix the namespace prefix
  * @param key the key
  * @param value the value
  * @return CPL_OK or an error code
@@ -1659,6 +1734,7 @@ err:
 extern "C" cpl_return_t
 cpl_odbc_add_relation_property(struct _cpl_db_backend_t* backend,
                       const cpl_id_t id,
+                      const char* prefix,
                       const char* key,
                       const char* value)
 {
@@ -1676,8 +1752,9 @@ retry:
 	SQLHSTMT stmt = odbc->add_relation_property_stmt;
 
 	SQL_BIND_INTEGER(stmt, 1, id);
-	SQL_BIND_VARCHAR(stmt, 2, CPL_KEY_LEN, key);
-	SQL_BIND_VARCHAR(stmt, 3, CPL_VALUE_LEN, value);
+	SQL_BIND_VARCHAR(stmt, 2, CPL_PREFIX_LEN, prefix);
+	SQL_BIND_VARCHAR(stmt, 3, CPL_KEY_LEN, key);
+	SQL_BIND_VARCHAR(stmt, 4, CPL_VALUE_LEN, value);
 
 
 	// Execute
@@ -1699,6 +1776,349 @@ err:
 }
 
 
+/**
+ * Create a bundle.
+ *
+ * @param backend the pointer to the backend structure
+ * @param name the bundle name
+ * @param session the session ID responsible for this provenance record
+ * @param out_id the pointer to store the bundle ID
+ * @return CPL_OK or an error code
+ */
+extern "C" cpl_return_t
+cpl_odbc_create_bundle(struct _cpl_db_backend_t* backend,
+					   const char* name,
+					   const cpl_session_t session,
+					   cpl_id_t* out_id)
+{
+	assert(backend != NULL && name != NULL); 
+	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
+	
+	mutex_lock(odbc->create_bundle_lock);
+	
+	// Bind the statement parameters
+
+	SQL_START;
+
+	cpl_id_t id = CPL_NONE;
+	cpl_return_t r = CPL_E_INTERNAL_ERROR;
+
+retry:
+	SQLHSTMT stmt = odbc->create_bundle_stmt;
+
+	SQL_BIND_VARCHAR(stmt, 1, CPL_NAME_LEN, name);
+	SQL_BIND_INTEGER(stmt, 2, session);
+
+	// Insert the new row to the objects table
+
+	SQL_EXECUTE(stmt);
+	
+
+	r = cpl_sql_fetch_single_llong(stmt, (long long*) &id, 1);
+	if (!CPL_IS_OK(r)) {
+		mutex_unlock(odbc->create_bundle_lock);
+		return r;
+	}
+	// Finish
+
+	mutex_unlock(odbc->create_bundle_lock);
+
+	if (out_id != NULL) *out_id = id;
+	return CPL_OK;
+
+
+	// Error handling
+
+err:
+	mutex_unlock(odbc->create_bundle_lock);
+	return CPL_E_STATEMENT_ERROR;
+}
+/**
+ * Look up a bundle by name. If multiple bundles share the same name,
+ * get one.
+ *
+ * @param backend the pointer to the backend structure
+ * @param name the bundle name
+ * @param out_id the pointer to store the object ID
+ * @return CPL_OK or an error code
+ */
+extern "C" cpl_return_t
+cpl_odbc_lookup_bundle(struct _cpl_db_backend_t* backend,
+					   const char* name,
+					   cpl_id_t* out_id)
+{
+	assert(backend != NULL);
+	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
+	
+	SQL_START;
+
+	cpl_id_t id = CPL_NONE;
+	cpl_return_t r = CPL_E_INTERNAL_ERROR;
+
+	mutex_lock(odbc->lookup_bundle_lock);
+
+
+	// Prepare the statement
+
+retry:
+	SQLHSTMT stmt;
+
+	stmt = odbc->lookup_bundle_stmt;
+
+	SQL_BIND_VARCHAR(stmt, 1, CPL_NAME_LEN, name);
+
+
+	// Execute
+	
+	SQL_EXECUTE(stmt);
+
+
+	// Fetch the result
+
+	r = cpl_sql_fetch_single_llong(stmt, (long long*) &id, 1);
+	if (!CPL_IS_OK(r)) {
+		mutex_unlock(odbc->lookup_bundle_lock);
+		return r;
+	}
+
+
+	// Cleanup
+
+	mutex_unlock(odbc->lookup_bundle_lock);
+	
+	if (out_id != NULL) *out_id = id;
+	return CPL_OK;
+
+
+	// Error handling
+
+err:
+	mutex_unlock(odbc->lookup_bundle_lock);
+	return CPL_E_STATEMENT_ERROR;
+}
+
+
+/**
+ * Look up a bundle by name. If multiple bundles share the same name,
+ * get all of them
+ *
+ * @param backend the pointer to the backend structure
+ * @param name the bundle name
+ * @param flags a logical combination of CPL_L_* flags (currently unused)
+ * @param iterator the iterator to be called for each matching object
+ * @param context the caller-provided iterator context
+ * @return CPL_OK or an error code
+ */
+extern "C" cpl_return_t
+cpl_odbc_lookup_bundle_ext(struct _cpl_db_backend_t* backend,
+						   const char* name,
+						   const int flags,
+						   cpl_id_timestamp_iterator_t callback,
+						   void* context)
+{
+	assert(backend != NULL);
+	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
+
+	SQL_START;
+
+	cpl_return_t r = CPL_E_INTERNAL_ERROR;
+	cpl_id_timestamp_t entry;
+	std::list<cpl_id_timestamp_t> entries;
+	SQL_TIMESTAMP_STRUCT t;
+
+	mutex_lock(odbc->lookup_bundle_ext_lock);
+
+
+	// Prepare the statement
+
+retry:
+	SQLHSTMT stmt;
+
+	stmt = odbc->lookup_bundle_ext_stmt;
+
+	SQL_BIND_VARCHAR(stmt, 1, CPL_NAME_LEN, name);
+
+
+	// Execute
+	
+	SQL_EXECUTE(stmt);
+
+
+	// Bind the columns
+
+	ret = SQLBindCol(stmt, 1, SQL_C_UBIGINT, &entry.id, 0, NULL);
+	if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+	ret = SQLBindCol(stmt, 2, SQL_C_TYPE_TIMESTAMP, &t, sizeof(t), NULL);
+	if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+
+	// Fetch the result
+
+	while (true) {
+
+		ret = SQLFetch(stmt);
+		if (!SQL_SUCCEEDED(ret)) {
+			if (ret != SQL_NO_DATA) {
+				print_odbc_error("SQLFetch", stmt, SQL_HANDLE_STMT);
+				goto err_close;
+			}
+			break;
+		}
+
+		// Convert timestamp
+
+		entry.timestamp = cpl_sql_timestamp_to_unix_time(t);
+		entries.push_back(entry);
+	}
+	
+	ret = SQLCloseCursor(stmt);
+	if (!SQL_SUCCEEDED(ret)) {
+		print_odbc_error("SQLCloseCursor", stmt, SQL_HANDLE_STMT);
+		goto err;
+	}
+
+
+	// Unlock
+
+	mutex_unlock(odbc->lookup_bundle_ext_lock);
+
+
+	// If we did not get any data back, terminate
+
+	if (entries.empty()) return CPL_E_NOT_FOUND;
+
+
+	// Call the user-provided callback function
+
+	if (callback != NULL) {
+		std::list<cpl_id_timestamp_t>::iterator i;
+		for (i = entries.begin(); i != entries.end(); i++) {
+			r = callback(i->id, i->timestamp, context);
+			if (!CPL_IS_OK(r)) return r;
+		}
+	}
+
+	return CPL_OK;
+
+
+	// Error handling
+
+err_close:
+	ret = SQLCloseCursor(stmt);
+	if (!SQL_SUCCEEDED(ret)) {
+		print_odbc_error("SQLCloseCursor", stmt, SQL_HANDLE_STMT);
+	}
+
+err:
+	mutex_unlock(odbc->lookup_bundle_ext_lock);
+	return CPL_E_STATEMENT_ERROR;
+}
+
+/**
+ * Add a property to the given bundle
+ *
+ * @param backend the pointer to the backend structure
+ * @param id the edge ID
+ * @param prefix the namespace prefix
+ * @param key the key
+ * @param value the value
+ * @return CPL_OK or an error code
+ */
+extern "C" cpl_return_t
+cpl_odbc_add_bundle_property(struct _cpl_db_backend_t* backend,
+                      const cpl_id_t id,
+                      const char* prefix,
+                      const char* key,
+                      const char* value)
+{
+    assert(backend != NULL);
+    cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
+
+	mutex_lock(odbc->add_bundle_property_lock);
+
+
+	// Prepare the statement
+
+	SQL_START;
+
+retry:
+	SQLHSTMT stmt = odbc->add_bundle_property_stmt;
+
+	SQL_BIND_INTEGER(stmt, 1, id);
+	SQL_BIND_VARCHAR(stmt, 2, CPL_PREFIX_LEN, prefix);
+	SQL_BIND_VARCHAR(stmt, 3, CPL_KEY_LEN, key);
+	SQL_BIND_VARCHAR(stmt, 4, CPL_VALUE_LEN, value);
+
+
+	// Execute
+	
+	SQL_EXECUTE(stmt);
+
+
+	// Cleanup
+
+	mutex_unlock(odbc->add_bundle_property_lock);
+	return CPL_OK;
+
+
+	// Error handling
+
+err:
+	mutex_unlock(odbc->add_bundle_property_lock);
+	return CPL_E_STATEMENT_ERROR;
+}
+
+/**
+ * Add a prefix to the given bundle
+ *
+ * @param backend the pointer to the backend structure
+ * @param id the edge ID
+ * @param prefix the namespace prefix
+ * @param iri the namespace iri
+ * @return CPL_OK or an error code
+ */
+extern "C" cpl_return_t
+cpl_odbc_add_prefix(struct _cpl_db_backend_t* backend,
+                    const cpl_id_t id,
+                    const char* prefix,
+                    const char* iri)
+{
+    assert(backend != NULL);
+    cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
+
+	mutex_lock(odbc->add_prefix_lock);
+
+
+	// Prepare the statement
+
+	SQL_START;
+
+retry:
+	SQLHSTMT stmt = odbc->add_prefix_stmt;
+
+	SQL_BIND_INTEGER(stmt, 1, id);
+	SQL_BIND_VARCHAR(stmt, 2, CPL_PREFIX_LEN, prefix);
+	SQL_BIND_VARCHAR(stmt, 3, CPL_VALUE_LEN, iri);
+
+
+	// Execute
+	
+	SQL_EXECUTE(stmt);
+
+
+	// Cleanup
+
+	mutex_unlock(odbc->add_prefix_lock);
+	return CPL_OK;
+
+
+	// Error handling
+
+err:
+	mutex_unlock(odbc->add_prefix_lock);
+	return CPL_E_STATEMENT_ERROR;
+}
 
 /**
  * Get information about the given provenance session.
@@ -1809,13 +2229,13 @@ cpl_odbc_get_all_objects(struct _cpl_db_backend_t* backend,
 	std::list<cplxx_object_info_t> entries;
 	SQL_TIMESTAMP_STRUCT t;
 
-	size_t originator_size = CPL_ORIGINATOR_LEN + 1;
+	size_t prefix_size = CPL_PREFIX_LEN + 1;
 	size_t name_size = CPL_NAME_LEN + 1;
 
-	char* entry_originator = (char*) alloca(originator_size);
+	char* entry_prefix = (char*) alloca(prefix_size);
 	char* entry_name = (char*) alloca(name_size);
 
-	if (entry_originator == NULL || entry_name == NULL) {
+	if (entry_prefix == NULL || entry_name == NULL) {
 		return CPL_E_INSUFFICIENT_RESOURCES;
 	}
 
@@ -1849,7 +2269,7 @@ retry:
 	ret = SQLBindCol(stmt, 2, SQL_C_TYPE_TIMESTAMP, &t, sizeof(t), NULL);
 	if (!SQL_SUCCEEDED(ret)) goto err_close;
 
-	ret = SQLBindCol(stmt, 3, SQL_C_CHAR, entry_originator, originator_size,
+	ret = SQLBindCol(stmt, 3, SQL_C_CHAR, entry_prefix, prefix_size,
 					 NULL);
 	if (!SQL_SUCCEEDED(ret)) goto err_close;
 
@@ -1897,7 +2317,7 @@ retry:
 		}
 
 		entry.creation_time = cpl_sql_timestamp_to_unix_time(t);
-		entry.originator = entry_originator;
+		entry.prefix = entry_prefix;
 		entry.name = entry_name;
 
 		if (cb_bundle_id <= 0) entry.bundle_id = CPL_NONE;
@@ -1929,16 +2349,16 @@ retry:
 		std::list<cplxx_object_info_t>::iterator i;
 		for (i = entries.begin(); i != entries.end(); i++) {
 
-			strncpy(entry_originator, i->originator.c_str(), originator_size);
+			strncpy(entry_prefix, i->prefix.c_str(), prefix_size);
 			strncpy(entry_name, i->name.c_str(), name_size);
-			entry_originator[originator_size - 1] = '\0';
+			entry_prefix[prefix_size - 1] = '\0';
 			entry_name[name_size - 1] = '\0';
 
 			cpl_object_info_t e;
 			e.id = i->id;
 			e.creation_session = i->creation_session;
 			e.creation_time = i->creation_time;
-			e.originator = entry_originator;
+			e.prefix = entry_prefix;
 			e.name = entry_name;
 			e.type = i->type;
 			e.bundle_id = i->bundle_id;
@@ -2013,9 +2433,9 @@ retry:
 	CPL_SQL_SIMPLE_FETCH(llong, 1, (long long*) &p->creation_session);
 	CPL_SQL_SIMPLE_FETCH(timestamp_as_unix_time, 2, &p->creation_time);
 
-	CPL_SQL_SIMPLE_FETCH_EXT(dynamically_allocated_string, 3, &p->originator,
+	CPL_SQL_SIMPLE_FETCH_EXT(dynamically_allocated_string, 3, &p->prefix,
 							 true);
-	if (r == CPL_E_DB_NULL) p->originator = strdup("");
+	if (r == CPL_E_DB_NULL) p->prefix = strdup("");
 	CPL_SQL_SIMPLE_FETCH_EXT(dynamically_allocated_string, 4, &p->name, true);
 	if (r == CPL_E_DB_NULL) p->name = strdup("");
 	CPL_SQL_SIMPLE_FETCH(int, 5, (int*) &p->type);
@@ -2045,7 +2465,7 @@ err:
 err_r:
 	mutex_unlock(odbc->get_object_info_lock);
 
-	if (p->originator != NULL) free(p->originator);
+	if (p->prefix != NULL) free(p->prefix);
 	if (p->name != NULL) free(p->name);
 	free(p);
 
@@ -2202,8 +2622,9 @@ err:
  */
 typedef struct __get_properties__entry {
 	cpl_id_t id;
-	SQLCHAR key[256];
-	SQLCHAR value[4096];
+	SQLCHAR prefix[CPL_PREFIX_LEN];
+	SQLCHAR key[CPL_KEY_LEN];
+	SQLCHAR value[CPL_VALUE_LEN];
 } __get_properties__entry_t;
 
 
@@ -2212,7 +2633,8 @@ typedef struct __get_properties__entry {
  *
  * @param backend the pointer to the backend structure
  * @param id the the object ID
- * @param key the property to fetch - or NULL for all properties
+ * @param prefix the prefix to fetch - or NULL for all prefixes
+ * @param key the property key to fetch - or NULL for all keys
  * @param callback the iterator callback function
  * @param context the user context to be passed to the iterator function
  * @return CPL_OK, CPL_S_NO_DATA, or an error code
@@ -2220,6 +2642,7 @@ typedef struct __get_properties__entry {
 cpl_return_t
 cpl_odbc_get_object_properties(struct _cpl_db_backend_t* backend,
 						const cpl_id_t id,
+						const char* prefix,
 						const char* key,
 						cpl_property_iterator_t callback,
 						void* context)
@@ -2229,7 +2652,7 @@ cpl_odbc_get_object_properties(struct _cpl_db_backend_t* backend,
 
 	std::list<__get_properties__entry_t*> entries;
 	__get_properties__entry_t entry;
-	SQLLEN ind_key, ind_value;
+	SQLLEN ind_prefix, ind_key, ind_value;
 
 	SQL_START;
 
@@ -2243,7 +2666,7 @@ cpl_odbc_get_object_properties(struct _cpl_db_backend_t* backend,
 
 retry:
 	SQLHSTMT stmt;
-	if (key == NULL) {
+	if (prefix == NULL || key == NULL) {
 		stmt = odbc->get_object_properties_stmt;
 	}
 	else {
@@ -2252,8 +2675,9 @@ retry:
 
 	SQL_BIND_INTEGER(stmt, 1, id);
 
-	if (key != NULL) {
-		SQL_BIND_VARCHAR(stmt, 2, 255, key);
+	if (prefix != NULL && key != NULL) {
+		SQL_BIND_VARCHAR(stmt, 2, CPL_PREFIX_LEN, prefix);
+		SQL_BIND_VARCHAR(stmt, 3, CPL_KEY_LEN, key);
 	}
 
 
@@ -2267,11 +2691,15 @@ retry:
 	ret = SQLBindCol(stmt, 1, SQL_C_UBIGINT, &entry.id, 0, NULL);
 	if (!SQL_SUCCEEDED(ret)) goto err_close;
 
-	ret = SQLBindCol(stmt, 2, SQL_C_CHAR, entry.key, sizeof(entry.key),
+	ret = SQLBindCol(stmt, 2, SQL_C_CHAR, entry.prefix, sizeof(entry.prefix),
+			&ind_prefix);
+	if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+	ret = SQLBindCol(stmt, 3, SQL_C_CHAR, entry.key, sizeof(entry.key),
 			&ind_key);
 	if (!SQL_SUCCEEDED(ret)) goto err_close;
 
-	ret = SQLBindCol(stmt, 3, SQL_C_CHAR, entry.value, sizeof(entry.value),
+	ret = SQLBindCol(stmt, 4, SQL_C_CHAR, entry.value, sizeof(entry.value),
 			&ind_value);
 	if (!SQL_SUCCEEDED(ret)) goto err_close;
 
@@ -2289,7 +2717,7 @@ retry:
 			break;
 		}
 
-		if (ind_key == SQL_NULL_DATA || ind_value == SQL_NULL_DATA) {
+		if (ind_prefix == SQL_NULL_DATA || ind_key == SQL_NULL_DATA || ind_value == SQL_NULL_DATA) {
 			// NULLs should never occur here
 			continue;
 		}
@@ -2320,7 +2748,8 @@ retry:
 
 	if (callback != NULL) {
 		for (i = entries.begin(); i != entries.end(); i++) {
-			r = callback(id, (const char*) (*i)->key,
+			r = callback(id, (const char*) (*i)->prefix, 
+						 (const char*) (*i)->key,
 						 (const char*) (*i)->value,
 						 context);
 			if (!CPL_IS_OK(r)) goto err_free;
@@ -2354,6 +2783,7 @@ err:
  * Lookup an object based on a property value.
  *
  * @param backend the pointer to the backend structure
+ * @param prefix the property prefix
  * @param key the property name
  * @param value the property value
  * @param callback the iterator callback function
@@ -2362,6 +2792,7 @@ err:
  */
 cpl_return_t
 cpl_odbc_lookup_object_by_property(struct _cpl_db_backend_t* backend,
+							const char* prefix,
 							const char* key,
 							const char* value,
 							cpl_property_iterator_t callback,
@@ -2384,8 +2815,9 @@ cpl_odbc_lookup_object_by_property(struct _cpl_db_backend_t* backend,
 
 retry:
 	SQLHSTMT stmt = odbc->lookup_object_by_property_stmt;
-	SQL_BIND_VARCHAR(stmt, 1, 255, key);
-	SQL_BIND_VARCHAR(stmt, 2, 4095, value);
+	SQL_BIND_VARCHAR(stmt, 1, CPL_PREFIX_LEN, prefix);
+	SQL_BIND_VARCHAR(stmt, 2, CPL_KEY_LEN, key);
+	SQL_BIND_VARCHAR(stmt, 3, CPL_VALUE_LEN, value);
 
 
 	// Execute
@@ -2437,7 +2869,7 @@ retry:
 	if (callback != NULL) {
 		std::list<cpl_id_t>::iterator i;
 		for (i = entries.begin(); i != entries.end(); i++) {
-			r = callback(*i, key, value, context);
+			r = callback(*i, prefix, key, value, context);
 			if (!CPL_IS_OK(r)) return r;
 		}
 	}
@@ -2463,7 +2895,8 @@ err:
  *
  * @param backend the pointer to the backend structure
  * @param id the the relation ID
- * @param key the property to fetch - or NULL for all properties
+ * @param prefix the prefix to fetch - or NULL for all prefixes
+ * @param key the property key to fetch - or NULL for all keys
  * @param iterator the iterator callback function
  * @param context the user context to be passed to the iterator function
  * @return CPL_OK, CPL_S_NO_DATA, or an error code
@@ -2471,6 +2904,7 @@ err:
 cpl_return_t
 cpl_odbc_get_relation_properties(struct _cpl_db_backend_t* backend,
 						const cpl_id_t id,
+						const char* prefix,
 						const char* key,
 						cpl_property_iterator_t callback,
 						void* context)
@@ -2480,7 +2914,7 @@ cpl_odbc_get_relation_properties(struct _cpl_db_backend_t* backend,
 
 	std::list<__get_properties__entry_t*> entries;
 	__get_properties__entry_t entry;
-	SQLLEN ind_key, ind_value;
+	SQLLEN ind_prefix, ind_key, ind_value;
 
 	SQL_START;
 
@@ -2495,7 +2929,7 @@ cpl_odbc_get_relation_properties(struct _cpl_db_backend_t* backend,
 retry:
 	SQLHSTMT stmt;
 
-	if (key == NULL) {
+	if (prefix == NULL || key == NULL) {
 		stmt = odbc->get_relation_properties_stmt;
 	}
 	else {
@@ -2504,8 +2938,9 @@ retry:
 
 	SQL_BIND_INTEGER(stmt, 1, id);
 
-	if (key != NULL) {
-		SQL_BIND_VARCHAR(stmt, 2, CPL_KEY_LEN, key);
+	if (prefix != NULL && key != NULL) {
+		SQL_BIND_VARCHAR(stmt, 2, CPL_PREFIX_LEN, prefix);
+		SQL_BIND_VARCHAR(stmt, 3, CPL_KEY_LEN, key);
 	}
 
 
@@ -2519,11 +2954,15 @@ retry:
 	ret = SQLBindCol(stmt, 1, SQL_C_UBIGINT, &entry.id, 0, NULL);
 	if (!SQL_SUCCEEDED(ret)) goto err_close;
 
-	ret = SQLBindCol(stmt, 2, SQL_C_CHAR, entry.key, sizeof(entry.key),
+	ret = SQLBindCol(stmt, 2, SQL_C_CHAR, entry.prefix, sizeof(entry.prefix),
+			&ind_prefix);
+	if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+	ret = SQLBindCol(stmt, 3, SQL_C_CHAR, entry.key, sizeof(entry.key),
 			&ind_key);
 	if (!SQL_SUCCEEDED(ret)) goto err_close;
 
-	ret = SQLBindCol(stmt, 3, SQL_C_CHAR, entry.value, sizeof(entry.value),
+	ret = SQLBindCol(stmt, 4, SQL_C_CHAR, entry.value, sizeof(entry.value),
 			&ind_value);
 	if (!SQL_SUCCEEDED(ret)) goto err_close;
 
@@ -2541,7 +2980,7 @@ retry:
 			break;
 		}
 
-		if (ind_key == SQL_NULL_DATA || ind_value == SQL_NULL_DATA) {
+		if (ind_prefix == SQL_NULL_DATA || ind_key == SQL_NULL_DATA || ind_value == SQL_NULL_DATA) {
 			// NULLs should never occur here
 			continue;
 		}
@@ -2574,6 +3013,7 @@ retry:
 	if (callback != NULL) {
 		for (i = entries.begin(); i != entries.end(); i++) {
 			r = callback(id,
+						 (const char*) (*i)->prefix,
 						 (const char*) (*i)->key,
 						 (const char*) (*i)->value,
 						 context);
@@ -2603,7 +3043,314 @@ err:
 	return CPL_E_STATEMENT_ERROR;
 }
 
+/**
+ * Get the properties associated with the given provenance bundle.
+ *
+ * @param backend the pointer to the backend structure
+ * @param id the the relation ID
+ * @param prefix the prefix to fetch - or NULL for all prefixes
+ * @param key the property key to fetch - or NULL for all keys
+ * @param iterator the iterator callback function
+ * @param context the user context to be passed to the iterator function
+ * @return CPL_OK, CPL_S_NO_DATA, or an error code
+ */
+cpl_return_t
+cpl_odbc_get_bundle_properties(struct _cpl_db_backend_t* backend,
+						const cpl_id_t id,
+						const char* prefix,
+						const char* key,
+						cpl_property_iterator_t callback,
+						void* context)
+{
+	assert(backend != NULL);
+	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
 
+	std::list<__get_properties__entry_t*> entries;
+	__get_properties__entry_t entry;
+	SQLLEN ind_prefix, ind_key, ind_value;
+
+	SQL_START;
+
+	cpl_return_t r = CPL_E_INTERNAL_ERROR;
+	std::list<__get_properties__entry_t*>::iterator i;
+
+	mutex_lock(odbc->get_bundle_properties_lock);
+
+
+	// Prepare the statement
+
+retry:
+	SQLHSTMT stmt;
+
+	if (prefix == NULL || key == NULL) {
+		stmt = odbc->get_bundle_properties_stmt;
+	}
+	else {
+		stmt = odbc->get_bundle_properties_with_key_stmt;
+	}
+
+	SQL_BIND_INTEGER(stmt, 1, id);
+
+	if (prefix != NULL && key != NULL) {
+		SQL_BIND_VARCHAR(stmt, 2, CPL_PREFIX_LEN, prefix);
+		SQL_BIND_VARCHAR(stmt, 3, CPL_KEY_LEN, key);
+	}
+
+
+	// Execute
+	
+	SQL_EXECUTE(stmt);
+
+
+	// Bind the columns
+
+	ret = SQLBindCol(stmt, 1, SQL_C_UBIGINT, &entry.id, 0, NULL);
+	if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+	ret = SQLBindCol(stmt, 2, SQL_C_CHAR, entry.prefix, sizeof(entry.prefix),
+			&ind_prefix);
+	if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+	ret = SQLBindCol(stmt, 3, SQL_C_CHAR, entry.key, sizeof(entry.key),
+			&ind_key);
+	if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+	ret = SQLBindCol(stmt, 4, SQL_C_CHAR, entry.value, sizeof(entry.value),
+			&ind_value);
+	if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+
+	// Fetch the result
+
+	while (true) {
+
+		ret = SQLFetch(stmt);
+		if (!SQL_SUCCEEDED(ret)) {
+			if (ret != SQL_NO_DATA) {
+				print_odbc_error("SQLFetch", stmt, SQL_HANDLE_STMT);
+				goto err_close;
+			}
+			break;
+		}
+
+		if (ind_prefix == SQL_NULL_DATA || ind_key == SQL_NULL_DATA || ind_value == SQL_NULL_DATA) {
+			// NULLs should never occur here
+			continue;
+		}
+
+		__get_properties__entry_t* e = new __get_properties__entry_t;
+		memcpy(e, (const void*) &entry, sizeof(*e));
+
+		entries.push_back(e);
+	}
+	
+	ret = SQLCloseCursor(stmt);
+	if (!SQL_SUCCEEDED(ret)) {
+		print_odbc_error("SQLCloseCursor", stmt, SQL_HANDLE_STMT);
+		goto err;
+	}
+
+
+	// Unlock
+
+	mutex_unlock(odbc->get_bundle_properties_lock);
+
+
+	// If we did not get any data back, terminate
+
+	if (entries.empty()) return CPL_S_NO_DATA;
+
+
+	// Call the user-provided callback function
+
+	if (callback != NULL) {
+		for (i = entries.begin(); i != entries.end(); i++) {
+			r = callback(id,
+						 (const char*) (*i)->prefix,
+						 (const char*) (*i)->key,
+						 (const char*) (*i)->value,
+						 context);
+			if (!CPL_IS_OK(r)) goto err_free;
+		}
+	}
+
+	r = CPL_OK;
+
+
+	// Error handling
+
+err_free:
+	for (i = entries.begin(); i != entries.end(); i++) {
+		delete *i;
+	}
+	return r;
+
+err_close:
+	ret = SQLCloseCursor(stmt);
+	if (!SQL_SUCCEEDED(ret)) {
+		print_odbc_error("SQLCloseCursor", stmt, SQL_HANDLE_STMT);
+	}
+
+err:
+	mutex_unlock(odbc->get_bundle_properties_lock);
+	return CPL_E_STATEMENT_ERROR;
+}
+
+/**
+ * An entry in the result set of the queries issued by
+ * cpl_odbc_get_*_properties().
+ */
+typedef struct __get_prefixes__entry {
+	cpl_id_t id;
+	SQLCHAR prefix[CPL_PREFIX_LEN];
+	SQLCHAR iri[CPL_VALUE_LEN];
+} __get_prefixes__entry_t;
+
+
+/**
+ * Get the properties associated with the given provenance bundle.
+ *
+ * @param backend the pointer to the backend structure
+ * @param id the the relation ID
+ * @param prefix the prefix to fetch - or NULL for all prefixes
+ * @param iri the 
+ * @param context the user context to be passed to the iterator function
+ * @return CPL_OK, CPL_S_NO_DATA, or an error code
+ */
+cpl_return_t
+cpl_odbc_get_prefixes(struct _cpl_db_backend_t* backend,
+						const cpl_id_t id,
+						const char* prefix,
+						cpl_prefix_iterator_t callback,
+						void* context)
+{
+	assert(backend != NULL);
+	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
+
+	std::list<__get_prefixes__entry_t*> entries;
+	__get_prefixes__entry_t entry;
+	SQLLEN ind_prefix, ind_iri;
+
+	SQL_START;
+
+	cpl_return_t r = CPL_E_INTERNAL_ERROR;
+	std::list<__get_prefixes__entry_t*>::iterator i;
+
+	mutex_lock(odbc->get_prefixes_lock);
+
+
+	// Prepare the statement
+
+retry:
+	SQLHSTMT stmt;
+
+	if (prefix == NULL) {
+		stmt = odbc->get_prefixes_stmt;
+	}
+	else {
+		stmt = odbc->get_prefixes_with_key_stmt;
+	}
+
+	SQL_BIND_INTEGER(stmt, 1, id);
+
+	if (prefix != NULL) {
+		SQL_BIND_VARCHAR(stmt, 2, CPL_PREFIX_LEN, prefix);
+	}
+
+
+	// Execute
+	
+	SQL_EXECUTE(stmt);
+
+
+	// Bind the columns
+
+	ret = SQLBindCol(stmt, 1, SQL_C_UBIGINT, &entry.id, 0, NULL);
+	if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+	ret = SQLBindCol(stmt, 2, SQL_C_CHAR, entry.prefix, sizeof(entry.prefix),
+			&ind_prefix);
+	if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+	ret = SQLBindCol(stmt, 3, SQL_C_CHAR, entry.iri, sizeof(entry.iri),
+			&ind_iri);
+	if (!SQL_SUCCEEDED(ret)) goto err_close;
+
+
+	// Fetch the result
+
+	while (true) {
+
+		ret = SQLFetch(stmt);
+		if (!SQL_SUCCEEDED(ret)) {
+			if (ret != SQL_NO_DATA) {
+				print_odbc_error("SQLFetch", stmt, SQL_HANDLE_STMT);
+				goto err_close;
+			}
+			break;
+		}
+
+		if (ind_prefix == SQL_NULL_DATA || ind_iri == SQL_NULL_DATA) {
+			// NULLs should never occur here
+			continue;
+		}
+
+		__get_prefixes__entry_t* e = new __get_prefixes__entry_t;
+		memcpy(e, (const void*) &entry, sizeof(*e));
+
+		entries.push_back(e);
+	}
+	
+	ret = SQLCloseCursor(stmt);
+	if (!SQL_SUCCEEDED(ret)) {
+		print_odbc_error("SQLCloseCursor", stmt, SQL_HANDLE_STMT);
+		goto err;
+	}
+
+
+	// Unlock
+
+	mutex_unlock(odbc->get_prefixes_lock);
+
+
+	// If we did not get any data back, terminate
+
+	if (entries.empty()) return CPL_S_NO_DATA;
+
+
+	// Call the user-provided callback function
+
+	if (callback != NULL) {
+		for (i = entries.begin(); i != entries.end(); i++) {
+			r = callback(id,
+						 (const char*) (*i)->prefix,
+						 (const char*) (*i)->iri,
+						 context);
+			if (!CPL_IS_OK(r)) goto err_free;
+		}
+	}
+
+	r = CPL_OK;
+
+
+	// Error handling
+
+err_free:
+	for (i = entries.begin(); i != entries.end(); i++) {
+		delete *i;
+	}
+	return r;
+
+err_close:
+	ret = SQLCloseCursor(stmt);
+	if (!SQL_SUCCEEDED(ret)) {
+		print_odbc_error("SQLCloseCursor", stmt, SQL_HANDLE_STMT);
+	}
+
+err:
+	mutex_unlock(odbc->get_prefixes_lock);
+	return CPL_E_STATEMENT_ERROR;
+}
 /**
  * Deletes a bundle along with all objects and relations it contains.
  *
@@ -2672,13 +3419,13 @@ SQL_START;
 	std::list<cplxx_object_info_t> entries;
 	SQL_TIMESTAMP_STRUCT t;
 
-	size_t originator_size = CPL_ORIGINATOR_LEN + 1;
+	size_t prefix_size = CPL_PREFIX_LEN + 1;
 	size_t name_size = CPL_NAME_LEN + 1;
 
-	char* entry_originator = (char*) alloca(originator_size);
+	char* entry_prefix = (char*) alloca(prefix_size);
 	char* entry_name = (char*) alloca(name_size);
 
-	if (entry_originator == NULL || entry_name == NULL) {
+	if (entry_prefix == NULL || entry_name == NULL) {
 		return CPL_E_INSUFFICIENT_RESOURCES;
 	}
 
@@ -2707,7 +3454,7 @@ retry:
 	ret = SQLBindCol(stmt, 2, SQL_C_TYPE_TIMESTAMP, &t, sizeof(t), NULL);
 	if (!SQL_SUCCEEDED(ret)) goto err_close;
 
-	ret = SQLBindCol(stmt, 3, SQL_C_CHAR, entry_originator, originator_size,
+	ret = SQLBindCol(stmt, 3, SQL_C_CHAR, entry_prefix, prefix_size,
 					 NULL);
 	if (!SQL_SUCCEEDED(ret)) goto err_close;
 
@@ -2743,7 +3490,7 @@ retry:
 		}
 
 		entry.creation_time = cpl_sql_timestamp_to_unix_time(t);
-		entry.originator = entry_originator;
+		entry.prefix = entry_prefix;
 		entry.name = entry_name;
 
 		entries.push_back(entry);
@@ -2772,16 +3519,16 @@ retry:
 		std::list<cplxx_object_info_t>::iterator i;
 		for (i = entries.begin(); i != entries.end(); i++) {
 
-			strncpy(entry_originator, i->originator.c_str(), originator_size);
+			strncpy(entry_prefix, i->prefix.c_str(), prefix_size);
 			strncpy(entry_name, i->name.c_str(), name_size);
-			entry_originator[originator_size - 1] = '\0';
+			entry_prefix[prefix_size - 1] = '\0';
 			entry_name[name_size - 1] = '\0';
 
 			cpl_object_info_t e;
 			e.id = i->id;
 			e.creation_session = i->creation_session;
 			e.creation_time = i->creation_time;
-			e.originator = entry_originator;
+			e.prefix = entry_prefix;
 			e.name = entry_name;
 			e.type = i->type;
 			e.bundle_id = i->bundle_id;
@@ -2947,10 +3694,15 @@ const cpl_db_backend_t CPL_ODBC_BACKEND = {
 	cpl_odbc_create_object,
 	cpl_odbc_lookup_object,
 	cpl_odbc_lookup_object_ext,
-	cpl_odbc_add_relation,
-	cpl_odbc_has_immediate_ancestor,
 	cpl_odbc_add_object_property,
+	cpl_odbc_add_relation,
 	cpl_odbc_add_relation_property,
+	cpl_odbc_create_bundle,
+	cpl_odbc_lookup_bundle,
+	cpl_odbc_lookup_bundle_ext,
+	cpl_odbc_add_bundle_property,
+	cpl_odbc_add_prefix,
+	cpl_odbc_has_immediate_ancestor,
 	cpl_odbc_get_session_info,
 	cpl_odbc_get_all_objects,
 	cpl_odbc_get_object_info,
@@ -2960,6 +3712,8 @@ const cpl_db_backend_t CPL_ODBC_BACKEND = {
 	cpl_odbc_get_relation_properties,
 	cpl_odbc_delete_bundle,
 	cpl_odbc_get_bundle_objects,
-	cpl_odbc_get_bundle_relations
+	cpl_odbc_get_bundle_relations,
+	cpl_odbc_get_bundle_properties,
+	cpl_odbc_get_prefixes
 };
 

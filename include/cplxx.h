@@ -55,6 +55,8 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include <jansson.h>
+#include <igraph/igraph.h>
 
 
 

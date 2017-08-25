@@ -94,9 +94,7 @@ CREATE TABLE IF NOT EXISTS cpl_objects (
                    REFERENCES cpl_sessions(id),
        FOREIGN KEY(bundle_id)
                    REFERENCES cpl_bundles(id)
-                   ON DELETE CASCADE)
-       FOREIGN KEY(bundle_id, prefix)
-                   REFERENCES cpl_prefixes(id, prefix));
+                   ON DELETE CASCADE));
 
 CREATE TABLE IF NOT EXISTS cpl_relations (
        id BIGSERIAL,
@@ -162,6 +160,7 @@ CREATE OR REPLACE RULE cpl_relation_properties_ignore_duplicate_inserts AS
    WHERE (EXISTS ( SELECT 1
            FROM cpl_relation_properties
           WHERE cpl_relation_properties.id = NEW.id 
+          AND cpl_relation_properties.prefix = NEW.prefix
           AND cpl_relation_properties.name = NEW.name)) 
       DO INSTEAD NOTHING;
 
@@ -170,9 +169,26 @@ CREATE OR REPLACE RULE cpl_object_properties_ignore_duplicate_inserts AS
    WHERE (EXISTS ( SELECT 1
            FROM cpl_object_properties
           WHERE cpl_object_properties.id = NEW.id 
+          AND cpl_object_properties.prefix = NEW.prefix
           AND cpl_object_properties.name = NEW.name)) 
       DO INSTEAD NOTHING;
 
+CREATE OR REPLACE RULE cpl_bundle_properties_ignore_duplicate_inserts AS
+    ON INSERT TO cpl_bundle_properties
+   WHERE (EXISTS ( SELECT 1
+           FROM cpl_bundle_properties
+          WHERE cpl_bundle_properties.id = NEW.id
+          AND cpl_bundle_properties.prefix = NEW.prefix
+          AND cpl_bundle_properties.name = NEW.name)) 
+      DO INSTEAD NOTHING;
+
+CREATE OR REPLACE RULE cpl_prefixes_ignore_duplicate_inserts AS
+    ON INSERT TO cpl_prefixes
+   WHERE (EXISTS ( SELECT 1
+           FROM cpl_prefixes
+          WHERE cpl_prefixes.id = NEW.id 
+          AND cpl_prefixes.prefix = NEW.prefix)) 
+      DO INSTEAD NOTHING;
 --
 -- Grant the appropriate privileges
 --

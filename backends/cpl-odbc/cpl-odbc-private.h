@@ -107,11 +107,6 @@ typedef struct {
 	SQLHSTMT create_object_insert_stmt;
 
 	/**
-	 * The insert statement for object creation - with bundle
-	 */
-	SQLHSTMT create_object_insert_bundle_stmt;
-
-	/**
 	 * The lock for lookup_object
 	 */
 	mutex_t lookup_object_lock;
@@ -150,6 +145,35 @@ typedef struct {
 	SQLHSTMT add_relation_stmt;
 
 	/**
+	 * Lock for bundle creation
+	 */
+	mutex_t create_bundle_lock;
+
+	/**
+	 * The insert statement for object creation - with bundle
+	 */
+	SQLHSTMT create_bundle_stmt;
+
+	/**
+	 * The lock for lookup_bundle
+	 */
+	mutex_t lookup_bundle_lock;
+
+	/**
+	 * The statement for looking up a bundle
+	 */
+	SQLHSTMT lookup_bundle_stmt;
+	/**
+	 * The lock for lookup_object_ext
+	 */
+	mutex_t lookup_bundle_ext_lock;
+
+	/**
+	 * The statement for looking up bundles
+	 */
+	SQLHSTMT lookup_bundle_ext_stmt;
+
+	/**
 	 * The lock for add_object_property
 	 */
 	mutex_t add_object_property_lock;
@@ -168,6 +192,26 @@ typedef struct {
 	* The statement that adds a new relation property
 	*/
 	SQLHSTMT add_relation_property_stmt;
+
+	/**
+	* The lock for add_bundle_property
+	*/
+	mutex_t add_bundle_property_lock;
+
+	/**
+	* The statement that adds a new bundle property
+	*/
+	SQLHSTMT add_bundle_property_stmt;
+
+	/**
+	* The lock for add_prefix
+	*/
+	mutex_t add_prefix_lock;
+
+	/**
+	* The statement that adds a new prefix
+	*/
+	SQLHSTMT add_prefix_stmt;
 
 	/**
 	 * The lock for get_session_info
@@ -299,6 +343,36 @@ typedef struct {
 	* The statement for getting bundle relations
 	*/
 	SQLHSTMT get_bundle_relations_stmt;
+
+	/**
+	* The mutex for get_bundle_properties
+	*/
+	mutex_t get_bundle_properties_lock;
+
+	/**
+	* The statement for getting bundle properties
+	*/
+	SQLHSTMT get_bundle_properties_stmt;
+
+	/**
+	* The statement for listing specific bundle properties
+	*/
+	SQLHSTMT get_bundle_properties_with_key_stmt;
+
+	/**
+	* The mutex for get_prefixes
+	*/
+	mutex_t get_prefixes_lock;
+
+	/**
+	* The statement for getting prefixes
+	*/
+	SQLHSTMT get_prefixes_stmt;
+
+	/**
+	* The statement for listing specific bundle prefixes
+	*/
+	SQLHSTMT get_prefixes_with_key_stmt;
 
 } cpl_odbc_t;
 

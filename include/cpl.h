@@ -36,8 +36,6 @@
 #define __CPL_H__
 
 #include <stddef.h>
-#include <jansson.h>
-#include <igraph/igraph.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -251,6 +249,7 @@ typedef struct cpl_relation {
  * The iterator callback function used by property accessors.
  *
  * @param id the object ID
+ * @param prefix the namespace prefix
  * @param key the property name
  * @param value the property value
  * @param context the application-provided context
@@ -261,6 +260,21 @@ typedef cpl_return_t (*cpl_property_iterator_t)
 						 const char* prefix,
 						 const char* key,
 						 const char* value,
+						 void* context);
+
+/**
+ * The iterator callback function used by property accessors.
+ *
+ * @param id the object ID
+ * @param prefix the namespace prefix
+ * @param iri the namespace iri
+ * @param context the application-provided context
+ * @return CPL_OK or an error code (the caller should fail on this error)
+ */
+typedef cpl_return_t (*cpl_prefix_iterator_t)
+						(const cpl_id_t id,
+						 const char* prefix,
+						 const char* iri,
 						 void* context);
 
 
@@ -726,7 +740,9 @@ cpl_lookup_bundle(const char* name,
  */
 EXPORT cpl_return_t
 cpl_lookup_bundle_ext(const char* name,
-				      cpl_id_t* out_id);
+					  const int flags,
+ 					  cpl_id_timestamp_iterator_t iterator,
+					  void* context);
 
 /**
  * Add a property to the given relation.
@@ -962,8 +978,9 @@ cpl_get_bundle_properties(const cpl_id_t id,
  * @return CPL_OK, CPL_S_NO_DATA, or an error code
  */
 EXPORT cpl_return_t
-cpl_get_bundle_prefixes(const cpl_id_t id,
-			            cpl_property_iterator_t iterator,
+cpl_get_prefixes(const cpl_id_t id,
+						const char* prefix,
+			            cpl_prefix_iterator_t iterator,
 			            void* context);
 /***************************************************************************/
 /** Utility functions                                                     **/
