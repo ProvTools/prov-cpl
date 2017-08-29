@@ -313,7 +313,7 @@ typedef struct {
 	* The statement for determining whether an object has a particular ancestor
 	*/
 	SQLHSTMT has_immediate_ancestor_stmt;
-	
+
 	/**
 	* The mutex for delete_bundle
 	*/
@@ -324,6 +324,16 @@ typedef struct {
 	*/
 	SQLHSTMT delete_bundle_stmt;
 
+	/**
+	 * The lock for get_bundle_info
+	 */
+	mutex_t get_bundle_info_lock;
+
+	/**
+	 * The statement that returns information about a provenance bundle
+	 */
+	SQLHSTMT get_bundle_info_stmt;
+	
 	/**
 	* The mutex for get_bundle_objects
 	*/

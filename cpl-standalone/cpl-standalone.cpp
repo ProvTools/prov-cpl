@@ -1184,6 +1184,45 @@ cpl_delete_bundle(const cpl_id_t id)
 }
 
 /**
+ * Get information about the given provenance bundle.
+ *
+ * @param id the bundle ID
+ * @param out_info the pointer to store the bundle info structure
+ * @return CPL_OK or an error code
+ */
+extern "C" EXPORT cpl_return_t
+cpl_get_bundle_info(const cpl_id_t id,
+					cpl_bundle_info_t** out_info)
+{
+	CPL_ENSURE_INITIALIZED;
+	CPL_ENSURE_NOT_NONE(id);
+	CPL_ENSURE_NOT_NULL(out_info);
+
+	// Call the database backend
+
+	return cpl_db_backend->cpl_db_get_bundle_info(cpl_db_backend, id,
+												  out_info);
+}
+
+
+/**
+ * Free cpl_bundle_info_t.
+ *
+ * @param info the pointer to the bundle info structure.
+ * @return CPL_OK or an error code
+ */
+extern "C" EXPORT cpl_return_t
+cpl_free_bundle_info(cpl_bundle_info_t* info)
+{
+	CPL_ENSURE_NOT_NULL(info);
+
+	if (info->name != NULL) free(info->name);
+
+	free(info);
+	return CPL_OK;
+}
+
+/**
  * Get all objects belonging to a bundle
  *
  * @paramID the bundle ID
@@ -2030,8 +2069,11 @@ export_objects_json(cpl_id_t bundle,
 			cpl_cb_collect_properties_vector, &property_vec);
 
 		for(auto & property: property_vec){
-			std::string full_prop_name(property.prefix);
-			full_prop_name.append(":");
+			std::string full_prop_name("");
+			if(property.prefix != ""){
+				full_prop_name.append(property.prefix);
+				full_prop_name.append(":");
+			}
 			full_prop_name.append(property.key);
 			if(json_object_set_new(properties, full_prop_name.c_str(), 
 								   json_string(property.value.c_str()))){
@@ -2044,8 +2086,11 @@ export_objects_json(cpl_id_t bundle,
 			json_type_array[obj.type-1] = json_object();
 		}
 
-		std::string full_obj_name(obj.prefix);
-		full_obj_name.append(":");
+		std::string full_obj_name("");
+		if(obj.prefix != ""){
+			full_obj_name.append(obj.prefix);
+			full_obj_name.append(":");
+		}
 		full_obj_name.append(obj.name);
 		if(json_object_set(json_type_array[obj.type-1], full_obj_name.c_str(),
 						   properties)){
@@ -2107,8 +2152,11 @@ export_relations_json(cpl_id_t bundle,
 			cpl_cb_collect_properties_vector, &property_vec);
 
 		for(auto & property: property_vec){
-			std::string full_prop_name(property.prefix);
-			full_prop_name.append(":");
+			std::string full_prop_name("");
+			if(property.prefix != ""){
+				full_prop_name.append(property.prefix);
+				full_prop_name.append(":");
+			}
 			full_prop_name.append(property.key);
 			if(json_object_set_new(properties, full_prop_name.c_str(),
 								   json_string(property.value.c_str()))){

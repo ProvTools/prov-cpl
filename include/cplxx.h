@@ -184,7 +184,7 @@ typedef struct prov_relation_data {
 /***************************************************************************/
 /**
  * The iterator callback for cpl_get_all_objects() that collects the returned
- * information in an instance of std::vector<cplxx_object_info_t>.
+ * information in an instance of std::vector<cpl_object_info_t>.
  *
  * @param info the object info
  * @param context the pointer to an instance of the vector 
@@ -354,10 +354,8 @@ validate_json(const char* path,
  */
 EXPORT cpl_return_t
 import_document_json(const char* filename,
-					 const char* originator,
 					 const char* bundle_name,
 					 const cpl_id_t anchor_object,
-					 const cpl_id_t bundle_agent,
 					 cpl_id_t* bundle_id);
 
 

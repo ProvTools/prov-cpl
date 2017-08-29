@@ -507,6 +507,7 @@ cpl_odbc_free_statement_handles(cpl_odbc_t* odbc)
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_relation_properties_with_key_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->has_immediate_ancestor_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->delete_bundle_stmt);
+	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_bundle_info_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_bundle_objects_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_bundle_relations_stmt);
 	SQLFreeHandle(SQL_HANDLE_STMT, odbc->get_bundle_properties_stmt);
@@ -604,6 +605,7 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 	ALLOC_STMT(get_relation_properties_with_key_stmt);
 	ALLOC_STMT(has_immediate_ancestor_stmt);
 	ALLOC_STMT(delete_bundle_stmt);
+	ALLOC_STMT(get_bundle_info_stmt);
 	ALLOC_STMT(get_bundle_objects_stmt);
 	ALLOC_STMT(get_bundle_relations_stmt);
 	ALLOC_STMT(get_bundle_properties_stmt);
@@ -803,6 +805,13 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 			"DELETE FROM cpl_bundles"
 			"	WHERE id = ?");
 
+	PREPARE(get_object_info_stmt,
+			"SELECT session_id,"
+			"       creation_time"
+			"  FROM cpl_bundles"
+			" WHERE id = ?"
+			" LIMIT 1;");
+
 	PREPARE(get_bundle_objects_stmt,
 			"SELECT id, creation_time, prefix, name, type"
 			"  FROM cpl_objects"
@@ -950,6 +959,7 @@ cpl_create_odbc_backend(const char* connection_string,
 	mutex_init(odbc->get_relation_properties_lock);
 	mutex_init(odbc->has_immediate_ancestor_lock);
 	mutex_init(odbc->delete_bundle_lock);
+	mutex_init(odbc->get_bundle_info_lock);
 	mutex_init(odbc->get_bundle_objects_lock);
 	mutex_init(odbc->get_bundle_relations_lock);
 	mutex_init(odbc->get_bundle_properties_lock);
@@ -991,6 +1001,7 @@ err_sync:
 	mutex_destroy(odbc->get_relation_properties_lock);
 	mutex_destroy(odbc->has_immediate_ancestor_lock);
 	mutex_destroy(odbc->delete_bundle_lock);
+	mutex_destroy(odbc->get_bundle_info_lock);
 	mutex_destroy(odbc->get_bundle_objects_lock);
 	mutex_destroy(odbc->get_bundle_relations_lock);
 	mutex_destroy(odbc->get_bundle_properties_lock);
@@ -1080,6 +1091,7 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
 	mutex_destroy(odbc->get_relation_properties_lock);
 	mutex_destroy(odbc->has_immediate_ancestor_lock);
 	mutex_destroy(odbc->delete_bundle_lock);
+	mutex_destroy(odbc->get_bundle_info_lock);
 	mutex_destroy(odbc->get_bundle_objects_lock);
 	mutex_destroy(odbc->get_bundle_relations_lock);
 	mutex_destroy(odbc->get_bundle_properties_lock);
@@ -3395,6 +3407,85 @@ err:
 }
 
 /**
+ * Get information about the given provenance bundle
+ *
+ * @param backend the pointer to the backend structure
+ * @param id the bundle ID
+ * @param out_info the pointer to store the bundle info structure
+ * @return CPL_OK or an error code
+ */
+cpl_return_t
+cpl_odbc_get_bundle_info(struct _cpl_db_backend_t* backend,
+						 const cpl_id_t id,
+						 cpl_bundle_info_t** out_info)
+{
+	assert(backend != NULL);
+	
+	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
+	
+	SQL_START;
+
+	cpl_return_t r = CPL_E_INTERNAL_ERROR;
+
+
+	cpl_bundle_info_t* p = (cpl_bundle_info_t*) malloc(sizeof(*p));
+	if (p == NULL) return CPL_E_INSUFFICIENT_RESOURCES;
+	memset(p, 0, sizeof(*p));
+	p->id = id;
+
+
+	// Prepare the statement
+
+	mutex_lock(odbc->get_bundle_info_lock);
+
+retry:
+	SQLHSTMT stmt = odbc->get_bundle_info_stmt;
+
+	SQL_BIND_INTEGER(stmt, 1, id);
+
+
+	// Execute
+	
+	SQL_EXECUTE(stmt);
+
+
+	// Fetch the result
+
+	CPL_SQL_SIMPLE_FETCH(llong, 1, (long long*) &p->creation_session);
+	CPL_SQL_SIMPLE_FETCH(timestamp_as_unix_time, 2, &p->creation_time);
+	CPL_SQL_SIMPLE_FETCH_EXT(dynamically_allocated_string, 3, &p->name, true);
+	if (r == CPL_E_DB_NULL) p->name = strdup("");
+	
+	ret = SQLCloseCursor(stmt);
+	if (!SQL_SUCCEEDED(ret)) {
+		print_odbc_error("SQLCloseCursor", stmt, SQL_HANDLE_STMT);
+		goto err;
+	}
+
+
+	// Cleanup
+
+	mutex_unlock(odbc->get_bundle_info_lock);
+	
+	*out_info = p;
+	return CPL_OK;
+
+
+	// Error handling
+
+err:
+	r = CPL_E_STATEMENT_ERROR;
+
+err_r:
+	mutex_unlock(odbc->get_bundle_info_lock);
+
+	if (p->name != NULL) free(p->name);
+	free(p);
+
+	return r;
+}
+
+/**
  * Returns all objects contained in a bundle.
  *
  * @param backend the pointer to the backend structure
@@ -3711,6 +3802,7 @@ const cpl_db_backend_t CPL_ODBC_BACKEND = {
 	cpl_odbc_lookup_object_by_property,
 	cpl_odbc_get_relation_properties,
 	cpl_odbc_delete_bundle,
+	cpl_odbc_get_bundle_info,
 	cpl_odbc_get_bundle_objects,
 	cpl_odbc_get_bundle_relations,
 	cpl_odbc_get_bundle_properties,

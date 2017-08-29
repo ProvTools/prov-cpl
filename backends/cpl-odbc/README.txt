@@ -118,7 +118,7 @@ Finally, run the configuration script ../../scripts/postgresql-setup.sql
 as the user postgres. On Linux and Unix systems, this can be easily achieved
 by cd-ing into CPL's main project directory and running from the command line:
 
-    sudo -u postgres psql postgres < scripts/postgresql-setup.sql
+    sudo psql -U postgres postgres < scripts/postgresql-setup.sql
 
 This will create user cpl with password "cplcplcpl", database cpl, and its
 corresponding schema.

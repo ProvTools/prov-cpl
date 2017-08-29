@@ -80,7 +80,7 @@ public class CPLRelation {
 	private int type;
 
 	/// The bundle/bundle
-	private CPLObject bundle;
+	private CPLBundle bundle;
 
 	/// The direction of the query
 	private boolean otherIsAncestor;
@@ -98,7 +98,7 @@ public class CPLRelation {
 	 * @param otherIsAncestor the dependency direction
 	 */
 	CPLRelation(BigInteger id, CPLObject base, CPLObject other,
-			int type, CPLObject bundle, boolean otherIsAncestor) {
+			int type, CPLBundle bundle, boolean otherIsAncestor) {
 
 		this.id = id;
 		this.base = base;
@@ -113,7 +113,7 @@ public class CPLRelation {
 	}
 
 	// TODO dest == null case
-	public static CPLRelation create(CPLObject source, CPLObject dest,  int type, CPLObject bundle){
+	public static CPLRelation create(CPLObject source, CPLObject dest,  int type, CPLBundle bundle){
 
 		BigInteger[] id = {nullId};
 		int r = CPLDirect.cpl_add_relation(source.getId(), dest.getId(), type, bundle.getId(), id);
@@ -224,7 +224,7 @@ public class CPLRelation {
 	 *
 	 * @return the bundle
 	 */
-	public CPLObject getbundle() {
+	public CPLBundle getbundle() {
 		return bundle;
 	}
 
@@ -241,12 +241,13 @@ public class CPLRelation {
 		/**
 	 * Add a property
 	 *
+	 * @param the namespace prefix
 	 * @param key the key
 	 * @param value the value
 	 */
-	public void addProperty(String key, String value) {
+	public void addProperty(String prefix, String key, String value) {
 
-		int r = CPLDirect.cpl_add_relation_property(id, key, value);
+		int r = CPLDirect.cpl_add_relation_property(id, prefix, key, value);
 		CPLException.assertSuccess(r);
 	}
 
@@ -254,28 +255,29 @@ public class CPLRelation {
 	/**
 	 * Get the properties of an ancestry edge
 	 *
+	 * @param prefix the namespace prefix or null for all entries
 	 * @param key the property name or null for all entries
 	 * @return the vector of property entries
 	 */
-	public Vector<CPLRelationPropertyEntry> getProperties(String key) {
+	public Vector<CPLPropertyEntry> getProperties(String prefix, String key) {
 				SWIGTYPE_p_std_vector_cplxx_property_entry_t pVector
 			= CPLDirect.new_std_vector_cplxx_property_entry_tp();
 		SWIGTYPE_p_void pv = CPLDirect
 			.cpl_convert_p_std_vector_cplxx_property_entry_t_to_p_void(pVector);
-		Vector<CPLRelationPropertyEntry> result = null;
+		Vector<CPLPropertyEntry> result = null;
 
 		try {
-			int r = CPLDirect.cpl_get_relation_properties(id, key,
+			int r = CPLDirect.cpl_get_relation_properties(id, prefix, key,
 					CPLDirect.cpl_cb_collect_properties_vector, pv);
 			CPLException.assertSuccess(r);
 
 			cplxx_property_entry_t_vector v = CPLDirect
 				.cpl_dereference_p_std_vector_cplxx_property_entry_t(pVector);
 			long l = v.size();
-			result = new Vector<CPLRelationPropertyEntry>((int) l);
+			result = new Vector<CPLPropertyEntry>((int) l);
 			for (long i = 0; i < l; i++) {
 				cplxx_property_entry_t e = v.get((int) i);
-				result.add(new CPLRelationPropertyEntry(this,
+				result.add(new CPLPropertyEntry(e.getPrefix(),
 							e.getKey(),
 							e.getValue()));
 			}
@@ -293,50 +295,8 @@ public class CPLRelation {
 	 *
 	 * @return the vector of property entries
 	 */
-	public Vector<CPLRelationPropertyEntry> getProperties() {
-		return getProperties(null);
+	public Vector<CPLPropertyEntry> getProperties() {
+		return getProperties(null, null);
 	}
-
-	/**
-	 * Get all relations belonging to a bundle
-	 *
-	 * @param bundle the bundle
-	 * @return the vector of matching relations (empty if not found)
-	 */
-	public static Vector<CPLRelation> getBundleRelations(CPLObject bundle) {
-
-		SWIGTYPE_p_std_vector_cpl_relation_t pVector
-			= CPLDirect.new_std_vector_cpl_relation_tp();
-		SWIGTYPE_p_void pv = CPLDirect
-			.cpl_convert_p_std_vector_cpl_relation_t_to_p_void(pVector);
-		Vector<CPLRelation> result = null;
-
-		try {
-			int r = CPLDirect.cpl_get_bundle_relations(bundle.getId(), 
-				CPLDirect.cpl_cb_collect_relation_vector, pv);
-			CPLException.assertSuccess(r);
-
-			cpl_relation_t_vector v = CPLDirect
-				.cpl_dereference_p_std_vector_cpl_relation_t(pVector);
-			long l = v.size();
-			result = new Vector<CPLRelation>((int) l);
-			for (long i = 0; i < l; i++) {
-				cpl_relation_t e = v.get((int) i);
-				result.add(new CPLRelation(
-						e.getId(),
-						new CPLObject(e.getQuery_object_id()),
-						new CPLObject(e.getOther_object_id()),
-						e.getType(),
-						new CPLObject(e.getBundle_id()),
-						true));
-			}
-		}
-		finally {
-			CPLDirect.delete_std_vector_cpl_relation_tp(pVector);
-		}
-
-		return result;
-	}
-
 }
 

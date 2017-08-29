@@ -1,7 +1,7 @@
 package edu.harvard.pass.cpl;
 
 /*
- * CPLObjectPropertyEntry.java
+ * CPLPropertyEntry.java
  * Prov-CPL
  *
  * Copyright 2016
@@ -45,11 +45,11 @@ import java.util.Vector;
  *
  * @author Jackson Okuhn
  */
-public class CPLObjectPropertyEntry {
+public class CPLPropertyEntry {
 
 
-    /// The provenance object
-	private CPLObject object;
+    /// The namespace prefix
+	private String prefix;
 
 	/// The property name
 	private String key;
@@ -59,14 +59,14 @@ public class CPLObjectPropertyEntry {
 
 
 	/**
-	 * Create an instance of CPLObjectPropertyEntry
+	 * Create an instance of CPLPropertyEntry
 	 *
-	 * @param object the provenance object
+	 * @param prefix the property prefix
      * @param key the property name
      * @param value the property value
 	 */
-	CPLObjectPropertyEntry(CPLObject object, String key, String value) {
-		this.object = object;
+	CPLPropertyEntry(String prefix, String key, String value) {
+		this.prefix = prefix;
         this.key = key;
         this.value = value;
 	}
@@ -80,11 +80,11 @@ public class CPLObjectPropertyEntry {
 	 */
 	@Override
 	public boolean equals(Object other) {
-		if (other instanceof CPLObjectPropertyEntry) {
-			CPLObjectPropertyEntry o = (CPLObjectPropertyEntry) other;
-			return o.object.equals(object)
+		if (other instanceof CPLPropertyEntry) {
+			CPLPropertyEntry o = (CPLPropertyEntry) other;
+			return o.prefix.equals(prefix)
                 && o.key.equals(key)
-                && (o.value == value ? true : o.value.equals(value));
+                && (o.value == null ? true : o.value.equals(value));
 		}
 		else {
 			return false;
@@ -100,30 +100,29 @@ public class CPLObjectPropertyEntry {
 	@Override
 	public int hashCode() {
         int valueHashCode = value == null ? 0 : value.hashCode();
-		return ((object.hashCode() * 31) << 4)
+		return ((prefix.hashCode() * 31) << 4)
             ^ ((key.hashCode() * 31) ^ ~valueHashCode);
 	}
 
 
 	/**
-	 * Return a string representation of the object. Note that this is based
-	 * on the internal object ID, since the name might not be known.
+	 * Return a string representation of the property.
 	 *
 	 * @return the string representation
 	 */
 	@Override
 	public String toString() {
-		return object.toString() + "-" + key + " = " + value;
+		return prefix + ":" + key + " = " + value;
 	}
 
 
 	/**
-	 * Get the provenance object
+	 * Get the namespace prefix
 	 *
-	 * @return the provenance object
+	 * @return the namespace prefix
 	 */
-	public CPLObject getObject() {
-		return object;
+	public String getPrefix() {
+		return prefix;
 	}
 
 
@@ -146,17 +145,5 @@ public class CPLObjectPropertyEntry {
 		return value;
 	}
 
-
-	/**
-	 * Create a more detailed string representation of the object
-	 *
-	 * @param includeObject whether to also include the object and version
-	 * @return a string describing the entry
-	 */
-	public String toString(boolean includeObject) {
-
-		return (includeObject ? object.toString() + "- " : "")
-            + key + " = " + value;
-	}
 }
 

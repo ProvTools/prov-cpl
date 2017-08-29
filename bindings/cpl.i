@@ -39,9 +39,6 @@
 /*%include std_list.i*/
 %include std_vector.i
 %include std_string.i
-%include various.i 
-%apply char **STRING_OUT { char **string_out };
-
 
 /*
  * Additional code for the C wrapper
@@ -56,6 +53,7 @@
 typedef cpl_db_backend_t* p_cpl_db_backend_t;
 typedef cpl_session_info_t* p_cpl_session_info_t;
 typedef cpl_object_info_t* p_cpl_object_info_t;
+typedef cpl_bundle_info_t* p_cpl_bundle_info_t;
 
 inline _cpl_db_backend_t*
 cpl_dereference_pp_cpl_db_backend_t(p_cpl_db_backend_t* p) {
@@ -72,6 +70,11 @@ cpl_dereference_pp_cpl_object_info_t(p_cpl_object_info_t* p) {
     return *p;
 }
 
+inline cpl_bundle_info_t*
+cpl_dereference_pp_cpl_bundle_info_t(p_cpl_bundle_info_t* p) {
+    return *p;
+}
+
 inline cpl_session_info_t**
 cpl_convert_pp_cpl_session_info_t(p_cpl_session_info_t* p) {
     return p;
@@ -82,6 +85,10 @@ cpl_convert_pp_cpl_object_info_t(p_cpl_object_info_t* p) {
     return p;
 }
 
+inline cpl_bundle_info_t**
+cpl_convert_pp_cpl_bundle_info_t(p_cpl_bundle_info_t* p) {
+    return p;
+}
 
 inline int
 cpl_is_ok(cpl_return_t ret) {
@@ -146,6 +153,19 @@ cpl_convert_p_std_vector_cplxx_property_entry_t_to_p_void(
     return (void*) p;
 }
 
+typedef std::vector<cplxx_prefix_entry_t> std_vector_cplxx_prefix_entry_t;
+
+inline std::vector<cplxx_prefix_entry_t>&
+cpl_dereference_p_std_vector_cplxx_prefix_entry_t(
+        std_vector_cplxx_prefix_entry_t* p) {
+    return *p;
+}
+
+inline void*
+cpl_convert_p_std_vector_cplxx_prefix_entry_t_to_p_void(
+        std_vector_cplxx_prefix_entry_t* p) {
+    return (void*) p;
+}
 
 typedef std::vector<cpl_id_t> std_vector_cpl_id_t;
 
@@ -202,21 +222,25 @@ cpl_is_ok(cpl_return_t ret);
 %include typemaps.i
 
 cpl_return_t
-cpl_create_object(const char* originator,
+cpl_create_bundle(const char* name,
+                  unsigned long long* OUTPUT);
+
+cpl_return_t
+cpl_create_object(const char* prefix,
                   const char* name,
                   const int type,
                   const cpl_id_t bundle,
                   unsigned long long* OUTPUT);
 
 cpl_return_t
-cpl_lookup_object(const char* originator,
+cpl_lookup_object(const char* prefix,
                   const char* name,
                   const int type,
                   const cpl_id_t bundle_id,
                   unsigned long long* OUTPUT);
 
 cpl_return_t
-cpl_lookup_or_create_object(const char* originator,
+cpl_lookup_or_create_object(const char* prefix,
                             const char* name,
                             const int type,
                             const cpl_id_t bundle,
@@ -234,10 +258,8 @@ cpl_get_current_session(unsigned long long* OUTPUT);
 
 cpl_return_t
 import_document_json(const char* filename,
-                     const char* originator,
                      const char* bundle_name,
                      const cpl_id_t anchor_object,
-                     const cpl_id_t bundle_agent,
                      unsigned long long* OUTPUT);
 /*
  * STL bundles
@@ -284,6 +306,16 @@ inline void*
 cpl_convert_p_std_vector_cplxx_property_entry_t_to_p_void(
         std_vector_cplxx_property_entry_t* p);
 
+%template (cplxx_prefix_entry_t_vector) std::vector<cplxx_prefix_entry_t>;
+
+inline std::vector<cplxx_prefix_entry_t>&
+cpl_dereference_p_std_vector_cplxx_prefix_entry_t(
+    std_vector_cplxx_prefix_entry_t* p);
+
+inline void*
+cpl_convert_p_std_vector_cplxx_prefix_entry_t_to_p_void(
+        std_vector_cplxx_prefix_entry_t* p);
+
 %template (cpl_id_t_vector) std::vector<cpl_id_t>;
 
 inline std::vector<cpl_id_t>&
@@ -300,12 +332,14 @@ cpl_convert_p_std_vector_cpl_id_t_to_p_void(
 %pointer_functions(p_cpl_db_backend_t, cpl_db_backend_tpp);
 %pointer_functions(p_cpl_session_info_t, cpl_session_info_tpp);
 %pointer_functions(p_cpl_object_info_t, cpl_object_info_tpp);
+%pointer_functions(p_cpl_bundle_info_t, cpl_bundle_info_tpp);
 
 %pointer_functions(cpl_session_t, cpl_session_tp);
 %pointer_functions(cpl_id_t, cpl_id_tp);
 
 %pointer_functions(cpl_session_info_t, cpl_session_info_tp);
 %pointer_functions(cpl_object_info_t, cpl_object_info_tp);
+%pointer_functions(cpl_bundle_info_t, cpl_bundle_info_tp);
 
 %pointer_functions(std_vector_cpl_id_timestamp_t,
         std_vector_cpl_id_timestamp_tp);
@@ -319,6 +353,9 @@ cpl_convert_p_std_vector_cpl_id_t_to_p_void(
 
 %pointer_functions(std_vector_cplxx_property_entry_t,
         std_vector_cplxx_property_entry_tp);
+
+%pointer_functions(std_vector_cplxx_prefix_entry_t,
+        std_vector_cplxx_prefix_entry_tp);
 
 %pointer_functions(std_vector_cpl_id_t, std_vector_cpl_id_tp);
 

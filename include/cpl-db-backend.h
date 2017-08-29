@@ -328,8 +328,6 @@ typedef struct _cpl_db_backend_t {
 	 *
 	 * @param backend the pointer to the backend structure
 	 * @param id the object ID
-	 * @param version_hint the version of the given provenance object if known,
-	 *                     or CPL_VERSION_NONE if not
 	 * @param out_info the pointer to store the object info structure
 	 * @return CPL_OK or an error code
 	 */
@@ -343,8 +341,6 @@ typedef struct _cpl_db_backend_t {
 	 *
 	 * @param backend the pointer to the backend structure
 	 * @param id the object ID
-	 * @param version the object version, or CPL_VERSION_NONE to access all
-	 *                version nodes associated with the given object
 	 * @param direction the direction of the graph traversal (CPL_D_ANCESTORS
 	 *                  or CPL_D_DESCENDANTS)
 	 * @param flags the bitwise combination of flags describing how should
@@ -423,6 +419,7 @@ typedef struct _cpl_db_backend_t {
 								 cpl_property_iterator_t callback,
 								 void* context);
 
+
 	/**
 	 * Deletes a bundle along with all objects and relations it contains.
 	 *
@@ -433,6 +430,19 @@ typedef struct _cpl_db_backend_t {
 	(*cpl_db_delete_bundle)(struct _cpl_db_backend_t* backend,
 								 const cpl_id_t id);
 	
+	/**
+	 * Get information about the given provenance bundle
+	 *
+	 * @param backend the pointer to the backend structure
+	 * @param id the bundle ID
+	 * @param out_info the pointer to store the bundle info structure
+	 * @return CPL_OK or an error code
+	 */
+	cpl_return_t
+	(*cpl_db_get_bundle_info)(struct _cpl_db_backend_t* backend,
+							  const cpl_id_t id,
+							  cpl_bundle_info_t** out_info);
+
 	/**
 	 * Returns all objects contained in a bundle.
 	 *

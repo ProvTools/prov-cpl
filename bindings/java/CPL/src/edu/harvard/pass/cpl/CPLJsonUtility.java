@@ -75,18 +75,16 @@ public class CPLJsonUtility {
 	 * Currently supports only one anchor object and no bundles.
 	 *
 	 * @param fileName document path
-	 * @param originator document originator
 	 * @param bundleName desired name of document bundle
 	 * @param anchorObject Prov-CPL object identical to an object in the document
-	 * @param bundleAgent agent responsible for the document bundle
 	 */
 
-	public static CPLObject importJson(String filepath, String originator, 
-			String bundleName, CPLObject anchorObject, CPLObject bundleAgent) {
+	public static CPLObject importJson(String filepath, 
+			String bundleName, CPLObject anchorObject) {
 
 		BigInteger[] id = {nullId};
-		int r = CPLDirect.import_document_json(filepath, originator, bundleName,
-									   anchorObject.getId(), bundleAgent.getId(), id);
+		int r = CPLDirect.import_document_json(filepath, bundleName,
+									   anchorObject.getId(), id);
 		CPLException.assertSuccess(r);
 		
 		CPLObject o = new CPLObject(id[0]);
@@ -100,7 +98,7 @@ public class CPLJsonUtility {
 	 * @param bundle bundle to export
 	 * @param filepath path to desired output file, overwrites if file already exists
 	 */
-	public static void exportBundleJson(CPLObject bundle, String filepath) {
+	public static void exportBundleJson(CPLBundle bundle, String filepath) {
 
 		int r = CPLDirect.export_bundle_json(bundle.getId(), filepath);
 		CPLException.assertSuccess(r);

@@ -41,6 +41,10 @@
 %javaconst(0) cpl_cb_collect_relation_vector;
 %javaconst(0) cpl_cb_collect_properties_vector;
 %javaconst(0) cpl_cb_collect_property_lookup_vector;
+%javaconst(0) cpl_cb_collect_prefixes_vector;
+
+%include various.i 
+%apply char **STRING_OUT { char **string_out };
 
 %include "../../cpl.i"
 

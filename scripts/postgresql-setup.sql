@@ -87,21 +87,21 @@ CREATE TABLE IF NOT EXISTS cpl_objects (
        name VARCHAR(255),
        type INT,
        creation_time TIMESTAMP DEFAULT NOW(),
-       bundle_id BIGINT NOT NULL,
+       bundle_id BIGINT,
        session_id BIGINT,
        PRIMARY KEY(id),
        FOREIGN KEY(session_id)
                    REFERENCES cpl_sessions(id),
        FOREIGN KEY(bundle_id)
                    REFERENCES cpl_bundles(id)
-                   ON DELETE CASCADE));
+                   ON DELETE CASCADE);
 
 CREATE TABLE IF NOT EXISTS cpl_relations (
        id BIGSERIAL,
        from_id BIGINT,
        to_id BIGINT,
        type INT,
-       bundle_id BIGINT NOT NULL,
+       bundle_id BIGINT,
        PRIMARY KEY(id),
        FOREIGN KEY(from_id)
                    REFERENCES cpl_objects(id)
@@ -150,6 +150,8 @@ CREATE TABLE IF NOT EXISTS cpl_object_properties (
 
 INSERT INTO cpl_sessions (id, mac_address, username, pid, program, cmdline)
   VALUES (0, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO cpl_bundles (id, name, session_id)
+  VALUES (0, NULL, NULL);
 INSERT INTO cpl_objects (id, prefix, name, type, bundle_id, session_id)
   VALUES (0, NULL, NULL, NULL, NULL, NULL);
 INSERT INTO cpl_relations (id, from_id, to_id, type, bundle_id)
@@ -189,6 +191,9 @@ CREATE OR REPLACE RULE cpl_prefixes_ignore_duplicate_inserts AS
           WHERE cpl_prefixes.id = NEW.id 
           AND cpl_prefixes.prefix = NEW.prefix)) 
       DO INSTEAD NOTHING;
+
+-- TODO add empty prefix conversion rule
+
 --
 -- Grant the appropriate privileges
 --

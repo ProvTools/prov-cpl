@@ -924,6 +924,26 @@ EXPORT cpl_return_t
 cpl_delete_bundle(const cpl_id_t id);
 
 /**
+ * Get information about the given provenance bundle.
+ *
+ * @param id the bundle ID
+ * @param out_info the pointer to store the bundle info structure
+ * @return CPL_OK or an error code
+ */
+EXPORT cpl_return_t
+cpl_get_bundle_info(const cpl_id_t id,
+					cpl_bundle_info_t** out_info);
+
+/**
+ * Free cpl_bundle_info_t.
+ *
+ * @param info the pointer to the bundle info structure
+ * @return CPL_OK or an error code
+ */
+EXPORT cpl_return_t
+cpl_free_bundle_info(cpl_bundle_info_t* info);
+
+/**
  * Get all objects belonging to a bundle
  *
  * @paramID the bundle ID
