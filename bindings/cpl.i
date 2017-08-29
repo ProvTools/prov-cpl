@@ -196,11 +196,17 @@ cpl_dereference_pp_cpl_session_info_t(p_cpl_session_info_t* p);
 inline cpl_object_info_t*
 cpl_dereference_pp_cpl_object_info_t(p_cpl_object_info_t* p);
 
+inline cpl_bundle_info_t*
+cpl_dereference_pp_cpl_bundle_info_t(p_cpl_bundle_info_t* p);
+
 inline cpl_session_info_t**
 cpl_convert_pp_cpl_session_info_t(p_cpl_session_info_t* p);
 
 inline cpl_object_info_t**
 cpl_convert_pp_cpl_object_info_t(p_cpl_object_info_t* p);
+
+inline cpl_bundle_info_t**
+cpl_convert_pp_cpl_bundle_info_t(p_cpl_bundle_info_t* p);
 
 inline int
 cpl_is_ok(cpl_return_t ret);
@@ -223,6 +229,9 @@ cpl_is_ok(cpl_return_t ret);
 
 cpl_return_t
 cpl_create_bundle(const char* name,
+                  unsigned long long* OUTPUT);
+cpl_return_t
+cpl_lookup_bundle(const char* name,
                   unsigned long long* OUTPUT);
 
 cpl_return_t

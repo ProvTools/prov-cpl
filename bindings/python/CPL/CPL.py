@@ -84,7 +84,6 @@ NUM_R_TYPES = CPLDirect. CPL_NUM_R_TYPES
 ENTITY = CPLDirect.CPL_ENTITY
 ACTIVITY = CPLDirect.CPL_ACTIVITY
 AGENT = CPLDirect.CPL_AGENT
-BUNDLE = CPLDirect.CPL_BUNDLE
 NUM_O_TYPES = CPLDirect.CPL_NUM_O_TYPES
 
 # Return Codes
@@ -145,8 +144,7 @@ __relation_dict = ["wasInfluencedBy",
 
 __object_dict = ["entity",
 				 "activity",
-				 "agent",
-				 "bundle"]
+				 "agent"]
 				 
 
 #
@@ -222,7 +220,7 @@ def p_object(obj, with_session = False):
 
 	i = obj.info()
 	p_id(i.object.id)
-	sys.stdout.write('originator:' + i.originator + ' name:' + i.name +
+	sys.stdout.write('prefix:' + i.prefix + ' name:' + i.name +
 	    ' type:' + __object_dict[i.type-1])
 	if i.bundle is not None:
 		sys.stdout.write(' bundle_id:' + str(i.bundle) + ' ')
@@ -294,7 +292,7 @@ class cpl_relation:
 			' [type:' + relation_type_to_str(self.type) +
 			'; id: ' + self.id + ']')
 
-	def properties(self, key=None, version=None):
+	def properties(self, prefix=None, key=None):
 		'''
 		Return all the properties associated with the current relation.
 
@@ -303,7 +301,7 @@ class cpl_relation:
 		'''
 		vp = CPLDirect.new_std_vector_cplxx_property_entry_tp()
 
-		ret = CPLDirect.cpl_get_relation_properties(self.id, key,
+		ret = CPLDirect.cpl_get_relation_properties(self.id, prefix, key,
 		    CPLDirect.cpl_cb_collect_properties_vector, vp)
 		if not CPLDirect.cpl_is_ok(ret):
 			CPLDirect.delete_std_vector_cplxx_property_entry_tp(vp)
@@ -313,15 +311,15 @@ class cpl_relation:
 		v = CPLDirect.cpl_dereference_p_std_vector_cplxx_property_entry_t(vp)
 		l = []
 		for e in v:
-			l.append([e.key, e.value])
+			l.append([e.prefix, e.key, e.value])
 		CPLDirect.delete_std_vector_cplxx_property_entry_tp(vp)
 		return l
 
-	def add_property(self, name, value):
+	def add_property(self, prefix, name, value):
 		'''
 		Add name/value pair as a property to current object.
 		'''
-		return CPLDirect.cpl_add_relation_property(self.id, name, value)
+		return CPLDirect.cpl_add_relation_property(self.id, prefix, name, value)
 
 
 #
@@ -385,16 +383,15 @@ class cpl_connection:
 		if self == _cpl_connection and not self.closed:
 			self.close()
 
-
-	def __create_or_lookup_cpl_object(self, originator,
+	def __create_or_lookup_cpl_object(self, prefix,
 		     name, type=None, create=None, bundle=None):
 		'''
 		Create or lookup a CPL object
 
 		** Parameters **
-			originator 
-			name: originator-local name
-			type: originator-local type, type can be none for lookup
+			prefix 
+			name: name
+			type: type, type can be none for lookup
 			create:
 				None: lookup or create
 				True: create only
@@ -408,15 +405,15 @@ class cpl_connection:
 			bundle_id = bundle.id
 
 		if create == None:
-			ret, idp = CPLDirect.cpl_lookup_or_create_object(originator, name,
+			ret, idp = CPLDirect.cpl_lookup_or_create_object(prefix, name,
 							  type, bundle_id)
 			if ret == S_OBJECT_CREATED:
 				ret = S_OK
 		elif create:
-			ret, idp = CPLDirect.cpl_create_object(originator,
+			ret, idp = CPLDirect.cpl_create_object(prefix,
 						name, type, bundle_id)
 		else:
-			ret, idp = CPLDirect.cpl_lookup_object(originator, name, type, bundle_id)
+			ret, idp = CPLDirect.cpl_lookup_object(prefix, name, type, bundle_id)
 			if ret == E_NOT_FOUND:
 				raise LookupError('Not found')
 		if not CPLDirect.cpl_is_ok(ret):
@@ -424,9 +421,50 @@ class cpl_connection:
 			    ' provenance object: ' + CPLDirect.cpl_error_string(ret))
 		
 		r = cpl_object(idp)
-
 		return r
 
+	def create_bundle(self, name):
+			ret, idp = CPLDirect.cpl_create_bundle(name)
+
+		if not CPLDirect.cpl_is_ok(ret):
+			raise Exception('Could not create' +
+			    ' provenance bundle: ' + CPLDirect.cpl_error_string(ret))
+		
+		r = cpl_bundle(idp)
+		return r
+
+	def lookup_bundle(self, name):
+			ret, idp = CPLDirect.cpl_lookup_bundle(name)
+
+		if not CPLDirect.cpl_is_ok(ret):
+			raise Exception('Could not find' +
+			    ' provenance bundle: ' + CPLDirect.cpl_error_string(ret))
+		
+		r = cpl_bundle(idp)
+		return r
+
+	def lookup_all_bundles(self, name):
+		'''
+		Return all bundles that have the specified name
+		'''
+
+		vp = CPLDirect.new_std_vector_cpl_id_timestamp_tp()
+		ret = CPLDirect.cpl_lookup_bundle_ext(name,
+			L_NO_FAIL, CPLDirect.cpl_cb_collect_id_timestamp_vector, vp)
+
+		if not CPLDirect.cpl_is_ok(ret):
+			CPLDirect.delete_std_vector_cpl_id_timestamp_tp(vp)
+			raise Exception('Unable to lookup all bundles: ' +
+					CPLDirect.cpl_error_string(ret))
+
+		v = CPLDirect.cpl_dereference_p_std_vector_cpl_id_timestamp_t(vp)
+		l = []
+		if v != S_NO_DATA :
+			for e in v:
+				l.append(cpl_object(e.id))
+
+		CPLDirect.delete_std_vector_cpl_id_timestamp_tp(vp)
+		return l
 
 	def get_all_objects(self, fast=False):
 		'''
@@ -462,62 +500,59 @@ class cpl_connection:
 				else:
 					creation_session = cpl_session(e.creation_session)
 				l.append(cpl_object_info(cpl_object(e.id),
-					creation_session, e.creation_time, e.originator, e.name,
+					creation_session, e.creation_time, e.prefix, e.name,
 					e.type, bundle))
 
 		CPLDirect.delete_std_vector_cplxx_object_info_tp(vp)
 		return l
 			
 
-	def get_object(self, originator, name, type, bundle=None):
+	def get_object(self, prefix, name, type, bundle):
 		'''
-		Get the object, with the designated originator (string),
-		name (int), and type (int), creating it if necessary.
+		Get the object, with the designated prefix (string),
+		name (int), type (int), and bundle (ID) creating it if necessary.
 
-		If you want an object in a specific bundle, set the bundle
-		parameter to the ID of the object in which you want this object
-		created.
 		'''
-		return self.__create_or_lookup_cpl_object(originator, name, type,
+		return self.__create_or_lookup_cpl_object(prefix, name, type,
 				create=None, bundle=bundle)
 
 
-	def create_object(self, originator, name, type, bundle=None):
+	def create_object(self, prefix, name, type, bundle):
 		'''
 		Create object, returns None if object already exists.
 		'''
-		return self.__create_or_lookup_cpl_object(originator, name, type,
+		return self.__create_or_lookup_cpl_object(prefix, name, type,
 				create=True, bundle=bundle)
 
 
-	def lookup_object(self, originator, name, type, bundle=None):
+	def lookup_object(self, prefix, name, type, bundle=None):
 		'''
 		Look up object; raise LookupError if the object does not exist.
 		'''
-		o = self.__create_or_lookup_cpl_object(originator, name, type,
+		o = self.__create_or_lookup_cpl_object(prefix, name, type,
 				create=False, bundle=bundle)
 		return o
 
 
-	def try_lookup_object(self, originator, name, type, bundle=None):
+	def try_lookup_object(self, prefix, name, type, bundle=None):
 		'''
 		Look up object; returns None if the object does not exist.
 		'''
 		try:
-			o = self.__create_or_lookup_cpl_object(originator, name, type,
+			o = self.__create_or_lookup_cpl_object(prefix, name, type,
 					create=False, bundle=bundle)
 		except LookupError:
 			o = None
 		return o
 
 
-	def lookup_by_property(self, key, value):
+	def lookup_by_property(self, prefix, key, value):
 		'''
 		Return all objects that have the key/value property specified; raise
 		LookupError if no such object is found.
 		'''
 		vp = CPLDirect.new_std_vector_cpl_id_tp()
-		ret = CPLDirect.cpl_lookup_object_by_property(key, value,
+		ret = CPLDirect.cpl_lookup_object_by_property(prefix, key, value,
 			CPLDirect.cpl_cb_collect_property_lookup_vector, vp)
 
 		if ret == E_NOT_FOUND:
@@ -537,29 +572,27 @@ class cpl_connection:
 		return l
 
 
-	def try_lookup_by_property(self, key, value):
+	def try_lookup_by_property(self, prefix, key, value):
 		'''
 		Return all objects that have the key/value property specified, but do
 		not fail if no such object is found -- return an empty list instead.
 		'''
 		try:
-			o = self.lookup_by_property(key, value)
+			o = self.lookup_by_property(prefix, key, value)
 		except LookupError:
 			o = []
 		return o
 
 
-	def lookup_all(self, originator, name, type, bundle=None):
+	def lookup_all_objects(self, prefix, name, type, bundle):
 		'''
-		Return all objects that have the specified originator, name,
+		Return all objects that have the specified prefix, name,
 		type, or bundle.
 		'''
-		if bundle == None:
-			bundle = NONE
-		else:
-			bundle = bundle.id
+		
+		bundle = bundle.id
 		vp = CPLDirect.new_std_vector_cpl_id_timestamp_tp()
-		ret = CPLDirect.cpl_lookup_object_ext(originator, name, type, bundle,
+		ret = CPLDirect.cpl_lookup_object_ext(prefix, name, type, bundle,
 			L_NO_FAIL, CPLDirect.cpl_cb_collect_id_timestamp_vector, vp)
 
 		if not CPLDirect.cpl_is_ok(ret):
@@ -646,21 +679,21 @@ class cpl_connection:
 		return stringout
 
 
-	def import_document_json(self, filepath, originator, 
-			bundle_name, anchor_object, bundle_agent):
+	def import_document_json(self, filepath,
+			bundle_name, anchor_object):
 		'''
 		Imports a Prov-JSON document into the CPL as a bundle.
 
 		** Parameters **
 			filepath
-			originator
+			prefix
 			bundle_name
 			anchor_object: an existing CPL object that matches the name and type of 
 			an object in the document, can be none
 			bundle_agent: the agent responsible for uploading the bundle, can be none
 		'''
-		ret, idp = CPLDirect.import_document_json(filepath, originator, bundle_name,
-			  anchor_object.id, bundle_agent.id)
+		ret, idp = CPLDirect.import_document_json(filepath, bundle_name,
+			  anchor_object.id)
 		if not CPLDirect.cpl_is_ok(ret): 
 			raise Exception('Error importing document:' +
 					CPLDirect.cpl_error_string(ret))
@@ -799,7 +832,7 @@ class cpl_object_info:
 	'''
 
 	def __init__(self, object, creation_session, creation_time,
-			originator, name, type, bundle):
+			prefix, name, type, bundle):
 		'''
 		Create an instance of this object
 		'''
@@ -807,7 +840,7 @@ class cpl_object_info:
 		self.object = object
 		self.creation_session = creation_session
 		self.creation_time = creation_time
-		self.originator = originator
+		self.prefix = prefix
 		self.name = name
 		self.type = type
 		self.bundle = bundle
@@ -855,14 +888,12 @@ class cpl_object:
 		return str(self.id)
 
 
-	def relation_to(self, dest, type, bundle=None):
+	def relation_to(self, dest, type, bundle):
 		'''
 		Add relation type from self to dest.
 		'''
-		if bundle == None:
-			bundle = NONE
-		else:
-			bundle = bundle.id
+
+		bundle = bundle.id
 		ret, idp = CPLDirect.cpl_add_relation(self.id, dest.id, type, bundle)
 		if not CPLDirect.cpl_is_ok(ret):
 			raise Exception('Could not add relation: ' +
@@ -873,14 +904,12 @@ class cpl_object:
 		return r
 
 
-	def relation_from(self, src, type, bundle=None):
+	def relation_from(self, src, type, bundle):
 		'''
 		Add relation type from src to self.
 		'''
-		if bundle == None:
-			bundle = NONE
-		else:
-			bundle = bundle.id
+
+		bundle = bundle.id
 		ret, idp = CPLDirect.cpl_add_relation(src.id, self.id, type, bundle)
 		if not CPLDirect.cpl_is_ok(ret):
 			raise Exception('Could not add relation: ' +
@@ -891,11 +920,11 @@ class cpl_object:
 		return r
 
 
-	def add_property(self, name, value):
+	def add_property(self, prefix, name, value):
 		'''
 		Add name/value pair as a property to current object.
 		'''
-		return CPLDirect.cpl_add_object_property(self.id, name, value)
+		return CPLDirect.cpl_add_object_property(self.id, prefix, name, value)
 
 
 	def info(self):
@@ -921,7 +950,7 @@ class cpl_object:
 
 		_info = cpl_object_info(self,
 				cpl_session(object.creation_session), object.creation_time,
-				object.originator, object.name, object.type, bundle)
+				object.prefix, object.name, object.type, bundle)
 
 		CPLDirect.cpl_free_object_info(op)
 		CPLDirect.delete_cpl_object_info_tpp(objectpp)
@@ -962,16 +991,16 @@ class cpl_object:
 		return l
 
 
-	def properties(self, key=None, version=None):
+	def properties(self, prefix=None, key=None, version=None):
 		'''
 		Return all the properties associated with the current object.
 
-		If key is set to something other than None, return only those
-		properties matching key.
+		If prefix/key is set to something other than None, return only those
+		properties matching prefix/key.
 		'''
 		vp = CPLDirect.new_std_vector_cplxx_property_entry_tp()
 
-		ret = CPLDirect.cpl_get_object_properties(self.id, key,
+		ret = CPLDirect.cpl_get_object_properties(self.id, prefix, key,
 		    CPLDirect.cpl_cb_collect_properties_vector, vp)
 		if not CPLDirect.cpl_is_ok(ret):
 			CPLDirect.delete_std_vector_cplxx_property_entry_tp(vp)
@@ -981,7 +1010,132 @@ class cpl_object:
 		v = CPLDirect.cpl_dereference_p_std_vector_cplxx_property_entry_t(vp)
 		l = []
 		for e in v:
-			l.append([e.key, e.value])
+			l.append([e.prefix, e.key, e.value])
+		CPLDirect.delete_std_vector_cplxx_property_entry_tp(vp)
+		return l
+
+
+
+#
+# Information about a provenance bundle
+#
+
+class cpl_bundle_info:
+	'''
+	Information about a provenance bundle
+	'''
+
+	def __init__(self, bundle, creation_session, creation_time,
+			name):
+		'''
+		Create an instance of this object
+		'''
+
+		self.bundle = bundle
+		self.creation_session = creation_session
+		self.creation_time = creation_time
+		self.name = name
+
+
+
+#
+# CPL Provenance bundle
+#
+
+class cpl_bundle:
+	'''
+	CPL Provenance bundle
+	'''
+
+
+	def __init__(self, id):
+		'''
+		Create a new instance of a provenance bundle from its internal ID
+		'''
+		self.id = id
+
+
+	def __eq__(self, other):
+		'''
+		Compare this and the other bundle and return true if they are equal
+		'''
+		if isinstance(other, self.__class__):
+			return self.id == other.id
+		else:
+			return False
+
+
+	def __ne__(self, other):
+		'''
+		Compare this and the other object and return true if they are not equal
+		'''
+		return self.id != other.id
+
+
+	def __str__(self):
+		'''
+		Return a string representation of this object
+		'''
+		return str(self.id)
+
+	def add_prefix(self, prefix, iri):
+		'''
+		Add prefix/iri pair to current bundle.
+		'''
+		return CPLDirect.cpl_add_prefix(self.id, prefix, iri)
+
+	def add_property(self, prefix, name, value):
+		'''
+		Add prefix/name/value as a property to current bundle.
+		'''
+		return CPLDirect.cpl_add_bundle_property(self.id, prefix, name, value)
+
+
+	def info(self):
+		'''
+		Return cpl_bundle_info_t corresponding to the current bundle.
+		'''
+		bundlepp = CPLDirect.new_cpl_bundle_info_tpp()
+
+		ret = CPLDirect.cpl_get_bundles_info(self.id,
+		    CPLDirect.cpl_convert_pp_cpl_bundle_info_t(bundlepp))
+		if not CPLDirect.cpl_is_ok(ret):
+			CPLDirect.delete_cpl_bundle_info_tpp(bundlepp)
+			raise Exception('Unable to get bundle info: ' +
+					CPLDirect.cpl_error_string(ret))
+
+		op = CPLDirect.cpl_dereference_pp_cpl_bundle_info_t(bundlepp)
+		bundle = CPLDirect.cpl_bundle_info_tp_value(op)
+
+		_info = cpl_bundle_info(self,
+				cpl_session(bundle.creation_session), bundle.creation_time,
+				bundle.name)
+
+		CPLDirect.cpl_free_bundle_info(op)
+		CPLDirect.delete_cpl_bundle_info_tpp(bundlepp)
+
+		return _info
+
+	def properties(self, prefix=None, key=None, version=None):
+		'''
+		Return all the properties associated with the current bundle.
+
+		If prefix/key is set to something other than None, return only those
+		properties matching prefix/key.
+		'''
+		vp = CPLDirect.new_std_vector_cplxx_property_entry_tp()
+
+		ret = CPLDirect.cpl_get_bundle_properties(self.id, prefix, key,
+		    CPLDirect.cpl_cb_collect_properties_vector, vp)
+		if not CPLDirect.cpl_is_ok(ret):
+			CPLDirect.delete_std_vector_cplxx_property_entry_tp(vp)
+			raise Exception('Error retrieving properties: ' +
+					CPLDirect.cpl_error_string(ret))
+
+		v = CPLDirect.cpl_dereference_p_std_vector_cplxx_property_entry_t(vp)
+		l = []
+		for e in v:
+			l.append([e.prefix, e.key, e.value])
 		CPLDirect.delete_std_vector_cplxx_property_entry_tp(vp)
 		return l
 
