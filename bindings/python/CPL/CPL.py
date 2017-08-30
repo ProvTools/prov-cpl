@@ -232,6 +232,23 @@ def p_object(obj, with_session = False):
 	print
 
 
+def p_bundle(bun, with_session = False):
+	'''
+	Print information about a bundle
+
+	Method calls:
+		p_bundle(bun, with_session = False)
+	'''
+
+	i = bun.info()
+	p_id(i.bundle.id)
+	sys.stdout.write(' name:' + i.name)
+	if with_session:
+		print 'creation_time:' + str(i.creation_time)
+		p_session(i.creation_session)
+	print
+
+
 def p_session(session):
 	'''
 	Print information about a session
@@ -248,6 +265,8 @@ def p_session(session):
 		print(' mac_address:' + si.mac_address + ' pid:' + str(si.pid))
 		print('\t(' + str(si.start_time) + ')' + ' user:' +
 		    si.user + ' cmdline:' + si.cmdline + ' program:' + si.program)
+
+
 
 #
 # Provenance relation
@@ -383,6 +402,7 @@ class cpl_connection:
 		if self == _cpl_connection and not self.closed:
 			self.close()
 
+
 	def __create_or_lookup_cpl_object(self, prefix,
 		     name, type=None, create=None, bundle=None):
 		'''
@@ -423,6 +443,7 @@ class cpl_connection:
 		r = cpl_object(idp)
 		return r
 
+
 	def create_bundle(self, name):
 			ret, idp = CPLDirect.cpl_create_bundle(name)
 
@@ -433,6 +454,7 @@ class cpl_connection:
 		r = cpl_bundle(idp)
 		return r
 
+
 	def lookup_bundle(self, name):
 			ret, idp = CPLDirect.cpl_lookup_bundle(name)
 
@@ -442,6 +464,7 @@ class cpl_connection:
 		
 		r = cpl_bundle(idp)
 		return r
+
 
 	def lookup_all_bundles(self, name):
 		'''
@@ -465,6 +488,7 @@ class cpl_connection:
 
 		CPLDirect.delete_std_vector_cpl_id_timestamp_tp(vp)
 		return l
+
 
 	def get_all_objects(self, fast=False):
 		'''
@@ -657,6 +681,7 @@ class cpl_connection:
 
 		CPLDirect.delete_std_vector_cpl_relation_tp(vp)
 		return l
+
 
 	def delete_bundle(self, bundle):
 		'''

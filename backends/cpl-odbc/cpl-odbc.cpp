@@ -794,7 +794,7 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 	PREPARE(get_relation_properties_with_key_stmt,
 			"SELECT id, prefix, name, value"
 			"  FROM cpl_relation_properties"
-			" WHERE id = ? AND prefix AND name = ?;");
+			" WHERE id = ? AND prefix = ? AND name = ?;");
 
 	PREPARE(has_immediate_ancestor_stmt,
 			"SELECT id"
@@ -805,9 +805,9 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 			"DELETE FROM cpl_bundles"
 			"	WHERE id = ?");
 
-	PREPARE(get_object_info_stmt,
+	PREPARE(get_bundle_info_stmt,
 			"SELECT session_id,"
-			"       creation_time"
+			"       creation_time, name"
 			"  FROM cpl_bundles"
 			" WHERE id = ?"
 			" LIMIT 1;");
@@ -1709,7 +1709,7 @@ retry:
 	SQLHSTMT stmt = odbc->add_object_property_stmt;
 
 	SQL_BIND_INTEGER(stmt, 1, id);
-	SQL_BIND_VARCHAR(stmt, 2, CPL_PREFIX_LEN, key);
+	SQL_BIND_VARCHAR(stmt, 2, CPL_PREFIX_LEN, prefix);
 	SQL_BIND_VARCHAR(stmt, 3, CPL_KEY_LEN, key);
 	SQL_BIND_VARCHAR(stmt, 4, CPL_VALUE_LEN, value);
 

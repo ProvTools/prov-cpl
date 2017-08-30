@@ -654,7 +654,6 @@ cpl_add_object_property(const cpl_id_t id,
 	CPL_ENSURE_NOT_NULL(key);
 	CPL_ENSURE_NOT_NULL(value);
 
-
     // Call the backend
 
 	return cpl_db_backend->cpl_db_add_object_property(cpl_db_backend,

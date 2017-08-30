@@ -184,7 +184,7 @@ cb_get_properties(const cpl_id_t id,
 				  const char* key,
 				  const char* value,
 				  void* context)
-{
+{	
 	std::multimap<std::string, std::string>* m
 		= (std::multimap<std::string, std::string>*) context;
 	std::string name = prefix;
@@ -193,8 +193,8 @@ cb_get_properties(const cpl_id_t id,
 	m->insert(std::pair<std::string, std::string>(name,
 				std::string(value)));
 	
-	print(L_DEBUG, "  %llx %s = %s",
-			id, key, value);
+	print(L_DEBUG, "  %llx %s:%s = %s",
+			id, prefix, key, value);
 
 	return CPL_OK;
 }
