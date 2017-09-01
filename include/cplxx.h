@@ -51,11 +51,13 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <stringstream>
+#include <iostream>
 
 #include <unordered_map>
 #include <unordered_set>
 
-#include <jansson.h>
+#include <json.hpp>
 #include <igraph/igraph.h>
 
 
@@ -338,37 +340,36 @@ cpl_cb_collect_property_lookup_vector(const cpl_id_t id,
  * @return 0 on successful validation or -1 on failure
  */
 EXPORT int
-validate_json(const char* path,
-			  char** string_out);
+validate_json(string path,
+			  string& string_out);
 
 /*
  * Imports a Prov-JSON document into Prov-CPL.
  *
- * @param filename file path to document
- * @param originator document originator
+ * @param path file path to document
  * @param bundle_name desired name of document bundle, must be unique
- * @param anchor_object optional PROV_CPL object identical to an object in the document
- * @param bundle_agent optional agent responsible for the document bundle
- * @param bundle_id the ID of the imported bundle
+ * @param anchor_objects optional vector of ID string pairs that match
+ *		                 objects in the database with objects in the document
+ * @param out_id the ID of the imported bundle
  * @return CPL_OK or an error code
  */
 EXPORT cpl_return_t
-import_document_json(const char* filename,
-					 const char* bundle_name,
-					 const cpl_id_t anchor_object,
-					 cpl_id_t* bundle_id);
+import_document_json(const string path,
+					 const string bundle_name,
+					 const vector<pair<cpl_id_t, string>> anchor_objects,
+					 cpl_id_t* out_id);
 
 
 /*
  * Exports a Prov-CPL bundle as a Prov-JSON document.
  *
- * @param bundle the bundle ID
+ * @param bundle a vector of bundle IDs, currently only supports one
  * @param path path to desired output file, overwrites if file already exists
  * @return CPL_OK or an error code
  */
 EXPORT cpl_return_t
-export_bundle_json(const cpl_id_t bundle, 
-				   const char* path);
+export_bundle_json(const vector<cpl_id_t> bundles, 
+				   const string path);
 
 #endif /* __cplusplus */
 

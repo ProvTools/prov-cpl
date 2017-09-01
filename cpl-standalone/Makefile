@@ -30,9 +30,9 @@ INCLUDE_FLAGS := $(INCLUDE_FLAGS) -I$(ROOT)/include
 CXXFLAGS := -std=c++11 -g
 
 ifeq ($(OSTYPE),darwin)
-LIBRARIES := -framework IOKit -framework CoreFoundation -ligraph -ljansson
+LIBRARIES := -framework IOKit -framework CoreFoundation -ligraph
 else
-LIBRARIES := -luuid -ligraph -ljansson
+LIBRARIES := -luuid -ligraph
 endif
 
 
