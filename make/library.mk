@@ -172,7 +172,7 @@ list-subproject-lib-build-dirs::
 
 
 #
-# Install & unistall
+# Install & uninstall
 #
 
 .PHONY: install uninstall

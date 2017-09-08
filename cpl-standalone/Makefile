@@ -27,12 +27,12 @@ SO_MINOR_VERSION := $(shell cat "$(ROOT)/include/cpl.h" \
 
 DEPENDENCIES := $(ROOT)/include/*.h
 INCLUDE_FLAGS := $(INCLUDE_FLAGS) -I$(ROOT)/include
-CXXFLAGS := -std=c++11 -g
+CXXFLAGS := -std=c++11
 
 ifeq ($(OSTYPE),darwin)
-LIBRARIES := -framework IOKit -framework CoreFoundation -ligraph
+LIBRARIES := -framework IOKit -framework CoreFoundation
 else
-LIBRARIES := -luuid -ligraph
+LIBRARIES := -luuid
 endif
 
 

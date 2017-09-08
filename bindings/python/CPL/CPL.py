@@ -109,6 +109,7 @@ E_INVALID_VERSION = CPLDirect.CPL_E_INVALID_VERSION
 E_DB_NULL = CPLDirect.CPL_E_DB_NULL
 E_DB_KEY_NOT_FOUND = CPLDirect.CPL_E_DB_KEY_NOT_FOUND
 E_DB_INVALID_TYPE = CPLDirect.CPL_E_DB_INVALID_TYPE
+E_INVALID_JSON = CPLDirect.CPL_E_INVALID_JSON
 
 # Flags
 L_NO_FAIL = CPLDirect.CPL_L_NO_FAIL
@@ -698,14 +699,14 @@ class cpl_connection:
 		'''
 		Checks a Prov-JSON document (at filepath) for cycles and correctness.
 		'''
-		ret = CPLDirect.validate_json(filepath, stringout)
-		if not r:
+		ret = CPLDirect.validate_json(filepath)
+		if not CPLDirect.cpl_is_ok(ret.return_code):
 			return None
-		return stringout
+		return ret.out_string
 
 
 	def import_document_json(self, filepath,
-			bundle_name, anchor_object):
+			bundle_name, anchor_objects):
 		'''
 		Imports a Prov-JSON document into the CPL as a bundle.
 
@@ -713,23 +714,29 @@ class cpl_connection:
 			filepath
 			prefix
 			bundle_name
-			anchor_object: an existing CPL object that matches the name and type of 
-			an object in the document, can be none
-			bundle_agent: the agent responsible for uploading the bundle, can be none
+			anchor_objects: a list of cpl_object, name tuples, can be None
+			bundle_agent: the agent responsible for uploading the bundle, can be None
 		'''
+		if anchor_objects == None:
+			id_name_vector = none
+		else:
+			id_name_pairs = [(entry.get(0).id, entry.get(1)) for entry in anchor_objects]
+			id_name_vector = CPLDirect.cplxx_id_name_pair_vector(id_name_pairs)
 		ret, idp = CPLDirect.import_document_json(filepath, bundle_name,
-			  anchor_object.id)
+			  id_name_vector)
 		if not CPLDirect.cpl_is_ok(ret): 
 			raise Exception('Error importing document:' +
 					CPLDirect.cpl_error_string(ret))
 		return idp
 		
 
-	def export_bundle_json(self, bundle, filepath):
+	def export_bundle_json(self, bundles, filepath):
 	'''
 	Exports a bundle as a Prov-JSON document.
 	'''
-		ret = CPLDirect.export_bundle_json(bundle.id, filepath)
+		bundle_ids = [bundle.id for bundle in bundles]
+		bundles_vec = CPLDirect.cpl_id_t_vector(bundle_ids);
+		ret = CPLDirect.export_bundle_json(bundles_vec, filepath)
 		if not CPLDirect.cpl_is_ok(ret):
 			raise Exception('Error exporting bundle:' +
 					CPLDirect.cpl_error_string(ret))

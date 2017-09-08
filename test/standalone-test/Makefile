@@ -20,7 +20,7 @@ INCLUDE_FLAGS := $(INCLUDE_FLAGS) -I$(ROOT)/include \
 # Flags and libraries
 #
 
-CXXFLAGS      := $(CXXFLAGS) -Wno-sign-compare
+CXXFLAGS      := $(CXXFLAGS) -std=c++11 -Wno-sign-compare
 INCLUDE_FLAGS := $(INCLUDE_FLAGS)
 LINKER_FLAGS  := $(LINKER_FLAGS)
 LIBRARIES     := $(LIBRARIES)

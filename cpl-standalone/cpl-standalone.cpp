@@ -256,7 +256,7 @@ cpl_attach(struct _cpl_db_backend_t* backend)
 		return CPL_E_PLATFORM_ERROR;
 	}
 
-	string _cmdline = "";
+	std::string _cmdline = "";
 	char buf[256];
 	while (!feof(f)) {
 		if (fgets(buf, sizeof(buf), f) == NULL) {
@@ -305,8 +305,8 @@ cpl_attach(struct _cpl_db_backend_t* backend)
 	_cmdbuf[l] = '\0';
 	fclose(f);
 	
-	string _cmdline = "";
-	string token = "";
+	std::string _cmdline = "";
+	std::string token = "";
 	bool has_white = false;
 	bool has_sq = false;
 	for (size_t i = 0; i <= l; i++) {
@@ -318,7 +318,7 @@ cpl_attach(struct _cpl_db_backend_t* backend)
 		}
 		else {
 			if (has_sq) {
-				string s = "";
+				std::string s = "";
 				const char* _t = token.c_str();
 				size_t _tl = strlen(_t);
 				for (size_t j = 0; j < _tl; j++) {
@@ -1354,8 +1354,8 @@ cpl_cb_collect_object_info_vector(const cpl_object_info_t* info,
     e.type = info->type;
     e.bundle_id = info->bundle_id;
 
-	vector<cplxx_object_info_t>& l =
-		*((vector<cplxx_object_info_t>*) context);
+	std::vector<cplxx_object_info_t>& l =
+		*((std::vector<cplxx_object_info_t>*) context);
 	l.push_back(e);
 
 	return CPL_OK;
@@ -1385,8 +1385,8 @@ cpl_cb_collect_id_timestamp_vector(const cpl_id_t id,
 	e.id = id;
 	e.timestamp = timestamp;
 
-	vector<cpl_id_timestamp_t>& l =
-		*((vector<cpl_id_timestamp_t>*) context);
+	std::vector<cpl_id_timestamp_t>& l =
+		*((std::vector<cpl_id_timestamp_t>*) context);
 	l.push_back(e);
 
 	return CPL_OK;
@@ -1425,8 +1425,8 @@ cpl_cb_collect_relation_list(const cpl_id_t relation_id,
 	e.type = type;
 	e.bundle_id = bundle_id;
 
-	list<cpl_relation_t>& l =
-		*((list<cpl_relation_t>*) context);
+	std::list<cpl_relation_t>& l =
+		*((std::list<cpl_relation_t>*) context);
 	l.push_back(e);
 
 	return CPL_OK;
@@ -1465,8 +1465,8 @@ cpl_cb_collect_relation_vector(const cpl_id_t relation_id,
 	e.type = type;
 	e.bundle_id = bundle_id;
 
-	vector<cpl_relation_t>& l =
-		*((vector<cpl_relation_t>*) context);
+	std::vector<cpl_relation_t>& l =
+		*((std::vector<cpl_relation_t>*) context);
 	l.push_back(e);
 
 	return CPL_OK;
@@ -1502,8 +1502,8 @@ cpl_cb_collect_properties_vector(const cpl_id_t id,
 	e.key = key;
 	e.value = value;
 
-	vector<cplxx_property_entry_t>& l =
-		*((vector<cplxx_property_entry_t>*) context);
+	std::vector<cplxx_property_entry_t>& l =
+		*((std::vector<cplxx_property_entry_t>*) context);
 	l.push_back(e);
 
 	return CPL_OK;
@@ -1535,8 +1535,8 @@ cpl_cb_collect_prefixes_vector(const cpl_id_t id,
 	e.prefix = prefix;
 	e.iri = iri;
 
-	vector<cplxx_prefix_entry_t>& l =
-		*((vector<cplxx_prefix_entry_t>*) context);
+	std::vector<cplxx_prefix_entry_t>& l =
+		*((std::vector<cplxx_prefix_entry_t>*) context);
 	l.push_back(e);
 
 	return CPL_OK;
@@ -1568,8 +1568,8 @@ cpl_cb_collect_property_lookup_vector(const cpl_id_t id,
 	cpl_id_t e = id;
 
 
-	vector<cpl_id_t>& l =
-		*((vector<cpl_id_t>*) context);
+	std::vector<cpl_id_t>& l =
+		*((std::vector<cpl_id_t>*) context);
 	l.push_back(e);
 
 	return CPL_OK;
@@ -1642,7 +1642,6 @@ prov_relation_data_t rdata_array[] =
 	"prov:responsible", CPL_AGENT}
 };
 
-using namespace std;
 using json = nlohmann::json;
 
 /*
@@ -1653,95 +1652,91 @@ using json = nlohmann::json;
  * @param string_out error output string
  * @return 0 on successful validation or -1 on failure
  */
-EXPORT int
-validate_json(const string path,
-	 		  string& string_out)
+EXPORT cpl_return_t
+validate_json(const std::string& path,
+	 		  std::string& string_out)
 {
-	string str_msg;
-
 	string_out = "Validation failed on upload";
 	
-	ifstream i(path);
+	std::ifstream i(path);
 	json document;
 	i >> document;
 
 	if(document == NULL){
-		return -1;
+		return CPL_E_INTERNAL_ERROR;
 	}
 
-	vector<string> objects;
+	typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS> directed_graph_t;
+  	typedef boost::graph_traits<directed_graph_t>::vertex_descriptor vertex_t;
+	typedef std::pair<int, int> edge_t;
 
-	igraph_vector_t edges;
-	igraph_vector_init(&edges, 0);
+	std::vector<std::string> objects;
+	std::vector<edge_t> edges;
 
-	str_msg = "Invalid Prov-JSON formatting";
-	strncpy(*string_out, str_msg.c_str(), 50);
+	string_out = "Invalid JSON formatting";
 
 	for(int i=0; i<CPL_NUM_R_TYPES; i++){
 		prov_relation_data_t entry = rdata_array[i];
-		json_t* relations = json_object_get(document, entry.type_str.c_str());
+		json relations = document[entry.type_str];
 
-		const char* name;
-		json_t*  value;
+		for (json::iterator it = relations.begin(); it != relations.end(); ++it){
 
-		json_object_foreach(relations, name, value){
-
-			string source(json_string_value(json_object_get(value, 
-													entry.source_str.c_str())));
-			string dest(json_string_value(json_object_get(value, 
-													entry.dest_str.c_str())));
-
+			std::string source = it.value()[entry.source_str];
+			std::string dest = it.value()[entry.dest_str];
 			if(source.empty()){
-				json_decref(relations);
-				json_decref(document);
-				return -1;
+				return CPL_E_INVALID_JSON;
 			}
 
 			if(!dest.empty()){
-				int source_int, dest_int;
-
-				if (int pos = find(objects.begin(), objects.end(), source) 
-																!= objects.end()){
-					source_int = pos;
+				size_t source_ind, dest_ind;
+				auto pos = std::find(objects.begin(), objects.end(), source);
+				if (pos != objects.end()){
+					source_ind = distance(objects.begin(), pos);
 				} else {
 					objects.push_back(source);
-					source_int = objects.size()-1;
+					source_ind = objects.size()-1;
 				}
-
-				if (int pos = find(objects.begin(), objects.end(), dest) 
-																!= objects.end()){
-					dest_int = pos;
+				pos = std::find(objects.begin(), objects.end(), dest);
+				if (pos != objects.end()){
+					dest_ind = distance(objects.begin(), pos);
 				} else {
 					objects.push_back(dest);
-					dest_int = objects.size()-1;
+					dest_ind = objects.size()-1;
 				}
 
-				igraph_vector_push_back(&edges, source_int);
-				igraph_vector_push_back(&edges, dest_int);
+				edges.push_back(edge_t(source_ind, dest_ind));
 			}
 		}
-
-		json_decref(relations);
 	}
 
-	igraph_t graph;
-	igraph_empty(&graph, objects.size(), IGRAPH_DIRECTED);
-	igraph_add_edges(&graph, &edges, 0);
+	directed_graph_t g(edges.begin(), edges.end(), objects.size());
 
-	igraph_bool_t is_dag;
-	igraph_is_dag(&graph, &is_dag);
+	std::vector<vertex_t> c;
 
-	if(!is_dag){
-		str_msg = "Prov-JSON document contains cycles";
-		strncpy(*string_out, str_msg.c_str(), 50);
-		json_decref(document);
-		return -1;
+	try{
+		 boost::topological_sort(g, back_inserter(c));
+	} catch (const boost::not_a_dag& e){
+		string_out = "Provenance graph is not a DAG";
+		return CPL_E_INVALID_JSON;
 	}
 
-	str_msg = "Valid Prov-JSON";
-	strncpy(*string_out, str_msg.c_str(), 50);
-	//json_decref(document);
-	return 0;
+	string_out = "Valid JSON";
+	return CPL_OK;
+}
+
+typedef std::pair<std::string, std::string> token_pair_t;
+
+token_pair_t
+name_to_tokens(const std::string& name_string){
+		std::string tok1, tok2;
+		std::stringstream full_name(name_string);
+		std::getline(full_name, tok1, ':');
+		std::getline(full_name, tok2);
+		if(tok2.empty()){
+			tok2 = tok1;
+			tok1 = "";
+		}
+		return token_pair_t(tok1, tok2);
 }
 
 /*
@@ -1754,7 +1749,7 @@ import_bundle_prefixes_json(const cpl_id_t bundle,
 	json prefixes = document["prefix"];
 
 	for (json::iterator it = prefixes.begin(); it != prefixes.end(); ++it) {
-		if(!CPL_IS_OK(cpl_add_prefix(bundle, it.key().c_str(), it.value().c_str()))){
+		if(!CPL_IS_OK(cpl_add_prefix(bundle, it.key().c_str(), it.value().dump().c_str()))){
 			return CPL_E_INTERNAL_ERROR;
 		}
 	}
@@ -1768,9 +1763,9 @@ import_bundle_prefixes_json(const cpl_id_t bundle,
  */
 cpl_return_t
 import_objects_json(const int type,
-					const string type_str,
+					const std::string& type_str,
 					const cpl_id_t bundle_id,
-					json_t document)
+					json& document)
 {
 	json o = document[type_str];
 
@@ -1778,35 +1773,21 @@ import_objects_json(const int type,
 
 		cpl_id_t obj_id = CPL_NONE;
 
-		string tok1, tok2;
+		token_pair_t pair = name_to_tokens(it.key());
 
-		stringstream full_name(it.key());
-		getline(full_name, tok1, ':');
-		getline(full_name, tok2);
-		if(!tok_2){
-			tok_2 = tok_1;
-			tok_1 = "";
-		}
-
-		if(!CPL_IS_OK(cpl_create_object(tok_1.c_str(), tok_2.c_str(), type, bundle_id, &obj_id))){
+		if(!CPL_IS_OK(cpl_create_object(pair.first.c_str(), pair.second.c_str(), type, bundle_id, &obj_id))){
 			return CPL_E_INTERNAL_ERROR;
 		}
 
-		properties = it.value();
+		json properties = it.value();
 		for (json::iterator it2 = properties.begin(); it2 != properties.end(); ++it2){
 			
-			stringstream full_property(it2.key());
-			getline(full_property, tok1, ':');
-			getline(full_property, tok2);
-			if(!tok_2){
-				tok_2 = tok_1;
-				tok_1 = "";
-			}
+			pair = name_to_tokens(it2.key());
 
 			if(!CPL_IS_OK(cpl_add_object_property(obj_id, 
-												  tok_1.c_str(), 
-												  tok_2.c_str(), 
-												  it2.value().c_str()))){
+												  pair.first.c_str(), 
+												  pair.second.c_str(), 
+												  it2.value().dump().c_str()))){
 				return CPL_E_INTERNAL_ERROR;
 			}
 		}
@@ -1820,42 +1801,30 @@ import_objects_json(const int type,
  */
 cpl_return_t
 import_relations_json(const cpl_id_t bundle_id,
-					  json document)
+					  json& document)
 {
 	for(int i=0; i<CPL_NUM_R_TYPES; i++){
 		prov_relation_data_t entry = rdata_array[i];
 		json relations = document[entry.type_str];
 
-		for (json::iterator it = o.begin(); it != o.end(); ++it) {
+		for (json::iterator it = relations.begin(); it != relations.end(); ++it) {
 
 			cpl_id_t source, dest, relation_id;
+			
+			token_pair_t pair = name_to_tokens(it.value()[entry.source_str]);
 
-			stringstream full_source(it.value()[entry.source_str]);
-			getline(full_source, tok1, ':');
-			getline(full_source, tok2);
-			if(!tok_2){
-				tok_2 = tok_1;
-				tok_1 = "";
-			}
-
-			if(!CPL_IS_OK(cpl_lookup_object(tok_1.c_str(), 
-											tok_2.c_str(),
+			if(!CPL_IS_OK(cpl_lookup_object(pair.first.c_str(), 
+											pair.second.c_str(),
 											entry.source_t,
 											bundle_id,
 											&source))){
 				return CPL_E_INTERNAL_ERROR;
 			}
 
-			stringstream full_dest(it.value()[entry.dest_str]);
-			getline(full_dest, tok1, ':');
-			getline(full_dest, tok2);
-			if(!tok_2){
-				tok_2 = tok_1;
-				tok_1 = "";
-			}
+			pair = name_to_tokens(it.value()[entry.dest_str]);
 
-			if(!CPL_IS_OK(cpl_lookup_object(tok_1.c_str(), 
-											tok_2.c_str(),
+			if(!CPL_IS_OK(cpl_lookup_object(pair.first.c_str(), 
+											pair.second.c_str(),
 											entry.dest_t,
 											bundle_id,
 											&dest))){
@@ -1866,23 +1835,17 @@ import_relations_json(const cpl_id_t bundle_id,
 				return CPL_E_INTERNAL_ERROR;
 			}
 
-			properties = it.value();
+			json properties = it.value();
 			for (json::iterator it2 = properties.begin(); it2 != properties.end(); ++it2){
 
 				if(it.key() != entry.source_str && it.key() != entry.dest_str){
 
-					stringstream full_property(it2.key());
-					getline(full_property, tok1, ':');
-					getline(full_property, tok2);
-					if(!tok_2){
-						tok_2 = tok_1;
-						tok_1 = "";
-					}
+					pair = name_to_tokens(it2.key());
 
-					if(!CPL_IS_OK(cpl_add_object_property(obj_id, 
-														  tok_1.c_str(), 
-														  tok_2.c_str(), 
-														  it2.value().c_str()))){
+					if(!CPL_IS_OK(cpl_add_object_property(relation_id, 
+														  pair.first.c_str(), 
+														  pair.second.c_str(), 
+														  it2.value().dump().c_str()))){
 						return CPL_E_INTERNAL_ERROR;
 					}
 				}
@@ -1903,15 +1866,12 @@ import_relations_json(const cpl_id_t bundle_id,
  * @return CPL_OK or an error code
  */
 EXPORT cpl_return_t
-import_document_json(const string path,
-					 const string bundle_name,
-					 const vector<pair<cpl_id_t, string>> anchor_objects,
+import_document_json(const std::string& path,
+					 const std::string& bundle_name,
+					 const std::vector<std::pair<cpl_id_t, std::string>>& anchor_objects,
 					 cpl_id_t* out_id)
 {
-	json_error_t err;
-
-
-	ifstream i(filename);
+	std::ifstream i(path);
 	json document;
 	i >> document;
 
@@ -1921,7 +1881,7 @@ import_document_json(const string path,
 
 	// Create bundle
 	cpl_id_t bundle_id;
-	if(!CPL_IS_OK(cpl_create_bundle(bundle_name, &bundle_id))){
+	if(!CPL_IS_OK(cpl_create_bundle(bundle_name.c_str(), &bundle_id))){
 		goto error;
 	}
 
@@ -1941,20 +1901,14 @@ import_document_json(const string path,
 	}
 
 	// Connect anchor objects
-	for (json::iterator it = anchor_objects.begin(); it != anchor_objects.end(); ++it){
+	for (auto & id_string: anchor_objects){
 		
-		stringstream full_name(it.get(1));
-		getline(full_name, tok1, ':');
-		getline(full_name, tok2);
-		if(!tok_2){
-			tok_2 = tok_1;
-			tok_1 = "";
-		}
+		token_pair_t pair = name_to_tokens(id_string.second);
 
 		cpl_id_t source;
-		if(CPL_IS_OK(cpl_lookup_object(tok1, tok2, NULL, bundle_id, &source))){
+		if(CPL_IS_OK(cpl_lookup_object(pair.first.c_str(), pair.second.c_str(), CPL_NONE, bundle_id, &source))){
 
-			if(!CPL_IS_OK(cpl_add_relation(source, it.get(0),
+			if(!CPL_IS_OK(cpl_add_relation(source, id_string.first,
 						ALTERNATEOF, bundle_id, NULL))){
 				goto error;		
 			}
@@ -1978,16 +1932,16 @@ error:
  * Retrieves bundle prefixes. export_bundle_json helper function.
  */
 cpl_return_t
-export_bundle_prefixes_json(const vector<cpl_id_t> bundles, 
+export_bundle_prefixes_json(const std::vector<cpl_id_t>& bundles, 
 							json& document)
 {	
 	if(bundles.size() == 1){
 
 		cpl_return_t ret;
-		cpl_id_t bundle = bundles.get(0);
+		cpl_id_t bundle = bundles.at(0);
 
-		vector<cplxx_prefix_entry_t> prefix_vec;
-		if(ret = cpl_get_prefixes(bundle, NULL, cpl_cb_collect_prefixes_vector, &prefix_vec))
+		std::vector<cplxx_prefix_entry_t> prefix_vec;
+		if((ret = cpl_get_prefixes(bundle, NULL, cpl_cb_collect_prefixes_vector, &prefix_vec))!=0)
 				return ret;
 
 		json prefixes;
@@ -2054,33 +2008,33 @@ export_bundle_prefixes_json(const vector<cpl_id_t> bundles,
  * Retrieves bundle objects. export_bundle_json helper function.
  */
 cpl_return_t
-export_objects_json(const vector<cpl_id_t> bundles, 
+export_objects_json(const std::vector<cpl_id_t>& bundles, 
 					json& document)
 {
 	if(bundles.size() == 1){
 
 		cpl_return_t ret;
-		cpl_id_t bundle = bundles.get(0);
+		cpl_id_t bundle = bundles.at(0);
 
-		vector<cplxx_object_info_t> object_vec;
-		if (ret = cpl_get_bundle_objects(bundle, cpl_cb_collect_object_info_vector, &object_vec))
+		std::vector<cplxx_object_info_t> object_vec;
+		if((ret = cpl_get_bundle_objects(bundle, cpl_cb_collect_object_info_vector, &object_vec))!=0)
 			return ret;
 
 		if(object_vec.empty()){
 			return CPL_OK;
 		}
 
-		vector<cplxx_property_entry_t> property_vec;
+		std::vector<cplxx_property_entry_t> property_vec;
 
 		for(auto & obj: object_vec){
 
 			json properties;
-			if(ret = cpl_get_object_properties(obj.id, NULL, NULL, 
-				cpl_cb_collect_properties_vector, &property_vec)) return ret;
+			if((ret = cpl_get_object_properties(obj.id, NULL, NULL, 
+				cpl_cb_collect_properties_vector, &property_vec))!=0) return ret;
 
 			for(auto & property: property_vec){
 
-				string full_prop_name(property.prefix);
+				std::string full_prop_name(property.prefix);
 				if(full_prop_name != "") full_prop_name.append(":");
 				full_prop_name.append(property.key);
 
@@ -2089,18 +2043,18 @@ export_objects_json(const vector<cpl_id_t> bundles,
 
 			property_vec.clear();
 
-			string full_obj_name(obj.prefix);
+			std::string full_obj_name(obj.prefix);
 			if(full_obj_name != "") full_obj_name.append(":");
 			full_obj_name.append(obj.name);
 
 			switch(obj.type){
-				case ENTITY: 
+				case CPL_ENTITY: 
 					document["entity"][full_obj_name] = properties;
 					break;
-				case AGENT:
+				case CPL_AGENT:
 					document["agent"][full_obj_name] = properties;
 					break;
-				case ACTIVITY:
+				case CPL_ACTIVITY:
 					document["activity"][full_obj_name] = properties;
 					break;
 			}
@@ -2117,32 +2071,32 @@ export_objects_json(const vector<cpl_id_t> bundles,
  * Retrieves bundle relations. export_bundle_json helper function.
  */
 cpl_return_t
-export_relations_json(const vector<cpl_id_t> bundles,
+export_relations_json(const std::vector<cpl_id_t>& bundles,
 				      json& document)
 {	
 	if(bundles.size() == 1){
 
 		cpl_return_t ret;
-		cpl_id_t bundle = bundles.get(0);
+		cpl_id_t bundle = bundles.at(0);
 
-		vector<cpl_relation_t> relation_vec;
+		std::vector<cpl_relation_t> relation_vec;
 
-		if(ret = cpl_get_bundle_relations(bundle, cpl_cb_collect_relation_vector, &relation_vec))
+		if((ret = cpl_get_bundle_relations(bundle, cpl_cb_collect_relation_vector, &relation_vec))!=0)
 				return ret;
 
 		if(relation_vec.empty()) return CPL_OK;
 
-		vector<cplxx_property_entry_t> property_vec;
+		std::vector<cplxx_property_entry_t> property_vec;
 
 		for(auto & relation: relation_vec){
 
 			json properties;
-			if(ret = cpl_get_relation_properties(relation.id, NULL, NULL,
-				cpl_cb_collect_properties_vector, &property_vec)) return ret;
+			if((ret = cpl_get_relation_properties(relation.id, NULL, NULL,
+				cpl_cb_collect_properties_vector, &property_vec))!=0) return ret;
 
 			for(auto & property: property_vec){
 
-				string full_prop_name(property.prefix);
+				std::string full_prop_name(property.prefix);
 				if(full_prop_name != "") full_prop_name.append(":");
 				full_prop_name.append(property.key);
 
@@ -2154,18 +2108,18 @@ export_relations_json(const vector<cpl_id_t> bundles,
 			cpl_object_info* from_info;
 			cpl_object_info* to_info;
 
-			if(ret = cpl_get_object_info(relation.query_object_id, &from_info))
+			if((ret = cpl_get_object_info(relation.query_object_id, &from_info))!=0)
 				return ret;
-			if(ret = cpl_get_object_info(relation.other_object_id, &to_info))
+			if((ret = cpl_get_object_info(relation.other_object_id, &to_info))!=0)
 				return ret;
 
 			properties[rdata_array[relation.type-1].source_str] = from_info->name;
 			properties[rdata_array[relation.type-1].dest_str] = to_info->name;
 
-			if(ret = cpl_free_object_info(from_info)) return ret;
-			if(ret = cpl_free_object_info(to_info)) return ret;
+			if((ret = cpl_free_object_info(from_info))!=0) return ret;
+			if((ret = cpl_free_object_info(to_info))!=0) return ret;
 
-			document[rdata_array[relation.type-1]][relation.id] = properties;
+			document[rdata_array[relation.type-1].type_str][relation.id] = properties;
 		}
 
 	} else {
@@ -2183,27 +2137,27 @@ export_relations_json(const vector<cpl_id_t> bundles,
  * @return CPL_OK or an error code
  */
 EXPORT cpl_return_t
-export_bundle_json(const vector<cpl_id_t> bundles, 
-				   const string path)
+export_bundle_json(const std::vector<cpl_id_t>& bundles, 
+				   const std::string& path)
 {
 
 	json document;
 	cpl_return_t ret;
 
-	if(ret = export_bundle_prefixes_json(bundles, document)){
+	if((ret = export_bundle_prefixes_json(bundles, document))!=0){
 		return ret;
 	}
 
-	if(ret = export_objects_json(bundles, document)){
+	if((ret = export_objects_json(bundles, document))!=0){
 		return ret;
 	}
 
-	if(ret = export_relations_json(bundles, document)){
+	if((ret = export_relations_json(bundles, document))!=0){
 		return ret;
 	}
 
-	ofstream o(path);
-	o << setw(4) << document << endl;
+	std::ofstream o(path);
+	o << std::setw(4) << document << std::endl;
 
 	return CPL_OK;
 }

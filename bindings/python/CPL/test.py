@@ -45,7 +45,8 @@ import CPL
 import sys
 import tempfile
 
-originator = 'python_test'
+prefix = 'ptst'
+iri = "python.test"
 c = CPL.cpl_connection()
 
 print "Session information: "
@@ -57,29 +58,31 @@ print '----- Create object tests -----'
 print
 
 bundle_name = 'Bundle'
-bundle_type = CPL.BUNDLE
-print ('Create object name:' +
-	bundle_name + ' type:' + str(bundle_type) + ' bundle:void')
-bundle = c.create_object(originator, bundle_name, bundle_type)
+print ('Create bundle name:' +
+	bundle_name)
+bundle = c.create_bundle(prefix, bundle_name)
 CPL.p_object(bundle, False)
+
+print ('Add bundle prefix:' + prefix + ':' + iri)
+bundle.add_prefix(prefix, iri)
 
 entity_name = 'Entity'
 entity_type = CPL.ENTITY
 print ('Create object name:' + str(entity_name) + ' type:' + str(entity_type) +
     ' bundle:' + str(bundle.id))
-entity = c.create_object(originator, entity_name, entity_type, bundle)
+entity = c.create_object(prefix, entity_name, entity_type, bundle)
 CPL.p_object(entity)
 
 agent_name = 'Agent'
 agent_type = CPL.AGENT
 print ('Create object name:' +
 	str(agent_name) + ' type:' + str(agent_type) + ' bundle:' + str(bundle.id))
-agent = c.create_object(originator, agent_name, agent_type, bundle)
+agent = c.create_object(prefix, agent_name, agent_type, bundle)
 CPL.p_object(agent)
 
 print('Lookup or create object:' + str(entity_name) + ' type:' + str(entity_type) +
  	' bundle:' + str(bundle.id))
-entityt = c.get_object(originator, entity_name, entity_type, bundle = bundle)
+entityt = c.get_object(prefix, entity_name, entity_type, bundle = bundle)
 CPL.p_object(entityt)
 if entity.id != entity.id:
 	print "Lookup returned wrong object!"
@@ -89,7 +92,7 @@ activity_name = 'Activity'
 activity_type = CPL.ACTIVITY
 print ('Create object name:' +
 	str(activity_name) + ' type:' + str(activity_type) + ' bundle:' + str(bundle.id))
-activity = c.create_object(originator, activity_name, activity_type, bundle)
+activity = c.create_object(prefix, activity_name, activity_type, bundle)
 CPL.p_object(bundle)
 
 # Lookup Objects
@@ -97,26 +100,26 @@ print
 print '----- Lookup object tests -----'
 print
 
-print ('Looking up object name:' + str(bundle_name) + ' type:' + str(bundle_type))
-bundle_check = c.lookup_object(originator, bundle_name, bundle_type, None)
+print ('Looking up bundle name:' + str(bundle_name))
+bundle_check = c.lookup_bundle(prefix, bundle_name)
 if bundle.id != bundle_check.id:
-	sys.stdout.write('Lookup returned wrong object:' + str(bundle_check.id))
+	sys.stdout.write('Lookup returned wrong bundle:' + str(bundle_check.id))
 	sys.exit(1)
 
 print ('Looking up object name:' + str(entity_name) + ' type:' + str(entity_type))
-entity_check = c.lookup_object(originator, entity_name, entity_type, bundle)
+entity_check = c.lookup_object(prefix, entity_name, entity_type, bundle)
 if entity.id != entity_check.id:
 	sys.stdout.write('Lookup returned wrong object:' + str(entity_check.id))
 	sys.exit(1)
 
 print ('Looking up object name:' + str(agent_name) + ' type:' + str(agent_type))
-agent_check = c.lookup_object(originator, agent_name, agent_type, bundle)
+agent_check = c.lookup_object(prefix, agent_name, agent_type, bundle)
 if agent.id != agent_check.id:
 	sys.stdout.write('Lookup returned wrong object:' + str(agent_check.id))
 	sys.exit(1)
 
 print ('Looking up object name:' + str(activity_name) + ' type:' + str(activity_type))
-activity_check = c.lookup_object(originator, activity_name, activity_type, bundle)
+activity_check = c.lookup_object(prefix, activity_name, activity_type, bundle)
 if activity.id != activity_check.id:
 	sys.stdout.write('Lookup returned wrong object:' + str(activity_check.id))
 	sys.exit(1)
@@ -124,7 +127,7 @@ if activity.id != activity_check.id:
 print ('Looking up object in wrong bundle name:' +
  	str(entity_name) + ' type:' + str(entity_type) + ' bundle:Agent')
 try:
-	fail0 = c.lookup_object(originator, entity_name, entity_type, agent)
+	fail0 = c.lookup_object(prefix, entity_name, entity_type, agent)
 except LookupError:
 	pass
 else:
@@ -133,31 +136,31 @@ else:
 	 	sys.exit(1)
 
 print 'Look up non-existent object (type failure)'
-fail1 = c.try_lookup_object(originator, bundle_name, entity_type)
+fail1 = c.try_lookup_object(prefix, bundle_name, entity_type)
 if fail1:
 	print 'Returned an object:' + str(fail1.id)
 	sys.exit(1)
 
 print 'Look up non-existent object (name failure)'
-fail2 = c.try_lookup_object(originator, 'no-name', bundle_type)
+fail2 = c.try_lookup_object(prefix, 'no-name', bundle_type)
 if fail2:
 	print 'Returned an object:' + str(fail2.id)
 	sys.exit(1)
 
-print 'Look up non-existent object (originator failure)'
-fail3 = c.try_lookup_object('no-originator', bundle_name, bundle_type)
+print 'Look up non-existent object (prefix failure)'
+fail3 = c.try_lookup_object('no-prefix', bundle_name, bundle_type)
 if fail3:
 	print 'Returned an object:' + str(fail3.id)
 	sys.exit(1)
 
-print 'Look up all objects with name:' + str(bundle_name) + ' type:' + str(bundle_type)
-bundle_all = c.lookup_all(originator, bundle_name, bundle_type)
+print 'Look up all objects with name:' + str(entity_name) + ' type:' + str(entity_type)
+entity_all = c.lookup_all(prefix, entity_name, entity_type)
 i = 0
-for t in bundle_all:
+for t in entity_all:
 	CPL.p_id(t.id, with_newline = True)
 	i += 1
 	if i >= 10 and len(bundle_all) > 10:
-		print '  ... (' + str(len(bundle_all)) + ' objects total)'
+		print '  ... (' + str(len(entity_all)) + ' objects total)'
 		break
 
 print 'All objects'
@@ -241,13 +244,20 @@ if len(bundle_relations) != 3:
 	sys.exit(1)
 
 
+#Bundle info
+print
+print '----- Bundle Info -----'
+print
+
+CPL.p_bundle(bundle)
+
 #Object info
 print
 print '----- Object Info -----'
 print
 
 print 'Object info'
-for o in [bundle, entity, agent, activity]:
+for o in [entity, agent, activity]:
 	CPL.p_object(o)
 
 
@@ -257,16 +267,16 @@ print '----- Properties -----'
 print
 
 print 'Adding LABEL/1 to entity'
-entity.add_property('LABEL', '1')
+entity.add_property(prefix, 'LABEL', '1')
 
 print 'Adding LABEL/2 to bundle'
-agent.add_property('LABEL', '2')
+agent.add_property(prefix, 'LABEL', '2')
 
 print 'Adding LABEL/3 to entity'
-activity.add_property('LABEL', '3')
+activity.add_property(prefix, 'LABEL', '3')
 
 print 'Adding TAG/Hello to agent'
-activity.add_property('TAG', 'HELLO')
+activity.add_property(prefix, 'TAG', 'HELLO')
 
 print 'Getting properties for entity'
 print entity.properties()
@@ -278,7 +288,7 @@ print 'Getting properties for activity'
 print activity.properties()
 
 print 'Getting all objects with LABEL/3 property'
-tuples = c.lookup_by_property('LABEL', '3')
+tuples = c.lookup_by_property(prefix, 'LABEL', '3')
 i = 0
 for t in tuples:
 	print str(t)
@@ -288,16 +298,16 @@ for t in tuples:
 		break
 
 print 'Adding LABEL/1 to r1'
-r1.add_property('LABEL', '1')
+r1.add_property(prefix, 'LABEL', '1')
 
 print 'Adding LABEL/2 to r2'
-r2.add_property('LABEL', '2')
+r2.add_property(prefix, 'LABEL', '2')
 
 print 'Adding LABEL/3 to r3'
-r3.add_property('LABEL', '3')
+r3.add_property(prefix, 'LABEL', '3')
 
 print 'Adding TAG/Hello to r3'
-r3.add_property('TAG', 'Hello')
+r3.add_property(prefix, 'TAG', 'Hello')
 
 print 'Getting properties for r1'
 print r1.properties()
@@ -307,6 +317,16 @@ print r2.properties()
 
 print 'Getting properties for r3'
 print r3.properties()
+
+
+print 'Adding LABEL/3 to bundle'
+bundle.add_property(prefix, 'LABEL', '3')
+
+print 'Adding TAG/Hello to bundle'
+bundle.add_property(prefix, 'TAG', 'Hello')
+
+print 'Getting properties for bundle'
+print bundle.properties()
 
 
 # Exit

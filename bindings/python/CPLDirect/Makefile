@@ -13,6 +13,7 @@ ROOT := ../../..
 
 INSTALL := yes
 DEPENDENCIES := ../../cpl.i $(ROOT)/include/cpl.h $(ROOT)/include/cplxx.h
+CXXFLAGS := $(CXXFLAGS) -std=c++11
 
 #
 # Include the magic script

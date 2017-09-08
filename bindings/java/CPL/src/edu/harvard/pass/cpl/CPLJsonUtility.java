@@ -36,6 +36,7 @@ package edu.harvard.pass.cpl;
 
 import swig.direct.CPLDirect.*;
 import java.math.BigInteger;
+import java.util.Map;
 
 /**
  * A utility for processing Prov JSON
@@ -58,15 +59,13 @@ public class CPLJsonUtility {
 	 *@return a string detailing errors if any exist or NULL on success
 	 */
 	public static String validateJson(String filepath){
-		
-		String stringOutArray[] = { "" };
 
-		int r = CPLDirect.validate_json(filepath, stringOutArray);
-		if(r == 0){
+		validate_json_return_t r = CPLDirect.validate_json(filepath);
+		if(r.getReturn_code() == 0){
 			return null;
 		}
 
-		return stringOutArray[0];
+		return r.getOut_string();
 	}
 
 	/**
@@ -76,15 +75,24 @@ public class CPLJsonUtility {
 	 *
 	 * @param fileName document path
 	 * @param bundleName desired name of document bundle
-	 * @param anchorObject Prov-CPL object identical to an object in the document
+	 * @param anchorObjects map of CPLObject, name pairs matching a stored object to
+	 *                      an object name in the document
 	 */
 
 	public static CPLObject importJson(String filepath, 
-			String bundleName, CPLObject anchorObject) {
+			String bundleName, Map<CPLObject, String> anchorObjects) {
+
+		cplxx_id_name_pair_vector anchorVector = new cplxx_id_name_pair_vector(anchorObjects.size());
+
+		int pos = 0;
+		for(Map.Entry<CPLObject, String> entry : anchorObjects.entrySet()){
+			anchorVector.set(pos, new cplxx_id_name_pair(entry.getKey().getId(), entry.getValue()));
+			pos++;
+		}
 
 		BigInteger[] id = {nullId};
 		int r = CPLDirect.import_document_json(filepath, bundleName,
-									   anchorObject.getId(), id);
+									   anchorVector, id);
 		CPLException.assertSuccess(r);
 		
 		CPLObject o = new CPLObject(id[0]);
@@ -95,12 +103,16 @@ public class CPLJsonUtility {
 	/**
 	 * Export a Prov bundle as a JSON document
 	 *
-	 * @param bundle bundle to export
+	 * @param bundles an array of bundles to export, currently only supports one
 	 * @param filepath path to desired output file, overwrites if file already exists
 	 */
-	public static void exportBundleJson(CPLBundle bundle, String filepath) {
+	public static void exportBundleJson(CPLBundle[] bundles, String filepath) {
 
-		int r = CPLDirect.export_bundle_json(bundle.getId(), filepath);
+		cpl_id_t_vector bundleVector = new cpl_id_t_vector(bundles.length);
+		for(int i=0; i<bundles.length; i++){
+			bundleVector.set(i, bundles[i].getId());
+		}
+		int r = CPLDirect.export_bundle_json(bundleVector, filepath);
 		CPLException.assertSuccess(r);
 	}
 }

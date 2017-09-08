@@ -82,7 +82,7 @@ list-subproject-libs::
 
 
 #
-# Install & unistall
+# Install & uninstall
 #
 
 .PHONY: install uninstall

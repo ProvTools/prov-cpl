@@ -47,18 +47,17 @@
 
 #include <cpl-exception.h>
 
+#include <json.hpp>
+#include <boost/graph/adjacency_list.hpp>
+#include <boost/graph/topological_sort.hpp>
+
 #include <list>
 #include <string>
 #include <vector>
 #include <algorithm>
-#include <stringstream>
-#include <iostream>
+#include <sstream>
+#include <fstream>
 
-#include <unordered_map>
-#include <unordered_set>
-
-#include <json.hpp>
-#include <igraph/igraph.h>
 
 
 
@@ -339,9 +338,9 @@ cpl_cb_collect_property_lookup_vector(const cpl_id_t id,
  * @param string_out error output string
  * @return 0 on successful validation or -1 on failure
  */
-EXPORT int
-validate_json(string path,
-			  string& string_out);
+EXPORT cpl_return_t
+validate_json(const std::string& path,
+			  std::string& string_out);
 
 /*
  * Imports a Prov-JSON document into Prov-CPL.
@@ -354,9 +353,9 @@ validate_json(string path,
  * @return CPL_OK or an error code
  */
 EXPORT cpl_return_t
-import_document_json(const string path,
-					 const string bundle_name,
-					 const vector<pair<cpl_id_t, string>> anchor_objects,
+import_document_json(const std::string& path,
+					 const std::string& bundle_name,
+					 const std::vector<std::pair<cpl_id_t, std::string>>& anchor_objects,
 					 cpl_id_t* out_id);
 
 
@@ -368,8 +367,8 @@ import_document_json(const string path,
  * @return CPL_OK or an error code
  */
 EXPORT cpl_return_t
-export_bundle_json(const vector<cpl_id_t> bundles, 
-				   const string path);
+export_bundle_json(const std::vector<cpl_id_t>& bundles, 
+				   const std::string& path);
 
 #endif /* __cplusplus */
 

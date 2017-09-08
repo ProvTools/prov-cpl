@@ -482,7 +482,11 @@ extern cpl_session_t cpl_session;
 #define CPL_E_DB_INVALID_TYPE			-17
 #define __CPL_E_STR__17	"The value in a database has an unexpected type"
 
-
+/**
+ * The JSON isn't valid
+ */
+#define CPL_E_INVALID_JSON			-18
+#define __CPL_E_STR__18	"The JSON is invalid"
 
 /***************************************************************************/
 /** Standard Object Types                                                 **/

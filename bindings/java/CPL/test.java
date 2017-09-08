@@ -46,13 +46,11 @@ import java.math.BigInteger;
  */
 public class test {
 
-	/// The originator
-	private static final String ORIGINATOR = "edu.harvard.pass.cpl.java.test";
-
     /// The command-line arguments
     protected String[] args;
 
-
+    private static final PREFIX = "jtst" 
+    private static final IRI = "java.test"
     /**
      * Create the test object
      *
@@ -98,29 +96,32 @@ public class test {
 		 * Create objects
 		 */
 
-		System.out.print("CPLObject.create(\" Bundle\")");
-		CPLObject bundle = CPLObject.create(ORIGINATOR, "Bundle", CPLObject.BUNDLE);
+		System.out.print("CPLBundle.create(\" Bundle\")");
+		CPLObject bundle = CPLBundle.create("Bundle");
 		System.out.println(": " + bundle);
 
+		System.out.println("CPLBundle.addPrefix()");
+		bundle.addPrefix(PREFIX, IRI);
+
 		System.out.print("CPLObject.create(\"Entity\", bundle)");
-		CPLObject entity = CPLObject.create(ORIGINATOR, "Entity",
+		CPLObject entity = CPLObject.create(PREFIX, "Entity",
 										  CPLObject.ENTITY, bundle);
 		System.out.println(": " + entity);
 
 		System.out.print("CPLObject.create(\"Agent\", bundle)");
-		CPLObject agent = CPLObject.create(ORIGINATOR, "Agent",
+		CPLObject agent = CPLObject.create(PREFIX, "Agent",
 										  CPLObject.AGENT, bundle);
 		System.out.println(": " + agent);
 
 		System.out.print("CPLObject.lookupOrCreate(\"Entity\", bundle)");
-		CPLObject entityt = CPLObject.lookupOrCreate(ORIGINATOR, "Entity",
+		CPLObject entityt = CPLObject.lookupOrCreate(PREFIX, "Entity",
 													 CPLObject.ENTITY, bundle);
 		System.out.println(": " + entityt);
 		if (!entity.equals(entityt))
 			throw new RuntimeException("Object lookup returned the wrong object");
 
 		System.out.print("CPLObject.lookupOrCreate(\"Activity\", bundle)");
-		CPLObject activity = CPLObject.lookupOrCreate(ORIGINATOR, "Activity", 
+		CPLObject activity = CPLObject.lookupOrCreate(PREFIX, "Activity", 
 											  CPLObject.ACTIVITY, bundle);
 		System.out.println(": " + activity);
 
@@ -131,38 +132,38 @@ public class test {
 		 * Lookup objects
 		 */
 
-		System.out.print("CPLObject.lookup(\"Bundle\")");
-		CPLObject bundlex = CPLObject.lookup(ORIGINATOR, "Bundle", CPLObject.BUNDLE, null);
+		System.out.print("CPLBundle.lookup(\"Bundle\")");
+		CPLObject bundlex = CPLBundle.lookup(PREFIX, "Bundle");
 		System.out.println(": " + bundlex);
 		if (!bundle.equals(bundlex))
-			throw new RuntimeException("Object lookup returned the wrong object");
+			throw new RuntimeException("Bundle lookup returned the wrong bundle");
 
 		System.out.print("CPLObject.lookup(\"Entity\")");
-		CPLObject entityx = CPLObject.lookup(ORIGINATOR, "Entity", CPLObject.ENTITY, bundle);
+		CPLObject entityx = CPLObject.lookup(PREFIX, "Entity", CPLObject.ENTITY, bundle);
 		System.out.println(": " + entityx);
 		if (!entity.equals(entityx))
 			throw new RuntimeException("Object lookup returned the wrong object");
 
 		System.out.print("CPLObject.tryLookup(\"Agent\")");
-		CPLObject agentx = CPLObject.tryLookup(ORIGINATOR, "Agent", CPLObject.AGENT, bundle);
+		CPLObject agentx = CPLObject.tryLookup(PREFIX, "Agent", CPLObject.AGENT, bundle);
 		System.out.println(": " + agentx);
 		if (!agent.equals(agentx))
 			throw new RuntimeException("Object lookup returned the wrong object");
 
 		System.out.print("CPLObject.tryLookup(\"Activity\")");
-		CPLObject activityx = CPLObject.tryLookup(ORIGINATOR, "Activity", CPLObject.ACTIVITY, bundle);
+		CPLObject activityx = CPLObject.tryLookup(PREFIX, "Activity", CPLObject.ACTIVITY, bundle);
 		System.out.println(": " + activityx);
 		if (!activity.equals(activityx))
 			throw new RuntimeException("Object lookup returned the wrong object");
 
 		System.out.print("CPLObject.tryLookup(...should fail...)");
-		CPLObject objfx = CPLObject.tryLookup(ORIGINATOR, "%%%%%%", 42, null);
+		CPLObject objfx = CPLObject.tryLookup(PREFIX, "%%%%%%", 42, null);
 		if (objfx == null) System.out.println(": OK");
 		if (objfx != null)
 			throw new RuntimeException("Object lookup did not fail as expected");
 
 		System.out.print("CPLObject.lookupAll(\"Entity\")");
-		Vector<CPLObject> entityv = CPLObject.lookupAll(ORIGINATOR, "Entity", CPLObject.ENTITY, bundle);
+		Vector<CPLObject> entityv = CPLObject.lookupAll(PREFIX, "Entity", CPLObject.ENTITY, bundle);
 		System.out.println(": " + (entityv.contains(entity) ? "" : "not ") + "found "
                 + "(" + entityv.size() + " result" + (entityv.size() == 1 ? "" : "s")
                 + ")");
@@ -182,11 +183,11 @@ public class test {
 		 * Check objects created back from their internal IDs
 		 */
 
-		System.out.print("new CPLObject(new CPLId(bundle.getId().toString()))");
-		bundlex = new CPLObject(bundle.getId());
+		System.out.print("new CPLBundle(new CPLId(bundle.getId().toString()))");
+		bundlex = new CPLBundle(bundle.getId());
 		System.out.println(": " + bundlex);
 		if (!bundle.equals(bundlex))
-			throw new RuntimeException("Object recreation from ID failed");
+			throw new RuntimeException("Bundle recreation from ID failed");
 
 		System.out.print("new CPLObject(new CPLId(entity.getId().toString()))");
 		entityx = new CPLObject(entity.getId());
@@ -307,6 +308,13 @@ public class test {
 		}
 
 		/*
+		 * Bundle info
+		 */
+
+		System.out.println("Bundle");
+		System.out.println(bundle.toString(true));
+
+		/*
 		 * Object infos
 		 */
 
@@ -324,19 +332,19 @@ public class test {
 		 */
 
 		System.out.print("entity.addProperty(\"LABEL\", \"1\")");
-		entity.addProperty("LABEL", "1");
+		entity.addProperty(PREFIX, "LABEL", "1");
 		System.out.println();
 
 		System.out.print("agent.addProperty(\"LABEL\", \"2\")");
-		agent.addProperty("LABEL", "2");
+		agent.addProperty(PREFIX, "LABEL", "2");
 		System.out.println();
 
 		System.out.print("activity.addProperty(\"LABEL\", \"3\")");
-		activity.addProperty("LABEL", "3");
+		activity.addProperty(PREFIX, "LABEL", "3");
 		System.out.println();
 
 		System.out.print("activity.addProperty(\"TAG\", \"Hello\")");
-		activity.addProperty("TAG", "Hello");
+		activity.addProperty(PREFIX, "TAG", "Hello");
 		System.out.println();
 
 		System.out.println();
@@ -349,17 +357,17 @@ public class test {
 		System.out.println("Properties of activity:");
 
 		System.out.println("activity.getProperties():");
-		for (CPLObjectPropertyEntry e : activity.getProperties()) {
+		for (CPLPropertyEntry e : activity.getProperties()) {
 			System.out.println("  " + e);
 		}
 
 		System.out.println("activity.getProperties(\"LABEL\"):");
-		for (CPLObjectPropertyEntry e : activity.getProperties("LABEL")) {
+		for (CPLPropertyEntry e : activity.getProperties(PREFIX, "LABEL")) {
 			System.out.println("  " + e);
 		}
 
 		System.out.println("activity.getProperties(\"HELLO\"):");
-		for (CPLObjectPropertyEntry e : activity.getProperties("HELLO")) {
+		for (CPLPropertyEntry e : activity.getProperties(PREFIX, "HELLO")) {
 			System.out.println("  " + e);
 		}
 
@@ -371,7 +379,7 @@ public class test {
 		 */
 
 		System.out.print("CPLObject.lookupByProperty(\"LABEL\", \"3\")");
-		Vector<CPLObject> lv = CPLObject.lookupByProperty("LABEL",
+		Vector<CPLObject> lv = CPLObject.lookupByProperty(PREFIX, "LABEL",
 				"3");
 		System.out.print(": ");
 		if (lv.contains(activity)) {
@@ -390,19 +398,19 @@ public class test {
 		 */
 
 		System.out.print("r1.addProperty(\"LABEL\", \"1\")");
-		r1.addProperty("LABEL", "1");
+		r1.addProperty(PREFIX, "LABEL", "1");
 		System.out.println();
 
 		System.out.print("r2.addProperty(\"LABEL\", \"2\")");
-		r2.addProperty("LABEL", "2");
+		r2.addProperty(PREFIX, "LABEL", "2");
 		System.out.println();
 
 		System.out.print("r3.addProperty(\"LABEL\", \"3\")");
-		r3.addProperty("LABEL", "3");
+		r3.addProperty(PREFIX, "LABEL", "3");
 		System.out.println();
 
 		System.out.print("r3.addProperty(\"TAG\", \"Hello\")");
-		r3.addProperty("TAG", "Hello");
+		r3.addProperty(PREFIX, "TAG", "Hello");
 		System.out.println();
 
 		System.out.println();
@@ -414,21 +422,59 @@ public class test {
 		System.out.println("Properties of r3:");
 
 		System.out.println("r3.getProperties():");
-		for (CPLRelationPropertyEntry e : r3.getProperties()) {
+		for (CPLPropertyEntry e : r3.getProperties()) {
 			System.out.println("  " + e);
 		}
 
 		System.out.println("r3.getProperties(\"LABEL\"):");
-		for (CPLRelationPropertyEntry e : r3.getProperties("LABEL")) {
+		for (CPLPropertyEntry e : r3.getProperties(PREFIX, "LABEL")) {
 			System.out.println("  " + e);
 		}
 
 		System.out.println("r3.getProperties(\"HELLO\"):");
-		for (CPLRelationPropertyEntry e : r3.getProperties("HELLO")) {
+		for (CPLPropertyEntry e : r3.getProperties(PREFIX, "HELLO")) {
 			System.out.println("  " + e);
 		}
 
-		System.out.println();	
+		System.out.println();
+
+		/*
+		 * Add bundle properties
+		 */
+
+
+		System.out.print("bundle.addProperty(\"LABEL\", \"3\")");
+		bundle.addProperty(PREFIX, "LABEL", "3");
+		System.out.println();
+
+		System.out.print("bundle.addProperty(\"TAG\", \"Hello\")");
+		bundle.addProperty(PREFIX, "TAG", "Hello");
+		System.out.println();
+
+		System.out.println();
+	
+		/*
+		 * List relation properties
+		 */
+
+		System.out.println("Properties of bundle:");
+
+		System.out.println("bundle.getProperties():");
+		for (CPLPropertyEntry e : bundle.getProperties()) {
+			System.out.println("  " + e);
+		}
+
+		System.out.println("bundle.getProperties(\"LABEL\"):");
+		for (CPLPropertyEntry e : bundle.getProperties(PREFIX, "LABEL")) {
+			System.out.println("  " + e);
+		}
+
+		System.out.println("bundle.getProperties(\"HELLO\"):");
+		for (CPLPropertyEntry e : bundle.getProperties(PREFIX, "HELLO")) {
+			System.out.println("  " + e);
+		}
+
+		System.out.println();		
 	}
 }
 

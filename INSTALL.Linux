@@ -23,8 +23,8 @@ Please make sure that the following packages are installed:
   odbc-postgresql (for PostgreSQL)
   libcurl4-openssl-dev
   libxml2-dev
-  jansson
-  igraph
+  nlohmann_json
+  boost
 
 Compilation also requires Clang 3.3+ or g++ 5.0+
 

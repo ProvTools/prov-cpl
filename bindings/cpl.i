@@ -39,6 +39,7 @@
 /*%include std_list.i*/
 %include std_vector.i
 %include std_string.i
+%include std_pair.i
 
 /*
  * Additional code for the C wrapper
@@ -96,6 +97,7 @@ cpl_is_ok(cpl_return_t ret) {
 }
 
 typedef std::vector<cpl_id_timestamp_t> std_vector_cpl_id_timestamp_t;
+
 
 inline std::vector<cpl_id_timestamp_t>&
 cpl_dereference_p_std_vector_cpl_id_timestamp_t(
@@ -222,7 +224,7 @@ cpl_is_ok(cpl_return_t ret);
 %include "../../../include/backends/cpl-odbc.h"
 
 /*
- * cpl_id_t reference pointer workarounds
+ * cpl_id_t/std::string output parameter workarounds
  */
 
 %include typemaps.i
@@ -268,8 +270,9 @@ cpl_get_current_session(unsigned long long* OUTPUT);
 cpl_return_t
 import_document_json(const char* filename,
                      const char* bundle_name,
-                     const cpl_id_t anchor_object,
+                     const std::vector<std::pair<cpl_id_t, std::string>>& anchor_objects,
                      unsigned long long* OUTPUT);
+
 /*
  * STL bundles
  */
@@ -334,6 +337,26 @@ cpl_dereference_p_std_vector_cpl_id_t(
 inline void*
 cpl_convert_p_std_vector_cpl_id_t_to_p_void(
         std_vector_cpl_id_t* p);
+
+%template(cplxx_id_name_pair) std::pair<cpl_id_t, std::string>;
+
+%template (cplxx_id_name_pair_vector) std::vector<std::pair<cpl_id_t, std::string>>;
+
+%inline %{
+  struct validate_json_return_t {
+    cpl_return_t return_code;
+    std::string out_string;
+  };
+
+  validate_json_return_t validate_json(const std::string& filepath) {
+    validate_json_return_t ret;
+    ret.return_code = validate_json(filepath,ret.out_string);
+    return ret;
+  }
+%}
+
+%ignore method2;
+
 /*
  * Pointers
  */
