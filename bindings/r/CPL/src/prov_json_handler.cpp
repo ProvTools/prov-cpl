@@ -1,4 +1,5 @@
 #include <cplxx.h>
+#include <backends/cpl-odbc.h>
 #include <Rcpp.h>
 using namespace Rcpp;
 
@@ -7,21 +8,18 @@ void
 cpl_attach_r(){
 	cpl_db_backend_t* backend = NULL;
 	cpl_create_odbc_backend_dsn("CPL",
-						CPL_ODBC_POSTGRESQL, &backend);
+						0, &backend);
 	cpl_attach(backend);
 }
 
 // [[Rcpp::export]]
 unsigned long long
-import_document_json_r(const char* filename,
-					 const char* originator,
-					 const char* bundle_name,
-					 const unsigned long long anchor_object,
-					 const unsigned long long bundle_agent)
+import_document_json_r(const std::string& filepath,
+					 const std::string& bundle_name)
 {	
 
 	unsigned long long out_id;
-	import_document_json(filename, originator, bundle_name, anchor_object, bundle_agent, &out_id);
+	import_document_json(filepath, bundle_name, std::vector<std::pair<cpl_id_t, std::string>>(), &out_id);
 
 	return out_id;
 }
@@ -29,10 +27,11 @@ import_document_json_r(const char* filename,
 // [[Rcpp::export]]
 void
 export_bundle_json_r(const unsigned long long bundle, 
-				   const char* path)
+				   const std::string& filepath)
 {
 
-	export_bundle_json(bundle, path)
+	std::vector<cpl_id_t> bundle_vec = {bundle};
+	export_bundle_json(bundle_vec, filepath);
 }
 
 // [[Rcpp::export]]

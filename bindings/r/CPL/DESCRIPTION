@@ -1,7 +1,7 @@
 Package: CPL
 Type: Package
 Title: R Bindings for Prov-CPL
-Version: 1.0
+Version: 3.0
 Date: 2017-07-18
 Author: Jackson Okuhn
 Maintainer: Jackson Okuhn <jpokuhn@gmail.com>

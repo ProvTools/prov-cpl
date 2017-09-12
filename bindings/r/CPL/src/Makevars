@@ -1,1 +1,2 @@
-PKG_LIBS=-lcpl -lcpl-odbc
+PKG_LIBS= -lcpl -lcpl-odbc
+CXX_STD = CXX11

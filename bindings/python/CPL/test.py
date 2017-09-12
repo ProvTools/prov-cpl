@@ -60,8 +60,8 @@ print
 bundle_name = 'Bundle'
 print ('Create bundle name:' +
 	bundle_name)
-bundle = c.create_bundle(prefix, bundle_name)
-CPL.p_object(bundle, False)
+bundle = c.create_bundle(bundle_name)
+CPL.p_bundle(bundle, False)
 
 print ('Add bundle prefix:' + prefix + ':' + iri)
 bundle.add_prefix(prefix, iri)
@@ -93,7 +93,7 @@ activity_type = CPL.ACTIVITY
 print ('Create object name:' +
 	str(activity_name) + ' type:' + str(activity_type) + ' bundle:' + str(bundle.id))
 activity = c.create_object(prefix, activity_name, activity_type, bundle)
-CPL.p_object(bundle)
+CPL.p_object(activity)
 
 # Lookup Objects
 print
@@ -101,7 +101,7 @@ print '----- Lookup object tests -----'
 print
 
 print ('Looking up bundle name:' + str(bundle_name))
-bundle_check = c.lookup_bundle(prefix, bundle_name)
+bundle_check = c.lookup_bundle(bundle_name)
 if bundle.id != bundle_check.id:
 	sys.stdout.write('Lookup returned wrong bundle:' + str(bundle_check.id))
 	sys.exit(1)
@@ -142,19 +142,19 @@ if fail1:
 	sys.exit(1)
 
 print 'Look up non-existent object (name failure)'
-fail2 = c.try_lookup_object(prefix, 'no-name', bundle_type)
+fail2 = c.try_lookup_object(prefix, 'no-name', entity_type)
 if fail2:
 	print 'Returned an object:' + str(fail2.id)
 	sys.exit(1)
 
 print 'Look up non-existent object (prefix failure)'
-fail3 = c.try_lookup_object('no-prefix', bundle_name, bundle_type)
+fail3 = c.try_lookup_object('no-prefix', agent_name, agent_type)
 if fail3:
 	print 'Returned an object:' + str(fail3.id)
 	sys.exit(1)
 
 print 'Look up all objects with name:' + str(entity_name) + ' type:' + str(entity_type)
-entity_all = c.lookup_all(prefix, entity_name, entity_type)
+entity_all = c.lookup_all_objects(prefix, entity_name, entity_type, bundle)
 i = 0
 for t in entity_all:
 	CPL.p_id(t.id, with_newline = True)

@@ -2,18 +2,18 @@
 # Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 cpl_attach_r <- function() {
-    invisible(.Call(CPL_cpl_attach_r))
+    invisible(.Call('CPL_cpl_attach_r', PACKAGE = 'CPL'))
 }
 
-import_document_json_r <- function(filename, originator, bundle_name, anchor_object, bundle_agent) {
-    .Call(CPL_import_document_json_r, filename, originator, bundle_name, anchor_object, bundle_agent)
+import_document_json_r <- function(filepath, bundle_name) {
+    .Call('CPL_import_document_json_r', PACKAGE = 'CPL', filepath, bundle_name)
 }
 
-export_bundle_json_r <- function(bundle, path) {
-    invisible(.Call(CPL_export_bundle_json_r, bundle, path))
+export_bundle_json_r <- function(bundle, filepath) {
+    invisible(.Call('CPL_export_bundle_json_r', PACKAGE = 'CPL', bundle, filepath))
 }
 
 cpl_detach_r <- function() {
-    invisible(.Call(CPL_cpl_detach_r))
+    invisible(.Call('CPL_cpl_detach_r', PACKAGE = 'CPL'))
 }
 

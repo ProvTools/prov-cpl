@@ -127,7 +127,7 @@ CREATE TABLE IF NOT EXISTS cpl_bundle_properties (
       name VARCHAR(255) NOT NULL,
       value VARCHAR(4095) NOT NULL,
       FOREIGN KEY(id)
-            REFERENCES cpl_relations(id)
+            REFERENCES cpl_bundles(id)
             ON DELETE CASCADE);
 
 CREATE TABLE IF NOT EXISTS cpl_relation_properties (

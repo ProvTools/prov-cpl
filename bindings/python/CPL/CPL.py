@@ -446,7 +446,7 @@ class cpl_connection:
 
 
 	def create_bundle(self, name):
-			ret, idp = CPLDirect.cpl_create_bundle(name)
+		ret, idp = CPLDirect.cpl_create_bundle(name)
 
 		if not CPLDirect.cpl_is_ok(ret):
 			raise Exception('Could not create' +
@@ -457,7 +457,7 @@ class cpl_connection:
 
 
 	def lookup_bundle(self, name):
-			ret, idp = CPLDirect.cpl_lookup_bundle(name)
+		ret, idp = CPLDirect.cpl_lookup_bundle(name)
 
 		if not CPLDirect.cpl_is_ok(ret):
 			raise Exception('Could not find' +
@@ -731,9 +731,9 @@ class cpl_connection:
 		
 
 	def export_bundle_json(self, bundles, filepath):
-	'''
-	Exports a bundle as a Prov-JSON document.
-	'''
+		'''
+		Exports a bundle as a Prov-JSON document.
+		'''
 		bundle_ids = [bundle.id for bundle in bundles]
 		bundles_vec = CPLDirect.cpl_id_t_vector(bundle_ids);
 		ret = CPLDirect.export_bundle_json(bundles_vec, filepath)
@@ -1129,7 +1129,7 @@ class cpl_bundle:
 		'''
 		bundlepp = CPLDirect.new_cpl_bundle_info_tpp()
 
-		ret = CPLDirect.cpl_get_bundles_info(self.id,
+		ret = CPLDirect.cpl_get_bundle_info(self.id,
 		    CPLDirect.cpl_convert_pp_cpl_bundle_info_t(bundlepp))
 		if not CPLDirect.cpl_is_ok(ret):
 			CPLDirect.delete_cpl_bundle_info_tpp(bundlepp)
