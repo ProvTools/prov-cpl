@@ -471,7 +471,7 @@ public class CPLBundle {
 	 *
 	 * @return the vector of matching relations (empty if not found)
 	 */
-	public Vector<CPLRelation> getBundleRelations() {
+	public Vector<CPLRelation> getRelations() {
 
 		SWIGTYPE_p_std_vector_cpl_relation_t pVector
 			= CPLDirect.new_std_vector_cpl_relation_tp();

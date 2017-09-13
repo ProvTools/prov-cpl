@@ -49,8 +49,8 @@ public class test {
     /// The command-line arguments
     protected String[] args;
 
-    private static final PREFIX = "jtst" 
-    private static final IRI = "java.test"
+    private static final String PREFIX = "jtst";
+    private static final String IRI = "java.test";
     /**
      * Create the test object
      *
@@ -97,7 +97,7 @@ public class test {
 		 */
 
 		System.out.print("CPLBundle.create(\" Bundle\")");
-		CPLObject bundle = CPLBundle.create("Bundle");
+		CPLBundle bundle = CPLBundle.create("Bundle");
 		System.out.println(": " + bundle);
 
 		System.out.println("CPLBundle.addPrefix()");
@@ -133,7 +133,7 @@ public class test {
 		 */
 
 		System.out.print("CPLBundle.lookup(\"Bundle\")");
-		CPLObject bundlex = CPLBundle.lookup(PREFIX, "Bundle");
+		CPLBundle bundlex = CPLBundle.lookup("Bundle");
 		System.out.println(": " + bundlex);
 		if (!bundle.equals(bundlex))
 			throw new RuntimeException("Bundle lookup returned the wrong bundle");
@@ -214,7 +214,7 @@ public class test {
 		 */
 
 		System.out.print("CPLObject.getBundleObjects(bundle)");
-		Vector<CPLObject> bovec = CPLObject.getBundleObjects(bundle);
+		Vector<CPLObject> bovec = bundle.getObjects();
 		System.out.println(": " + bovec.size() + " results");
 		if(bovec.size() != 3){
 			throw new RuntimeException("getBundleObjects() returned an incorrect vector");
@@ -293,7 +293,7 @@ public class test {
 		 */
 
 		System.out.print("CPLObject.getBundleRelations(bundle)");
-		Vector<CPLRelation> brvec = CPLRelation.getBundleRelations(bundle);
+		Vector<CPLRelation> brvec = bundle.getRelations();
 		System.out.println(": " + bovec.size() + " results");
 		if(bovec.size() != 3){
 			throw new RuntimeException("getBundleRelations() returned an incorrect vector");

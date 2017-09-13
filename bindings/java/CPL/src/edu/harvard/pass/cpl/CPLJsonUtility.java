@@ -79,7 +79,7 @@ public class CPLJsonUtility {
 	 *                      an object name in the document
 	 */
 
-	public static CPLObject importJson(String filepath, 
+	public static CPLObject importJson(String json, 
 			String bundleName, Map<CPLObject, String> anchorObjects) {
 
 		cplxx_id_name_pair_vector anchorVector = new cplxx_id_name_pair_vector(anchorObjects.size());
