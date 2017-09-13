@@ -1782,6 +1782,7 @@ import_objects_json(const int type,
 			
 			pair = name_to_tokens(it2.key());
 
+
 			if(!CPL_IS_OK(cpl_add_object_property(obj_id, 
 												  pair.first.c_str(), 
 												  pair.second.c_str(), 
@@ -1840,10 +1841,10 @@ import_relations_json(const cpl_id_t bundle_id,
 
 					pair = name_to_tokens(it2.key());
 
-					if(!CPL_IS_OK(cpl_add_object_property(relation_id, 
-														  pair.first.c_str(), 
-														  pair.second.c_str(), 
-														  it2.value().dump().c_str()))){
+					if(!CPL_IS_OK(cpl_add_relation_property(relation_id, 
+														  	pair.first.c_str(), 
+														  	pair.second.c_str(), 
+														  	it2.value().dump().c_str()))){
 						return CPL_E_INTERNAL_ERROR;
 					}
 				}
@@ -2115,7 +2116,7 @@ export_relations_json(const std::vector<cpl_id_t>& bundles,
 			if((ret = cpl_free_object_info(from_info))!=0) return ret;
 			if((ret = cpl_free_object_info(to_info))!=0) return ret;
 
-			document[rdata_array[relation.type-1].type_str][relation.id] = properties;
+			document[rdata_array[relation.type-1].type_str][std::to_string(relation.id)] = properties;
 		}
 
 	} else {
