@@ -695,23 +695,23 @@ class cpl_connection:
 		return None
 
 
-	def validate_json(self, filepath):
+	def validate_json(self, json):
 		'''
-		Checks a Prov-JSON document (at filepath) for cycles and correctness.
+		Checks a Prov-JSON document (in string format) for cycles and correctness.
 		'''
-		ret = CPLDirect.validate_json(filepath)
-		if not CPLDirect.cpl_is_ok(ret.return_code):
+		ret = CPLDirect.validate_json(json)
+		if CPLDirect.cpl_is_ok(ret.return_code):
 			return None
 		return ret.out_string
 
 
-	def import_document_json(self, filepath,
+	def import_document_json(self, json,
 			bundle_name, anchor_objects):
 		'''
 		Imports a Prov-JSON document into the CPL as a bundle.
 
 		** Parameters **
-			filepath
+			json the JSON document in string format
 			prefix
 			bundle_name
 			anchor_objects: a list of cpl_object, name tuples, can be None
@@ -722,7 +722,7 @@ class cpl_connection:
 		else:
 			id_name_pairs = [(entry.get(0).id, entry.get(1)) for entry in anchor_objects]
 			id_name_vector = CPLDirect.cplxx_id_name_pair_vector(id_name_pairs)
-		ret, idp = CPLDirect.import_document_json(filepath, bundle_name,
+		ret, idp = CPLDirect.import_document_json(json, bundle_name,
 			  id_name_vector)
 		if not CPLDirect.cpl_is_ok(ret): 
 			raise Exception('Error importing document:' +
@@ -730,17 +730,17 @@ class cpl_connection:
 		return idp
 		
 
-	def export_bundle_json(self, bundles, filepath):
+	def export_bundle_json(self, bundles):
 		'''
 		Exports a bundle as a Prov-JSON document.
 		'''
 		bundle_ids = [bundle.id for bundle in bundles]
 		bundles_vec = CPLDirect.cpl_id_t_vector(bundle_ids);
-		ret = CPLDirect.export_bundle_json(bundles_vec, filepath)
-		if not CPLDirect.cpl_is_ok(ret):
+		ret = CPLDirect.export_bundle_json(bundles_vec)
+		if not CPLDirect.cpl_is_ok(ret.return_code):
 			raise Exception('Error exporting bundle:' +
-					CPLDirect.cpl_error_string(ret))
-		return None
+					CPLDirect.cpl_error_string(ret.return_code))
+		return ret.out_string
 
 
 	def close(self):

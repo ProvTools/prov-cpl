@@ -56,7 +56,6 @@
 #include <vector>
 #include <algorithm>
 #include <sstream>
-#include <fstream>
 
 
 
@@ -334,18 +333,18 @@ cpl_cb_collect_property_lookup_vector(const cpl_id_t id,
 /*
  * Verifies the correctness of a Prov-JSON document. Not currently exhaustive.
  * 
- * @param path the JSON file path
+ * @param json_string the JSON document as a string
  * @param string_out error output string
  * @return 0 on successful validation or -1 on failure
  */
 EXPORT cpl_return_t
-validate_json(const std::string& path,
+validate_json(const std::string& json_string,
 			  std::string& string_out);
 
 /*
  * Imports a Prov-JSON document into Prov-CPL.
  *
- * @param path file path to document
+ * @param json_string the JSON document as a string
  * @param bundle_name desired name of document bundle, must be unique
  * @param anchor_objects optional vector of ID string pairs that match
  *		                 objects in the database with objects in the document
@@ -353,7 +352,7 @@ validate_json(const std::string& path,
  * @return CPL_OK or an error code
  */
 EXPORT cpl_return_t
-import_document_json(const std::string& path,
+import_document_json(const std::string& json_string,
 					 const std::string& bundle_name,
 					 const std::vector<std::pair<cpl_id_t, std::string>>& anchor_objects,
 					 cpl_id_t* out_id);
@@ -363,12 +362,12 @@ import_document_json(const std::string& path,
  * Exports a Prov-CPL bundle as a Prov-JSON document.
  *
  * @param bundle a vector of bundle IDs, currently only supports one
- * @param path path to desired output file, overwrites if file already exists
+ * @param json_string the JSON document as a string
  * @return CPL_OK or an error code
  */
 EXPORT cpl_return_t
 export_bundle_json(const std::vector<cpl_id_t>& bundles, 
-				   const std::string& path);
+				   std::string& json_string);
 
 #endif /* __cplusplus */
 

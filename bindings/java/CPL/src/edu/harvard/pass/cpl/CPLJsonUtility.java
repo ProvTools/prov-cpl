@@ -55,13 +55,13 @@ public class CPLJsonUtility {
 	/**
 	 * Verify the correctness of a Prov JSON document
 	 *
-	 *@param fileName document path
+	 *@param json the JSON document as a string
 	 *@return a string detailing errors if any exist or NULL on success
 	 */
-	public static String validateJson(String filepath){
+	public static String validateJson(String json){
 
-		validate_json_return_t r = CPLDirect.validate_json(filepath);
-		if(r.getReturn_code() == 0){
+		validate_json_return_t r = CPLDirect.validate_json(json);
+		if(CPLException.isSuccess(r.getReturn_code())){
 			return null;
 		}
 
@@ -73,7 +73,7 @@ public class CPLJsonUtility {
 	 * Does not verify correctness.
 	 * Currently supports only one anchor object and no bundles.
 	 *
-	 * @param fileName document path
+	 * @param json the JSON document as a string
 	 * @param bundleName desired name of document bundle
 	 * @param anchorObjects map of CPLObject, name pairs matching a stored object to
 	 *                      an object name in the document
@@ -91,7 +91,7 @@ public class CPLJsonUtility {
 		}
 
 		BigInteger[] id = {nullId};
-		int r = CPLDirect.import_document_json(filepath, bundleName,
+		int r = CPLDirect.import_document_json(json, bundleName,
 									   anchorVector, id);
 		CPLException.assertSuccess(r);
 		
@@ -104,15 +104,16 @@ public class CPLJsonUtility {
 	 * Export a Prov bundle as a JSON document
 	 *
 	 * @param bundles an array of bundles to export, currently only supports one
-	 * @param filepath path to desired output file, overwrites if file already exists
 	 */
-	public static void exportBundleJson(CPLBundle[] bundles, String filepath) {
+	public static String exportBundleJson(CPLBundle[] bundles) {
 
 		cpl_id_t_vector bundleVector = new cpl_id_t_vector(bundles.length);
 		for(int i=0; i<bundles.length; i++){
 			bundleVector.set(i, bundles[i].getId());
 		}
-		int r = CPLDirect.export_bundle_json(bundleVector, filepath);
-		CPLException.assertSuccess(r);
+		export_bundle_json_return_t r = CPLDirect.export_bundle_json(bundleVector);
+		CPLException.assertSuccess(r.getReturn_code());
+
+		return r.getOut_string();
 	}
 }

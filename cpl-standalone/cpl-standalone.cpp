@@ -1648,19 +1648,17 @@ using json = nlohmann::json;
  * Verifies the correctness of a Prov-JSON document. Not currently exhaustive.
  * Free *string_out after use.
  * 
- * @param path the JSON file path
+ * @param json_string the JSON document as a string
  * @param string_out error output string
  * @return 0 on successful validation or -1 on failure
  */
 EXPORT cpl_return_t
-validate_json(const std::string& path,
+validate_json(const std::string& json_string,
 	 		  std::string& string_out)
 {
 	string_out = "Validation failed on upload";
 	
-	std::ifstream i(path);
-	json document;
-	i >> document;
+	json document = json::parse(json_string);
 
 	if(document == NULL){
 		return CPL_E_INTERNAL_ERROR;
@@ -1859,21 +1857,19 @@ import_relations_json(const cpl_id_t bundle_id,
 /*
  * Imports a Prov-JSON document into Prov-CPL.
  *
- * @param path file path to document
+ * @param json_string the JSON document as a string
  * @param bundle_name desired name of document bundle
  * @param anchor_object optional PROV-CPL object identical to an object in the document
  * @param out_id the ID of the imported bundle
  * @return CPL_OK or an error code
  */
 EXPORT cpl_return_t
-import_document_json(const std::string& path,
+import_document_json(const std::string& json_string,
 					 const std::string& bundle_name,
 					 const std::vector<std::pair<cpl_id_t, std::string>>& anchor_objects,
 					 cpl_id_t* out_id)
 {
-	std::ifstream i(path);
-	json document;
-	i >> document;
+	json document = json::parse(json_string);
 
 	if(document == NULL || document.empty()){
 		return CPL_E_INTERNAL_ERROR;
@@ -2133,12 +2129,12 @@ export_relations_json(const std::vector<cpl_id_t>& bundles,
  * Exports a Prov-CPL bundle as a Prov-JSON document.
  *
  * @param bundles vector of bundle IDs, currently only single bundle supported
- * @param path path to desired output file, overwrites if file already exists
+ * @param json_string the bundle as a string in JSON format
  * @return CPL_OK or an error code
  */
 EXPORT cpl_return_t
 export_bundle_json(const std::vector<cpl_id_t>& bundles, 
-				   const std::string& path)
+				   std::string& json_string)
 {
 
 	json document;
@@ -2156,8 +2152,7 @@ export_bundle_json(const std::vector<cpl_id_t>& bundles,
 		return ret;
 	}
 
-	std::ofstream o(path);
-	o << std::setw(4) << document << std::endl;
+	json_string = document.dump();
 
 	return CPL_OK;
 }

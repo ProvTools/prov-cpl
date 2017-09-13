@@ -355,6 +355,19 @@ cpl_convert_p_std_vector_cpl_id_t_to_p_void(
   }
 %}
 
+%inline %{
+  struct export_bundle_json_return_t {
+    cpl_return_t return_code;
+    std::string out_string;
+  };
+
+  export_bundle_json_return_t export_bundle_json(const std::vector<cpl_id_t> bundles) {
+    struct export_bundle_json_return_t ret;
+    ret.return_code = export_bundle_json(bundles, ret.out_string);
+    return ret;
+  }
+%}
+
 %ignore method2;
 
 /*

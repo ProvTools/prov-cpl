@@ -110,7 +110,7 @@ CREATE TABLE IF NOT EXISTS cpl_relations (
                    REFERENCES cpl_objects(id)
                    ON DELETE CASCADE,
        FOREIGN KEY(bundle_id)
-                   REFERENCES cpl_objects(id)
+                   REFERENCES cpl_bundles(id)
                    ON DELETE CASCADE);
 
 CREATE TABLE IF NOT EXISTS cpl_prefixes (
