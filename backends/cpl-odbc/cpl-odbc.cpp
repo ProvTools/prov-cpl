@@ -530,7 +530,6 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 	cpl_return_t r = CPL_OK;
 	const char* connection_string = odbc->connection_string.c_str();
 
-
 	// Open the ODBC connection
 
 	SQLRETURN ret;

@@ -718,7 +718,7 @@ class cpl_connection:
 			bundle_agent: the agent responsible for uploading the bundle, can be None
 		'''
 		if anchor_objects == None:
-			id_name_vector = none
+			id_name_vector = CPLDirect.cplxx_id_name_pair_vector()
 		else:
 			id_name_pairs = [(entry.get(0).id, entry.get(1)) for entry in anchor_objects]
 			id_name_vector = CPLDirect.cplxx_id_name_pair_vector(id_name_pairs)
@@ -727,7 +727,7 @@ class cpl_connection:
 		if not CPLDirect.cpl_is_ok(ret): 
 			raise Exception('Error importing document:' +
 					CPLDirect.cpl_error_string(ret))
-		return idp
+		return cpl_bundle(idp)
 		
 
 	def export_bundle_json(self, bundles):

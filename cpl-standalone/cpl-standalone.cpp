@@ -357,7 +357,7 @@ cpl_attach(struct _cpl_db_backend_t* backend)
 	}
 
 	//currently no support for sessions 
-	
+	/*
 	ret = cpl_db_backend->cpl_db_create_session(cpl_db_backend,
 												NULL,
 												mac_string_ptr,
@@ -366,7 +366,7 @@ cpl_attach(struct _cpl_db_backend_t* backend)
 												program,
 												cmdline);
 
-
+	*/
 #ifdef __APPLE__
 	delete[] _program;
 #endif
@@ -1656,7 +1656,7 @@ EXPORT cpl_return_t
 validate_json(const std::string& json_string,
 	 		  std::string& string_out)
 {
-	string_out = "Validation failed on upload";
+	string_out = "Validation failed on upload \n";
 	
 	json document = json::parse(json_string);
 
@@ -1671,7 +1671,7 @@ validate_json(const std::string& json_string,
 	std::vector<std::string> objects;
 	std::vector<edge_t> edges;
 
-	string_out = "Invalid JSON formatting";
+	string_out = "Invalid JSON formatting \n";
 
 	for(int i=0; i<CPL_NUM_R_TYPES; i++){
 		prov_relation_data_t entry = rdata_array[i];
@@ -1714,11 +1714,11 @@ validate_json(const std::string& json_string,
 	try{
 		 boost::topological_sort(g, back_inserter(c));
 	} catch (const boost::not_a_dag& e){
-		string_out = "Provenance graph is not a DAG";
+		string_out = "Provenance graph is not a DAG \n";
 		return CPL_E_INVALID_JSON;
 	}
 
-	string_out = "Valid JSON";
+	string_out = "Valid JSON \n";
 	return CPL_OK;
 }
 
@@ -1809,7 +1809,7 @@ import_relations_json(const cpl_id_t bundle_id,
 		for (json::iterator it = relations.begin(); it != relations.end(); ++it) {
 
 			cpl_id_t source, dest, relation_id;
-			
+
 			token_pair_t pair = name_to_tokens(it.value()[entry.source_str]);
 
 			if(!CPL_IS_OK(cpl_lookup_object(pair.first.c_str(), 
@@ -1817,6 +1817,7 @@ import_relations_json(const cpl_id_t bundle_id,
 											entry.source_t,
 											bundle_id,
 											&source))){
+				std::cout << "lookup source failed" << pair.first << ":" << pair.second << std::endl;
 				return CPL_E_INTERNAL_ERROR;
 			}
 
@@ -1827,6 +1828,7 @@ import_relations_json(const cpl_id_t bundle_id,
 											entry.dest_t,
 											bundle_id,
 											&dest))){
+				std::cout << "lookup dest failed" << pair.first << ":" << pair.second << std::endl;
 				return CPL_E_INTERNAL_ERROR;
 			}
 

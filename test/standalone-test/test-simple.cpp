@@ -640,13 +640,11 @@ test_simple(void)
 	print(L_DEBUG, "cpl_get_all_objects --> %d objects [%d]",
           (int) oiv.size(), ret);
 	CPL_VERIFY(cpl_get_all_objects, ret);
-    bool found_bun = false;
     bool found1 = false;
     bool found2 = false;
     bool found3 = false;
     for (size_t i = 0; i < oiv.size(); i++) {
         cplxx_object_info_t& info = oiv[i];
-        if (info.id == bun ) found_bun  = true;
         if (info.id == obj1) found1 = true;
         if (info.id == obj2) found2 = true;
         if (info.id == obj3) found3 = true;
@@ -656,8 +654,6 @@ test_simple(void)
         }
     }
     if (oiv.size() > 10) print(L_DEBUG, "  ...");
-    if (!found_bun)
-        throw CPLException("Object listing did not return a certain object");
     if (!found1)
         throw CPLException("Object listing did not return a certain object");
     if (!found2)
