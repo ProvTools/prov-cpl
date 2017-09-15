@@ -11,3 +11,5 @@ Description: Provides basic Prov-CPL functionality around the upload
 License: Harvard University
 Imports: Rcpp (>= 0.12.11)
 LinkingTo: Rcpp
+NeedsCompilation: yes
+Packaged: 2017-09-15 20:31:01 UTC; jacksonokuhn

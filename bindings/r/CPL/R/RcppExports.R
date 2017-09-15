@@ -5,12 +5,12 @@ cpl_attach_r <- function() {
     invisible(.Call('CPL_cpl_attach_r', PACKAGE = 'CPL'))
 }
 
-import_document_json_r <- function(filepath, bundle_name) {
-    .Call('CPL_import_document_json_r', PACKAGE = 'CPL', filepath, bundle_name)
+import_document_json_r <- function(string, bundle_name) {
+    .Call('CPL_import_document_json_r', PACKAGE = 'CPL', string, bundle_name)
 }
 
-export_bundle_json_r <- function(bundle, filepath) {
-    invisible(.Call('CPL_export_bundle_json_r', PACKAGE = 'CPL', bundle, filepath))
+export_bundle_json_r <- function(bundle, string) {
+    invisible(.Call('CPL_export_bundle_json_r', PACKAGE = 'CPL', bundle, string))
 }
 
 cpl_detach_r <- function() {

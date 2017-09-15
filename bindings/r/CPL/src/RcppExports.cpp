@@ -15,25 +15,25 @@ BEGIN_RCPP
 END_RCPP
 }
 // import_document_json_r
-unsigned long long import_document_json_r(const std::string& filepath, const std::string& bundle_name);
-RcppExport SEXP CPL_import_document_json_r(SEXP filepathSEXP, SEXP bundle_nameSEXP) {
+unsigned long long import_document_json_r(const std::string& string, const std::string& bundle_name);
+RcppExport SEXP CPL_import_document_json_r(SEXP stringSEXP, SEXP bundle_nameSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const std::string& >::type filepath(filepathSEXP);
+    Rcpp::traits::input_parameter< const std::string& >::type string(stringSEXP);
     Rcpp::traits::input_parameter< const std::string& >::type bundle_name(bundle_nameSEXP);
-    rcpp_result_gen = Rcpp::wrap(import_document_json_r(filepath, bundle_name));
+    rcpp_result_gen = Rcpp::wrap(import_document_json_r(string, bundle_name));
     return rcpp_result_gen;
 END_RCPP
 }
 // export_bundle_json_r
-void export_bundle_json_r(const unsigned long long bundle, const std::string& filepath);
-RcppExport SEXP CPL_export_bundle_json_r(SEXP bundleSEXP, SEXP filepathSEXP) {
+void export_bundle_json_r(const unsigned long long bundle, std::string& string);
+RcppExport SEXP CPL_export_bundle_json_r(SEXP bundleSEXP, SEXP stringSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const unsigned long long >::type bundle(bundleSEXP);
-    Rcpp::traits::input_parameter< const std::string& >::type filepath(filepathSEXP);
-    export_bundle_json_r(bundle, filepath);
+    Rcpp::traits::input_parameter< std::string& >::type string(stringSEXP);
+    export_bundle_json_r(bundle, string);
     return R_NilValue;
 END_RCPP
 }

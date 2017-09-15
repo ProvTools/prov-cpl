@@ -14,12 +14,12 @@ cpl_attach_r(){
 
 // [[Rcpp::export]]
 unsigned long long
-import_document_json_r(const std::string& filepath,
+import_document_json_r(const std::string& string,
 					 const std::string& bundle_name)
 {	
 
 	unsigned long long out_id;
-	import_document_json(filepath, bundle_name, std::vector<std::pair<cpl_id_t, std::string>>(), &out_id);
+	import_document_json(string, bundle_name, std::vector<std::pair<cpl_id_t, std::string>>(), &out_id);
 
 	return out_id;
 }
@@ -27,11 +27,11 @@ import_document_json_r(const std::string& filepath,
 // [[Rcpp::export]]
 void
 export_bundle_json_r(const unsigned long long bundle, 
-				   const std::string& filepath)
+				     std::string& string)
 {
 
 	std::vector<cpl_id_t> bundle_vec = {bundle};
-	export_bundle_json(bundle_vec, filepath);
+	export_bundle_json(bundle_vec, string);
 }
 
 // [[Rcpp::export]]
