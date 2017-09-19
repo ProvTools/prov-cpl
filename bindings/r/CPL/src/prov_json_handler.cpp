@@ -13,6 +13,17 @@ cpl_attach_r(){
 }
 
 // [[Rcpp::export]]
+std::string
+validate_json_r(const std::string& string)
+{	
+
+	std::string output;
+	validate_json(string, output);
+
+	return output;
+}
+
+// [[Rcpp::export]]
 unsigned long long
 import_document_json_r(const std::string& string,
 					 const std::string& bundle_name)

@@ -14,6 +14,17 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// validate_json_r
+std::string validate_json_r(const std::string& string);
+RcppExport SEXP CPL_validate_json_r(SEXP stringSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const std::string& >::type string(stringSEXP);
+    rcpp_result_gen = Rcpp::wrap(validate_json_r(string));
+    return rcpp_result_gen;
+END_RCPP
+}
 // import_document_json_r
 unsigned long long import_document_json_r(const std::string& string, const std::string& bundle_name);
 RcppExport SEXP CPL_import_document_json_r(SEXP stringSEXP, SEXP bundle_nameSEXP) {
@@ -49,6 +60,7 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"CPL_cpl_attach_r", (DL_FUNC) &CPL_cpl_attach_r, 0},
+    {"CPL_validate_json_r", (DL_FUNC) &CPL_validate_json_r, 1},
     {"CPL_import_document_json_r", (DL_FUNC) &CPL_import_document_json_r, 2},
     {"CPL_export_bundle_json_r", (DL_FUNC) &CPL_export_bundle_json_r, 2},
     {"CPL_cpl_detach_r", (DL_FUNC) &CPL_cpl_detach_r, 0},

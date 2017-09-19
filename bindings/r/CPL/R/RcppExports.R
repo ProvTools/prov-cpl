@@ -5,6 +5,10 @@ cpl_attach_r <- function() {
     invisible(.Call('CPL_cpl_attach_r', PACKAGE = 'CPL'))
 }
 
+validate_json_r <- function(string) {
+    .Call('CPL_validate_json_r', PACKAGE = 'CPL', string)
+}
+
 import_document_json_r <- function(string, bundle_name) {
     .Call('CPL_import_document_json_r', PACKAGE = 'CPL', string, bundle_name)
 }
