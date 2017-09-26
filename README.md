@@ -207,9 +207,9 @@ Required Packages:
 To compile and install the CPL R bindings, please do the following: 
 ```
 cd bindings/r/CPL  
-From inside R:  
-> library(Rcpp)
-> compileAttributes()
+(From inside R:)
+  > library(Rcpp)
+  > compileAttributes()
 cd ..  
 R CMD build CPL 
 R CMD install CPL_3.0.tar.gz
