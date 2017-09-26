@@ -200,14 +200,16 @@ To compile and install the CPL python bindings, please do the following:
 Required Packages:
 * Rcpp
 
-To compile and install the CPL R bindings, please do the following:  
-  `cd bindings/r/CPL`  
-  From inside R:  
-  `> library(Rcpp)`  
-  `> compileAttributes()`  
-  `cd ..`  
-  `R CMD build CPL`  
-  `R CMD install CPL_3.0.tar.gz`
+To compile and install the CPL R bindings, please do the following: 
+```
+      cd bindings/r/CPL  
+      From inside R:  
+      > library(Rcpp)
+      > compileAttributes()
+      cd ..  
+      R CMD build CPL 
+      R CMD install CPL_3.0.tar.gz
+      ```
 
 The bindings currently only implement basic JSON document handling
 
