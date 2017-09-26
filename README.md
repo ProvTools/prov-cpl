@@ -60,8 +60,6 @@ Required Packages:
 - nlohmann_json
 - boost
 
-#### Installing 
-
 To compile and install CPL, please type the following commands:
   `make release`
   `[sudo] (for linux) make install`
@@ -145,11 +143,13 @@ postgresql.conf file and restarting the PostgreSQL service:
 
      unix_socket_directory = '/tmp'
 
-Finally, run the configuration script `../../scripts/postgresql-setup.sql`
-as the user postgres. On Linux and Unix systems, this can be easily achieved
-by cd-ing into CPL's main project directory and running from the command line:
+Finally, run the configuration script `../../scripts/postgresql-setup.sql` 
+as the user postgres. (Note: if you've used homebrew to install postgres, then 
+your default username may instead be root.) On Linux and Unix systems, this can
+be easily achieved by cd-ing into CPL's main project directory and running from 
+the command line:
 
-     sudo psql -U [postgres/other superuser name] postgres < scripts/postgresql-setup.sql
+     sudo psql -U postgres postgres < scripts/postgresql-setup.sql
 
 This will create user `cpl` with password `cplcplcpl`, database `cpl`, and its
 corresponding schema.
