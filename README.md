@@ -61,8 +61,10 @@ Required Packages:
 - boost
 
 To compile and install CPL, please type the following commands:
-  `make release`
-  `[sudo] (for linux) make install`
+```
+make release
+[sudo] (for linux) make install
+```
 
 The default installation directory is /usr/local.
 
