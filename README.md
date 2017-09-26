@@ -160,19 +160,21 @@ Required Packages:
 * swig
 
 If you plan to use the CPL bindings via Maven, please do the following:
-      cd bindings/java  (if necessary)
-      make release
-      sudo make -C CPLDirect install
-      make -C CPL maven-install
-
+```
+cd bindings/java  (if necessary)
+make release
+sudo make -C CPLDirect install
+make -C CPL maven-install
+```
 The Maven group ID is edu.harvard.pass, and the artifact ID is cpl. You can
 find the most recent version of the project by examining CPL/Makefile.
 
 To use the bindings by manually including the .jar or to use with Ant:
-  cd bindings/java (if necessary)
-  make release
-  sudo make install
-
+```
+cd bindings/java (if necessary)
+make release
+sudo make install
+```
 This will (among other things) create /usr/local/java/CPL.jar, which you can
 then include in your project. You do not need to include CPLDirect.jar, since
 it is statically included in CPL.jar.
@@ -191,9 +193,11 @@ Required Packages:
 * swig
 
 To compile and install the CPL python bindings, please do the following:  
-  `cd bindings/python`  
-  `make release`  
-  `[sudo] make install`
+```
+cd bindings/python
+make release
+[sudo] make install
+```
   
 ### R Bindings
 
@@ -202,15 +206,14 @@ Required Packages:
 
 To compile and install the CPL R bindings, please do the following: 
 ```
-      cd bindings/r/CPL  
-      From inside R:  
-      > library(Rcpp)
-      > compileAttributes()
-      cd ..  
-      R CMD build CPL 
-      R CMD install CPL_3.0.tar.gz
-      ```
-
+cd bindings/r/CPL  
+From inside R:  
+> library(Rcpp)
+> compileAttributes()
+cd ..  
+R CMD build CPL 
+R CMD install CPL_3.0.tar.gz
+```
 The bindings currently only implement basic JSON document handling
 
 ## To-Dos
