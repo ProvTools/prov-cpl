@@ -215,7 +215,7 @@ cd ..
 R CMD build CPL 
 R CMD install CPL_3.0.tar.gz
 ```
-The bindings currently only implement basic JSON document handling
+The bindings currently only implement basic JSON document handling.
 
 ## To-Dos
 
