@@ -86,17 +86,17 @@ manually. For example, if you use the PostgreSQL ODBC driver, the database is
 running locally, and the database name is cpl, the appropriate configuration
 entry would be:
 
-`[CPL]
-Description     = PostgreSQL Core Provenance Library
-Driver          = PostgreSQL
-Server          = localhost
-Database        = cpl
-Port            = 
-Socket          = 
-Option          = 
-Stmt            = 
-User            = cpl
-Password        = cplcplcpl`
+      [CPL]
+      Description     = PostgreSQL Core Provenance Library
+      Driver          = PostgreSQL
+      Server          = localhost
+      Database        = cpl
+      Port            = 
+      Socket          = 
+      Option          = 
+      Stmt            = 
+      User            = cpl
+      Password        = cplcplcpl
 
 You can verify that the data source is installed by running: odbcinst -q -s
 
