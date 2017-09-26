@@ -14,15 +14,10 @@ Contributor(s): Peter Macko
 ----------------------------------
 
 Please make sure that the following packages are installed:
-  uuid-dev
-  libssl-dev (included in openssl)
-  libncurses5-dev
   unixodbc
   unixodbc-dev
   odbcinst
   odbc-postgresql (for PostgreSQL)
-  libcurl4-openssl-dev
-  libxml2-dev
   nlohmann_json
   boost
 

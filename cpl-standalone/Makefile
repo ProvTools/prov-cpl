@@ -31,8 +31,6 @@ CXXFLAGS := -std=c++11
 
 ifeq ($(OSTYPE),darwin)
 LIBRARIES := -framework IOKit -framework CoreFoundation
-else
-LIBRARIES := -luuid
 endif
 
 
