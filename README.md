@@ -62,8 +62,8 @@ Required Packages:
 #### Installing 
 
 To compile and install CPL, please type the following commands:
-  make release
-  [sudo] (for linux) make install
+  `make release`
+  `[sudo] (for linux) make install`
 
 The default installation directory is /usr/local.
 
@@ -86,7 +86,7 @@ manually. For example, if you use the PostgreSQL ODBC driver, the database is
 running locally, and the database name is cpl, the appropriate configuration
 entry would be:
 
-[CPL]
+`[CPL]
 Description     = PostgreSQL Core Provenance Library
 Driver          = PostgreSQL
 Server          = localhost
@@ -96,7 +96,7 @@ Socket          =
 Option          = 
 Stmt            = 
 User            = cpl
-Password        = cplcplcpl
+Password        = cplcplcpl`
 
 You can verify that the data source is installed by running: odbcinst -q -s
 
@@ -130,11 +130,11 @@ PostgreSQL might not work out of the box on Ubuntu. If you experience user
 authentication issues for the user cpl, please add the following line to your
 pg_hba.conf file:
 
-local   cpl             cpl                                     md5
+`local   cpl             cpl                                     md5`
 
 Make sure to add it just before the line:
 
-local   all             all                                     peer
+`local   all             all                                     peer`
 
 
 If you are able to connect to the database using psql (i.e. psql cpl -U cpl),
@@ -142,14 +142,13 @@ but you cannot open an ODBC connection, you might need to change the location
 of the PostgreSQL socket to /tmp by setting the following property in your
 postgresql.conf file and restarting the PostgreSQL service:
 
-unix_socket_directory = '/tmp'
-
+`unix_socket_directory = '/tmp'`
 
 Finally, run the configuration script ../../scripts/postgresql-setup.sql
 as the user postgres. On Linux and Unix systems, this can be easily achieved
 by cd-ing into CPL's main project directory and running from the command line:
 
-    sudo psql -U [postgres/other superuser name] postgres < scripts/postgresql-setup.sql
+    `sudo psql -U [postgres/other superuser name] postgres < scripts/postgresql-setup.sql`
 
 This will create user cpl with password "cplcplcpl", database cpl, and its
 corresponding schema.
@@ -162,9 +161,9 @@ Required Packages:
 
 If you plan to use the CPL bindings via Maven, please do the following:
   `cd bindings/java`      (if necessary)
-  `make release
-  sudo make -C CPLDirect install
-  make -C CPL maven-install`
+  `make release`
+  `sudo make -C CPLDirect install`
+  `make -C CPL maven-install`
 
 The Maven group ID is edu.harvard.pass, and the artifact ID is cpl. You can
 find the most recent version of the project by examining CPL/Makefile.
@@ -192,9 +191,9 @@ Required Packages:
 * swig
 
 To compile and install the CPL python bindings, please do the following:  
-  `cd bindings/python  
-  make release  
-  [sudo] make install`
+  `cd bindings/python`  
+  `make release`  
+  `[sudo] make install`
   
 ### R Bindings
 
