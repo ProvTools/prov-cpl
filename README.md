@@ -130,11 +130,11 @@ PostgreSQL might not work out of the box on Ubuntu. If you experience user
 authentication issues for the user cpl, please add the following line to your
 pg_hba.conf file:
 
-  `local   cpl             cpl                                     md5`
+    local   cpl             cpl                                     md5
 
 Make sure to add it just before the line:
 
-  `local   all             all                                     peer`
+    local   all             all                                     peer
 
 
 If you are able to connect to the database using psql (i.e. psql cpl -U cpl),
@@ -142,13 +142,13 @@ but you cannot open an ODBC connection, you might need to change the location
 of the PostgreSQL socket to /tmp by setting the following property in your
 postgresql.conf file and restarting the PostgreSQL service:
 
-  `unix_socket_directory = '/tmp'`
+     unix_socket_directory = '/tmp'
 
 Finally, run the configuration script ../../scripts/postgresql-setup.sql
 as the user postgres. On Linux and Unix systems, this can be easily achieved
 by cd-ing into CPL's main project directory and running from the command line:
 
-    `sudo psql -U [postgres/other superuser name] postgres < scripts/postgresql-setup.sql`
+     sudo psql -U [postgres/other superuser name] postgres < scripts/postgresql-setup.sql
 
 This will create user cpl with password "cplcplcpl", database cpl, and its
 corresponding schema.
