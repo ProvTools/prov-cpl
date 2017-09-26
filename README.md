@@ -50,6 +50,7 @@ Check test files for details.
 Required:
 * C/C++ Standalone
 * ODBC Backend
+
 Optional:
 * Language specific bindings
 
