@@ -169,9 +169,9 @@ The Maven group ID is edu.harvard.pass, and the artifact ID is cpl. You can
 find the most recent version of the project by examining CPL/Makefile.
 
 To use the bindings by manually including the .jar or to use with Ant:
-      cd bindings/java (if necessary)
-      make release
-      sudo make install
+  cd bindings/java (if necessary)
+  make release
+  sudo make install
 
 This will (among other things) create /usr/local/java/CPL.jar, which you can
 then include in your project. You do not need to include CPLDirect.jar, since
