@@ -191,10 +191,10 @@ Required Packages:
 * python-dev
 * swig
 
-To compile and install the CPL python bindings, please do the following:
-  cd bindings/python
-  make release
-  [sudo] make install
+To compile and install the CPL python bindings, please do the following:  
+`cd bindings/python  
+make release  
+[sudo] make install`
   
 ### R Bindings
 
@@ -202,12 +202,12 @@ Required Packages:
 * Rcpp
 
 To compile and install the CPL R bindings, please do the following:
-  `cd bindings/r/CPL`
-  From inside R:
-  `> library(Rcpp)`
-  `> compileAttributes()`
-  `cd ..`
-  `R CMD build CPL`
+  `cd bindings/r/CPL`  
+  From inside R:  
+  `> library(Rcpp)`  
+  `> compileAttributes()`  
+  `cd ..`  
+  `R CMD build CPL`  
   `R CMD install CPL_3.0.tar.gz`
 
 The bindings currently only implement basic JSON document handling
