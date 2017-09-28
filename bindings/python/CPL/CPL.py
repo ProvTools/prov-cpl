@@ -216,7 +216,7 @@ def p_object(obj, with_session = False):
 	Print information about an object
 
 	Method calls:
-		p_object(obj, with_session = False)
+			p_object(obj, with_session = False)
 	'''
 
 	i = obj.info()
@@ -1148,7 +1148,7 @@ class cpl_bundle:
 
 		return _info
 
-	def properties(self, prefix=None, key=None, version=None):
+	def properties(self, prefix=None, key=None):
 		'''
 		Return all the properties associated with the current bundle.
 
@@ -1169,5 +1169,27 @@ class cpl_bundle:
 		for e in v:
 			l.append([e.prefix, e.key, e.value])
 		CPLDirect.delete_std_vector_cplxx_property_entry_tp(vp)
+		return l
+
+		def prefixes(self, prefix):
+		'''
+		Return all the prefixes associated with the current bundle.
+
+		If prefix return only those properties matching prefix.
+		'''
+		vp = CPLDirect.new_std_vector_cplxx_prefix_entry_tp()
+
+		ret = CPLDirect.cpl_get_prefixes(self.id, prefix,
+		    CPLDirect.cpl_cb_collect_prefixes_vector, vp)
+		if not CPLDirect.cpl_is_ok(ret):
+			CPLDirect.delete_std_vector_cplxx_prefix_entry_tp(vp)
+			raise Exception('Error retrieving properties: ' +
+					CPLDirect.cpl_error_string(ret))
+
+		v = CPLDirect.cpl_dereference_p_std_vector_cplxx_prefix_entry_t(vp)
+		l = []
+		for e in v:
+			l.append([e.prefix, e.iri])
+		CPLDirect.delete_std_vector_cplxx_prefix_entry_tp(vp)
 		return l
 
