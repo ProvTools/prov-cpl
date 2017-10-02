@@ -1038,7 +1038,7 @@ cpl_free_object_info(cpl_object_info_t* info)
 
 
 /**
- * Iterate over the ancestors or the descendants of a provenance object.
+ * Iterate over the relations of a provenance object.
  *
  * @param id the object ID
  * @param direction the direction of the graph traversal (CPL_D_ANCESTORS

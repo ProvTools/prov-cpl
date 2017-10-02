@@ -285,10 +285,10 @@ class cpl_relation:
 		Create an instance of cpl_relation_t
 		'''
 		self.id = id
-		self.ancestor = cpl_object(cpl_object(aid))
-		self.descendant = cpl_object(cpl_object(did))
+		self.ancestor = cpl_object(aid)
+		self.descendant = cpl_object(did)
 		self.type = type
-		self.bundle = bundle
+		self.bundle = cpl_bundle(bundle)
 
 		if direction == D_ANCESTORS:
 			self.base  = self.descendant
@@ -465,7 +465,6 @@ class cpl_connection:
 		
 		r = cpl_bundle(idp)
 		return r
-
 
 	def lookup_all_bundles(self, name):
 		'''
@@ -732,7 +731,7 @@ class cpl_connection:
 
 	def export_bundle_json(self, bundles):
 		'''
-		Exports a bundle as a Prov-JSON document.
+		Exports bundles as a Prov-JSON document. Only works with single bundles currently.
 		'''
 		bundle_ids = [bundle.id for bundle in bundles]
 		bundles_vec = CPLDirect.cpl_id_t_vector(bundle_ids);
@@ -978,7 +977,7 @@ class cpl_object:
 		if object.bundle_id == NONE:
 			bundle = None
 		else:
-			bundle = cpl_object(object.bundle_id)
+			bundle = cpl_bundle(object.bundle_id)
 
 		_info = cpl_object_info(self,
 				cpl_session(object.creation_session), object.creation_time,
@@ -992,7 +991,7 @@ class cpl_object:
 
 	def relations(self, direction=D_ANCESTORS, flags=0):
 		'''
-		Return a list of cpl_ancestor objects
+		Return a list of cpl_relations
 		'''
 		vp = CPLDirect.new_std_vector_cpl_relation_tp()
 
@@ -1171,7 +1170,7 @@ class cpl_bundle:
 		CPLDirect.delete_std_vector_cplxx_property_entry_tp(vp)
 		return l
 
-		def prefixes(self, prefix):
+	def prefixes(self, prefix):
 		'''
 		Return all the prefixes associated with the current bundle.
 
