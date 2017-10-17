@@ -77,10 +77,12 @@ public class CPLJsonUtility {
 	 * @param bundleName desired name of document bundle
 	 * @param anchorObjects map of CPLObject, name pairs matching a stored object to
 	 *                      an object name in the document
+	 * @param externObjects whether the document contains relations that reference
+	 *						external objects
 	 */
 
 	public static CPLBundle importJson(String json, 
-			String bundleName, Map<CPLObject, String> anchorObjects) {
+			String bundleName, Map<CPLObject, String> anchorObjects, boolean externObjects) {
 
 		cplxx_id_name_pair_vector anchorVector = new cplxx_id_name_pair_vector(anchorObjects.size());
 
@@ -90,14 +92,62 @@ public class CPLJsonUtility {
 			pos++;
 		}
 
+		int flags = (externObjects) ? CPLDirect.CPL_J_EXTERN_OBJ : 0;
+
 		BigInteger[] id = {nullId};
 		int r = CPLDirect.import_document_json(json, bundleName,
-									   anchorVector, id);
+									   anchorVector, flags, id);
 		CPLException.assertSuccess(r);
 		
 		CPLBundle o = new CPLBundle(id[0]);
 
 		return o;
+	}
+
+
+	/**
+	 * Import a Prov JSON document into Prov-CPL as a bundle. 
+	 * Does not verify correctness.
+	 * Currently supports only one anchor object and no bundles.
+	 *
+	 * @param json the JSON document as a string
+	 * @param bundleName desired name of document bundle
+	 * @param anchorObjects map of CPLObject, name pairs matching a stored object to
+	 *                      an object name in the document
+	 */
+
+	public static CPLBundle importJson(String json, 
+			String bundleName, Map<CPLObject, String> anchorObjects) {
+ 		return importJson(json, bundleName, anchorObjects, false);
+	}
+
+	/**
+	 * Import a Prov JSON document into Prov-CPL as a bundle. 
+	 * Does not verify correctness.
+	 * Currently supports only one anchor object and no bundles.
+	 *
+	 * @param json the JSON document as a string
+	 * @param bundleName desired name of document bundle
+	 * @param externObjects whether the document contains relations that reference
+	 *						external objects
+	 */
+
+	public static CPLBundle importJson(String json, 
+			String bundleName, boolean externObjects) {
+ 		return importJson(json, bundleName, null, externObjects);
+	}
+
+	/**
+	 * Import a Prov JSON document into Prov-CPL as a bundle. 
+	 * Does not verify correctness.
+	 * Currently supports only one anchor object and no bundles.
+	 *
+	 * @param json the JSON document as a string
+	 * @param bundleName desired name of document bundle
+	 */
+
+	public static CPLBundle importJson(String json, String bundleName) {
+ 		return importJson(json, bundleName, null, false);
 	}
 
 	/**

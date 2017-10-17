@@ -1800,7 +1800,8 @@ import_objects_json(const int type,
  */
 cpl_return_t
 import_relations_json(const cpl_id_t bundle_id,
-					  json& document)
+					  json& document,
+					  const int extern_obj_f)
 {
 	for(int i=0; i<CPL_NUM_R_TYPES; i++){
 		prov_relation_data_t entry = rdata_array[i];
@@ -1812,23 +1813,41 @@ import_relations_json(const cpl_id_t bundle_id,
 
 			token_pair_t pair = name_to_tokens(it.value()[entry.source_str]);
 
-			if(!CPL_IS_OK(cpl_lookup_object(pair.first.c_str(), 
-											pair.second.c_str(),
-											entry.source_t,
-											bundle_id,
-											&source))){
-				std::cout << "lookup source failed" << pair.first << ":" << pair.second << std::endl;
+			int r = cpl_lookup_object(pair.first.c_str(), 
+								  	 pair.second.c_str(),
+						    	   	 entry.source_t,
+								 	 bundle_id,
+								  	 &source);
+
+			if(r == CPL_E_NOT_FOUND && extern_obj_f){
+				if(!CPL_IS_OK(cpl_lookup_object(pair.first.c_str(), 
+												pair.second.c_str(),
+												entry.source_t,
+												CPL_NONE,
+												&source))){
+					return CPL_E_INTERNAL_ERROR;
+				}				
+			} else if(!CPL_IS_OK(r)){
 				return CPL_E_INTERNAL_ERROR;
 			}
 
 			pair = name_to_tokens(it.value()[entry.dest_str]);
 
-			if(!CPL_IS_OK(cpl_lookup_object(pair.first.c_str(), 
-											pair.second.c_str(),
-											entry.dest_t,
-											bundle_id,
-											&dest))){
-				std::cout << "lookup dest failed" << pair.first << ":" << pair.second << std::endl;
+			r = cpl_lookup_object(pair.first.c_str(), 
+								  pair.second.c_str(),
+						       	  entry.dest_t,
+								  bundle_id,
+								  &dest);
+
+			if(r == CPL_E_NOT_FOUND && extern_obj_f){
+				if(!CPL_IS_OK(cpl_lookup_object(pair.first.c_str(), 
+												pair.second.c_str(),
+												entry.dest_t,
+												CPL_NONE,
+												&dest))){
+					return CPL_E_INTERNAL_ERROR;
+				}				
+			} else if(!CPL_IS_OK(r)){
 				return CPL_E_INTERNAL_ERROR;
 			}
 
@@ -1863,6 +1882,7 @@ import_relations_json(const cpl_id_t bundle_id,
  * @param json_string the JSON document as a string
  * @param bundle_name desired name of document bundle
  * @param anchor_object optional PROV-CPL object identical to an object in the document
+ * @param flags a logical combination of CPL_J_* flags
  * @param out_id the ID of the imported bundle
  * @return CPL_OK or an error code
  */
@@ -1870,9 +1890,11 @@ EXPORT cpl_return_t
 import_document_json(const std::string& json_string,
 					 const std::string& bundle_name,
 					 const std::vector<std::pair<cpl_id_t, std::string>>& anchor_objects,
+					 const int flags,
 					 cpl_id_t* out_id)
 {
 	json document = json::parse(json_string);
+	int extern_obj_f = (flags && CPL_J_EXTERN_OBJ) ? 1 : 0;
 
 	if(document == NULL || document.empty()){
 		return CPL_E_INTERNAL_ERROR;
@@ -1914,10 +1936,10 @@ import_document_json(const std::string& json_string,
 		}
 	}
 
-	if(!CPL_IS_OK(import_relations_json(bundle_id, document))){
+	if(!CPL_IS_OK(import_relations_json(bundle_id, document, extern_obj_f))){
 		goto error;
 	}
-
+	
 	if (out_id != NULL) *out_id = bundle_id;
 
 	return CPL_OK;

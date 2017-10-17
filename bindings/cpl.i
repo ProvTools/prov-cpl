@@ -271,6 +271,7 @@ cpl_return_t
 import_document_json(const char* filename,
                      const char* bundle_name,
                      const std::vector<std::pair<cpl_id_t, std::string>>& anchor_objects,
+                     const int flags,
                      unsigned long long* OUTPUT);
 
 /*

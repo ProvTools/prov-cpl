@@ -545,7 +545,7 @@ extern cpl_session_t cpl_session;
  */
 #define CPL_D_DESCENDANTS				1
 
-
+#define CPL_J_EXTERN_OBJ				(1 << 0)
 /***************************************************************************/
 /** Initialization and Cleanup                                            **/
 /***************************************************************************/

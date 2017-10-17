@@ -348,6 +348,7 @@ validate_json(const std::string& json_string,
  * @param bundle_name desired name of document bundle, must be unique
  * @param anchor_objects optional vector of ID string pairs that match
  *		                 objects in the database with objects in the document
+ * @param flags a logical combination of CPL_J_* flags
  * @param out_id the ID of the imported bundle
  * @return CPL_OK or an error code
  */
@@ -355,6 +356,7 @@ EXPORT cpl_return_t
 import_document_json(const std::string& json_string,
 					 const std::string& bundle_name,
 					 const std::vector<std::pair<cpl_id_t, std::string>>& anchor_objects,
+					 const int flags,
 					 cpl_id_t* out_id);
 
 

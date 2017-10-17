@@ -115,6 +115,7 @@ E_INVALID_JSON = CPLDirect.CPL_E_INVALID_JSON
 L_NO_FAIL = CPLDirect.CPL_L_NO_FAIL
 I_NO_CREATION_SESSION = CPLDirect.CPL_I_NO_CREATION_SESSION
 I_FAST = CPLDirect.CPL_I_FAST
+J_EXTERN_OBJ = CPLDirect.CPL_J_EXTERN_OBJ
 D_ANCESTORS = CPLDirect.CPL_D_ANCESTORS
 D_DESCENDANTS = CPLDirect.CPL_D_DESCENDANTS
 
@@ -705,7 +706,7 @@ class cpl_connection:
 
 
 	def import_document_json(self, json,
-			bundle_name, anchor_objects):
+			bundle_name, anchor_objects = None, flags = 0):
 		'''
 		Imports a Prov-JSON document into the CPL as a bundle.
 
@@ -714,7 +715,7 @@ class cpl_connection:
 			prefix
 			bundle_name
 			anchor_objects: a list of cpl_object, name tuples, can be None
-			bundle_agent: the agent responsible for uploading the bundle, can be None
+			flags: a logical combination of CPL_J_* flags
 		'''
 		if anchor_objects == None:
 			id_name_vector = CPLDirect.cplxx_id_name_pair_vector()
@@ -722,7 +723,7 @@ class cpl_connection:
 			id_name_pairs = [(entry.get(0).id, entry.get(1)) for entry in anchor_objects]
 			id_name_vector = CPLDirect.cplxx_id_name_pair_vector(id_name_pairs)
 		ret, idp = CPLDirect.import_document_json(json, bundle_name,
-			  id_name_vector)
+			  id_name_vector, flags)
 		if not CPLDirect.cpl_is_ok(ret): 
 			raise Exception('Error importing document:' +
 					CPLDirect.cpl_error_string(ret))
