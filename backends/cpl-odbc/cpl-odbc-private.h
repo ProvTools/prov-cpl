@@ -89,300 +89,339 @@ typedef struct {
 	/**
 	 * Lock for session creation
 	 */
+	sem_t create_session_sem;
 	mutex_t create_session_lock;
 
 	/**
 	 * The insert statement for session creation
 	 */
-	SQLHSTMT create_session_insert_stmt;
+	SQLHSTMT* create_session_stmts;
 
 	/**
 	 * Lock for object creation
 	 */
+	sem_t create_object_sem;
 	mutex_t create_object_lock;
 
 	/**
 	 * The insert statement for object creation
 	 */
-	SQLHSTMT create_object_insert_stmt;
+	SQLHSTMT* create_object_stmts;
 
 	/**
 	 * The lock for lookup_object
 	 */
+	sem_t lookup_object_sem;
 	mutex_t lookup_object_lock;
-
+	sem_t lookup_object_nt_sem;
+	mutex_t lookup_object_nt_lock;
+	sem_t lookup_object_nb_sem;
+	mutex_t lookup_object_nb_lock;
+	sem_t lookup_object_ntnb_sem;
+	mutex_t lookup_object_ntnb_lock;
 	/**
 	 * The statements for looking up an object by name and originator
 	 * and optionally type and bundle_id
 	 */
-	SQLHSTMT lookup_object_stmt;
-	SQLHSTMT lookup_object_nt_stmt;
-	SQLHSTMT lookup_object_nb_stmt;
-	SQLHSTMT lookup_object_ntnb_stmt;
+	SQLHSTMT* lookup_object_stmts;
+	SQLHSTMT* lookup_object_nt_stmts;
+	SQLHSTMT* lookup_object_nb_stmts;
+	SQLHSTMT* lookup_object_ntnb_stmts;
 
 	/**
 	 * The lock for lookup_object_ext
 	 */
+	sem_t lookup_object_ext_sem;
 	mutex_t lookup_object_ext_lock;
+	sem_t lookup_object_nt_ext_sem;
+	mutex_t lookup_object_nt_ext_lock;
+	sem_t lookup_object_nb_ext_sem;
+	mutex_t lookup_object_nb_ext_lock;
+	sem_t lookup_object_ntnb_ext_sem;
+	mutex_t lookup_object_ntnb_ext_lock;
 
 	/**
 	 * The statements for looking up objects by name and originator
 	 * and optionally type and bundle_id
 	 */
-	SQLHSTMT lookup_object_ext_stmt;
-	SQLHSTMT lookup_object_nt_ext_stmt;
-	SQLHSTMT lookup_object_nb_ext_stmt;
-	SQLHSTMT lookup_object_ntnb_ext_stmt;
+	SQLHSTMT* lookup_object_ext_stmts;
+	SQLHSTMT* lookup_object_nt_ext_stmts;
+	SQLHSTMT* lookup_object_nb_ext_stmts;
+	SQLHSTMT* lookup_object_ntnb_ext_stmts;
 
 	/**
 	 * The lock for add_relation_edge
 	 */
+	sem_t add_relation_sem;
 	mutex_t add_relation_lock;
 
 	/**
 	 * The statement that adds a new relation
 	 */
-	SQLHSTMT add_relation_stmt;
+	SQLHSTMT* add_relation_stmts;
 
 	/**
 	 * Lock for bundle creation
 	 */
+	sem_t create_bundle_sem;
 	mutex_t create_bundle_lock;
 
 	/**
 	 * The insert statement for object creation - with bundle
 	 */
-	SQLHSTMT create_bundle_stmt;
+	SQLHSTMT* create_bundle_stmts;
 
 	/**
 	 * The lock for lookup_bundle
 	 */
+	sem_t lookup_bundle_sem;
 	mutex_t lookup_bundle_lock;
 
 	/**
 	 * The statement for looking up a bundle
 	 */
-	SQLHSTMT lookup_bundle_stmt;
+	SQLHSTMT* lookup_bundle_stmts;
 	/**
 	 * The lock for lookup_object_ext
 	 */
+	sem_t lookup_bundle_ext_sem;
 	mutex_t lookup_bundle_ext_lock;
 
 	/**
 	 * The statement for looking up bundles
 	 */
-	SQLHSTMT lookup_bundle_ext_stmt;
+	SQLHSTMT* lookup_bundle_ext_stmts;
 
 	/**
 	 * The lock for add_object_property
 	 */
+	sem_t add_object_property_sem;
 	mutex_t add_object_property_lock;
 
 	/**
 	 * The statement that adds a new object property
 	 */
-	SQLHSTMT add_object_property_stmt;
+	SQLHSTMT* add_object_property_stmts;
 
 	/**
 	* The lock for add_relation_property
 	*/
+	sem_t add_relation_property_sem;
 	mutex_t add_relation_property_lock;
 
 	/**
 	* The statement that adds a new relation property
 	*/
-	SQLHSTMT add_relation_property_stmt;
+	SQLHSTMT* add_relation_property_stmts;
 
 	/**
 	* The lock for add_bundle_property
 	*/
+	sem_t add_bundle_property_sem;
 	mutex_t add_bundle_property_lock;
 
 	/**
 	* The statement that adds a new bundle property
 	*/
-	SQLHSTMT add_bundle_property_stmt;
+	SQLHSTMT* add_bundle_property_stmts;
 
 	/**
 	* The lock for add_prefix
 	*/
+	sem_t add_prefix_sem;
 	mutex_t add_prefix_lock;
 
 	/**
 	* The statement that adds a new prefix
 	*/
-	SQLHSTMT add_prefix_stmt;
+	SQLHSTMT* add_prefix_stmt;
 
-	/**
+	/*s*
 	 * The lock for get_session_info
 	 */
+	sem_t get_session_info_sem;
 	mutex_t get_session_info_lock;
 
 	/**
 	 * The statement that returns information about a provenance session
 	 */
-	SQLHSTMT get_session_info_stmt;
+	SQLHSTMT* get_session_info_stmts;
 
 	/**
 	 * The lock for get_all_objects
 	 */
+	sem_t get_all_objects_sem;
 	mutex_t get_all_objects_lock;
 
 	/**
 	 * The statement that returns information about all provenance objects
 	 */
-	SQLHSTMT get_all_objects_stmt;
-
-	/**
-	 * The statement that returns information about all provenance objects,
-     * including the creation session
-	 */
-	SQLHSTMT get_all_objects_with_session_stmt;
+	SQLHSTMT* get_all_objects_stmts;
 
 	/**
 	 * The lock for get_object_info
 	 */
+	sem_t get_object_info_sem;
 	mutex_t get_object_info_lock;
 
 	/**
 	 * The statement that returns information about a provenance object
 	 */
-	SQLHSTMT get_object_info_stmt;
+	SQLHSTMT* get_object_info_stmts;
 
 	/**
 	 * The mutex for get_object_relations
 	 */
-	mutex_t get_object_relations_lock;
-
+	sem_t get_object_ancestors_sem;
+	mutex_t get_object_ancestors_lock;
+	sem_t get_object_descendants_sem;
+	mutex_t get_object_descendants_lock;
 	/**
 	 * The statement for listing ancestors
 	 */
-	SQLHSTMT get_object_ancestors_stmt;
+	SQLHSTMT* get_object_ancestors_stmts;
 
 	/**
 	 * The statement for listing descendants
 	 */
-	SQLHSTMT get_object_descendants_stmt;
+	SQLHSTMT* get_object_descendants_stmts;
 
 	/**
 	 * The mutex for get_object_properties
 	 */
+	sem_t get_object_properties_sem;
 	mutex_t get_object_properties_lock;
+	sem_t get_object_properties_with_key_sem;
+	mutex_t get_object_properties_with_key_lock;
 
 	/**
 	 * The statement for listing object properties
 	 */
-	SQLHSTMT get_object_properties_stmt;
+	SQLHSTMT* get_object_properties_stmts;
 
 	/**
 	 * The statement for listing specific object properties
 	 */
-	SQLHSTMT get_object_properties_with_key_stmt;
+	SQLHSTMT* get_object_properties_with_key_stmts;
 
 	/**
 	 * The mutex for lookup_object_by_property
 	 */
+	sem_t lookup_object_by_property_sem;
 	mutex_t lookup_object_by_property_lock;
 
 	/**
 	 * The statement for looking up by a property value
 	 */
-	SQLHSTMT lookup_object_by_property_stmt;
+	SQLHSTMT* lookup_object_by_property_stmts;
 
 	/**
 	* The mutex for get_relation_properties
 	*/
+	sem_t get_relation_properties_sem;
 	mutex_t get_relation_properties_lock;
+	sem_t get_relation_properties_with_key_sem;
+	mutex_t get_relation_properties_with_key_lock;
 
 	/**
 	* The statement for listing object properties
 	*/
-	SQLHSTMT get_relation_properties_stmt;
+	SQLHSTMT* get_relation_properties_stmts;
 
 	/**
 	* The statement for listing specific object properties
 	*/
-	SQLHSTMT get_relation_properties_with_key_stmt;
+	SQLHSTMT* get_relation_properties_with_key_stmts;
 	
 	/**
 	* The mutex for has_immediate_ancestor
 	*/
+	sem_t has_immediate_ancestor_sem;
 	mutex_t has_immediate_ancestor_lock;
 
 	/**
 	* The statement for determining whether an object has a particular ancestor
 	*/
-	SQLHSTMT has_immediate_ancestor_stmt;
+	SQLHSTMT* has_immediate_ancestor_stmts;
 
 	/**
 	* The mutex for delete_bundle
 	*/
+	sem_t delete_bundle_sem;
 	mutex_t delete_bundle_lock;
 
 	/**
 	* The statement for deleting a bundle
 	*/
-	SQLHSTMT delete_bundle_stmt;
+	SQLHSTMT* delete_bundle_stmts;
 
 	/**
 	 * The lock for get_bundle_info
 	 */
+	sem_t get_bundle_info_sem;
 	mutex_t get_bundle_info_lock;
 
 	/**
 	 * The statement that returns information about a provenance bundle
 	 */
-	SQLHSTMT get_bundle_info_stmt;
+	SQLHSTMT* get_bundle_info_stmts;
 	
 	/**
 	* The mutex for get_bundle_objects
 	*/
+	sem_t get_bundle_objects_sem;
 	mutex_t get_bundle_objects_lock;
 
 	/**
 	* The statement for getting bundle objects
 	*/
-	SQLHSTMT get_bundle_objects_stmt;
+	SQLHSTMT* get_bundle_objects_stmts;
 
 	/**
 	* The mutex for get_bundle_relations
 	*/
+	sem_t get_bundle_relations_sem;
 	mutex_t get_bundle_relations_lock;
 
 	/**
 	* The statement for getting bundle relations
 	*/
-	SQLHSTMT get_bundle_relations_stmt;
+	SQLHSTMT* get_bundle_relations_stmts;
 
 	/**
 	* The mutex for get_bundle_properties
 	*/
+	sem_t get_bundle_properties_sem;
 	mutex_t get_bundle_properties_lock;
-
+	sem_t get_bundle_properties_with_key_sem;
+	mutex_t get_bundle_properties_with_key_lock;
 	/**
 	* The statement for getting bundle properties
 	*/
-	SQLHSTMT get_bundle_properties_stmt;
+	SQLHSTMT* get_bundle_properties_stmts;
 
 	/**
 	* The statement for listing specific bundle properties
 	*/
-	SQLHSTMT get_bundle_properties_with_key_stmt;
+	SQLHSTMT* get_bundle_properties_with_key_stmts;
 
 	/**
 	* The mutex for get_prefixes
 	*/
+	sem_t get_prefixes_sem;
 	mutex_t get_prefixes_lock;
+	sem_t get_prefixes_with_key_sem;
+	mutex_t get_prefixes_with_key_lock;
 
 	/**
 	* The statement for getting prefixes
 	*/
-	SQLHSTMT get_prefixes_stmt;
+	SQLHSTMT* get_prefixes_stmts;
 
 	/**
 	* The statement for listing specific bundle prefixes
 	*/
-	SQLHSTMT get_prefixes_with_key_stmt;
+	SQLHSTMT* get_prefixes_with_key_stmts;
 
 } cpl_odbc_t;
 

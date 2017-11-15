@@ -157,9 +157,6 @@ typedef struct cpl_object_info {
 	/// The object ID.
 	cpl_id_t id;
 
-	/// The session ID of the process that created the object
-	cpl_session_t creation_session;
-
 	/// The object creation time expressed as UNIX time.
 	unsigned long creation_time;
 

@@ -212,12 +212,12 @@ def p_id(id, with_newline = False):
 		sys.stdout.write('\n')
 
 
-def p_object(obj, with_session = False):
+def p_object(obj):
 	'''
 	Print information about an object
 
 	Method calls:
-			p_object(obj, with_session = False)
+			p_object(obj)
 	'''
 
 	i = obj.info()
@@ -228,9 +228,7 @@ def p_object(obj, with_session = False):
 		sys.stdout.write(' bundle_id:' + str(i.bundle) + ' ')
 	else:
 		sys.stdout.write(' bundle_id:none ')
-	if with_session:
-		print 'creation_time:' + str(i.creation_time)
-		p_session(i.creation_session)
+	print 'creation_time:' + str(i.creation_time)
 	print
 
 
@@ -520,12 +518,8 @@ class cpl_connection:
 					bundle = None
 				else:
 					bundle = cpl_object(e.bundle_id)
-				if e.creation_session == NONE:
-					creation_session = None
-				else:
-					creation_session = cpl_session(e.creation_session)
 				l.append(cpl_object_info(cpl_object(e.id),
-					creation_session, e.creation_time, e.prefix, e.name,
+					e.creation_time, e.prefix, e.name,
 					e.type, bundle))
 
 		CPLDirect.delete_std_vector_cplxx_object_info_tp(vp)
@@ -863,14 +857,13 @@ class cpl_object_info:
 	Information about a provenance object
 	'''
 
-	def __init__(self, object, creation_session, creation_time,
+	def __init__(self, object, creation_time,
 			prefix, name, type, bundle):
 		'''
 		Create an instance of this object
 		'''
 
 		self.object = object
-		self.creation_session = creation_session
 		self.creation_time = creation_time
 		self.prefix = prefix
 		self.name = name
@@ -981,7 +974,7 @@ class cpl_object:
 			bundle = cpl_bundle(object.bundle_id)
 
 		_info = cpl_object_info(self,
-				cpl_session(object.creation_session), object.creation_time,
+				object.creation_time,
 				object.prefix, object.name, object.type, bundle)
 
 		CPLDirect.cpl_free_object_info(op)

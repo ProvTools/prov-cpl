@@ -81,9 +81,6 @@ public class CPLObject {
 	/// The creation time (cache)
 	private long creationTime = 0;
 
-	/// The creation session (cache)
-	private CPLSession creationSession = null;
-
 	/// Whether the object creation information is known
 	private boolean knowCreationInfo = false;
 
@@ -380,13 +377,6 @@ public class CPLObject {
 
 			bundleId = info.getBundle_id();
 
-			BigInteger creationSessionId = info.getCreation_session();
-			if (CPL.isNone(creationSessionId)) {
-				creationSession = null;		// This should never happen!
-			}
-			else {
-				creationSession = new CPLSession(creationSessionId);
-			}
 			creationTime = info.getCreation_time();
 
 			knowCreationInfo = true;
@@ -454,18 +444,6 @@ public class CPLObject {
 		return bundleId;
 	}
 
-
-	/**
-	 * Get the session that created this object
-	 *
-	 * @return the session that created this object
-	 */
-	public CPLSession getCreationSession() {
-		if (!knowCreationInfo) fetchInfo();
-		return creationSession;
-	}
-
-
 	/**
 	 * Get the creation time of this object
 	 *
@@ -506,10 +484,6 @@ public class CPLObject {
 
 			sb.append("bundle ID        : ");
 			sb.append(getbundleId());
-			sb.append("\n");
-
-			sb.append("Creation session    : ");
-			sb.append(getCreationSession());
 			sb.append("\n");
 
 			sb.append("Creation time       : ");

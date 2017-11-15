@@ -485,7 +485,6 @@ cpl_create_object(const char* prefix,
 											   name,
 											   type,
 											   bundle,
-											   cpl_session,
 											   &id);
 	CPL_RUNTIME_VERIFY(ret);
 
@@ -1347,7 +1346,6 @@ cpl_cb_collect_object_info_vector(const cpl_object_info_t* info,
 
 	cplxx_object_info_t e;
 	e.id = info->id;
-	e.creation_session = info->creation_session;
     e.creation_time = info->creation_time;
     e.prefix = info->prefix;
     e.name = info->name;

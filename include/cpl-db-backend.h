@@ -102,7 +102,6 @@ typedef struct _cpl_db_backend_t {
 							const char* name,
 							const int type,
 							const cpl_id_t bundle,
-							const cpl_session_t session,
 							cpl_id_t* out_id);
 
 	/**

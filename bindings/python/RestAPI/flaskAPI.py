@@ -8,7 +8,6 @@ app = Flask(__name__)
 def serialize_object_info(obj):
     return {
         'id': obj.object.id, 
-        'creation_session': obj.creation_session,
         'creation_time': obj.creation_time,
         'prefix': obj.prefix,
         'name': obj.name,

@@ -88,10 +88,7 @@ CREATE TABLE IF NOT EXISTS cpl_objects (
        type INT,
        creation_time TIMESTAMP DEFAULT NOW(),
        bundle_id BIGINT,
-       session_id BIGINT,
        PRIMARY KEY(id),
-       FOREIGN KEY(session_id)
-                   REFERENCES cpl_sessions(id),
        FOREIGN KEY(bundle_id)
                    REFERENCES cpl_bundles(id)
                    ON DELETE CASCADE);
@@ -152,7 +149,7 @@ INSERT INTO cpl_sessions (id, mac_address, username, pid, program, cmdline)
   VALUES (0, NULL, NULL, NULL, NULL, NULL);
 INSERT INTO cpl_bundles (id, name, session_id)
   VALUES (0, NULL, NULL);
-INSERT INTO cpl_objects (id, prefix, name, type, bundle_id, session_id)
+INSERT INTO cpl_objects (id, prefix, name, type, bundle_id)
   VALUES (0, NULL, NULL, NULL, NULL, NULL);
 INSERT INTO cpl_relations (id, from_id, to_id, type, bundle_id)
   VALUES (0, NULL, NULL, NULL, NULL);

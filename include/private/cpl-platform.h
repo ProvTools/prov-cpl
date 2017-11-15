@@ -36,7 +36,7 @@
 #define __CPL_PRIVATE_PLATFORM_H__
 
 #include <pthread.h>
-
+#include <semaphore.h>
 
 
 /***************************************************************************/
@@ -75,6 +75,7 @@ typedef pthread_mutex_t mutex_t;
  * @param m the mutex
  */
 #define mutex_unlock(m) pthread_mutex_unlock(&(m));
+
 
 
 
