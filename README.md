@@ -223,6 +223,6 @@ The bindings currently only implement basic JSON document handling.
 
 * Expand R bindings to full library support
 * Add MySQL and RDF database backends
-* Improve query tool with CIPHER
+* Improve querying with CypherToSQL tool
 
 
