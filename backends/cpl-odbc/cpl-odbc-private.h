@@ -89,7 +89,7 @@ typedef struct {
 	/**
 	 * Lock for session creation
 	 */
-	sem_t create_session_sem;
+	sema_t create_session_sem;
 	mutex_t create_session_lock;
 
 	/**
@@ -100,7 +100,7 @@ typedef struct {
 	/**
 	 * Lock for object creation
 	 */
-	sem_t create_object_sem;
+	sema_t create_object_sem;
 	mutex_t create_object_lock;
 
 	/**
@@ -111,13 +111,13 @@ typedef struct {
 	/**
 	 * The lock for lookup_object
 	 */
-	sem_t lookup_object_sem;
+	sema_t lookup_object_sem;
 	mutex_t lookup_object_lock;
-	sem_t lookup_object_nt_sem;
+	sema_t lookup_object_nt_sem;
 	mutex_t lookup_object_nt_lock;
-	sem_t lookup_object_nb_sem;
+	sema_t lookup_object_nb_sem;
 	mutex_t lookup_object_nb_lock;
-	sem_t lookup_object_ntnb_sem;
+	sema_t lookup_object_ntnb_sem;
 	mutex_t lookup_object_ntnb_lock;
 	/**
 	 * The statements for looking up an object by name and originator
@@ -131,13 +131,13 @@ typedef struct {
 	/**
 	 * The lock for lookup_object_ext
 	 */
-	sem_t lookup_object_ext_sem;
+	sema_t lookup_object_ext_sem;
 	mutex_t lookup_object_ext_lock;
-	sem_t lookup_object_nt_ext_sem;
+	sema_t lookup_object_nt_ext_sem;
 	mutex_t lookup_object_nt_ext_lock;
-	sem_t lookup_object_nb_ext_sem;
+	sema_t lookup_object_nb_ext_sem;
 	mutex_t lookup_object_nb_ext_lock;
-	sem_t lookup_object_ntnb_ext_sem;
+	sema_t lookup_object_ntnb_ext_sem;
 	mutex_t lookup_object_ntnb_ext_lock;
 
 	/**
@@ -152,7 +152,7 @@ typedef struct {
 	/**
 	 * The lock for add_relation_edge
 	 */
-	sem_t add_relation_sem;
+	sema_t add_relation_sem;
 	mutex_t add_relation_lock;
 
 	/**
@@ -163,7 +163,7 @@ typedef struct {
 	/**
 	 * Lock for bundle creation
 	 */
-	sem_t create_bundle_sem;
+	sema_t create_bundle_sem;
 	mutex_t create_bundle_lock;
 
 	/**
@@ -174,7 +174,7 @@ typedef struct {
 	/**
 	 * The lock for lookup_bundle
 	 */
-	sem_t lookup_bundle_sem;
+	sema_t lookup_bundle_sem;
 	mutex_t lookup_bundle_lock;
 
 	/**
@@ -184,7 +184,7 @@ typedef struct {
 	/**
 	 * The lock for lookup_object_ext
 	 */
-	sem_t lookup_bundle_ext_sem;
+	sema_t lookup_bundle_ext_sem;
 	mutex_t lookup_bundle_ext_lock;
 
 	/**
@@ -195,7 +195,7 @@ typedef struct {
 	/**
 	 * The lock for add_object_property
 	 */
-	sem_t add_object_property_sem;
+	sema_t add_object_property_sem;
 	mutex_t add_object_property_lock;
 
 	/**
@@ -206,7 +206,7 @@ typedef struct {
 	/**
 	* The lock for add_relation_property
 	*/
-	sem_t add_relation_property_sem;
+	sema_t add_relation_property_sem;
 	mutex_t add_relation_property_lock;
 
 	/**
@@ -217,7 +217,7 @@ typedef struct {
 	/**
 	* The lock for add_bundle_property
 	*/
-	sem_t add_bundle_property_sem;
+	sema_t add_bundle_property_sem;
 	mutex_t add_bundle_property_lock;
 
 	/**
@@ -228,18 +228,18 @@ typedef struct {
 	/**
 	* The lock for add_prefix
 	*/
-	sem_t add_prefix_sem;
+	sema_t add_prefix_sem;
 	mutex_t add_prefix_lock;
 
 	/**
 	* The statement that adds a new prefix
 	*/
-	SQLHSTMT* add_prefix_stmt;
+	SQLHSTMT* add_prefix_stmts;
 
 	/*s*
 	 * The lock for get_session_info
 	 */
-	sem_t get_session_info_sem;
+	sema_t get_session_info_sem;
 	mutex_t get_session_info_lock;
 
 	/**
@@ -250,7 +250,7 @@ typedef struct {
 	/**
 	 * The lock for get_all_objects
 	 */
-	sem_t get_all_objects_sem;
+	sema_t get_all_objects_sem;
 	mutex_t get_all_objects_lock;
 
 	/**
@@ -261,7 +261,7 @@ typedef struct {
 	/**
 	 * The lock for get_object_info
 	 */
-	sem_t get_object_info_sem;
+	sema_t get_object_info_sem;
 	mutex_t get_object_info_lock;
 
 	/**
@@ -272,9 +272,9 @@ typedef struct {
 	/**
 	 * The mutex for get_object_relations
 	 */
-	sem_t get_object_ancestors_sem;
+	sema_t get_object_ancestors_sem;
 	mutex_t get_object_ancestors_lock;
-	sem_t get_object_descendants_sem;
+	sema_t get_object_descendants_sem;
 	mutex_t get_object_descendants_lock;
 	/**
 	 * The statement for listing ancestors
@@ -289,9 +289,9 @@ typedef struct {
 	/**
 	 * The mutex for get_object_properties
 	 */
-	sem_t get_object_properties_sem;
+	sema_t get_object_properties_sem;
 	mutex_t get_object_properties_lock;
-	sem_t get_object_properties_with_key_sem;
+	sema_t get_object_properties_with_key_sem;
 	mutex_t get_object_properties_with_key_lock;
 
 	/**
@@ -307,7 +307,7 @@ typedef struct {
 	/**
 	 * The mutex for lookup_object_by_property
 	 */
-	sem_t lookup_object_by_property_sem;
+	sema_t lookup_object_by_property_sem;
 	mutex_t lookup_object_by_property_lock;
 
 	/**
@@ -318,9 +318,9 @@ typedef struct {
 	/**
 	* The mutex for get_relation_properties
 	*/
-	sem_t get_relation_properties_sem;
+	sema_t get_relation_properties_sem;
 	mutex_t get_relation_properties_lock;
-	sem_t get_relation_properties_with_key_sem;
+	sema_t get_relation_properties_with_key_sem;
 	mutex_t get_relation_properties_with_key_lock;
 
 	/**
@@ -336,7 +336,7 @@ typedef struct {
 	/**
 	* The mutex for has_immediate_ancestor
 	*/
-	sem_t has_immediate_ancestor_sem;
+	sema_t has_immediate_ancestor_sem;
 	mutex_t has_immediate_ancestor_lock;
 
 	/**
@@ -347,7 +347,7 @@ typedef struct {
 	/**
 	* The mutex for delete_bundle
 	*/
-	sem_t delete_bundle_sem;
+	sema_t delete_bundle_sem;
 	mutex_t delete_bundle_lock;
 
 	/**
@@ -358,7 +358,7 @@ typedef struct {
 	/**
 	 * The lock for get_bundle_info
 	 */
-	sem_t get_bundle_info_sem;
+	sema_t get_bundle_info_sem;
 	mutex_t get_bundle_info_lock;
 
 	/**
@@ -369,7 +369,7 @@ typedef struct {
 	/**
 	* The mutex for get_bundle_objects
 	*/
-	sem_t get_bundle_objects_sem;
+	sema_t get_bundle_objects_sem;
 	mutex_t get_bundle_objects_lock;
 
 	/**
@@ -380,7 +380,7 @@ typedef struct {
 	/**
 	* The mutex for get_bundle_relations
 	*/
-	sem_t get_bundle_relations_sem;
+	sema_t get_bundle_relations_sem;
 	mutex_t get_bundle_relations_lock;
 
 	/**
@@ -391,9 +391,9 @@ typedef struct {
 	/**
 	* The mutex for get_bundle_properties
 	*/
-	sem_t get_bundle_properties_sem;
+	sema_t get_bundle_properties_sem;
 	mutex_t get_bundle_properties_lock;
-	sem_t get_bundle_properties_with_key_sem;
+	sema_t get_bundle_properties_with_key_sem;
 	mutex_t get_bundle_properties_with_key_lock;
 	/**
 	* The statement for getting bundle properties
@@ -408,9 +408,9 @@ typedef struct {
 	/**
 	* The mutex for get_prefixes
 	*/
-	sem_t get_prefixes_sem;
+	sema_t get_prefixes_sem;
 	mutex_t get_prefixes_lock;
-	sem_t get_prefixes_with_key_sem;
+	sema_t get_prefixes_with_key_sem;
 	mutex_t get_prefixes_with_key_lock;
 
 	/**

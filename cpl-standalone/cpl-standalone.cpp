@@ -1761,6 +1761,7 @@ cpl_return_t
 import_objects_json(const int type,
 					const std::string& type_str,
 					const cpl_id_t bundle_id,
+					std::map<std::string, cpl_id_t>& lookup_tbl,
 					json& document)
 {
 	json o = document[type_str];
@@ -1774,6 +1775,8 @@ import_objects_json(const int type,
 		if(!CPL_IS_OK(cpl_create_object(pair.first.c_str(), pair.second.c_str(), type, bundle_id, &obj_id))){
 			return CPL_E_INTERNAL_ERROR;
 		}
+
+		lookup_tbl.emplace(it.key(), obj_id);
 
 		json properties = it.value();
 		for (json::iterator it2 = properties.begin(); it2 != properties.end(); ++it2){
@@ -1798,6 +1801,7 @@ import_objects_json(const int type,
  */
 cpl_return_t
 import_relations_json(const cpl_id_t bundle_id,
+					  const std::map<std::string, cpl_id_t>& lookup_tbl,
 					  json& document,
 					  const int extern_obj_f)
 {
@@ -1808,16 +1812,16 @@ import_relations_json(const cpl_id_t bundle_id,
 		for (json::iterator it = relations.begin(); it != relations.end(); ++it) {
 
 			cpl_id_t source, dest, relation_id;
+			token_pair_t pair;
+			std::string obj_name = it.value()[entry.source_str];
 
-			token_pair_t pair = name_to_tokens(it.value()[entry.source_str]);
+			auto tbl_it = lookup_tbl.find(obj_name);
 
-			int r = cpl_lookup_object(pair.first.c_str(), 
-								  	 pair.second.c_str(),
-						    	   	 entry.source_t,
-								 	 bundle_id,
-								  	 &source);
+			if( tbl_it != lookup_tbl.end()){
+				source = tbl_it->second;
+			} else if(extern_obj_f){
+				pair = name_to_tokens(obj_name);
 
-			if(r == CPL_E_NOT_FOUND && extern_obj_f){
 				if(!CPL_IS_OK(cpl_lookup_object(pair.first.c_str(), 
 												pair.second.c_str(),
 												entry.source_t,
@@ -1825,19 +1829,19 @@ import_relations_json(const cpl_id_t bundle_id,
 												&source))){
 					return CPL_E_INTERNAL_ERROR;
 				}				
-			} else if(!CPL_IS_OK(r)){
+			} else {
 				return CPL_E_INTERNAL_ERROR;
 			}
 
-			pair = name_to_tokens(it.value()[entry.dest_str]);
+			obj_name = it.value()[entry.dest_str];
 
-			r = cpl_lookup_object(pair.first.c_str(), 
-								  pair.second.c_str(),
-						       	  entry.dest_t,
-								  bundle_id,
-								  &dest);
+			tbl_it = lookup_tbl.find(obj_name);
 
-			if(r == CPL_E_NOT_FOUND && extern_obj_f){
+			if( tbl_it != lookup_tbl.end()){
+				dest = tbl_it->second;
+			} else if(extern_obj_f){
+				pair = name_to_tokens(obj_name);
+
 				if(!CPL_IS_OK(cpl_lookup_object(pair.first.c_str(), 
 												pair.second.c_str(),
 												entry.dest_t,
@@ -1845,7 +1849,7 @@ import_relations_json(const cpl_id_t bundle_id,
 												&dest))){
 					return CPL_E_INTERNAL_ERROR;
 				}				
-			} else if(!CPL_IS_OK(r)){
+			} else {
 				return CPL_E_INTERNAL_ERROR;
 			}
 
@@ -1898,6 +1902,8 @@ import_document_json(const std::string& json_string,
 		return CPL_E_INTERNAL_ERROR;
 	}
 
+ 	std::map<std::string, cpl_id_t> lookup_tbl;
+
 	// Create bundle
 	cpl_id_t bundle_id;
 	if(!CPL_IS_OK(cpl_create_bundle(bundle_name.c_str(), &bundle_id))){
@@ -1907,15 +1913,14 @@ import_document_json(const std::string& json_string,
 	if(!CPL_IS_OK(import_bundle_prefixes_json(bundle_id, document))){
 		goto error;
 	}
-
 	// Import objects
-	if(!CPL_IS_OK(import_objects_json(CPL_ENTITY, CPL_ENTITY_STR, bundle_id, document))){
+	if(!CPL_IS_OK(import_objects_json(CPL_ENTITY, CPL_ENTITY_STR, bundle_id, lookup_tbl, document))){
 		goto error;
 	}
-	if(!CPL_IS_OK(import_objects_json(CPL_AGENT, CPL_AGENT_STR, bundle_id, document))){
+	if(!CPL_IS_OK(import_objects_json(CPL_AGENT, CPL_AGENT_STR, bundle_id, lookup_tbl, document))){
 		goto error;
 	}
-	if(!CPL_IS_OK(import_objects_json(CPL_ACTIVITY, CPL_ACTIVITY_STR, bundle_id, document))){
+	if(!CPL_IS_OK(import_objects_json(CPL_ACTIVITY, CPL_ACTIVITY_STR, bundle_id, lookup_tbl, document))){
 		goto error;
 	}
 
@@ -1934,7 +1939,7 @@ import_document_json(const std::string& json_string,
 		}
 	}
 
-	if(!CPL_IS_OK(import_relations_json(bundle_id, document, extern_obj_f))){
+	if(!CPL_IS_OK(import_relations_json(bundle_id, lookup_tbl, document, extern_obj_f))){
 		goto error;
 	}
 	

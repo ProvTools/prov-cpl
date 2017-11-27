@@ -576,7 +576,7 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 	// Allocate the statement handles
 
 #define ALLOC_STMT(handle) { \
-	odbc->handle = malloc(CPL_STMT_MAX * sizeof(SQLHSTMT)); \
+	odbc->handle = (SQLHSTMT *) malloc(CPL_STMT_MAX * sizeof(SQLHSTMT)); \
 	for(int i = 0; i < CPL_STMT_MAX; i++){ \
 		SQLAllocHandle(SQL_HANDLE_STMT, odbc->db_connection, &odbc->handle[i]); \
 	}}
@@ -634,14 +634,14 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 			goto err_stmts; \
 	}}}
 
-	PREPARE(create_session_insert_stmts,
+	PREPARE(create_session_stmts,
 			"INSERT INTO cpl_sessions"
 			"            (id, mac_address, username, pid, program,"
 			"             cmdline)"
 			"     VALUES (DEFAULT, ?, ?, ?, ?, ?)"
 			"   RETURNING id;");
 
-	PREPARE(create_object_insert_stmts,
+	PREPARE(create_object_stmts,
 			"INSERT INTO cpl_objects"
 			"            (id, prefix, name, type,"
 			"             bundle_id)"
@@ -902,9 +902,9 @@ cpl_odbc_reconnect(cpl_odbc_t* odbc)
 }
 
 static SQLHSTMT
-cpl_acquire_stmt(sem_t semaphore, mutex_t mutex. SQLHSTMT* stmt_array){
-	sem_wait(&semaphore);
-
+cpl_acquire_stmt(sema_t semaphore, mutex_t mutex, SQLHSTMT* stmt_array){
+	
+	sema_wait(semaphore);
 	mutex_lock(mutex);
 
 	for(int i=0;i<CPL_STMT_MAX;i++){
@@ -916,32 +916,32 @@ cpl_acquire_stmt(sem_t semaphore, mutex_t mutex. SQLHSTMT* stmt_array){
 		}
 	}
 	mutex_unlock(mutex);
-	sem_post(&semaphore)
+	sema_post(semaphore);
 
 	return NULL;
 }
 
 static void
-cpl_release_stmt(sem_t semaphore, mutex_t mutex, SQLHSTMT* stmt_array, SQLHSTMT stmt){
+cpl_release_stmt(sema_t semaphore, mutex_t mutex, SQLHSTMT* stmt_array, SQLHSTMT stmt){
 
 	mutex_lock(mutex);
 
 	for(int i=0;i<CPL_STMT_MAX;i++){
 		if(stmt_array[i]== NULL){
 			stmt_array[i] = stmt;
-			mutex_release(mutex);
-			sem_post(&semaphore);
+			mutex_unlock(mutex);
+			sema_post(semaphore);
 		}
 	}
-	mutex_release(mutex);
-	sem_post(&semaphore);
+	mutex_unlock(mutex);
+	sema_post(semaphore);
 }
 
 #define STMT_ACQUIRE(name) \
-	cpl_acquire_stmt(odbc-> ## name ## _sem, odbc-> ## name ## _lock, odbc-> ## name ## _stmts);
+	cpl_acquire_stmt(odbc->name ## _sem, odbc->name ## _lock, odbc->name ## _stmts);
 
 #define STMT_RELEASE(name, stmt) \
-	cpl_release_stmt(odbc-> ## name ## _sem, odbc-> ## name ## _lock, odbc-> ## name ## _stmts, stmt);
+	cpl_release_stmt(odbc->name ## _sem, odbc->name ## _lock, odbc->name ## _stmts, stmt);
 
 /***************************************************************************/
 /** Constructors and a Destructor                                         **/
@@ -979,42 +979,42 @@ cpl_create_odbc_backend(const char* connection_string,
 	// Initialize the synchronization primitives
 
 
-	sem_init(&odbc->create_session_sem);
-	sem_init(&odbc->create_object_sem);
-	sem_init(&odbc->lookup_object_sem);
-	sem_init(&odbc->lookup_object_nt_sem);
-	sem_init(&odbc->lookup_object_nb_sem);
-	sem_init(&odbc->lookup_object_ntnb_sem);
-	sem_init(&odbc->lookup_object_ext_sem);
-	sem_init(&odbc->lookup_object_nt_ext_sem);
-	sem_init(&odbc->lookup_object_nb_ext_sem);
-	sem_init(&odbc->lookup_object_ntnb_ext_sem);
-	sem_init(&odbc->add_relation_sem);
-	sem_init(&odbc->create_bundle_sem);
-	sem_init(&odbc->lookup_bundle_sem);
-	sem_init(&odbc->lookup_bundle_ext_sem);
-	sem_init(&odbc->add_object_property_sem);
-	sem_init(&odbc->add_relation_property_sem);
-	sem_init(&odbc->add_bundle_property_sem);
-	sem_init(&odbc->add_prefix_sem);
-	sem_init(&odbc->get_session_info_sem);
-	sem_init(&odbc->get_all_objects_sem);
-	sem_init(&odbc->get_object_info_sem);
-	sem_init(&odbc->get_object_ancestors_sem);
-	sem_init(&odbc->get_object_descendants_sem);
-	sem_init(&odbc->get_object_properties_sem);
-	sem_init(&odbc->get_object_properties_with_key_sem);
-	sem_init(&odbc->lookup_object_by_property_sem);
-	sem_init(&odbc->get_relation_properties_sem);
-	sem_init(&odbc->get_relation_properties_with_key_sem);
-	sem_init(&odbc->has_immediate_ancestor_sem);
-	sem_init(&odbc->delete_bundle_sem);
-	sem_init(&odbc->get_bundle_info_sem);
-	sem_init(&odbc->get_bundle_objects_sem);
-	sem_init(&odbc->get_bundle_relations_sem);
-	sem_init(&odbc->get_bundle_properties_sem);
-	sem_init(&odbc->get_bundle_properties_with_key_sem);
-	sem_init(&odbc->get_prefixes_sem);
+	sema_init(odbc->create_session_sem, 4);
+	sema_init(odbc->create_object_sem, 4);
+	sema_init(odbc->lookup_object_sem, 4);
+	sema_init(odbc->lookup_object_nt_sem, 4);
+	sema_init(odbc->lookup_object_nb_sem, 4);
+	sema_init(odbc->lookup_object_ntnb_sem, 4);
+	sema_init(odbc->lookup_object_ext_sem, 4);
+	sema_init(odbc->lookup_object_nt_ext_sem, 4);
+	sema_init(odbc->lookup_object_nb_ext_sem, 4);
+	sema_init(odbc->lookup_object_ntnb_ext_sem, 4);
+	sema_init(odbc->add_relation_sem, 4);
+	sema_init(odbc->create_bundle_sem, 4);
+	sema_init(odbc->lookup_bundle_sem, 4);
+	sema_init(odbc->lookup_bundle_ext_sem, 4);
+	sema_init(odbc->add_object_property_sem, 4);
+	sema_init(odbc->add_relation_property_sem, 4);
+	sema_init(odbc->add_bundle_property_sem, 4);
+	sema_init(odbc->add_prefix_sem, 4);
+	sema_init(odbc->get_session_info_sem, 4);
+	sema_init(odbc->get_all_objects_sem, 4);
+	sema_init(odbc->get_object_info_sem, 4);
+	sema_init(odbc->get_object_ancestors_sem, 4);
+	sema_init(odbc->get_object_descendants_sem, 4);
+	sema_init(odbc->get_object_properties_sem, 4);
+	sema_init(odbc->get_object_properties_with_key_sem, 4);
+	sema_init(odbc->lookup_object_by_property_sem, 4);
+	sema_init(odbc->get_relation_properties_sem, 4);
+	sema_init(odbc->get_relation_properties_with_key_sem, 4);
+	sema_init(odbc->has_immediate_ancestor_sem, 4);
+	sema_init(odbc->delete_bundle_sem, 4);
+	sema_init(odbc->get_bundle_info_sem, 4);
+	sema_init(odbc->get_bundle_objects_sem, 4);
+	sema_init(odbc->get_bundle_relations_sem, 4);
+	sema_init(odbc->get_bundle_properties_sem, 4);
+	sema_init(odbc->get_bundle_properties_with_key_sem, 4);
+	sema_init(odbc->get_prefixes_sem, 4);
 
 	mutex_init(odbc->create_session_lock);
 	mutex_init(odbc->create_object_lock);
@@ -1067,42 +1067,42 @@ cpl_create_odbc_backend(const char* connection_string,
 	// Error handling -- the variable r must be set
 
 err_sync:
-	sem_destroy(odbc->create_session_sem);
-	sem_destroy(odbc->create_object_sem);
-	sem_destroy(odbc->lookup_object_sem);
-	sem_destroy(odbc->lookup_object_nt_sem);
-	sem_destroy(odbc->lookup_object_nb_sem);
-	sem_destroy(odbc->lookup_object_ntnb_sem);
-	sem_destroy(odbc->lookup_object_ext_sem);
-	sem_destroy(odbc->lookup_object_nt_ext_sem);
-	sem_destroy(odbc->lookup_object_nb_ext_sem);
-	sem_destroy(odbc->lookup_object_ntnb_ext_sem);
-	sem_destroy(odbc->add_relation_sem);
-	sem_destroy(odbc->create_bundle_sem);
-	sem_destroy(odbc->lookup_bundle_sem);
-	sem_destroy(odbc->lookup_bundle_ext_sem);
-	sem_destroy(odbc->add_object_property_sem);
-	sem_destroy(odbc->add_relation_property_sem);
-	sem_destroy(odbc->add_bundle_property_sem);
-	sem_destroy(odbc->add_prefix_sem);
-	sem_destroy(odbc->get_session_info_sem);
-	sem_destroy(odbc->get_all_objects_sem);
-	sem_destroy(odbc->get_object_info_sem);
-	sem_destroy(odbc->get_object_ancestors_sem);
-	sem_destroy(odbc->get_object_descendants_sem);
-	sem_destroy(odbc->get_object_properties_sem);
-	sem_destroy(odbc->get_object_properties_with_key_sem);
-	sem_destroy(odbc->lookup_object_by_property_sem);
-	sem_destroy(odbc->get_relation_properties_sem);
-	sem_destroy(odbc->get_relation_properties_with_key_sem);
-	sem_destroy(odbc->has_immediate_ancestor_sem);
-	sem_destroy(odbc->delete_bundle_sem);
-	sem_destroy(odbc->get_bundle_info_sem);
-	sem_destroy(odbc->get_bundle_objects_sem);
-	sem_destroy(odbc->get_bundle_relations_sem);
-	sem_destroy(odbc->get_bundle_properties_sem);
-	sem_destroy(odbc->get_bundle_properties_with_key_sem);
-	sem_destroy(odbc->get_prefixes_sem);
+	sema_destroy(odbc->create_session_sem);
+	sema_destroy(odbc->create_object_sem);
+	sema_destroy(odbc->lookup_object_sem);
+	sema_destroy(odbc->lookup_object_nt_sem);
+	sema_destroy(odbc->lookup_object_nb_sem);
+	sema_destroy(odbc->lookup_object_ntnb_sem);
+	sema_destroy(odbc->lookup_object_ext_sem);
+	sema_destroy(odbc->lookup_object_nt_ext_sem);
+	sema_destroy(odbc->lookup_object_nb_ext_sem);
+	sema_destroy(odbc->lookup_object_ntnb_ext_sem);
+	sema_destroy(odbc->add_relation_sem);
+	sema_destroy(odbc->create_bundle_sem);
+	sema_destroy(odbc->lookup_bundle_sem);
+	sema_destroy(odbc->lookup_bundle_ext_sem);
+	sema_destroy(odbc->add_object_property_sem);
+	sema_destroy(odbc->add_relation_property_sem);
+	sema_destroy(odbc->add_bundle_property_sem);
+	sema_destroy(odbc->add_prefix_sem);
+	sema_destroy(odbc->get_session_info_sem);
+	sema_destroy(odbc->get_all_objects_sem);
+	sema_destroy(odbc->get_object_info_sem);
+	sema_destroy(odbc->get_object_ancestors_sem);
+	sema_destroy(odbc->get_object_descendants_sem);
+	sema_destroy(odbc->get_object_properties_sem);
+	sema_destroy(odbc->get_object_properties_with_key_sem);
+	sema_destroy(odbc->lookup_object_by_property_sem);
+	sema_destroy(odbc->get_relation_properties_sem);
+	sema_destroy(odbc->get_relation_properties_with_key_sem);
+	sema_destroy(odbc->has_immediate_ancestor_sem);
+	sema_destroy(odbc->delete_bundle_sem);
+	sema_destroy(odbc->get_bundle_info_sem);
+	sema_destroy(odbc->get_bundle_objects_sem);
+	sema_destroy(odbc->get_bundle_relations_sem);
+	sema_destroy(odbc->get_bundle_properties_sem);
+	sema_destroy(odbc->get_bundle_properties_with_key_sem);
+	sema_destroy(odbc->get_prefixes_sem);
 
 	mutex_destroy(odbc->create_session_lock);
 	mutex_destroy(odbc->create_object_lock);
@@ -1205,42 +1205,42 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
 		fprintf(stderr, "Warning: Could not terminate the ODBC connection.\n");
 	}
 	
-	sem_destroy(odbc->create_session_sem);
-	sem_destroy(odbc->create_object_sem);
-	sem_destroy(odbc->lookup_object_sem);
-	sem_destroy(odbc->lookup_object_nt_sem);
-	sem_destroy(odbc->lookup_object_nb_sem);
-	sem_destroy(odbc->lookup_object_ntnb_sem);
-	sem_destroy(odbc->lookup_object_ext_sem);
-	sem_destroy(odbc->lookup_object_nt_ext_sem);
-	sem_destroy(odbc->lookup_object_nb_ext_sem);
-	sem_destroy(odbc->lookup_object_ntnb_ext_sem);
-	sem_destroy(odbc->add_relation_sem);
-	sem_destroy(odbc->create_bundle_sem);
-	sem_destroy(odbc->lookup_bundle_sem);
-	sem_destroy(odbc->lookup_bundle_ext_sem);
-	sem_destroy(odbc->add_object_property_sem);
-	sem_destroy(odbc->add_relation_property_sem);
-	sem_destroy(odbc->add_bundle_property_sem);
-	sem_destroy(odbc->add_prefix_sem);
-	sem_destroy(odbc->get_session_info_sem);
-	sem_destroy(odbc->get_all_objects_sem);
-	sem_destroy(odbc->get_object_info_sem);
-	sem_destroy(odbc->get_object_ancestors_sem);
-	sem_destroy(odbc->get_object_descendants_sem);
-	sem_destroy(odbc->get_object_properties_sem);
-	sem_destroy(odbc->get_object_properties_with_key_sem);
-	sem_destroy(odbc->lookup_object_by_property_sem);
-	sem_destroy(odbc->get_relation_properties_sem);
-	sem_destroy(odbc->get_relation_properties_with_key_sem);
-	sem_destroy(odbc->has_immediate_ancestor_sem);
-	sem_destroy(odbc->delete_bundle_sem);
-	sem_destroy(odbc->get_bundle_info_sem);
-	sem_destroy(odbc->get_bundle_objects_sem);
-	sem_destroy(odbc->get_bundle_relations_sem);
-	sem_destroy(odbc->get_bundle_properties_sem);
-	sem_destroy(odbc->get_bundle_properties_with_key_sem);
-	sem_destroy(odbc->get_prefixes_sem);
+	sema_destroy(odbc->create_session_sem);
+	sema_destroy(odbc->create_object_sem);
+	sema_destroy(odbc->lookup_object_sem);
+	sema_destroy(odbc->lookup_object_nt_sem);
+	sema_destroy(odbc->lookup_object_nb_sem);
+	sema_destroy(odbc->lookup_object_ntnb_sem);
+	sema_destroy(odbc->lookup_object_ext_sem);
+	sema_destroy(odbc->lookup_object_nt_ext_sem);
+	sema_destroy(odbc->lookup_object_nb_ext_sem);
+	sema_destroy(odbc->lookup_object_ntnb_ext_sem);
+	sema_destroy(odbc->add_relation_sem);
+	sema_destroy(odbc->create_bundle_sem);
+	sema_destroy(odbc->lookup_bundle_sem);
+	sema_destroy(odbc->lookup_bundle_ext_sem);
+	sema_destroy(odbc->add_object_property_sem);
+	sema_destroy(odbc->add_relation_property_sem);
+	sema_destroy(odbc->add_bundle_property_sem);
+	sema_destroy(odbc->add_prefix_sem);
+	sema_destroy(odbc->get_session_info_sem);
+	sema_destroy(odbc->get_all_objects_sem);
+	sema_destroy(odbc->get_object_info_sem);
+	sema_destroy(odbc->get_object_ancestors_sem);
+	sema_destroy(odbc->get_object_descendants_sem);
+	sema_destroy(odbc->get_object_properties_sem);
+	sema_destroy(odbc->get_object_properties_with_key_sem);
+	sema_destroy(odbc->lookup_object_by_property_sem);
+	sema_destroy(odbc->get_relation_properties_sem);
+	sema_destroy(odbc->get_relation_properties_with_key_sem);
+	sema_destroy(odbc->has_immediate_ancestor_sem);
+	sema_destroy(odbc->delete_bundle_sem);
+	sema_destroy(odbc->get_bundle_info_sem);
+	sema_destroy(odbc->get_bundle_objects_sem);
+	sema_destroy(odbc->get_bundle_relations_sem);
+	sema_destroy(odbc->get_bundle_properties_sem);
+	sema_destroy(odbc->get_bundle_properties_with_key_sem);
+	sema_destroy(odbc->get_prefixes_sem);
 	
 	mutex_destroy(odbc->create_session_lock);
 	mutex_destroy(odbc->create_object_lock);
@@ -1362,7 +1362,7 @@ cpl_odbc_create_session(struct _cpl_db_backend_t* backend,
 	cpl_id_t id = CPL_NONE;
 	cpl_return_t r = CPL_E_INTERNAL_ERROR;
 
-	SQLHSTMT stmt = STMT_ACQUIRE("create_session");
+	SQLHSTMT stmt = STMT_ACQUIRE(create_session);
 
 	
 	// Bind the statement parameters
@@ -1382,13 +1382,13 @@ retry:
 
 	r = cpl_sql_fetch_single_llong(stmt, (long long*) &id, 1);
 	if (!CPL_IS_OK(r)) {
-		STMT_RELEASE("create_session", stmt);
+		STMT_RELEASE(create_session, stmt);
 		return r;
 	}
 
 	// Finish
 
-	STMT_RELEASE("create_session", stmt);
+	STMT_RELEASE(create_session, stmt);
 	if (out_id != NULL) *out_id = id;
 	return CPL_OK;
 
@@ -1396,7 +1396,7 @@ retry:
 	// Error handling
 
 err:
-	STMT_RELEASE("create_session", stmt);
+	STMT_RELEASE(create_session, stmt);
 	return CPL_E_STATEMENT_ERROR;
 }
 
@@ -1430,7 +1430,7 @@ cpl_odbc_create_object(struct _cpl_db_backend_t* backend,
 	cpl_id_t id = CPL_NONE;
 	cpl_return_t r = CPL_E_INTERNAL_ERROR;
 
-	SQLHSTMT stmt = STMT_ACQUIRE("create_object");
+	SQLHSTMT stmt = STMT_ACQUIRE(create_object);
 	
 	// Bind the statement parameters
 
@@ -1448,12 +1448,12 @@ retry:
 
 	r = cpl_sql_fetch_single_llong(stmt, (long long*) &id, 1);
 	if (!CPL_IS_OK(r)) {
-		STMT_RELEASE("create_object", stmt);
+		STMT_RELEASE(create_object, stmt);
 		return r;
 	}
 	// Finish
 
-	STMT_RELEASE("create_object", stmt);
+	STMT_RELEASE(create_object, stmt);
 
 	if (out_id != NULL) *out_id = id;
 	return CPL_OK;
@@ -1462,7 +1462,7 @@ retry:
 	// Error handling
 
 err:
-	STMT_RELEASE("create_object", stmt);
+	STMT_RELEASE(create_object, stmt);
 	return CPL_E_STATEMENT_ERROR;
 }
 
@@ -1499,18 +1499,18 @@ cpl_odbc_lookup_object(struct _cpl_db_backend_t* backend,
 
 	if(type == 0){
 		if(bundle_id == CPL_NONE){
-			stmt = STMT_ACQUIRE("lookup_object_ntnb");
+			stmt = STMT_ACQUIRE(lookup_object_ntnb);
 			e = NTNB;
 		} else {
-			stmt = STMT_ACQUIRE("lookup_object_nt");
+			stmt = STMT_ACQUIRE(lookup_object_nt);
 			e = NT;
 		}
 	} else {
 		if(bundle_id == CPL_NONE){
-			stmt = STMT_ACQUIRE("lookup_object_nb");
+			stmt = STMT_ACQUIRE(lookup_object_nb);
 			e = NB;
 		} else {
-			stmt = STMT_ACQUIRE("lookup_object");
+			stmt = STMT_ACQUIRE(lookup_object);
 			e = A;
 		}
 	}
@@ -1524,6 +1524,7 @@ retry:
 		case NT: SQL_BIND_INTEGER(stmt, 3, bundle_id); break;
 		case A: SQL_BIND_INTEGER(stmt, 4, bundle_id);
 		case NB:  SQL_BIND_INTEGER(stmt, 3, type);
+		case NTNB: break;
 	}
 
 	// Execute
@@ -1536,10 +1537,10 @@ retry:
 	r = cpl_sql_fetch_single_llong(stmt, (long long*) &id, 1);
 	if (!CPL_IS_OK(r)) {
 		switch(e){
-			case A: STMT_RELEASE("lookup_object", stmt); break;
-			case NB: STMT_RELEASE("lookup_object_nb", stmt); break;
-			case NT: STMT_RELEASE("lookup_object_nt", stmt); break;
-			case NTNB: STMT_RELEASE("lookup_object_ntnb", stmt); break;
+			case A: STMT_RELEASE(lookup_object, stmt); break;
+			case NB: STMT_RELEASE(lookup_object_nb, stmt); break;
+			case NT: STMT_RELEASE(lookup_object_nt, stmt); break;
+			case NTNB: STMT_RELEASE(lookup_object_ntnb, stmt); break;
 		}
 		return r;
 	}
@@ -1548,10 +1549,10 @@ retry:
 	// Cleanup
 
 	switch(e){
-		case A: STMT_RELEASE("lookup_object", stmt); break;
-		case NB: STMT_RELEASE("lookup_object_nb", stmt); break;
-		case NT: STMT_RELEASE("lookup_object_nt", stmt); break;
-		case NTNB: STMT_RELEASE("lookup_object_ntnb", stmt); break;
+		case A: STMT_RELEASE(lookup_object, stmt); break;
+		case NB: STMT_RELEASE(lookup_object_nb, stmt); break;
+		case NT: STMT_RELEASE(lookup_object_nt, stmt); break;
+		case NTNB: STMT_RELEASE(lookup_object_ntnb, stmt); break;
 	}
 	
 	if (out_id != NULL) *out_id = id;
@@ -1562,10 +1563,10 @@ retry:
 
 	err:
 		switch(e){
-			case A: STMT_RELEASE("lookup_object", stmt); break;
-			case NB: STMT_RELEASE("lookup_object_nb", stmt); break;
-			case NT: STMT_RELEASE("lookup_object_nt", stmt); break;
-			case NTNB: STMT_RELEASE("lookup_object_ntnb", stmt); break;
+			case A: STMT_RELEASE(lookup_object, stmt); break;
+			case NB: STMT_RELEASE(lookup_object_nb, stmt); break;
+			case NT: STMT_RELEASE(lookup_object_nt, stmt); break;
+			case NTNB: STMT_RELEASE(lookup_object_ntnb, stmt); break;
 		}
 		return CPL_E_STATEMENT_ERROR;
 }
@@ -1610,18 +1611,18 @@ cpl_odbc_lookup_object_ext(struct _cpl_db_backend_t* backend,
 
 	if(type == 0){
 		if(bundle_id == CPL_NONE){
-			stmt = STMT_ACQUIRE("lookup_object_ntnb_ext");
+			stmt = STMT_ACQUIRE(lookup_object_ntnb_ext);
 			e = NTNB;
 		} else {
-			stmt = STMT_ACQUIRE("lookup_object_nt_ext");
+			stmt = STMT_ACQUIRE(lookup_object_nt_ext);
 			e = NT;
 		}
 	} else {
 		if(bundle_id == CPL_NONE){
-			stmt = STMT_ACQUIRE("lookup_object_nb_ext");
+			stmt = STMT_ACQUIRE(lookup_object_nb_ext);
 			e = NB;
 		} else {
-			stmt = STMT_ACQUIRE("lookup_object_ext");
+			stmt = STMT_ACQUIRE(lookup_object_ext);
 			e = A;
 		}
 	}
@@ -1635,6 +1636,7 @@ retry:
 		case NT: SQL_BIND_INTEGER(stmt, 3, bundle_id); break;
 		case A: SQL_BIND_INTEGER(stmt, 4, bundle_id);
 		case NB:  SQL_BIND_INTEGER(stmt, 3, type);
+		case NTNB: break;
 	}
 
 	// Execute
@@ -1680,10 +1682,10 @@ retry:
 	// Unlock
 
 	switch(e){
-		case A: STMT_RELEASE("lookup_object_ext", stmt); break;
-		case NB: STMT_RELEASE("lookup_object_nb_ext", stmt); break;
-		case NT: STMT_RELEASE("lookup_object_nt_ext", stmt); break;
-		case NTNB: STMT_RELEASE("lookup_object_ntnb_ext", stmt); break;
+		case A: STMT_RELEASE(lookup_object_ext, stmt); break;
+		case NB: STMT_RELEASE(lookup_object_nb_ext, stmt); break;
+		case NT: STMT_RELEASE(lookup_object_nt_ext, stmt); break;
+		case NTNB: STMT_RELEASE(lookup_object_ntnb_ext, stmt); break;
 	}
 
 
@@ -1715,10 +1717,10 @@ err_close:
 
 err:
 	switch(e){
-		case A: STMT_RELEASE("lookup_object_ext", stmt); break;
-		case NB: STMT_RELEASE("lookup_object_nb_ext", stmt); break;
-		case NT: STMT_RELEASE("lookup_object_nt_ext", stmt); break;
-		case NTNB: STMT_RELEASE("lookup_object_ntnb_ext", stmt); break;
+		case A: STMT_RELEASE(lookup_object_ext, stmt); break;
+		case NB: STMT_RELEASE(lookup_object_nb_ext, stmt); break;
+		case NT: STMT_RELEASE(lookup_object_nt_ext, stmt); break;
+		case NTNB: STMT_RELEASE(lookup_object_ntnb_ext, stmt); break;
 	}
 	return CPL_E_STATEMENT_ERROR;
 }
@@ -1742,7 +1744,7 @@ cpl_odbc_add_relation(struct _cpl_db_backend_t* backend,
 						   const cpl_id_t bundle,
 						   cpl_id_t* out_id)
 {
-	assert(backend != NULL && from_id != CPL_NONE && CPL_IS_RELATION_TYPE(type));
+	assert(backend != NULL && from_id != CPL_NONE && to_id != CPL_NONE && CPL_IS_RELATION_TYPE(type));
 	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
 
 
@@ -1753,7 +1755,7 @@ cpl_odbc_add_relation(struct _cpl_db_backend_t* backend,
 
 	// Prepare the statement
 
-	SQLHSTMT stmt = STMT_ACQUIRE("add_relation");
+	SQLHSTMT stmt = STMT_ACQUIRE(add_relation);
 
 retry:
 
@@ -1771,13 +1773,13 @@ retry:
 
 	r = cpl_sql_fetch_single_llong(stmt, (long long*) &id, 1);
 	if (!CPL_IS_OK(r)) {
-		STMT_RELEASE("add_relation", stmt);
+		STMT_RELEASE(add_relation, stmt);
 		return r;
 	}
 
 	// Cleanup
 
-	STMT_RELEASE("add_relation", stmt);
+	STMT_RELEASE(add_relation, stmt);
 	if (out_id != NULL) *out_id = id;
 	return CPL_OK;
 
@@ -1785,7 +1787,7 @@ retry:
 	// Error handling
 
 err:
-	STMT_RELEASE("add_relation", stmt);
+	STMT_RELEASE(add_relation, stmt);
 	return CPL_E_STATEMENT_ERROR;
 }
 
@@ -1814,7 +1816,7 @@ cpl_odbc_has_immediate_ancestor(struct _cpl_db_backend_t* backend,
 	cpl_return_t r = CPL_E_INTERNAL_ERROR;
 	int cr = CPL_E_INTERNAL_ERROR;
 
-	SQLHSTMT stmt = STMT_ACQUIRE("has_immediate_ancestor");
+	SQLHSTMT stmt = STMT_ACQUIRE(has_immediate_ancestor);
 
 
 	// Prepare the statement
@@ -1835,14 +1837,14 @@ retry:
 	if (CPL_IS_OK(r)) cr = 1;
 	if (r == CPL_E_NOT_FOUND) { r = CPL_OK; cr = 0; }
 	if (!CPL_IS_OK(r)) {
-		STMT_RELEASE("has_immediate_ancestor", stmt);
+		STMT_RELEASE(has_immediate_ancestor, stmt);
 		return r;
 	}
 
 
 	// Cleanup
 
-	STMT_RELEASE("has_immediate_ancestor", stmt);
+	STMT_RELEASE(has_immediate_ancestor, stmt);
 
 	if (out != NULL) *out = cr;
 	return CPL_OK;
@@ -1851,7 +1853,7 @@ retry:
 	// Error handling
 
 err:
-	STMT_RELEASE("has_immediate_ancestor", stmt);
+	STMT_RELEASE(has_immediate_ancestor, stmt);
 	return CPL_E_STATEMENT_ERROR;
 }
 
@@ -1880,7 +1882,7 @@ cpl_odbc_add_object_property(struct _cpl_db_backend_t* backend,
 
 	// Prepare the statement
 
-	SQLHSTMT stmt = STMT_ACQUIRE("add_object_property");
+	SQLHSTMT stmt = STMT_ACQUIRE(add_object_property);
 
 retry:
 
@@ -1897,14 +1899,14 @@ retry:
 
 	// Cleanup
 
-	STMT_RELEASE("add_object_property", stmt);
+	STMT_RELEASE(add_object_property, stmt);
 	return CPL_OK;
 
 
 	// Error handling
 
 err:
-	STMT_RELEASE("add_object_property", stmt);
+	STMT_RELEASE(add_object_property, stmt);
 	return CPL_E_STATEMENT_ERROR;
 }
 
@@ -1933,7 +1935,7 @@ cpl_odbc_add_relation_property(struct _cpl_db_backend_t* backend,
 
 	// Prepare the statement
 
-	SQLHSTMT stmt = STMT_ACQUIRE("add_relation_property");
+	SQLHSTMT stmt = STMT_ACQUIRE(add_relation_property);
 
 retry:
 
@@ -1950,14 +1952,14 @@ retry:
 
 	// Cleanup
 
-	STMT_RELEASE("add_relation_property", stmt);
+	STMT_RELEASE(add_relation_property, stmt);
 	return CPL_OK;
 
 
 	// Error handling
 
 err:
-	STMT_RELEASE("add_relation_property", stmt);
+	STMT_RELEASE(add_relation_property, stmt);
 	return CPL_E_STATEMENT_ERROR;
 }
 
@@ -1985,7 +1987,7 @@ cpl_odbc_create_bundle(struct _cpl_db_backend_t* backend,
 	cpl_id_t id = CPL_NONE;
 	cpl_return_t r = CPL_E_INTERNAL_ERROR;
 
-	SQLHSTMT stmt = STMT_ACQUIRE("create_bundle");
+	SQLHSTMT stmt = STMT_ACQUIRE(create_bundle);
 	
 	// Bind the statement parameters
 
@@ -2001,12 +2003,12 @@ retry:
 
 	r = cpl_sql_fetch_single_llong(stmt, (long long*) &id, 1);
 	if (!CPL_IS_OK(r)) {
-		STMT_RELEASE("create_bundle", stmt);
+		STMT_RELEASE(create_bundle, stmt);
 		return r;
 	}
 	// Finish
 
-	STMT_RELEASE("create_bundle", stmt);
+	STMT_RELEASE(create_bundle, stmt);
 
 	if (out_id != NULL) *out_id = id;
 	return CPL_OK;
@@ -2015,7 +2017,7 @@ retry:
 	// Error handling
 
 err:
-	STMT_RELEASE("create_bundle", stmt);
+	STMT_RELEASE(create_bundle, stmt);
 	return CPL_E_STATEMENT_ERROR;
 }
 /**
@@ -2042,7 +2044,7 @@ cpl_odbc_lookup_bundle(struct _cpl_db_backend_t* backend,
 
 	// Prepare the statement
 
-	SQLHSTMT stmt = STMT_ACQUIRE("lookup_bundle");
+	SQLHSTMT stmt = STMT_ACQUIRE(lookup_bundle);
 
 retry:
 
@@ -2058,14 +2060,14 @@ retry:
 
 	r = cpl_sql_fetch_single_llong(stmt, (long long*) &id, 1);
 	if (!CPL_IS_OK(r)) {
-		STMT_RELEASE("lookup_bundle", stmt);
+		STMT_RELEASE(lookup_bundle, stmt);
 		return r;
 	}
 
 
 	// Cleanup
 
-	STMT_RELEASE("lookup_bundle", stmt);
+	STMT_RELEASE(lookup_bundle, stmt);
 	
 	if (out_id != NULL) *out_id = id;
 	return CPL_OK;
@@ -2074,7 +2076,7 @@ retry:
 	// Error handling
 
 err:
-	STMT_RELEASE("lookup_bundle", stmt);
+	STMT_RELEASE(lookup_bundle, stmt);
 	return CPL_E_STATEMENT_ERROR;
 }
 
@@ -2107,7 +2109,7 @@ cpl_odbc_lookup_bundle_ext(struct _cpl_db_backend_t* backend,
 	std::list<cpl_id_timestamp_t> entries;
 	SQL_TIMESTAMP_STRUCT t;
 
-	SQLHSTMT stmt = STMT_ACQUIRE("lookup_bundle_ext");
+	SQLHSTMT stmt = STMT_ACQUIRE(lookup_bundle_ext);
 
 retry:
 
@@ -2156,7 +2158,7 @@ retry:
 
 	// Unlock
 
-	STMT_RELEASE("lookup_bundle_ext", stmt);
+	STMT_RELEASE(lookup_bundle_ext, stmt);
 
 
 	// If we did not get any data back, terminate
@@ -2186,7 +2188,7 @@ err_close:
 	}
 
 err:
-	STMT_RELEASE("lookup_bundle_ext", stmt);
+	STMT_RELEASE(lookup_bundle_ext, stmt);
 	return CPL_E_STATEMENT_ERROR;
 }
 
@@ -2212,7 +2214,7 @@ cpl_odbc_add_bundle_property(struct _cpl_db_backend_t* backend,
 
 	SQL_START;
 
-	SQLHSTMT stmt = STMT_ACQUIRE("add_bundle_property");
+	SQLHSTMT stmt = STMT_ACQUIRE(add_bundle_property);
 
 retry:
 
@@ -2229,14 +2231,14 @@ retry:
 
 	// Cleanup
 
-	STMT_RELEASE("add_bundle_property", stmt);
+	STMT_RELEASE(add_bundle_property, stmt);
 	return CPL_OK;
 
 
 	// Error handling
 
 err:
-	STMT_RELEASE("add_bundle_property", stmt);
+	STMT_RELEASE(add_bundle_property, stmt);
 	return CPL_E_STATEMENT_ERROR;
 }
 
@@ -2262,7 +2264,7 @@ cpl_odbc_add_prefix(struct _cpl_db_backend_t* backend,
 
 	// Prepare the statement
 
-	SQLHSTMT stmt = STMT_ACQUIRE("add_prefix");
+	SQLHSTMT stmt = STMT_ACQUIRE(add_prefix);
 
 retry:
 
@@ -2278,14 +2280,14 @@ retry:
 
 	// Cleanup
 
-	STMT_RELEASE("add_prefix", stmt);
+	STMT_RELEASE(add_prefix, stmt);
 	return CPL_OK;
 
 
 	// Error handling
 
 err:
-	STMT_RELEASE("add_prefix", stmt);
+	STMT_RELEASE(add_prefix, stmt);
 	return CPL_E_STATEMENT_ERROR;
 }
 
@@ -2318,7 +2320,7 @@ cpl_odbc_get_session_info(struct _cpl_db_backend_t* backend,
 
 	// Prepare the statement
 
-	SQLHSTMT stmt = STMT_ACQUIRE("get_session_info");
+	SQLHSTMT stmt = STMT_ACQUIRE(get_session_info);
 
 retry:
 
@@ -2348,7 +2350,7 @@ retry:
 
 	// Cleanup
 
-	STMT_RELEASE("get_session_info", stmt);
+	STMT_RELEASE(get_session_info, stmt);
 	
 	*out_info = p;
 	return CPL_OK;
@@ -2360,7 +2362,7 @@ err:
 	r = CPL_E_STATEMENT_ERROR;
 
 err_r:
-	STMT_RELEASE("get_session_info", stmt);
+	STMT_RELEASE(get_session_info, stmt);
 
 	if (p->mac_address != NULL) free(p->mac_address);
 	if (p->user != NULL) free(p->user);
@@ -2411,7 +2413,7 @@ cpl_odbc_get_all_objects(struct _cpl_db_backend_t* backend,
 
 	// Get and execute the statement
 
-	SQLHSTMT stmt = STMT_ACQUIRE("get_all_objects");
+	SQLHSTMT stmt = STMT_ACQUIRE(get_all_objects);
 	
 retry:
 
@@ -2469,7 +2471,6 @@ retry:
 		entry.name = entry_name;
 
 		if (cb_bundle_id <= 0) entry.bundle_id = CPL_NONE;
-		if (cb_session_id <= 0) entry.creation_session = CPL_NONE;
 
 		entries.push_back(entry);
 	}
@@ -2483,7 +2484,7 @@ retry:
 
 	// Unlock
 
-	STMT_RELEASE("get_all_objects", stmt);
+	STMT_RELEASE(get_all_objects, stmt);
 
 
 	// If we did not get any data back, terminate
@@ -2504,7 +2505,6 @@ retry:
 
 			cpl_object_info_t e;
 			e.id = i->id;
-			e.creation_session = i->creation_session;
 			e.creation_time = i->creation_time;
 			e.prefix = entry_prefix;
 			e.name = entry_name;
@@ -2528,7 +2528,7 @@ err_close:
 	}
 
 err:
-	STMT_RELEASE("get_all_objects", stmt);
+	STMT_RELEASE(get_all_objects, stmt);
 	return CPL_E_STATEMENT_ERROR;
 }
 
@@ -2563,7 +2563,7 @@ cpl_odbc_get_object_info(struct _cpl_db_backend_t* backend,
 
 	// Prepare the statement
 
-	SQLHSTMT stmt = STMT_ACQUIRE("get_object_info");
+	SQLHSTMT stmt = STMT_ACQUIRE(get_object_info);
 
 retry:
 
@@ -2577,16 +2577,15 @@ retry:
 
 	// Fetch the result
 
-	CPL_SQL_SIMPLE_FETCH(llong, 1, (long long*) &p->creation_session);
-	CPL_SQL_SIMPLE_FETCH(timestamp_as_unix_time, 2, &p->creation_time);
+	CPL_SQL_SIMPLE_FETCH(timestamp_as_unix_time, 1, &p->creation_time);
 
-	CPL_SQL_SIMPLE_FETCH_EXT(dynamically_allocated_string, 3, &p->prefix,
+	CPL_SQL_SIMPLE_FETCH_EXT(dynamically_allocated_string, 2, &p->prefix,
 							 true);
 	if (r == CPL_E_DB_NULL) p->prefix = strdup("");
-	CPL_SQL_SIMPLE_FETCH_EXT(dynamically_allocated_string, 4, &p->name, true);
+	CPL_SQL_SIMPLE_FETCH_EXT(dynamically_allocated_string, 3, &p->name, true);
 	if (r == CPL_E_DB_NULL) p->name = strdup("");
-	CPL_SQL_SIMPLE_FETCH(int, 5, (int*) &p->type);
-	CPL_SQL_SIMPLE_FETCH_EXT(llong, 6, (long long*) &p->bundle_id, true);
+	CPL_SQL_SIMPLE_FETCH(int, 4, (int*) &p->type);
+	CPL_SQL_SIMPLE_FETCH_EXT(llong, 5, (long long*) &p->bundle_id, true);
 	if (r == CPL_E_DB_NULL) p->bundle_id = CPL_NONE;
 	
 	ret = SQLCloseCursor(stmt);
@@ -2598,7 +2597,7 @@ retry:
 
 	// Cleanup
 
-	STMT_RELEASE("get_object_info", stmt);
+	STMT_RELEASE(get_object_info, stmt);
 	
 	*out_info = p;
 	return CPL_OK;
@@ -2610,7 +2609,7 @@ err:
 	r = CPL_E_STATEMENT_ERROR;
 
 err_r:
-	STMT_RELEASE("get_object_info", stmt);
+	STMT_RELEASE(get_object_info, stmt);
 
 	if (p->prefix != NULL) free(p->prefix);
 	if (p->name != NULL) free(p->name);
@@ -2670,10 +2669,10 @@ cpl_odbc_get_object_relations(struct _cpl_db_backend_t* backend,
 
 	SQLHSTMT stmt;
 	if (direction == CPL_D_ANCESTORS) {
-		stmt = STMT_ACQUIRE("get_object_ancestors");
+		stmt = STMT_ACQUIRE(get_object_ancestors);
 	}
 	else {
-		stmt = STMT_ACQUIRE("get_object_descendants");
+		stmt = STMT_ACQUIRE(get_object_descendants);
 	}
 
 retry:
@@ -2727,10 +2726,10 @@ retry:
 	// Unlock
 
 	if (direction == CPL_D_ANCESTORS) {
-		STMT_RELEASE("get_object_ancestors", stmt);
+		STMT_RELEASE(get_object_ancestors, stmt);
 	}
 	else {
-		STMT_RELEASE("get_object_descendants", stmt);
+		STMT_RELEASE(get_object_descendants, stmt);
 	}
 
 
@@ -2762,10 +2761,10 @@ err_close:
 
 err:
 	if (direction == CPL_D_ANCESTORS) {
-		STMT_RELEASE("get_object_ancestors", stmt);
+		STMT_RELEASE(get_object_ancestors, stmt);
 	}
 	else {
-		STMT_RELEASE("get_object_descendants", stmt);
+		STMT_RELEASE(get_object_descendants, stmt);
 	}
 	return CPL_E_STATEMENT_ERROR;
 }
@@ -2818,10 +2817,10 @@ cpl_odbc_get_object_properties(struct _cpl_db_backend_t* backend,
 
 	SQLHSTMT stmt;
 	if (prefix == NULL || key == NULL) {
-		stmt = STMT_ACQUIRE("get_object_properties");
+		stmt = STMT_ACQUIRE(get_object_properties);
 	}
 	else {
-		stmt = STMT_ACQUIRE("get_object_properties_with_key");
+		stmt = STMT_ACQUIRE(get_object_properties_with_key);
 	}
 
 retry:
@@ -2891,10 +2890,10 @@ retry:
 	// Unlock
 
 	if (prefix == NULL || key == NULL) {
-		STMT_RELEASE("get_object_properties", stmt);
+		STMT_RELEASE(get_object_properties, stmt);
 	}
 	else {
-		STMT_RELEASE("get_object_properties_with_key", stmt);
+		STMT_RELEASE(get_object_properties_with_key, stmt);
 	}
 
 	// If we did not get any data back, terminate
@@ -2933,10 +2932,10 @@ err_close:
 
 err:
 	if (prefix == NULL || key == NULL) {
-		STMT_RELEASE("get_object_properties", stmt);
+		STMT_RELEASE(get_object_properties, stmt);
 	}
 	else {
-		STMT_RELEASE("get_object_properties_with_key", stmt);
+		STMT_RELEASE(get_object_properties_with_key, stmt);
 	}
 	return CPL_E_STATEMENT_ERROR;
 }
@@ -2971,7 +2970,7 @@ cpl_odbc_lookup_object_by_property(struct _cpl_db_backend_t* backend,
 	std::list<cpl_id_t> entries;
 	cpl_id_t entry;
 
-	SQLSTMT stmt = STMT_ACQUIRE("lookup_object_by_property");
+	SQLHSTMT stmt = STMT_ACQUIRE(lookup_object_by_property);
 
 
 	// Prepare the statement
@@ -3019,7 +3018,7 @@ retry:
 
 	// Unlock
 
-	STMT_RELEASE("lookup_object_by_property", stmt);
+	STMT_RELEASE(lookup_object_by_property, stmt);
 
 
 	// If we did not get any data back, terminate
@@ -3049,7 +3048,7 @@ err_close:
 	}
 
 err:
-	STMT_RELEASE("lookup_object_by_property", stmt);
+	STMT_RELEASE(lookup_object_by_property, stmt);
 	return CPL_E_STATEMENT_ERROR;
 }
 
@@ -3088,10 +3087,10 @@ cpl_odbc_get_relation_properties(struct _cpl_db_backend_t* backend,
 
 
 	if (prefix == NULL || key == NULL) {
-		stmt = STMT_ACQUIRE("get_relation_properties");
+		stmt = STMT_ACQUIRE(get_relation_properties);
 	}
 	else {
-		stmt = STMT_ACQUIRE("get_relation_properties_with_key");
+		stmt = STMT_ACQUIRE(get_relation_properties_with_key);
 	}
 
 
@@ -3164,10 +3163,10 @@ retry:
 	// Unlock
 
 	if (prefix == NULL || key == NULL) {
-		STMT_RELEASE("get_relation_properties", stmt);
+		STMT_RELEASE(get_relation_properties, stmt);
 	}
 	else {
-		STMT_RELEASE("get_relation_properties_with_key", stmt);
+		STMT_RELEASE(get_relation_properties_with_key, stmt);
 	}
 
 	// If we did not get any data back, terminate
@@ -3207,10 +3206,10 @@ err_close:
 
 err:
 	if (prefix == NULL || key == NULL) {
-		STMT_RELEASE("get_relation_properties", stmt);
+		STMT_RELEASE(get_relation_properties, stmt);
 	}
 	else {
-		STMT_RELEASE("get_relation_properties_with_key", stmt);
+		STMT_RELEASE(get_relation_properties_with_key, stmt);
 	}
 	return CPL_E_STATEMENT_ERROR;
 }
@@ -3249,10 +3248,10 @@ cpl_odbc_get_bundle_properties(struct _cpl_db_backend_t* backend,
 	SQLHSTMT stmt;
 
 	if (prefix == NULL || key == NULL) {
-		stmt = STMT_ACQUIRE("get_bundle_properties");
+		stmt = STMT_ACQUIRE(get_bundle_properties);
 	}
 	else {
-		stmt = STMT_ACQUIRE("get_bundle_properties_with_key");
+		stmt = STMT_ACQUIRE(get_bundle_properties_with_key);
 	}
 
 
@@ -3325,10 +3324,10 @@ retry:
 	// Unlock
 
 	if (prefix == NULL || key == NULL) {
-		STMT_RELEASE("get_bundle_properties", stmt);
+		STMT_RELEASE(get_bundle_properties, stmt);
 	}
 	else {
-		STMT_RELEASE("get_bundle_properties_with_key", stmt);
+		STMT_RELEASE(get_bundle_properties_with_key, stmt);
 	}
 
 
@@ -3369,10 +3368,10 @@ err_close:
 
 err:
 	if (prefix == NULL || key == NULL) {
-		STMT_RELEASE("get_bundle_properties", stmt);
+		STMT_RELEASE(get_bundle_properties, stmt);
 	}
 	else {
-		STMT_RELEASE("get_bundle_properties_with_key", stmt);
+		STMT_RELEASE(get_bundle_properties_with_key, stmt);
 	}
 	return CPL_E_STATEMENT_ERROR;
 }
@@ -3420,10 +3419,10 @@ cpl_odbc_get_prefixes(struct _cpl_db_backend_t* backend,
 	SQLHSTMT stmt;
 
 	if (prefix == NULL) {
-		stmt = STMT_ACQUIRE("get_prefixes");
+		stmt = STMT_ACQUIRE(get_prefixes);
 	}
 	else {
-		stmt = STMT_ACQUIRE("get_prefixes_with_key");
+		stmt = STMT_ACQUIRE(get_prefixes_with_key);
 	}
 
 
@@ -3492,10 +3491,10 @@ retry:
 	// Unlock
 
 	if (prefix == NULL) {
-		STMT_RELEASE("get_prefixes", stmt);
+		STMT_RELEASE(get_prefixes, stmt);
 	}
 	else {
-		STMT_RELEASE("get_prefixes_with_key", stmt);
+		STMT_RELEASE(get_prefixes_with_key, stmt);
 	}
 
 
@@ -3535,10 +3534,10 @@ err_close:
 
 err:
 	if (prefix == NULL) {
-		STMT_RELEASE("get_prefixes", stmt);
+		STMT_RELEASE(get_prefixes, stmt);
 	}
 	else {
-		STMT_RELEASE("get_prefixes_with_key", stmt);
+		STMT_RELEASE(get_prefixes_with_key, stmt);
 	}
 	return CPL_E_STATEMENT_ERROR;
 }
@@ -3559,7 +3558,7 @@ cpl_odbc_delete_bundle(struct _cpl_db_backend_t* backend,
 
 	// Prepare the statement
 
-	SQLHSTMT stmt = STMT_ACQUIRE("delete_bundle");
+	SQLHSTMT stmt = STMT_ACQUIRE(delete_bundle);
 
 retry:
 
@@ -3571,14 +3570,14 @@ retry:
 
 	// Cleanup
 
-	STMT_RELEASE("delete_bundle", stmt);
+	STMT_RELEASE(delete_bundle, stmt);
 	return CPL_OK;
 
 
 	// Error handling
 
 err:
-	STMT_RELEASE("delete_bundle", stmt);
+	STMT_RELEASE(delete_bundle, stmt);
 	return CPL_E_STATEMENT_ERROR;
 
 }
@@ -3613,7 +3612,7 @@ cpl_odbc_get_bundle_info(struct _cpl_db_backend_t* backend,
 
 	// Prepare the statement
 
-	SQLHSTMT stmt = STMT_ACQUIRE("get_bundle_info");
+	SQLHSTMT stmt = STMT_ACQUIRE(get_bundle_info);
 
 retry:
 
@@ -3641,7 +3640,7 @@ retry:
 
 	// Cleanup
 
-	STMT_RELEASE("get_bundle_info", stmt);
+	STMT_RELEASE(get_bundle_info, stmt);
 	
 	*out_info = p;
 	return CPL_OK;
@@ -3653,7 +3652,7 @@ err:
 	r = CPL_E_STATEMENT_ERROR;
 
 err_r:
-	STMT_RELEASE("get_bundle_info", stmt);
+	STMT_RELEASE(get_bundle_info, stmt);
 
 	if (p->name != NULL) free(p->name);
 	free(p);
@@ -3698,7 +3697,7 @@ cpl_odbc_get_bundle_objects(struct _cpl_db_backend_t* backend,
 
 	// Get and execute the statement
 
-	SQLHSTMT stmt = STMT_ACQUIRE("get_bundle_objects");
+	SQLHSTMT stmt = STMT_ACQUIRE(get_bundle_objects);
 	
 retry:
 
@@ -3766,7 +3765,7 @@ retry:
 
 	// Unlock
 
-	STMT_RELEASE("get_bundle_objects", stmt);
+	STMT_RELEASE(get_bundle_objects, stmt);
 
 
 	// If we did not get any data back, terminate
@@ -3810,7 +3809,7 @@ err_close:
 	}
 
 err:
-	STMT_RELEASE("get_bundle_objects", stmt);
+	STMT_RELEASE(get_bundle_objects, stmt);
 	return CPL_E_STATEMENT_ERROR;
 }
 
@@ -3848,7 +3847,7 @@ cpl_odbc_get_bundle_relations(struct _cpl_db_backend_t* backend,
 	__get_bundle_relation__entry_t entry;
 	SQLLEN ind_type;
 
-	SQLHSTMT stmt = STMT_ACQUIRE("get_bundle_relations");
+	SQLHSTMT stmt = STMT_ACQUIRE(get_bundle_relations);
 
 	// Prepare the statement
 
@@ -3904,7 +3903,7 @@ retry:
 
 	// Unlock
 
-	STMT_RELEASE("get_bundle_relations", stmt);
+	STMT_RELEASE(get_bundle_relations, stmt);
 
 
 	// If we did not get any data back, terminate
@@ -3934,7 +3933,7 @@ err_close:
 	}
 
 err:
-	STMT_RELEASE("get_bundle_relations", stmt);
+	STMT_RELEASE(get_bundle_relations, stmt);
 	return CPL_E_STATEMENT_ERROR;
 }
 /***************************************************************************/

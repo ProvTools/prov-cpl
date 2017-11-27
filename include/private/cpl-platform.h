@@ -36,7 +36,13 @@
 #define __CPL_PRIVATE_PLATFORM_H__
 
 #include <pthread.h>
+
+#ifdef __APPLE__
+#include <dispatch/dispatch.h>
+#else
 #include <semaphore.h>
+#endif
+
 
 
 /***************************************************************************/
@@ -77,7 +83,62 @@ typedef pthread_mutex_t mutex_t;
 #define mutex_unlock(m) pthread_mutex_unlock(&(m));
 
 
+/***************************************************************************/
+/** Cross-Platform Compatibility: Semaphore                               **/
+/***************************************************************************/
 
+struct sema_t {
+#ifdef __APPLE__
+    dispatch_semaphore_t    sem;
+#else
+    sem_t                   sem;
+#endif
+};
+
+static inline void
+sema_init(struct sema_t s, uint32_t value)
+{
+#ifdef __APPLE__
+    dispatch_semaphore_t *sem = &s.sem;
+
+    *sem = dispatch_semaphore_create(value);
+#else
+    sem_init(&s.sem, 0, value);
+#endif
+}
+
+static inline void
+sema_wait(struct sema_t s)
+{
+
+#ifdef __APPLE__
+    dispatch_semaphore_wait(s.sem, DISPATCH_TIME_FOREVER);
+#else
+    sem_wait(&s.sem);
+#endif
+}
+
+static inline void
+sema_post(struct sema_t s)
+{
+
+#ifdef __APPLE__
+    dispatch_semaphore_signal(s.sem);
+#else
+    sem_post(&s.sem);
+#endif
+}
+
+static inline void
+sema_destroy(struct sema_t s)
+{
+
+#ifdef __APPLE__
+    dispatch_release(s.sem);
+#else
+    sem_destroy(&s.sem);
+#endif
+}
 
 /***************************************************************************/
 /** Helpers: Mutex                                                        **/

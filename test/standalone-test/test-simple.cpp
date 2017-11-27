@@ -102,7 +102,6 @@ print_object_info(cpl_object_info_t* info)
 	}
 
 	print(L_DEBUG, "  ID               : %llx", info->id);
-	print(L_DEBUG, "  Creation Session : %llx", info->creation_session);
 	print(L_DEBUG, "  Creation Time    : %s", s_creation_time);
 	print(L_DEBUG, "  Prefix       : %s", info->prefix);
 	print(L_DEBUG, "  Name             : %s", info->name);
@@ -698,7 +697,6 @@ test_simple(void)
 
 	print_object_info(info);
 	if (info->id != obj1
-			|| info->creation_session != session
 			|| (!with_delays && !check_time(info->creation_time))
 			|| strcmp(info->prefix, "test") != 0
 			|| strcmp(info->name, "Entity") != 0
@@ -720,7 +718,6 @@ test_simple(void)
 
 	print_object_info(info);
 	if (info->id != obj2
-			|| info->creation_session != session
 			|| (!with_delays && !check_time(info->creation_time))
 			|| strcmp(info->prefix, "test") != 0
 			|| strcmp(info->name, "Agent") != 0
