@@ -150,7 +150,7 @@ INSERT INTO cpl_sessions (id, mac_address, username, pid, program, cmdline)
 INSERT INTO cpl_bundles (id, name, session_id)
   VALUES (0, NULL, NULL);
 INSERT INTO cpl_objects (id, prefix, name, type, bundle_id)
-  VALUES (0, NULL, NULL, NULL, NULL, NULL);
+  VALUES (0, NULL, NULL, NULL, NULL);
 INSERT INTO cpl_relations (id, from_id, to_id, type, bundle_id)
   VALUES (0, NULL, NULL, NULL, NULL);
 
