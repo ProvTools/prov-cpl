@@ -87,58 +87,35 @@ typedef pthread_mutex_t mutex_t;
 /** Cross-Platform Compatibility: Semaphore                               **/
 /***************************************************************************/
 
-struct sema_t {
 #ifdef __APPLE__
-    dispatch_semaphore_t    sem;
+
+	typedef dispatch_semaphore_t sema_t;
+
+	static inline void
+	sema_create(sema_t *s, long value)
+	{
+		*s = dispatch_semaphore_create(value);
+	}
+
+	#define sema_init(s, value) sema_create(&s, value);
+
+	#define sema_wait(s) dispatch_semaphore_wait(s, DISPATCH_TIME_FOREVER);
+
+	#define sema_post(s) dispatch_semaphore_signal(s);
+
+	#define sema_destroy(s) dispatch_release(s);
 #else
-    sem_t                   sem;
+	typedef sem_t sema_t;
+
+	#define sema_init(s, value) sem_init(&s, 0, value);
+
+	#define sema_wait(s) sem_wait(&s);
+
+	#define sema_post(s) sem_post(&s);
+
+	#define sema_destroy(s) sem_destroy(&s);
 #endif
-};
 
-static inline void
-sema_init(struct sema_t s, uint32_t value)
-{
-#ifdef __APPLE__
-    dispatch_semaphore_t *sem = &s.sem;
-
-    *sem = dispatch_semaphore_create(value);
-#else
-    sem_init(&s.sem, 0, value);
-#endif
-}
-
-static inline void
-sema_wait(struct sema_t s)
-{
-
-#ifdef __APPLE__
-    dispatch_semaphore_wait(s.sem, DISPATCH_TIME_FOREVER);
-#else
-    sem_wait(&s.sem);
-#endif
-}
-
-static inline void
-sema_post(struct sema_t s)
-{
-
-#ifdef __APPLE__
-    dispatch_semaphore_signal(s.sem);
-#else
-    sem_post(&s.sem);
-#endif
-}
-
-static inline void
-sema_destroy(struct sema_t s)
-{
-
-#ifdef __APPLE__
-    dispatch_release(s.sem);
-#else
-    sem_destroy(&s.sem);
-#endif
-}
 
 /***************************************************************************/
 /** Helpers: Mutex                                                        **/

@@ -978,7 +978,6 @@ cpl_create_odbc_backend(const char* connection_string,
 
 	// Initialize the synchronization primitives
 
-
 	sema_init(odbc->create_session_sem, 4);
 	sema_init(odbc->create_object_sem, 4);
 	sema_init(odbc->lookup_object_sem, 4);
