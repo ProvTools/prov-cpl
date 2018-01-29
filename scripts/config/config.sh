@@ -69,8 +69,8 @@ fi
 # check if connection is possible
 export PGPASSWORD=$POSTGRES_ADMIN_PASSWORD
 $PSQL -U $POSTGRES_ADMIN -h $POSTGRES_SERVER -p $POSTGRES_PORT -c 'SELECT version()' >/dev/null 2>&1
-if ! [ $? ]; then
-	if [ $LOCAL_CONNECTION ]; then
+if ! [ $? = 0 ]; then
+	if [ $LOCAL_CONNECTION = 1 ]; then
 		echo "We haven't been able to connect to the local instance of PostgresQL as the admin user."
 		echo "Is postgresql running?"
 		echo "Also, please make sure that the daemon is listening to network connections"
@@ -107,7 +107,7 @@ $PSQL -U $POSTGRES_ADMIN -h $POSTGRES_SERVER -p $POSTGRES_PORT \
 	-v user_name=$POSTGRES_USER \
 	-v user_password=$POSTGRES_USER_PASSWORD < ../postgresql-setup-conf.sql >/dev/null 2>&1
 
-if ! [ $? ]; then
+if ! [ $? = 0 ]; then
   echo "Something went wrong with database configuration."
   echo "Make sure your database and user names are valid strings."
   exit 1
@@ -129,7 +129,7 @@ rm CPL_odbcinst.txt
 
 # Verify 
 $ODBCINST -q -d | grep -q '[PostgreSQL Unicode]'
-if ! [ $? ]; then
+if ! [ $? = 0 ]; then
   echo "Postgres ODBC driver configuration failed."
   echo "Check that you've downloaded the dependency"
   echo "from https://odbc.postgresql.org/."
@@ -157,7 +157,7 @@ rm CPL_odbc.txt
 
 # Verify 
 $ODBCINST -q -s | grep -q '[CPL]'
-if ! [ $? ]; then
+if ! [ $? = 0 ]; then
   echo "CPL ODBC configuration failed."
   echo "You can always manually modify the ~/.odbc.ini file"
   echo "or use a ODBC administrator tool."
