@@ -6,3 +6,4 @@ bindings/java/CPL/build
 bindings/java/CPL/test.class
 bindings/python/CPL/CPL.pyc
 bindings/r/*tar.gz
+**/.DS_Store
