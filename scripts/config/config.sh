@@ -1,36 +1,36 @@
 #!/bin/bash
 
 # navigate to CPL directory
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-if "$0" -neq "$DIR" && "$DIR" -neq "" ; then 
-    cd $DIR
-fi
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )";
+
+cd $DIR;
 
 echo "Welcome to the CPL installer.";
 echo "We'll need some information before we get started.";
 
-
-read -p "Enter: " name
-name=${name:-Richard}
-echo $name
 
 read -p "Postgres ADMIN username (default 'postgres'): " POSTGRES_ADMIN;
 POSTGRES_ADMIN=${POSTGRES_ADMIN:-postgres}
 read -p -s "Postgres ADMIN password (default ''): " POSTGRES_ADMIN_PASSWORD;
 POSTGRES_ADMIN_PASSWORD=${POSTGRES_ADMIN_PASSWORD:-}
 read -p "Postgres server address (default 'localhost'): " POSTGRES_SERVER;
+POSTGRES_SERVER=${POSTGRES_SERVER:-localhost}
 read -p "Postgres server port (default '5432'): " POSTGRES_PORT;
+POSTGRES_PORT=${POSTGRES_PORT:-5432};
+
 
 LOCAL_CONNECTION=0;
 if POSTGRES_SERVER -eq 'localhost' || POSTGRES_SERVER -eq '127.0.0.1'; then
 	$LOCAL_CONNECTION = 1;
 
-# TODO: find path/to/psql instead of relying on aliases
+# find path/to/psql instead of relying on aliases
+
+PSQL=$(find /usr -name psql -perm +111 -print -quit);
 
 # check if connection is possible
 export PGPASSWORD = $POSTGRES_ADMIN_PASSWORD;
 CHECK_CONNECTIONS
-if ! psql -U $POSTGRES_ADMIN -h POSTGRES_SERVER -p POSTGRES_PORT &>/dev/null; then
+if ! $($PSQL -U $POSTGRES_ADMIN -h POSTGRES_SERVER -p POSTGRES_PORT &>/dev/null); then
 	if [$LOCAL_CONNECTION]; then
 		echo "We haven't been able to connect to the local instance of PostgresQL as the admin user.\n";
 		echo "Is postgresql running?";
@@ -56,24 +56,27 @@ read -p "Postgres CPL username: " POSTGRES_USER
 read -p "Postgres CPL user password: " POSTGRES_USER_PASSWORD
 
 # configure Postgres database
-psql -U $POSTGRES_ADMIN -h POSTGRES_SERVER -p POSTGRES_PORT \
+$PSQL -U $POSTGRES_ADMIN -h POSTGRES_SERVER -p POSTGRES_PORT \
 	-v db_name=$POSTGRES_DATABASE \
 	-v user_name=$POSTGRES_USER \
-	-v user_password=$POSTGRES_USER_PASSWORD < ../scripts/postgresql-setup-conf.sql
+	-v user_password=$POSTGRES_USER_PASSWORD < ../postgresql-setup-conf.sql;
 
 echo "Great. Now configuring ODBC settings."
 
-# TODO: find path to odbcinst instead of relying on aliases, find psqlodbcw.so
+# find path to odbcinst instead of relying on aliases, 
+# TODO: find psqlodbcw.so
+
+ODBCINST=$(find /usr -name odbcinst -perm +111 -print -quit);
 
 # Add Postgres ODBC driver
 echo "[PostgreSQL Unicode]
 Description = PostgreSQL ODBC driver (Unicode version)
 Driver = psqlodbcw.so \n" > CPL_odbcinst.txt
 
-odbcinst -i -d -f CPL_odbcinst.txt
+$ODBCINST -i -d -f CPL_odbcinst.txt
 
 # Verify 
-if ! odbcinst -q -d | grep -q '[PostgreSQL Unicode]' ; then
+if ! $($ODBCINST -q -d | grep -q '[PostgreSQL Unicode]') ; then
   echo "Postgres ODBC driver configuration failed."
   echo "Check that you've downloaded the dependency"
   echo "from https://odbc.postgresql.org/."
@@ -94,13 +97,13 @@ Stmt            =
 User            = $POSTGRES_USER
 Password        = $POSTGRES_USER_PASSWORD \n" > CPL_odbc.txt
 
-odbcinst -i -s -f CPL_odbc.txt
+$ODBCINST -i -s -f CPL_odbc.txt
 
 # Verify 
-if ! odbcinst -q -s | grep -q '[CPL]'; then
+if ! $($ODBCINST -q -s | grep -q '[CPL]'); then
   echo "CPL ODBC configuration failed."
   echo "You can always manually modify the ~/.odbc.ini file"
   echo "or use a ODBC administrator tool."
 fi
 
-echo "Configuration successful"
+echo "Configuration successful."
