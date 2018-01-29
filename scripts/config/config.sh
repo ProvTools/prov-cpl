@@ -1,12 +1,49 @@
 #!/bin/bash
 
+echo "Welcome to the CPL installer."
+
 # navigate to CPL directory
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd $DIR
 
-echo "Welcome to the CPL installer."
-echo "We'll need some information before we get started."
+#check for dependencies
+PSQL=$(find /usr -name psql -perm +111 -print -quit)
+if ! command -v $PSQL >/dev/null 2>&1; then
+	echo "psql executable not found. Please install postgres and try again."
+	exit 1
+fi
 
+ODBCINST=$(find /usr -name odbcinst -perm +111 -print -quit)
+if ! command -v $ODBCINST >/dev/null 2>&1; then
+	echo "odbcinst executable not found. Please install unixodbc and try again."
+	exit 1
+fi
+
+if ! find /usr -name psqlodbcw.so | egrep '.*'; then
+	echo "psqlodbcw.so not found. Please install psqlodbc and try again."
+	exit 1
+fi
+
+if ! find /usr -name boost | egrep '.*'; then
+	echo "Boost libraries not found. Please install and try again."
+	exit 1
+fi
+
+if ! find /usr -name nlohmann_json | egrep '.*'; then
+	echo "nlohmann_json not found. Please install and try again."
+	exit 1
+fi
+
+if ! find /usr -name swig | egrep '.*'; then
+	echo "swig not found. Please install SWIG and try again."
+	exit 1
+fi
+
+
+
+# get postgres DB connection info
+
+echo "We'll need some information before we get started."
 
 read -p "Postgres ADMIN username (default 'postgres'): " POSTGRES_ADMIN
 POSTGRES_ADMIN=${POSTGRES_ADMIN:-postgres}
@@ -22,9 +59,6 @@ LOCAL_CONNECTION=0
 if POSTGRES_SERVER -eq 'localhost' || POSTGRES_SERVER -eq '127.0.0.1'; then
 	$LOCAL_CONNECTION = 1
 fi
-# find path/to/psql instead of relying on aliases
-
-PSQL=$(find /usr -name psql -perm +111 -print -quit)
 
 # check if connection is possible
 export PGPASSWORD = $POSTGRES_ADMIN_PASSWORD
@@ -62,10 +96,7 @@ $PSQL -U $POSTGRES_ADMIN -h POSTGRES_SERVER -p POSTGRES_PORT \
 
 echo "Great. Moving on to configuring ODBC settings."
 
-# find path to odbcinst instead of relying on aliases, 
 # TODO: find psqlodbcw.so
-
-ODBCINST=$(find /usr -name odbcinst -perm +111 -print -quit)
 
 # Add Postgres ODBC driver
 echo "[PostgreSQL Unicode]
