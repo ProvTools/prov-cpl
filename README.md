@@ -16,6 +16,10 @@ its provenance by creating provenance objects and disclosing data and control fl
 library would take care of persistently storing the provenance, detecting cycles, and providing 
 an interface to query the collected provenance.
 
++An overview of the PROV standard can be found at: https://www.w3.org/TR/2013/NOTE-prov-overview-20130430/
++For specifics about JSON: https://www.w3.org/Submission/2013/SUBM-prov-json-20130424/
++
+
 ## Disclosing Provenance
 
 Quick summary:
