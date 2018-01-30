@@ -83,7 +83,7 @@ Required Packages:
 - odbcinst
 - odbc-postgresql
 
-#### Installing ODBC data sources on Ubuntu
+#### Installing ODBC data sources
 
 The easiest way to add a data source is to use ODBCConfig available from
 the `unixodbc-bin` package. Alternatively, you can edit the `/etc/odbc.ini` file
@@ -105,29 +105,14 @@ entry would be:
 
 You can verify that the data source is installed by running: `odbcinst -q -s`
 
-#### Installing ODBC on Mac OS X
+You will also need to install the PostgreSQL ODBC driver from https://odbc.postgresql.org/.
+This will require adding the following entry to `/usr/local/etc/odbcinst.ini`:
 
-Please download and install the ODBC Administrator Tool for Mac OS X from:
+      [PostgreSQL]
+      Description = PostgreSQL ODBC driver (Unicode version)
+      Driver = psqlodbcw.so
 
-    http://support.apple.com/kb/dl895
-
-And install the appropriate ODBC drivers:
-
-    For PostgreSQL: https://odbc.postgresql.org/
-
-Alternatively, you can use purchase and use commercial ODBC drivers, such as:
-
-    http://www.actualtech.com/product_opensourcedatabases.php
-
-Then create either `User DSN` or `System DSN` (depending if you are installing
-CPL just for yourself or also for other users) for the database that you plan
-to use, and enter the following properties:
-
-    Name    : CPL
-    Server  : localhost
-    User    : cpl
-    Password: cplcplcpl
-    Database: cpl
+You can verify that the data driver is installed by running: `odbcinst -q -d`
 
 #### Configuring PostgreSQL
 
