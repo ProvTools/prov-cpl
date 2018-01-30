@@ -26,6 +26,19 @@ def serialize_relation_info(rel):
 		'other': rel.other.id
 	}
 
+def serialize_prefix_tuple(pre):
+	return {
+		'prefix': pre[0],
+		'iri': pre[1]
+	}
+
+def serialize_property_tuple(prop):
+	return {
+		'prefix': prop[0],
+		'name': prop[1],
+		'value': prop[2]
+	}
+# TODO: wrap returns in make_response with http status codes
 @app.route("/provapi/bundle/<id>")
 def bundle_get(id):
 	try:
@@ -68,7 +81,8 @@ def bundles_lookup():
 def bundle_prefix_get(id, prefix=None):
 	try:
 		prefixes = cpl_bundle(id).prefixes(prefix)
-		return jsonify(prefixes)
+		return jsonify(prefixes=
+			[serialize_prefix_tuple(pre) for pre in prefixes])
 	except Exception as e:
 		return jsonify(error=str(e))
 
@@ -87,7 +101,8 @@ def bundle_prefix_post(id):
 def bundle_property_get(id, prefix=None, name=None):
 	try:
 		properties = cpl_bundle(id).properties(prefix, name)
-		return jsonify(properties)
+		return jsonify(properties=
+			[serialize_property_tuple(prop) for prop in properties])
 	except Exception as e:
 		return jsonify(error=str(e))
 
@@ -102,19 +117,19 @@ def bundle_property_post(id):
 	except Exception as e:
 		return jsonify(error=str(e))
 
-@app.route("/provapi/bundle/<id>/object")
+@app.route("/provapi/bundle/<id>/objects")
 def bundle_objects_get(id):
 	try:
 		objects = connection.get_bundle_objects(cpl_bundle(id))
-		return jsonify([serialize_object_info(o) for o in objects])
+		return jsonify(objects=[serialize_object_info(o) for o in objects])
 	except Exception as e:
 		return jsonify(error=str(e))
 
-@app.route("/provapi/bundle/<id>/relation")
+@app.route("/provapi/bundle/<id>/relations")
 def bundle_relations_get(id):
 	try:
 		relations = connection.get_bundle_relations(cpl_bundle(id))
-		return jsonify([serialize_relation_info(r) for r in relations])
+		return jsonify(relations=[serialize_relation_info(r) for r in relations])
 	except Exception as e:
 		return jsonify(error=str(e))
 
@@ -139,8 +154,8 @@ def object_post():
 	except Exception as e:
 		return jsonify(error=str(e))
 
-@app.route("/provapi/object", methods=['PUT'])
-def object_put():
+@app.route("/provapi/lookup/object", methods=['POST'])
+def object_lookup():
 	try:
 		content = request.get_json()
 		o = connection.lookup_object(content['prefix'],
@@ -152,8 +167,8 @@ def object_put():
 	except Exception as e:
 		return jsonify(error=str(e))
 
-@app.route("/provapi/objects", methods=['PUT'])
-def objects_put():
+@app.route("/provapi/lookup/objects", methods=['PUT'])
+def objectss_lookup():
 	try:
 		content = request.get_json()
 		objects = connection.lookup_all_objects(content['prefix'],
@@ -201,7 +216,7 @@ def object_property_put():
 def object_ancestors_get(id):
 	try:
 		relations = cpl_object(id).relations()
-		return jsonify([serialize_relation_info(info) for info in relations])
+		return jsonify(relations=[serialize_relation_info(info) for info in relations])
 	except Exception as e:
 		return jsonify(error=str(e))
 

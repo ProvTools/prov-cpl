@@ -1160,7 +1160,7 @@ class cpl_bundle:
 		v = CPLDirect.cpl_dereference_p_std_vector_cplxx_property_entry_t(vp)
 		l = []
 		for e in v:
-			l.append([e.prefix, e.key, e.value])
+			l.append((e.prefix, e.key, e.value))
 		CPLDirect.delete_std_vector_cplxx_property_entry_tp(vp)
 		return l
 
@@ -1182,7 +1182,7 @@ class cpl_bundle:
 		v = CPLDirect.cpl_dereference_p_std_vector_cplxx_prefix_entry_t(vp)
 		l = []
 		for e in v:
-			l.append([e.prefix, e.iri])
+			l.append((e.prefix, e.iri))
 		CPLDirect.delete_std_vector_cplxx_prefix_entry_tp(vp)
 		return l
 

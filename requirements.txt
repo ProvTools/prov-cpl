@@ -1,6 +1,6 @@
 backend:
 postgreSQL
-unixODBC (and unixodbc-dev)
+unixODBC (and separately unixodbc-dev on Linux)
 psqlodbc
 
 standalone:
