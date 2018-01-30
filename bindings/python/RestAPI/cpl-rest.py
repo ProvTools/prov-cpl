@@ -45,8 +45,8 @@ def bundle_post():
 	except Exception as e:
 		return jsonify(error=str(e))
 
-@app.route("/provapi/bundle", methods=['PUT'])
-def bundle_put():
+@app.route("/provapi/lookup/bundle", methods=['POST'])
+def bundle_lookup():
 	try:
 		content = request.get_json()
 		bundle = connection.lookup_bundle(content['name'])
@@ -54,8 +54,8 @@ def bundle_put():
 	except Exception as e:
 		return jsonify(error=str(e))
 
-@app.route("/provapi/bundles", methods=['PUT'])
-def bundles_put():
+@app.route("/provapi/lookup/bundles", methods=['POST'])
+def bundles_lookup():
 	try:
 		content = request.get_json()
 		bundles = connection.lookup_all_bundles(content['name'])

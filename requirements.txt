@@ -1,6 +1,6 @@
 backend:
 postgreSQL
-unixODBC
+unixODBC (and unixodbc-dev)
 psqlodbc
 
 standalone:
@@ -14,6 +14,9 @@ swig
 python:
 python-dev
 swig
+
+	python rest-api:
+	flask
 
 R:
 Rcpp
