@@ -196,3 +196,100 @@ params:
 }
 returns:
 
+POST /provapi/lookup/object/property
+looks up objects by property
+param:
+{
+	'prefix': String,
+	'name': String,
+	'value': String (optional)
+}
+returns:
+{
+	ids: [Long]
+}
+
+GET /provapi/object/<id>/ancestors
+gets all ancestral relations from object <id>
+returns:
+{
+	relations: [{
+		'id': Long,
+		'ancestor': Long,
+		'descendant': Long,
+		'type': enum,
+		'bundle': Long,
+		'base': Long,
+		'other': Long
+	}]
+}
+
+GET /provapi/object/<id>/descendants
+gets all descendent relations to object <id>
+returns:
+{
+	relations: [{
+		'id': Long,
+		'ancestor': Long,
+		'descendant': Long,
+		'type': enum,
+		'bundle': Long,
+		'base': Long,
+		'other': Long
+	}]
+}
+
+POST /provapi/object/<id>/relation
+creates a relation to/from object <id>
+params:
+{
+	'dest' OR 'src': Long,
+	'type': enum,
+	'bundle': Long 
+}
+returns:
+{
+	'id': Long
+}
+
+GET /provapi/relation/<id>/property
+	/provapi/relation/<id>/property/<string:prefix>:<string:name>
+gets properties from relation <id> 
+(optionally with property prefix:name)
+returns:
+{
+	'properties': [{
+		'prefix': String,
+		'name': String,
+		'value': String
+	}]
+}
+
+POST /provapi/relation/<id>/property
+creates a property for relation <id>
+params:
+{
+	'prefix': String,
+	'name': String,
+	'value': String
+}
+returns:
+
+GET /provapi/bundle/<id>/json
+exports provenance from bundle <id> as a document
+returns:
+{
+	'JSON': {PROV-JSON Doc}
+}
+
+POST /provapi/json
+uploads a PROV-JSON file
+params:
+{
+	'JSON': {PROV-JSON Doc},
+	'bundle_name': String,
+	'anchor_objects': [{
+		'id': Long (internal CPL ID)
+		'name': String (name of object in document)
+	}]
+}

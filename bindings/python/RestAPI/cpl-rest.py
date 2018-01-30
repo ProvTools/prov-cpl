@@ -201,14 +201,14 @@ def object_property_post(id):
 	except Exception as e:
 		return jsonify(error=str(e))
 
-@app.route("/provapi/object/property", methods=['PUT'])
-def object_property_put():
+@app.route("/provapi/lookup/object/property", methods=['POST'])
+def object_lookup_by_property():
 	try:
 		content = request.get_json()
 		objects = connection.lookup_by_property(content['prefix'],
 									 content['key'],
 									 content['value'])
-		return jsonify([o.id for o in objects])
+		return jsonify(ids=[o.id for o in objects])
 	except Exception as e:
 		return jsonify(error=str(e))
 
@@ -220,7 +220,7 @@ def object_ancestors_get(id):
 	except Exception as e:
 		return jsonify(error=str(e))
 
-@app.route("/provapi/object/<id>/relation/descendants")
+@app.route("/provapi/object/<id>/descendants")
 def object_descendants_get(id):
 	try:
 		relations = cpl_object(id).relations(CPL.D_DESCENDANTS)
