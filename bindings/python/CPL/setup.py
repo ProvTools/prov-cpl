@@ -37,7 +37,7 @@
 from distutils.core import setup
 
 setup(name='CPL',
-	version = '2.0',
+	version = '3.0',
 	author = 'Jackson Okuhn & Peter Macko & Margo Seltzer',
 	description = """Python interface to CPL""",
 	py_modules = ["CPL"],

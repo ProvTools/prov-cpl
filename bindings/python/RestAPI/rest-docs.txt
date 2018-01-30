@@ -118,3 +118,81 @@ returns:
 		'other': Long
 	}]
 }
+
+GET /provapi/object/<id>
+gets object <id> information
+returns:
+{
+    'id': Long, 
+    'creation_time': Timestamp,
+    'prefix': String,
+    'name': String,
+    'type': enum,
+    'bundle': Long
+}
+
+POST /provapi/object
+creates a new object
+params:
+{
+	'prefix': String,
+	'name': String,
+	'type': enum,
+	'bundle': Long
+}
+returns:
+{
+	'id': Long
+}
+
+POST /provapi/lookup/object
+looks up an object
+params:
+{
+	'prefix': String,
+	'name': String,
+	'type': enum, (optional)
+	'bundle': Long (optional)
+}
+returns:
+{
+	'id': Long
+}
+
+POST /provapi/lookup/object
+looks up multiple objects
+params:
+{
+	'prefix': String,
+	'name': String,
+	'type': enum, (optional)
+	'bundle': Long (optional)
+}
+returns:
+{
+	'id': [Long]
+}
+
+GET /provapi/object/<id>/property
+	/provapi/object/<id>/property/<string:prefix>:<string:property>
+gets properties from object <id> 
+(optionally with property prefix:name)
+returns:
+{
+	'properties': [{
+		'prefix': String,
+		'name': String,
+		'value': String
+	}]
+}
+
+POST /provapi/object/<id>/property
+creates a property for object <id>
+params:
+{
+	'prefix': String,
+	'name': String,
+	'value': String
+}
+returns:
+

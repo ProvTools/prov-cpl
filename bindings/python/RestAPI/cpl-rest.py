@@ -148,8 +148,7 @@ def object_post():
 		o = connection.create_object(content['prefix'],
 								 content['name'],
 								 content['type'],
-								 cpl_bundle(content['bundle'] 
-								 	if content['bundle'] else None))
+								 cpl_bundle(content['bundle']))
 		return jsonify(id=o.id)
 	except Exception as e:
 		return jsonify(error=str(e))
@@ -167,8 +166,8 @@ def object_lookup():
 	except Exception as e:
 		return jsonify(error=str(e))
 
-@app.route("/provapi/lookup/objects", methods=['PUT'])
-def objectss_lookup():
+@app.route("/provapi/lookup/objects", methods=['POST'])
+def objects_lookup():
 	try:
 		content = request.get_json()
 		objects = connection.lookup_all_objects(content['prefix'],
@@ -185,7 +184,8 @@ def objectss_lookup():
 def object_property_get(id, prefix=None, property=None):
 	try:
 		properties = cpl_object(id).properties(prefix, name)
-		return jsonify(properties)
+		return jsonify(properties=
+			[serialize_property_tuple(prop) for prop in properties])
 	except Exception as e:
 		return jsonify(error=str(e))
 
