@@ -39,7 +39,16 @@ def serialize_property_tuple(prop):
         'name': prop[1],
         'value': prop[2]
     }
+
 # TODO: wrap returns in make_response with http status codes
+
+@app.route("/provapi/version")
+def version_get():
+    try:
+        return jsonify(version=CPL.CPL_VERSION_STR)
+    except Exception as e:
+        return jsonify(error=str(e))
+
 @app.route("/provapi/bundle/<id>")
 def bundle_get(id):
     try:
@@ -145,7 +154,7 @@ def object_post():
     try:
         content = request.get_json()
         o = connection.create_object(content['prefix'],
-                                 	 content['name'],
+                                     content['name'],
                                      content['type'],
                                      cpl_bundle(content['bundle']))
         return jsonify(id=o.id)
@@ -158,10 +167,10 @@ def object_lookup():
         content = request.get_json()
         o = connection.lookup_object(content['prefix'],
                                      content['name'],
-                                 	 content['type'],
+                                     content['type'],
                                      cpl_bundle(content['bundle']
-                                     		    if content['bundle'] 
-                                     		    else None))
+                                                if content['bundle'] 
+                                                else None))
         return jsonify(id=o.id)
     except Exception as e:
         return jsonify(error=str(e))
@@ -174,8 +183,8 @@ def objects_lookup():
                                                 content['name'],
                                                 content['type'],
                                                 cpl_bundle(content['bundle']
-                                                		   if content['bundle'] 
-                                                		   else None))
+                                                           if content['bundle'] 
+                                                           else None))
         return jsonify(ids=[o.id for o in objects])
     except Exception as e:
         return jsonify(error=str(e))    
@@ -207,8 +216,8 @@ def object_lookup_by_property():
     try:
         content = request.get_json()
         objects = connection.lookup_by_property(content['prefix'],
-                                     			content['key'],
-                                     			content['value'])
+                                                content['key'],
+                                                content['value'])
         return jsonify(ids=[o.id for o in objects])
     except Exception as e:
         return jsonify(error=str(e))
@@ -259,8 +268,8 @@ def relation_property_post(id):
     try:
         content = request.get_json()
         cpl_relation(id, None, None, None, None, None).add_property(content['prefix'],
-						  											content['name'],
-                          											content['value'])
+                                                                    content['name'],
+                                                                    content['value'])
         return jsonify(success=True)
     except Exception as e:
         return jsonify(error=str(e))
