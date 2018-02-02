@@ -44,26 +44,26 @@ def serialize_property_tuple(prop):
 @app.errorhandler(CPLException)
 def handle_cpl_error(e):
     if e.code == CPL.E_INVALID_ARGUMENT or e.code == CPL.E_ALREADY_EXISTS:
-        response = jsonify(error=e, success=False)
+        response = jsonify(error=e.msg, success=False)
         response.status_code = 400
         return response
     if e.code == CPL.E_NOT_FOUND:
-        response = jsonify(error=e, success=False)
+        response = jsonify(error=e.msg, success=False)
         response.status_code = 400
         return response
     else:
-        response = jsonify(error=e, success=False)
+        response = jsonify(error=e.msg, success=False)
         response.status_code = 500
         return response
 
 @app.errorhandler(LookupError)
-def handle_lookup_error():
+def handle_lookup_error(e):
     response = jsonify(error="Lookup failed", success=False)
     response.status_code = 404
     return response
 
 @app.errorhandler(Exception)
-def handle_exception():
+def handle_exception(e):
     response = jsonify(error="Unknown internal error", success=False)
     response.status_code = 500
     return response
@@ -77,8 +77,8 @@ def version_get():
 def bundle_get(id):
     info = cpl_bundle(id).info()
     return jsonify(name=info.name,
-                   creation_time=info.creation_time,
-                   creation_session=info.creation_session)
+               creation_time=info.creation_time,
+               creation_session=info.creation_session.id)
 
 @app.route("/provapi/bundle", methods=['POST'])
 def bundle_post():

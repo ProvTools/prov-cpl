@@ -274,7 +274,8 @@ class CPLException(Exception):
     def __init__(self, msg, code):
         super(CPLException, self).__init__(msg)
         self.code = code
-#
+        self.msg = msg
+#      
 # Provenance relation
 #
 
