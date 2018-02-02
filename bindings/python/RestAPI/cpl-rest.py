@@ -41,7 +41,6 @@ def serialize_property_tuple(prop):
     }
 
 # TODO: wrap returns in make_response with http status codes
-
 @app.route("/provapi/version")
 def version_get():
     try:
@@ -49,7 +48,7 @@ def version_get():
     except Exception as e:
         return jsonify(error=str(e))
 
-@app.route("/provapi/bundle/<id>")
+@app.route("/provapi/bundle/<int:id>")
 def bundle_get(id):
     try:
         info = cpl_bundle(id).info()
@@ -86,8 +85,8 @@ def bundles_lookup():
     except Exception as e:
         return jsonify(error=str(e))
 
-@app.route("/provapi/bundle/<id>/prefix")
-@app.route("/provapi/bundle/<id>/prefix/<string:prefix>")
+@app.route("/provapi/bundle/<int:id>/prefix")
+@app.route("/provapi/bundle/<int:id>/prefix/<string:prefix>")
 def bundle_prefix_get(id, prefix=None):
     try:
         prefixes = cpl_bundle(id).prefixes(prefix)
@@ -95,7 +94,7 @@ def bundle_prefix_get(id, prefix=None):
     except Exception as e:
         return jsonify(error=str(e))
 
-@app.route("/provapi/bundle/<id>/prefix", methods=['POST'])
+@app.route("/provapi/bundle/<int:id>/prefix", methods=['POST'])
 def bundle_prefix_post(id):
     try:
         content = request.get_json()
@@ -105,8 +104,8 @@ def bundle_prefix_post(id):
     except Exception as e:
         return jsonify(error=str(e))
 
-@app.route("/provapi/bundle/<id>/property")
-@app.route("/provapi/bundle/<id>/property/<string:prefix>:<string:name>")
+@app.route("/provapi/bundle/<int:id>/property")
+@app.route("/provapi/bundle/<int:id>/property/<string:prefix>:<string:name>")
 def bundle_property_get(id, prefix=None, name=None):
     try:
         properties = cpl_bundle(id).properties(prefix, name)
@@ -114,7 +113,7 @@ def bundle_property_get(id, prefix=None, name=None):
     except Exception as e:
         return jsonify(error=str(e))
 
-@app.route("/provapi/bundle/<id>/property", methods=['POST'])
+@app.route("/provapi/bundle/<int:id>/property", methods=['POST'])
 def bundle_property_post(id):
     try:
         content = request.get_json()
@@ -125,7 +124,7 @@ def bundle_property_post(id):
     except Exception as e:
         return jsonify(error=str(e))
 
-@app.route("/provapi/bundle/<id>/objects")
+@app.route("/provapi/bundle/<int:id>/objects")
 def bundle_objects_get(id):
     try:
         objects = connection.get_bundle_objects(cpl_bundle(id))
@@ -133,7 +132,7 @@ def bundle_objects_get(id):
     except Exception as e:
         return jsonify(error=str(e))
 
-@app.route("/provapi/bundle/<id>/relations")
+@app.route("/provapi/bundle/<int:id>/relations")
 def bundle_relations_get(id):
     try:
         relations = connection.get_bundle_relations(cpl_bundle(id))
@@ -141,7 +140,7 @@ def bundle_relations_get(id):
     except Exception as e:
         return jsonify(error=str(e))
 
-@app.route("/provapi/object/<id>")
+@app.route("/provapi/object/<int:id>")
 def object_get(id):
     try:
         info = cpl_object(id).info
@@ -189,8 +188,8 @@ def objects_lookup():
     except Exception as e:
         return jsonify(error=str(e))    
 
-@app.route("/provapi/object/<id>/property")
-@app.route("/provapi/object/<id>/property/<string:prefix>:<string:property>")
+@app.route("/provapi/object/<int:id>/property")
+@app.route("/provapi/object/<int:id>/property/<string:prefix>:<string:property>")
 def object_property_get(id, prefix=None, property=None):
     try:
         properties = cpl_object(id).properties(prefix, property)
@@ -200,7 +199,7 @@ def object_property_get(id, prefix=None, property=None):
         return jsonify(error=str(e))
 
 
-@app.route("/provapi/object/<id>/property")
+@app.route("/provapi/object/<int:id>/property")
 def object_property_post(id):
     try:
         content = request.get_json()
@@ -222,7 +221,7 @@ def object_lookup_by_property():
     except Exception as e:
         return jsonify(error=str(e))
 
-@app.route("/provapi/object/<id>/relation/ancestors")
+@app.route("/provapi/object/<int:id>/relation/ancestors")
 def object_ancestors_get(id):
     try:
         relations = cpl_object(id).relations()
@@ -230,7 +229,7 @@ def object_ancestors_get(id):
     except Exception as e:
         return jsonify(error=str(e))
 
-@app.route("/provapi/object/<id>/descendants")
+@app.route("/provapi/object/<int:id>/descendants")
 def object_descendants_get(id):
     try:
         relations = cpl_object(id).relations(CPL.D_DESCENDANTS)
@@ -238,7 +237,7 @@ def object_descendants_get(id):
     except Exception as e:
         return jsonify(error=str(e))
 
-@app.route("/provapi/object/<id>/relation", methods=['POST'])
+@app.route("/provapi/object/<int:id>/relation", methods=['POST'])
 def object_relation_post(id):
     try:
         content = request.get_json()
@@ -254,8 +253,8 @@ def object_relation_post(id):
     except Exception as e:
         return jsonify(error=str(e))
 
-@app.route("/provapi/relation/<id>/property")
-@app.route("/provapi/relation/<id>/property/<string:prefix>:<string:name>")
+@app.route("/provapi/relation/<int:id>/property")
+@app.route("/provapi/relation/<int:id>/property/<string:prefix>:<string:name>")
 def relation_property_get(id, prefix=None, name=None):
     try:
         properties = cpl_relation(id, None, None, None, None, None).properties(prefix, name)
@@ -263,7 +262,7 @@ def relation_property_get(id, prefix=None, name=None):
     except Exception as e:
         return jsonify(error=str(e))
 
-@app.route("/provapi/relation/<id>/property", methods=['POST'])
+@app.route("/provapi/relation/<int:id>/property", methods=['POST'])
 def relation_property_post(id):
     try:
         content = request.get_json()
@@ -298,7 +297,7 @@ def json_post():
     except Exception as e:
         return jsonify(error=str(e))
 
-@app.route("/provapi/bundle/<id>/json")
+@app.route("/provapi/bundle/<int:id>/json")
 def bundle_json_get(id):
     try:
         json = connection.export_bundle_json([cpl_bundle(id)])
