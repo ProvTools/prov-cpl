@@ -1,6 +1,7 @@
 import CPL
 from CPL import cpl_bundle, cpl_object, cpl_relation, CPLException
 from flask import Flask, request, jsonify
+import optparse
 
 connection = CPL.cpl_connection()
 
@@ -255,7 +256,31 @@ def bundle_json_get(id):
     json = connection.export_bundle_json([cpl_bundle(id)])
     return jsonify(JSON=json)
 
+def flaskrun(app, default_host="127.0.0.1", 
+                  default_port="5000"):
+    """
+    Takes a flask.Flask instance and runs it. Parses 
+    command-line flags to configure the app.
+    """
+
+    # Set up the command-line options
+    parser = optparse.OptionParser()
+    parser.add_option("-H", "--host",
+                      help="Hostname of the Flask app " + \
+                           "[default %s]" % default_host,
+                      default=default_host)
+    parser.add_option("-P", "--port",
+                      help="Port for the Flask app " + \
+                           "[default %s]" % default_port,
+                      default=default_port)
+
+    options, _ = parser.parse_args()
+
+    app.run(
+        host=options.host,
+        port=int(options.port)
+    )
 
 if __name__ == "__main__":
-    app.run()
+    flaskrun(app)
 
