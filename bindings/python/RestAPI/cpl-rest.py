@@ -81,6 +81,11 @@ def bundle_get(id):
                creation_time=info.creation_time,
                creation_session=info.creation_session.id)
 
+@app.route("/provapi/bundle/<int:id>", methods=['DELETE'])
+def bundle_delete(id):
+    connection.delete_bundle(id);
+    return jsonify(success=True)
+
 @app.route("/provapi/bundle", methods=['POST'])
 def bundle_post():
     content = request.get_json()
