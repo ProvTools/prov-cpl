@@ -1,3 +1,9 @@
+all API calls return 1 of the following status codes:
+200 - success
+400 - invalid arguments
+404 - lookup failed
+500 - internal error, check logs
+
 GET /provapi/bundle/<id>
 gets bundle <id> information
 returns:

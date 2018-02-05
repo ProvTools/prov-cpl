@@ -50,7 +50,7 @@ def handle_cpl_error(e):
         return response
     if e.code == CPL.E_NOT_FOUND:
         response = jsonify(error=e.msg, success=False)
-        response.status_code = 400
+        response.status_code = 404
         return response
     else:
         response = jsonify(error=e.msg, success=False)
