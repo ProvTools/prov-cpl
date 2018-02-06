@@ -65,6 +65,7 @@ def handle_lookup_error(e):
 
 @app.errorhandler(Exception)
 def handle_exception(e):
+    print e
     response = jsonify(error="Unknown internal error", success=False)
     response.status_code = 500
     return response
@@ -89,7 +90,7 @@ def bundle_delete(id):
 @app.route("/provapi/bundle", methods=['POST'])
 def bundle_post():
     content = request.get_json()
-    bundle = connection.create_bundle(content['name'])
+    bundle = connection.create_bundle(str(content['name']))
     return jsonify(id=bundle.id)
 
 @app.route("/provapi/lookup/bundle", methods=['POST'])
