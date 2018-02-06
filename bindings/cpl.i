@@ -353,7 +353,7 @@ cpl_convert_p_std_vector_cpl_id_t_to_p_void(
     validate_json_return_t ret;
     ret.return_code = validate_json(filepath,ret.out_string);
     return ret;
-  }
+  };
 %}
 
 %inline %{
