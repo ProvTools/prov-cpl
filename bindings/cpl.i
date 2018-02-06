@@ -268,8 +268,8 @@ cpl_return_t
 cpl_get_current_session(unsigned long long* OUTPUT);
 
 cpl_return_t
-import_document_json(const char* filename,
-                     const char* bundle_name,
+import_document_json(const std::string& filename,
+                     const std::string& bundle_name,
                      const std::vector<std::pair<cpl_id_t, std::string>>& anchor_objects,
                      const int flags,
                      unsigned long long* OUTPUT);
@@ -366,7 +366,7 @@ cpl_convert_p_std_vector_cpl_id_t_to_p_void(
     struct export_bundle_json_return_t ret;
     ret.return_code = export_bundle_json(bundles, ret.out_string);
     return ret;
-  }
+  };
 %}
 
 %ignore method2;
