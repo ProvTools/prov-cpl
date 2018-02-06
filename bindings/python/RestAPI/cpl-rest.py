@@ -84,7 +84,7 @@ def bundle_get(id):
 
 @app.route("/provapi/bundle/<int:id>", methods=['DELETE'])
 def bundle_delete(id):
-    connection.delete_bundle(id);
+    connection.delete_bundle(id)
     return jsonify(success=True)
 
 @app.route("/provapi/bundle", methods=['POST'])
@@ -96,13 +96,13 @@ def bundle_post():
 @app.route("/provapi/lookup/bundle", methods=['POST'])
 def bundle_lookup():
     content = request.get_json()
-    bundle = connection.lookup_bundle(content['name'])
+    bundle = connection.lookup_bundle(str(content['name']))
     return jsonify(id=bundle.id)
 
 @app.route("/provapi/lookup/bundles", methods=['POST'])
 def bundles_lookup():
     content = request.get_json()
-    bundles = connection.lookup_all_bundles(content['name'])
+    bundles = connection.lookup_all_bundles(str(content['name']))
     return jsonify(ids=[bundle.id for bundle in bundles])
 
 @app.route("/provapi/bundle/<int:id>/prefix")
@@ -114,8 +114,8 @@ def bundle_prefix_get(id, prefix=None):
 @app.route("/provapi/bundle/<int:id>/prefix", methods=['POST'])
 def bundle_prefix_post(id):
     content = request.get_json()
-    cpl_bundle(id).add_prefix(content['prefix'],
-                              content['iri'])
+    cpl_bundle(id).add_prefix(str(content['prefix']),
+                              str(content['iri']))
     return jsonify(success=True)
 
 @app.route("/provapi/bundle/<int:id>/property")
@@ -127,9 +127,9 @@ def bundle_property_get(id, prefix=None, name=None):
 @app.route("/provapi/bundle/<int:id>/property", methods=['POST'])
 def bundle_property_post(id):
     content = request.get_json()
-    cpl_bundle(id).add_property(content['prefix'],
-                                content['name'],
-                                content['value'])
+    cpl_bundle(id).add_property(str(content['prefix']),
+                                str(content['name']),
+                                str(content['value']))
     return jsonify(success=True)
 
 @app.route("/provapi/bundle/<int:id>/objects")
@@ -150,19 +150,19 @@ def object_get(id):
 @app.route("/provapi/object", methods=['POST'])
 def object_post():
     content = request.get_json()
-    o = connection.create_object(content['prefix'],
-                                 content['name'],
-                                 content['type'],
-                                 cpl_bundle(content['bundle']))
+    o = connection.create_object(str(content['prefix']),
+                                 str(content['name']),
+                                 int(content['type']),
+                                 cpl_bundle(int(content['bundle'])))
     return jsonify(id=o.id)
 
 @app.route("/provapi/lookup/object", methods=['POST'])
 def object_lookup():
     content = request.get_json()
-    o = connection.lookup_object(content['prefix'],
-                                 content['name'],
-                                 content['type'],
-                                 cpl_bundle(content['bundle']
+    o = connection.lookup_object(str(content['prefix']),
+                                 str(content['name']),
+                                 int(content['type']),
+                                 cpl_bundle(str(content['bundle'])
                                             if content['bundle'] 
                                             else None))
     return jsonify(id=o.id)
@@ -170,10 +170,10 @@ def object_lookup():
 @app.route("/provapi/lookup/objects", methods=['POST'])
 def objects_lookup():
     content = request.get_json()
-    objects = connection.lookup_all_objects(content['prefix'],
-                                            content['name'],
-                                            content['type'],
-                                            cpl_bundle(content['bundle']
+    objects = connection.lookup_all_objects(str(content['prefix']),
+                                            str(content['name']),
+                                            int(content['type']),
+                                            cpl_bundle(str(content['bundle'])
                                                        if content['bundle'] 
                                                        else None))
     return jsonify(ids=[o.id for o in objects])    
@@ -189,17 +189,17 @@ def object_property_get(id, prefix=None, property=None):
 @app.route("/provapi/object/<int:id>/property")
 def object_property_post(id):
     content = request.get_json()
-    cpl_object(id).add_property(content['prefix'],
-                                content['name'],
-                                content['value'])
+    cpl_object(id).add_property(str(content['prefix']),
+                                str(content['name']),
+                                str(content['value']))
     return jsonify(success=True)
 
 @app.route("/provapi/lookup/object/property", methods=['POST'])
 def object_lookup_by_property():
     content = request.get_json()
-    objects = connection.lookup_by_property(content['prefix'],
-                                            content['key'],
-                                            content['value'])
+    objects = connection.lookup_by_property(str(content['prefix']),
+                                            str(content['key']),
+                                            str(content['value']))
     return jsonify(ids=[o.id for o in objects])
 
 @app.route("/provapi/object/<int:id>/relation/ancestors")
@@ -216,13 +216,13 @@ def object_descendants_get(id):
 def object_relation_post(id):
     content = request.get_json()
     if content['dest']:
-        relation = cpl_object(id).relation_to(cpl_object(content['dest']),
-                                              content['type'],
-                                              cpl_bundle(content['bundle']))
+        relation = cpl_object(id).relation_to(cpl_object(int(content['dest'])),
+                                              int(content['type']),
+                                              cpl_bundle(int(content['bundle'])))
     else:
-        relation = cpl_object(id).relation_from(cpl_object(content['src']),
-                                                content['type'],
-                                                cpl_bundle(content['bundle']))
+        relation = cpl_object(id).relation_from(cpl_object(int(content['src'])),
+                                                int(content['type']),
+                                                cpl_bundle(int(content['bundle'])))
     return jsonify(id=relation.id)
 
 @app.route("/provapi/relation/<int:id>/property")
@@ -234,9 +234,9 @@ def relation_property_get(id, prefix=None, name=None):
 @app.route("/provapi/relation/<int:id>/property", methods=['POST'])
 def relation_property_post(id):
     content = request.get_json()
-    cpl_relation(id, None, None, None, None, None).add_property(content['prefix'],
-                                                                content['name'],
-                                                                content['value'])
+    cpl_relation(id, None, None, None, None, None).add_property(str(content['prefix']),
+                                                                str(content['name']),
+                                                                str(content['value']))
     return jsonify(success=True)
 
 @app.route("/provapi/json/validate", methods=['POST'])
@@ -251,9 +251,9 @@ def json_validate():
 @app.route("/provapi/json", methods=['POST'])
 def json_post():
     content = request.get_json()
-    anchors = [(cpl_object(a['id']), a['name']) for a in content['anchor_objects']]
+    anchors = [(cpl_object(int(a['id'])), str(a['name'])) for a in content['anchor_objects']]
     bundle = connection.import_document_json(content['JSON'],
-                                    content['bundle_name'],
+                                    str(content['bundle_name']),
                                     anchors)
     return jsonify(id=bundle.id)
 
