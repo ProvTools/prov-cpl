@@ -1761,7 +1761,7 @@ cpl_return_t
 import_objects_json(const int type,
 					const std::string& type_str,
 					const cpl_id_t bundle_id,
-					std::map<std::string, cpl_id_t>& lookup_tbl,
+					boost::unordered_map<std::string, cpl_id_t>& lookup_tbl,
 					json& document)
 {
 	json o = document[type_str];
@@ -1801,7 +1801,7 @@ import_objects_json(const int type,
  */
 cpl_return_t
 import_relations_json(const cpl_id_t bundle_id,
-					  const std::map<std::string, cpl_id_t>& lookup_tbl,
+					  const boost::unordered_map<std::string, cpl_id_t>& lookup_tbl,
 					  json& document,
 					  const int extern_obj_f)
 {
@@ -1902,7 +1902,7 @@ import_document_json(const std::string& json_string,
 		return CPL_E_INTERNAL_ERROR;
 	}
 
- 	std::map<std::string, cpl_id_t> lookup_tbl;
+ 	boost::unordered_map<std::string, cpl_id_t> lookup_tbl;
 
 	// Create bundle
 	cpl_id_t bundle_id;
@@ -1979,48 +1979,75 @@ export_bundle_prefixes_json(const std::vector<cpl_id_t>& bundles,
 
 	} else {
 
-		/**
-		typedef map<pair<string, string>, vector<cpl_id_t>> prefix_id_map;
-		prefix_id_map map;
+		typedef boost::tuple<std::string, std::string, cpl_id_t> prefix_tuple;
+		std::vector<prefix_tuple> lookup_tbl;
 
 		for (auto & bundle: bundles){
-
 			vector<cplxx_prefix_entry_t> prefix_vec;
 			cpl_get_prefixes(bundle, NULL, cpl_cb_collect_prefixes_vector, &prefix_vec);
 
-			for(auto & entry: prefix_vec){
-				pair<string, string> key(entry.prefix, entry.iri);
-				prefix_id_map::iterator vec_it = map.find(key);
-				if(vec_it == map.end()){
-					vector<cpl_id_t> id_vec;
-					id_vec.push_back(bundle);
-					map.emplace(pair<string, string>(entry.prefix, entry.iri), id_vec);
-				} else {
-					vec_it->push_back(bundle);
-				}
+			for(auto & prefix_entry: prefix_vec){
+				lookup_tbl.push_back(prefix_tuple(prefix_entry.prefix, prefix_entry.iri, bundle));
 			}
 		}
+		
+		//replace all this bullshit with a multi-index
+		boost::unordered_map<std::string, boost::unordered_map<std::string, std::set<cpl_id_t>>> nightmare_table;
+		// find prefixes that need splitting
+		for(int i = 0; i < lookup_tbl.size(); i++){
+			for(int j = i+1; j < lookup_tbl.size(); j++){
 
-		json document_prefixes;
-		map<cpl_id_t, json> bundle_prefixes;
+				p1 = lookup_tbl[i].get<0>;
+				iri1 = lookup_tbl[i].get<1>;
+				p2 = lookup_tbl[j].get<0>;
+				iri2 = lookup_tbl[j].get<1>;
 
-		for(auto & entry: prefix_id_map){
-			if(entry->second.size() == 1){
-				document_prefixes[entry->first.first] = entry->first.second;
-			} else {
-				for( auto & id: entry->second){
-					map<cpl_id_t, json>::iterator vec_it = bundle_prefixes.find(cpl_id_t);
-					if(vec_it == map.end()){
-						json p[entry->second.first] = entry->second.second;
-						map.emplace(cpl_id_t, p);
+				if(p1 == p2 && iri1 != iri2){
+					if(nightmare_tbl[p1][iri1]){
+						nightmare_tbl[p1][iri1].insert(lookup_tbl[i].get<2>);
 					} else {
-						vec_it->second[entry->second.first] = entry->second.second;
+						nightmare_tbl[p1][iri1] = std::set(cpl_id_t);
 					}
+					if(nightmare_tbl[p2][iri2]){
+						nightmare_tbl[p2][iri2].insert(lookup_tbl[j].get<2>);
+					} else {
+						nightmare_tbl[p2][iri2] = std::set(cpl_id_t);
+					}				
 				}
-			}
+			}	
 		}
 
-		//throw prefixes into appropriate bundles
+		// establish new prefixes
+		for(int i = 0; i < split_set.size(); i++){
+			for(int j = 0; j < split_set.size(); j++){
+
+				p1 = split_set[i].get<0>;
+				iri1 = split_set[i].get<1>;
+				p2 = split_set[j].get<0>;
+				iri2 = split_set[j].get<1>;
+
+				if(p1 == p2 && iri1 != iri2){
+					// change p2
+					// 
+				}
+			}	
+		}
+
+		/**
+		// merge pass
+		for(int i = 0; i < lookup_tbl.size(); i++){
+			for(int j = i+1; j < lookup_tbl.size(); j++){
+
+				p1 = lookup_tbl[i].get<0>;
+				iri1 = lookup_tbl[i].get<1>;
+				p2 = lookup_tbl[j].get<0>;
+				iri2 = lookup_tbl[j].get<1>;
+
+				if(iri1 == iri2 && p1!=p2){
+					//merge prefixes
+				}
+			}	
+		}
 		**/
 		return CPL_E_INVALID_ARGUMENT;
 	}
@@ -2033,6 +2060,7 @@ export_bundle_prefixes_json(const std::vector<cpl_id_t>& bundles,
  */
 cpl_return_t
 export_objects_json(const std::vector<cpl_id_t>& bundles, 
+					boost::unordered_map<cpl_id_t, std::string>& lookup_tbl,
 					json& document)
 {
 	if(bundles.size() == 1){
@@ -2082,6 +2110,8 @@ export_objects_json(const std::vector<cpl_id_t>& bundles,
 					document["activity"][full_obj_name] = properties;
 					break;
 			}
+
+			lookup_tbl.emplace(obj.id, full_obj_name);
 		}
 
 	} else {
@@ -2096,6 +2126,7 @@ export_objects_json(const std::vector<cpl_id_t>& bundles,
  */
 cpl_return_t
 export_relations_json(const std::vector<cpl_id_t>& bundles,
+					  const boost::unordered_map<cpl_id_t, std::string>& lookup_tbl,
 				      json& document)
 {	
 	if(bundles.size() == 1){
@@ -2129,19 +2160,42 @@ export_relations_json(const std::vector<cpl_id_t>& bundles,
 
 			property_vec.clear();
 
-			cpl_object_info* from_info;
-			cpl_object_info* to_info;
+			cpl_object_info* from_info, to_info;
+			bool is_from_info = false;
+			bool is_to_info = false;
 
-			if((ret = cpl_get_object_info(relation.query_object_id, &from_info))!=0)
+			auto tbl_it = lookup_tbl.find(relation.query_object_id);
+
+			if(tbl_it != lookup_tbl.end()){
+				properties[rdata_array[relation.type-1].source_str] = tbl_it->second;
+			} else if((ret = cpl_get_object_info(relation.query_object_id, &from_info))!=0){
 				return ret;
-			if((ret = cpl_get_object_info(relation.other_object_id, &to_info))!=0)
+			} else {
+				properties[rdata_array[relation.type-1].source_str] = from_info->name;
+				is_from_info = true;
+			}
+
+			auto tbl_it = lookup_tbl.find(relation.other_object_id);
+
+			if(tbl_it != lookup_tbl.end()){
+				properties[rdata_array[relation.type-1].dest_str] = tbl_it->second;
+			} else if((ret = cpl_get_object_info(relation.other_object_id, &to_info))!=0){
 				return ret;
+			} else {
+				properties[rdata_array[relation.type-1].dest_str] = to_info->name;
+				is_from_info = true;
+			}
 
-			properties[rdata_array[relation.type-1].source_str] = from_info->name;
-			properties[rdata_array[relation.type-1].dest_str] = to_info->name;
+			if(is_from_info){
+				if((ret = cpl_free_object_info(from_info))!=0) return ret;
+			}
 
-			if((ret = cpl_free_object_info(from_info))!=0) return ret;
-			if((ret = cpl_free_object_info(to_info))!=0) return ret;
+			if(is_to_info){
+				if((ret = cpl_free_object_info(to_info))!=0) return ret;
+			}
+
+			is_from_info = false;
+			is_to_info = false;
 
 			document[rdata_array[relation.type-1].type_str][std::to_string(relation.id)] = properties;
 		}
@@ -2168,15 +2222,17 @@ export_bundle_json(const std::vector<cpl_id_t>& bundles,
 	json document;
 	cpl_return_t ret;
 
+ 	boost::unordered_map<cpl_id_t, std::string> lookup_tbl;
+
 	if((ret = export_bundle_prefixes_json(bundles, document))!=0){
 		return ret;
 	}
 
-	if((ret = export_objects_json(bundles, document))!=0){
+	if((ret = export_objects_json(bundles, lookup_tbl, document))!=0){
 		return ret;
 	}
 
-	if((ret = export_relations_json(bundles, document))!=0){
+	if((ret = export_relations_json(bundles, lookup_tbl, document))!=0){
 		return ret;
 	}
 
