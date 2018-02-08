@@ -186,7 +186,7 @@ cpl_attach(struct _cpl_db_backend_t* backend)
 
 
 	// Create the session
-
+	/*
 	const char* user;
 	const char* program;
 	const char* cmdline;
@@ -357,7 +357,6 @@ cpl_attach(struct _cpl_db_backend_t* backend)
 	}
 
 	//currently no support for sessions 
-	/*
 	ret = cpl_db_backend->cpl_db_create_session(cpl_db_backend,
 												NULL,
 												mac_string_ptr,
@@ -366,7 +365,6 @@ cpl_attach(struct _cpl_db_backend_t* backend)
 												program,
 												cmdline);
 
-	*/
 #ifdef __APPLE__
 	delete[] _program;
 #endif
@@ -376,7 +374,7 @@ cpl_attach(struct _cpl_db_backend_t* backend)
 		mutex_unlock(cpl_backend_lock);
 		return ret;
 	}
-
+	*/
 
 	// Initialize the locks
 
@@ -2033,6 +2031,7 @@ export_bundle_prefixes_json(const std::vector<cpl_id_t>& bundles,
  */
 cpl_return_t
 export_objects_json(const std::vector<cpl_id_t>& bundles, 
+					boost::unordered_map<cpl_id_t, std::string>& lookup_tbl,
 					json& document)
 {
 	if(bundles.size() == 1){
@@ -2082,6 +2081,8 @@ export_objects_json(const std::vector<cpl_id_t>& bundles,
 					document["activity"][full_obj_name] = properties;
 					break;
 			}
+
+			lookup_tbl.emplace(obj.id, full_obj_name);
 		}
 
 	} else {
@@ -2096,6 +2097,7 @@ export_objects_json(const std::vector<cpl_id_t>& bundles,
  */
 cpl_return_t
 export_relations_json(const std::vector<cpl_id_t>& bundles,
+					  const boost::unordered_map<cpl_id_t, std::string>& lookup_tbl,
 				      json& document)
 {	
 	if(bundles.size() == 1){
@@ -2129,19 +2131,42 @@ export_relations_json(const std::vector<cpl_id_t>& bundles,
 
 			property_vec.clear();
 
-			cpl_object_info* from_info;
-			cpl_object_info* to_info;
+			cpl_object_info *from_info, *to_info;
+			bool is_from_info = false;
+			bool is_to_info = false;
 
-			if((ret = cpl_get_object_info(relation.query_object_id, &from_info))!=0)
+			auto tbl_it = lookup_tbl.find(relation.query_object_id);
+
+			if(tbl_it != lookup_tbl.end()){
+				properties[rdata_array[relation.type-1].source_str] = tbl_it->second;
+			} else if((ret = cpl_get_object_info(relation.query_object_id, &from_info))!=0){
 				return ret;
-			if((ret = cpl_get_object_info(relation.other_object_id, &to_info))!=0)
+			} else {
+				properties[rdata_array[relation.type-1].source_str] = from_info->name;
+				is_from_info = true;
+			}
+
+			tbl_it = lookup_tbl.find(relation.other_object_id);
+
+			if(tbl_it != lookup_tbl.end()){
+				properties[rdata_array[relation.type-1].dest_str] = tbl_it->second;
+			} else if((ret = cpl_get_object_info(relation.other_object_id, &to_info))!=0){
 				return ret;
+			} else {
+				properties[rdata_array[relation.type-1].dest_str] = to_info->name;
+				is_from_info = true;
+			}
 
-			properties[rdata_array[relation.type-1].source_str] = from_info->name;
-			properties[rdata_array[relation.type-1].dest_str] = to_info->name;
+			if(is_from_info){
+				if((ret = cpl_free_object_info(from_info))!=0) return ret;
+			}
 
-			if((ret = cpl_free_object_info(from_info))!=0) return ret;
-			if((ret = cpl_free_object_info(to_info))!=0) return ret;
+			if(is_to_info){
+				if((ret = cpl_free_object_info(to_info))!=0) return ret;
+			}
+
+			is_from_info = false;
+			is_to_info = false;
 
 			document[rdata_array[relation.type-1].type_str][std::to_string(relation.id)] = properties;
 		}
@@ -2168,15 +2193,17 @@ export_bundle_json(const std::vector<cpl_id_t>& bundles,
 	json document;
 	cpl_return_t ret;
 
+ 	boost::unordered_map<cpl_id_t, std::string> lookup_tbl;
+
 	if((ret = export_bundle_prefixes_json(bundles, document))!=0){
 		return ret;
 	}
 
-	if((ret = export_objects_json(bundles, document))!=0){
+	if((ret = export_objects_json(bundles, lookup_tbl, document))!=0){
 		return ret;
 	}
 
-	if((ret = export_relations_json(bundles, document))!=0){
+	if((ret = export_relations_json(bundles, lookup_tbl, document))!=0){
 		return ret;
 	}
 
