@@ -84,7 +84,7 @@ def bundle_get(id):
 
 @app.route("/provapi/bundle/<int:id>", methods=['DELETE'])
 def bundle_delete(id):
-    connection.delete_bundle(id)
+    connection.delete_bundle(cpl_bundle(id))
     return jsonify(success=True)
 
 @app.route("/provapi/bundle", methods=['POST'])
