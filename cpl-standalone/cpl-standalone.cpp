@@ -1963,17 +1963,18 @@ export_bundle_prefixes_json(const std::vector<cpl_id_t>& bundles,
 		cpl_id_t bundle = bundles.at(0);
 
 		std::vector<cplxx_prefix_entry_t> prefix_vec;
-		if((ret = cpl_get_prefixes(bundle, NULL, cpl_cb_collect_prefixes_vector, &prefix_vec))!=0)
+		if(!CPL_IS_OK(ret = cpl_get_prefixes(bundle, NULL, cpl_cb_collect_prefixes_vector, &prefix_vec)))
 				return ret;
 
 		json prefixes;
+		if (!prefix_vec.empty()){
+			for(auto & entry: prefix_vec){
+				
+				prefixes[entry.prefix] = entry.iri;
+			}
 
-		for(auto & entry: prefix_vec){
-			
-			prefixes[entry.prefix] = entry.iri;
+			document["prefix"] = prefixes;
 		}
-
-		document["prefix"] = prefixes;
 
 	} else {
 
@@ -2192,6 +2193,10 @@ export_bundle_json(const std::vector<cpl_id_t>& bundles,
 
 	json document;
 	cpl_return_t ret;
+
+	std::ofstream outputFile("/Users/jpokuhn/Desktop/test-output.txt");
+
+	outputFile << "entered function" << "\n";
 
  	boost::unordered_map<cpl_id_t, std::string> lookup_tbl;
 

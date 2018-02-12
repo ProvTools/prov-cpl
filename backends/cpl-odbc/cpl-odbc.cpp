@@ -34,7 +34,6 @@
 
 #include "stdafx.h"
 #include "cpl-odbc-private.h"
-
 #include <list>
 #include <vector>
 
@@ -3424,8 +3423,6 @@ cpl_odbc_get_prefixes(struct _cpl_db_backend_t* backend,
 		stmt = STMT_ACQUIRE(get_prefixes_with_key);
 	}
 
-
-
 	// Prepare the statement
 
 retry:
@@ -3440,7 +3437,6 @@ retry:
 	// Execute
 	
 	SQL_EXECUTE(stmt);
-
 
 	// Bind the columns
 
@@ -3486,7 +3482,6 @@ retry:
 		goto err;
 	}
 
-
 	// Unlock
 
 	if (prefix == NULL) {
@@ -3496,15 +3491,14 @@ retry:
 		STMT_RELEASE(get_prefixes_with_key, stmt);
 	}
 
-
 	// If we did not get any data back, terminate
 
 	if (entries.empty()) return CPL_S_NO_DATA;
 
-
 	// Call the user-provided callback function
 
 	if (callback != NULL) {
+
 		for (i = entries.begin(); i != entries.end(); i++) {
 			r = callback(id,
 						 (const char*) (*i)->prefix,
@@ -3515,7 +3509,6 @@ retry:
 	}
 
 	r = CPL_OK;
-
 
 	// Error handling
 
