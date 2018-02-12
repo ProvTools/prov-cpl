@@ -105,7 +105,7 @@ returns:
         'creation_time': Timestamp,
         'prefix': String,
         'name': String,
-        'type': enum,
+        'type': String,
         'bundle': Long
 	}]
 }
@@ -118,7 +118,7 @@ returns:
 		'id': Long,
 		'ancestor': Long,
 		'descendant': Long,
-		'type': enum,
+		'type': String,
 		'bundle': Long,
 		'base': Long,
 		'other': Long
@@ -133,7 +133,7 @@ returns:
     'creation_time': Timestamp,
     'prefix': String,
     'name': String,
-    'type': enum,
+    'type': String,
     'bundle': Long
 }
 
@@ -143,7 +143,7 @@ params:
 {
 	'prefix': String,
 	'name': String,
-	'type': enum,
+	'type': String,
 	'bundle': Long
 }
 returns:
@@ -157,7 +157,7 @@ params:
 {
 	'prefix': String,
 	'name': String,
-	'type': enum, (optional)
+	'type': String, (optional)
 	'bundle': Long (optional)
 }
 returns:
@@ -171,7 +171,7 @@ params:
 {
 	'prefix': String,
 	'name': String,
-	'type': enum, (optional)
+	'type': String, (optional)
 	'bundle': Long (optional)
 }
 returns:
@@ -223,7 +223,7 @@ returns:
 		'id': Long,
 		'ancestor': Long,
 		'descendant': Long,
-		'type': enum,
+		'type': String,
 		'bundle': Long,
 		'base': Long,
 		'other': Long
@@ -238,7 +238,7 @@ returns:
 		'id': Long,
 		'ancestor': Long,
 		'descendant': Long,
-		'type': enum,
+		'type': String,
 		'bundle': Long,
 		'base': Long,
 		'other': Long
@@ -250,7 +250,7 @@ creates a relation to/from object <id>
 params:
 {
 	'dest' OR 'src': Long,
-	'type': enum,
+	'type': String,
 	'bundle': Long 
 }
 returns:

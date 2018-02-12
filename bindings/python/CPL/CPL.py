@@ -127,7 +127,7 @@ D_DESCENDANTS = CPLDirect.CPL_D_DESCENDANTS
 # Private constants
 #
 
-__relation_dict = ["wasInfluencedBy",
+__relation_list = ["wasInfluencedBy",
                "alternateOf",
                "derivedByInsertionFrom",
                "derivedByRemovalFrom",
@@ -146,9 +146,32 @@ __relation_dict = ["wasInfluencedBy",
                "wasAssociatedWith",
                "actedOnBehalfOf"]
 
-__object_dict = ["entity",
+__relation_dict = {"wasInfluencedBy"    :1,
+               "alternateOf"            :2,
+               "derivedByInsertionFrom" :3,
+               "derivedByRemovalFrom"   :4,
+               "hadMember"              :5,
+               "hadDictionaryMember"    :6,
+               "specializationOf"       :7,
+               "wasDerivedFrom"         :8,
+               "wasGeneratedBy"         :9,
+               "wasInvalidatedBy"       :10,
+               "wasAttributedTo"        :11,
+               "used"                   :12,
+               "wasInformedBy"          :13,
+               "wasStartedBy"           :14,
+               "wasEndedBy"             :15,
+               "hadPlan"                :16,
+               "wasAssociatedWith"      :17,
+               "actedOnBehalfOf"        :18}
+
+__object_list = ["entity",
                  "activity",
                  "agent"]
+
+__object_dict = {"entity"   :1,
+                 "activity" :2,
+                 "agent"    :3}
                  
 
 #
@@ -197,11 +220,38 @@ def relation_type_to_str(val):
         strval = relation_type_to_str(val)
     '''
     if val > 0 and val < NUM_R_TYPES :
-        return __relation_dict[val-1]
+        return __relation_list[val-1]
     else:
         return 'unknown'
 
+def object_type_to_str(val):
+    '''
+    Given an object type, convert it to a string
 
+    Method calls::
+        strval = relation_type_to_str(val)
+    '''
+    if val > 0 and val < NUM_O_TYPES :
+        return __object_list[val-1]
+    else:
+        return 'unknown'
+
+def relation_str_to_type(str):
+
+    ret = __relation_dict.get(str)
+    if ret is None:
+        return 0
+    else:
+        return ret
+
+def object_str_to_type(str):
+
+    ret = __object_dict.get(str)
+    if ret is None:
+        return 0
+    else:
+        return ret
+        
 def p_id(id, with_newline = False):
     '''
     Print a CPL id, optionally with newline after it.
@@ -225,7 +275,7 @@ def p_object(obj):
     i = obj.info()
     p_id(i.object.id)
     sys.stdout.write('prefix:' + i.prefix + ' name:' + i.name +
-        ' type:' + __object_dict[i.type-1])
+        ' type:' + __object_list[i.type-1])
     if i.bundle is not None:
         sys.stdout.write(' bundle_id:' + str(i.bundle) + ' ')
     else:
