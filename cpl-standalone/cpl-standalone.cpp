@@ -1743,7 +1743,7 @@ import_bundle_prefixes_json(const cpl_id_t bundle,
 	json prefixes = document["prefix"];
 
 	for (json::iterator it = prefixes.begin(); it != prefixes.end(); ++it) {
-		if(!CPL_IS_OK(cpl_add_prefix(bundle, it.key().c_str(), it.value().dump().c_str()))){
+		if(!CPL_IS_OK(cpl_add_prefix(bundle, it.key().c_str(), it->get<std::string>().c_str()))){
 			return CPL_E_INTERNAL_ERROR;
 		}
 	}
@@ -1785,7 +1785,7 @@ import_objects_json(const int type,
 			if(!CPL_IS_OK(cpl_add_object_property(obj_id, 
 												  pair.first.c_str(), 
 												  pair.second.c_str(), 
-												  it2.value().dump().c_str()))){
+												  it2->get<std::string>().c_str()))){
 				return CPL_E_INTERNAL_ERROR;
 			}
 		}
@@ -1865,7 +1865,7 @@ import_relations_json(const cpl_id_t bundle_id,
 					if(!CPL_IS_OK(cpl_add_relation_property(relation_id, 
 														  	pair.first.c_str(), 
 														  	pair.second.c_str(), 
-														  	it2.value().dump().c_str()))){
+														  	it2->get<std::string>().c_str()))){
 						return CPL_E_INTERNAL_ERROR;
 					}
 				}
@@ -2041,7 +2041,7 @@ export_objects_json(const std::vector<cpl_id_t>& bundles,
 		cpl_id_t bundle = bundles.at(0);
 
 		std::vector<cplxx_object_info_t> object_vec;
-		if((ret = cpl_get_bundle_objects(bundle, cpl_cb_collect_object_info_vector, &object_vec))!=0)
+		if(!CPL_IS_OK(ret = cpl_get_bundle_objects(bundle, cpl_cb_collect_object_info_vector, &object_vec)))
 			return ret;
 
 		if(object_vec.empty()){
@@ -2053,8 +2053,8 @@ export_objects_json(const std::vector<cpl_id_t>& bundles,
 		for(auto & obj: object_vec){
 
 			json properties;
-			if((ret = cpl_get_object_properties(obj.id, NULL, NULL, 
-				cpl_cb_collect_properties_vector, &property_vec))!=0) return ret;
+			if(!CPL_IS_OK(ret = cpl_get_object_properties(obj.id, NULL, NULL, 
+				cpl_cb_collect_properties_vector, &property_vec))) return ret;
 
 			for(auto & property: property_vec){
 
@@ -2108,7 +2108,7 @@ export_relations_json(const std::vector<cpl_id_t>& bundles,
 
 		std::vector<cpl_relation_t> relation_vec;
 
-		if((ret = cpl_get_bundle_relations(bundle, cpl_cb_collect_relation_vector, &relation_vec))!=0)
+		if(!CPL_IS_OK(ret = cpl_get_bundle_relations(bundle, cpl_cb_collect_relation_vector, &relation_vec)))
 				return ret;
 
 		if(relation_vec.empty()) return CPL_OK;
@@ -2118,8 +2118,8 @@ export_relations_json(const std::vector<cpl_id_t>& bundles,
 		for(auto & relation: relation_vec){
 
 			json properties;
-			if((ret = cpl_get_relation_properties(relation.id, NULL, NULL,
-				cpl_cb_collect_properties_vector, &property_vec))!=0) return ret;
+			if(!CPL_IS_OK(ret = cpl_get_relation_properties(relation.id, NULL, NULL,
+				cpl_cb_collect_properties_vector, &property_vec))) return ret;
 
 			for(auto & property: property_vec){
 
@@ -2140,7 +2140,7 @@ export_relations_json(const std::vector<cpl_id_t>& bundles,
 
 			if(tbl_it != lookup_tbl.end()){
 				properties[rdata_array[relation.type-1].source_str] = tbl_it->second;
-			} else if((ret = cpl_get_object_info(relation.query_object_id, &from_info))!=0){
+			} else if(!CPL_IS_OK(ret = cpl_get_object_info(relation.query_object_id, &from_info))){
 				return ret;
 			} else {
 				properties[rdata_array[relation.type-1].source_str] = from_info->name;
@@ -2151,7 +2151,7 @@ export_relations_json(const std::vector<cpl_id_t>& bundles,
 
 			if(tbl_it != lookup_tbl.end()){
 				properties[rdata_array[relation.type-1].dest_str] = tbl_it->second;
-			} else if((ret = cpl_get_object_info(relation.other_object_id, &to_info))!=0){
+			} else if(!CPL_IS_OK(ret = cpl_get_object_info(relation.other_object_id, &to_info))){
 				return ret;
 			} else {
 				properties[rdata_array[relation.type-1].dest_str] = to_info->name;
@@ -2159,11 +2159,11 @@ export_relations_json(const std::vector<cpl_id_t>& bundles,
 			}
 
 			if(is_from_info){
-				if((ret = cpl_free_object_info(from_info))!=0) return ret;
+				if(!CPL_IS_OK(ret = cpl_free_object_info(from_info))) return ret;
 			}
 
 			if(is_to_info){
-				if((ret = cpl_free_object_info(to_info))!=0) return ret;
+				if(!CPL_IS_OK(ret = cpl_free_object_info(to_info))) return ret;
 			}
 
 			is_from_info = false;
@@ -2200,15 +2200,15 @@ export_bundle_json(const std::vector<cpl_id_t>& bundles,
 
  	boost::unordered_map<cpl_id_t, std::string> lookup_tbl;
 
-	if((ret = export_bundle_prefixes_json(bundles, document))!=0){
+	if(!CPL_IS_OK(ret = export_bundle_prefixes_json(bundles, document))){
 		return ret;
 	}
 
-	if((ret = export_objects_json(bundles, lookup_tbl, document))!=0){
+	if(!CPL_IS_OK(ret = export_objects_json(bundles, lookup_tbl, document))){
 		return ret;
 	}
 
-	if((ret = export_relations_json(bundles, lookup_tbl, document))!=0){
+	if(!CPL_IS_OK(ret = export_relations_json(bundles, lookup_tbl, document))){
 		return ret;
 	}
 
