@@ -1,6 +1,6 @@
 import CPL
 from CPL import cpl_bundle, cpl_object, cpl_relation, CPLException
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, json
 import optparse
 
 connection = CPL.cpl_connection()
@@ -259,8 +259,7 @@ def json_post():
         anchors = [(cpl_object(int(a['id'])), str(a['name'])) for a in content['anchor_objects']]
     else:
         anchors = None
-    print content['JSON']
-    bundle = connection.import_document_json(str(content['JSON']),
+    bundle = connection.import_document_json(str(json.dumps(content['JSON'],ensure_ascii = False)),
                                     str(content['bundle_name']),
                                     anchors)
     return jsonify(id=bundle.id)
@@ -289,7 +288,6 @@ def flaskrun(app, default_host="127.0.0.1",
                       default=default_port)
 
     options, _ = parser.parse_args()
-
     app.run(
         host=options.host,
         port=int(options.port)
