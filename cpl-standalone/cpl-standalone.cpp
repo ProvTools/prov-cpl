@@ -1781,12 +1781,21 @@ import_objects_json(const int type,
 			
 			pair = name_to_tokens(it2.key());
 
-
-			if(!CPL_IS_OK(cpl_add_object_property(obj_id, 
-												  pair.first.c_str(), 
-												  pair.second.c_str(), 
-												  it2->get<std::string>().c_str()))){
-				return CPL_E_INTERNAL_ERROR;
+			json val_json = *it2;
+			if(!val_json.is_array() && !val_json.is_object()){
+				if(!CPL_IS_OK(cpl_add_object_property(obj_id, 
+													  pair.first.c_str(), 
+													  pair.second.c_str(), 
+													  val_json.get<std::string>().c_str()))){
+					return CPL_E_INTERNAL_ERROR;
+				}
+			} else {
+				if(!CPL_IS_OK(cpl_add_object_property(obj_id, 
+													  pair.first.c_str(), 
+													  pair.second.c_str(), 
+													  val_json.dump().c_str()))){
+					return CPL_E_INTERNAL_ERROR;
+				}
 			}
 		}
 	}
@@ -1862,12 +1871,23 @@ import_relations_json(const cpl_id_t bundle_id,
 
 					pair = name_to_tokens(it2.key());
 
-					if(!CPL_IS_OK(cpl_add_relation_property(relation_id, 
-														  	pair.first.c_str(), 
-														  	pair.second.c_str(), 
-														  	it2->get<std::string>().c_str()))){
-						return CPL_E_INTERNAL_ERROR;
-					}
+					json val_json = *it2;
+
+					if(!val_json.is_array() && !val_json.is_object()){
+						if(!CPL_IS_OK(cpl_add_relation_property(relation_id, 
+															  	pair.first.c_str(), 
+															  	pair.second.c_str(), 
+															  	val_json.get<std::string>().c_str()))){
+							return CPL_E_INTERNAL_ERROR;
+						}
+					} else {
+						if(!CPL_IS_OK(cpl_add_relation_property(relation_id, 
+															  	pair.first.c_str(), 
+															  	pair.second.c_str(), 
+															  	val_json.dump().c_str()))){
+							return CPL_E_INTERNAL_ERROR;
+						}		
+					}	
 				}
 			}
 		}
