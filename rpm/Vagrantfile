@@ -1,0 +1,39 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# Vagrantfile API/syntax version. Don't touch unless you know what you're doing!
+VAGRANTFILE_API_VERSION = "2"
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+
+  config.vm.define "standalone", primary: true do |standalone|
+    config.vm.hostname = "standalone"
+    # Uncomment this temporarily to get `vagrant destroy` to work
+    #standalone.vm.box = "puppetlabs/centos-7.2-64-puppet"
+
+    operating_system = "centos"
+    if ENV['OPERATING_SYSTEM'].nil?
+      config.vm.box = "puppetlabs/centos-7.2-64-puppet"
+      config.vm.box_version = '1.0.1'
+    elsif ENV['OPERATING_SYSTEM'] == 'debian'
+      puts "WARNING: Debian specified. Here be dragons! https://github.com/IQSS/dataverse/issues/1059"
+      config.vm.box_url = "http://puppet-vagrant-boxes.puppetlabs.com/debian-73-x64-virtualbox-puppet.box"
+      config.vm.box = "puppet-vagrant-boxes.puppetlabs.com-debian-73-x64-virtualbox-puppet.box"
+    else
+      operating_system = ENV['OPERATING_SYSTEM']
+      puts "Not sure what do to with operating system: #{operating_system}"
+      exit 1
+    end
+
+
+    config.vm.provider "virtualbox" do |v|
+      v.memory = 2048
+      v.cpus = 1
+    end
+    # FIXME: get tests working and re-enable them!
+    #config.vm.provision "shell", path: "scripts/vagrant/test.sh"
+
+    config.vm.network "private_network", type: "dhcp"
+  end
+
+end
