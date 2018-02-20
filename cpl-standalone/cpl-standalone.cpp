@@ -1646,8 +1646,10 @@ using json = nlohmann::json;
  * 
  * @param json_string the JSON document as a string
  * @param string_out error output string
- * @return 0 on successful validation or -1 on failure
+ * @return CPL_OK on successful validation or CPL_E_INVALID_JSON on failure
  */
+
+//TODO add edge type checking
 EXPORT cpl_return_t
 validate_json(const std::string& json_string,
 	 		  std::string& string_out)
@@ -1656,9 +1658,12 @@ validate_json(const std::string& json_string,
 	
 	json document = json::parse(json_string);
 
-	if(document == NULL){
+	if(document == NULL || document.empty()){
 		return CPL_E_INTERNAL_ERROR;
 	}
+
+	if(!document.is_object()) return CPL_E_INVALID_JSON;
+
 
 	typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS> directed_graph_t;
   	typedef boost::graph_traits<directed_graph_t>::vertex_descriptor vertex_t;
@@ -1671,34 +1676,42 @@ validate_json(const std::string& json_string,
 
 	for(int i=0; i<CPL_NUM_R_TYPES; i++){
 		prov_relation_data_t entry = rdata_array[i];
-		json relations = document[entry.type_str];
+		auto doc_check = document.find(entry.type_str);
 
-		for (json::iterator it = relations.begin(); it != relations.end(); ++it){
+		if(doc_check != document.end()){
 
-			std::string source = it.value()[entry.source_str];
-			std::string dest = it.value()[entry.dest_str];
-			if(source.empty()){
-				return CPL_E_INVALID_JSON;
-			}
+			json relations = *doc_check;
+			for (json::iterator it = relations.begin(); it != relations.end(); ++it){
 
-			if(!dest.empty()){
-				size_t source_ind, dest_ind;
-				auto pos = std::find(objects.begin(), objects.end(), source);
-				if (pos != objects.end()){
-					source_ind = distance(objects.begin(), pos);
-				} else {
-					objects.push_back(source);
-					source_ind = objects.size()-1;
+			 	auto val = it.value();
+				auto source_check = val.find(entry.source_str);
+
+				auto dest_check = val.find(entry.dest_str);
+				if(source_check == val.end()) return CPL_E_INVALID_JSON;
+
+				if(dest_check != val.end()){
+					std::string source = *source_check;
+					std::string dest = *dest_check;
+
+					//TODO 
+					size_t source_ind, dest_ind;
+					auto pos = std::find(objects.begin(), objects.end(), source);
+					if (pos != objects.end()){
+						source_ind = distance(objects.begin(), pos);
+					} else {
+						objects.push_back(source);
+						source_ind = objects.size()-1;
+					}
+					pos = std::find(objects.begin(), objects.end(), dest);
+					if (pos != objects.end()){
+						dest_ind = distance(objects.begin(), pos);
+					} else {
+						objects.push_back(dest);
+						dest_ind = objects.size()-1;
+					}
+
+					edges.push_back(edge_t(source_ind, dest_ind));
 				}
-				pos = std::find(objects.begin(), objects.end(), dest);
-				if (pos != objects.end()){
-					dest_ind = distance(objects.begin(), pos);
-				} else {
-					objects.push_back(dest);
-					dest_ind = objects.size()-1;
-				}
-
-				edges.push_back(edge_t(source_ind, dest_ind));
 			}
 		}
 	}
@@ -1740,10 +1753,17 @@ cpl_return_t
 import_bundle_prefixes_json(const cpl_id_t bundle,
 							json document)
 {
-	json prefixes = document["prefix"];
+	auto doc_check = document.find("prefix");
+	if(doc_check == document.end()) return CPL_OK;
+	
+	json prefixes = *doc_check;
+	if(!prefixes.is_object()) return CPL_E_INVALID_JSON;
 
+	json val_json; 
 	for (json::iterator it = prefixes.begin(); it != prefixes.end(); ++it) {
-		if(!CPL_IS_OK(cpl_add_prefix(bundle, it.key().c_str(), it->get<std::string>().c_str()))){
+		val_json = *it;
+		if(val_json.is_null() || val_json.is_object() || val_json.is_array()) return CPL_E_INVALID_JSON;
+		if(!CPL_IS_OK(cpl_add_prefix(bundle, it.key().c_str(), val_json.get<std::string>().c_str()))){
 			return CPL_E_INTERNAL_ERROR;
 		}
 	}
@@ -1762,7 +1782,11 @@ import_objects_json(const int type,
 					std::map<std::string, cpl_id_t>& lookup_tbl,
 					json& document)
 {
-	json o = document[type_str];
+	auto doc_check = document.find(type_str);
+	if(doc_check == document.end()) return CPL_OK;
+
+	json o = *doc_check;
+	if(!o.is_object()) return CPL_E_INVALID_JSON;
 
 	for (json::iterator it = o.begin(); it != o.end(); ++it) {
 
@@ -1778,7 +1802,7 @@ import_objects_json(const int type,
 
 		json properties = it.value();
 		for (json::iterator it2 = properties.begin(); it2 != properties.end(); ++it2){
-			
+
 			pair = name_to_tokens(it2.key());
 
 			json val_json = *it2;
@@ -1814,80 +1838,92 @@ import_relations_json(const cpl_id_t bundle_id,
 {
 	for(int i=0; i<CPL_NUM_R_TYPES; i++){
 		prov_relation_data_t entry = rdata_array[i];
-		json relations = document[entry.type_str];
+		
+		auto doc_check = document.find(entry.type_str);
+		
+		if(doc_check != document.end()){
 
-		for (json::iterator it = relations.begin(); it != relations.end(); ++it) {
+			json relations = *doc_check;
+			if(!relations.is_object()) return CPL_E_INVALID_JSON;
 
-			cpl_id_t source, dest, relation_id;
-			token_pair_t pair;
-			std::string obj_name = it.value()[entry.source_str];
+			for (json::iterator it = relations.begin(); it != relations.end(); ++it) {
 
-			auto tbl_it = lookup_tbl.find(obj_name);
+				cpl_id_t source, dest, relation_id;
+				token_pair_t pair;
+				auto obj_check = it.value().find(entry.source_str);
+				if(obj_check == it.value().end()) return CPL_E_INVALID_JSON;
 
-			if( tbl_it != lookup_tbl.end()){
-				source = tbl_it->second;
-			} else if(extern_obj_f){
-				pair = name_to_tokens(obj_name);
+				std::string obj_name = *obj_check;
+				auto tbl_it = lookup_tbl.find(obj_name);
 
-				if(!CPL_IS_OK(cpl_lookup_object(pair.first.c_str(), 
-												pair.second.c_str(),
-												entry.source_t,
-												CPL_NONE,
-												&source))){
+				if( tbl_it != lookup_tbl.end()){
+					source = tbl_it->second;
+				} else if(extern_obj_f){
+					pair = name_to_tokens(obj_name);
+
+					if(!CPL_IS_OK(cpl_lookup_object(pair.first.c_str(), 
+													pair.second.c_str(),
+													entry.source_t,
+													CPL_NONE,
+													&source))){
+						return CPL_E_INTERNAL_ERROR;
+					}				
+				} else {
 					return CPL_E_INTERNAL_ERROR;
-				}				
-			} else {
-				return CPL_E_INTERNAL_ERROR;
-			}
+				}
 
-			obj_name = it.value()[entry.dest_str];
+				obj_check = it.value().find(entry.dest_str);
+				if(obj_check == it.value().end()) return CPL_E_INVALID_JSON;
 
-			tbl_it = lookup_tbl.find(obj_name);
+				obj_name = *obj_check;
 
-			if( tbl_it != lookup_tbl.end()){
-				dest = tbl_it->second;
-			} else if(extern_obj_f){
-				pair = name_to_tokens(obj_name);
+				tbl_it = lookup_tbl.find(obj_name);
 
-				if(!CPL_IS_OK(cpl_lookup_object(pair.first.c_str(), 
-												pair.second.c_str(),
-												entry.dest_t,
-												CPL_NONE,
-												&dest))){
+				if( tbl_it != lookup_tbl.end()){
+					dest = tbl_it->second;
+				} else if(extern_obj_f){
+					pair = name_to_tokens(obj_name);
+
+					if(!CPL_IS_OK(cpl_lookup_object(pair.first.c_str(), 
+													pair.second.c_str(),
+													entry.dest_t,
+													CPL_NONE,
+													&dest))){
+						return CPL_E_INTERNAL_ERROR;
+					}				
+				} else {
 					return CPL_E_INTERNAL_ERROR;
-				}				
-			} else {
-				return CPL_E_INTERNAL_ERROR;
-			}
+				}
 
-			if(!CPL_IS_OK(cpl_add_relation(source, dest, entry.type, bundle_id, &relation_id))){
-				return CPL_E_INTERNAL_ERROR;
-			}
+				if(!CPL_IS_OK(cpl_add_relation(source, dest, entry.type, bundle_id, &relation_id))){
+					return CPL_E_INTERNAL_ERROR;
+				}
 
-			json properties = it.value();
-			for (json::iterator it2 = properties.begin(); it2 != properties.end(); ++it2){
+				json properties = it.value();
+				for (json::iterator it2 = properties.begin(); it2 != properties.end(); ++it2){
 
-				if(it.key() != entry.source_str && it.key() != entry.dest_str){
+					if(it.key() != entry.source_str && it.key() != entry.dest_str){
 
-					pair = name_to_tokens(it2.key());
+						pair = name_to_tokens(it2.key());
 
-					json val_json = *it2;
+						json val_json = *it2;
 
-					if(!val_json.is_array() && !val_json.is_object()){
-						if(!CPL_IS_OK(cpl_add_relation_property(relation_id, 
-															  	pair.first.c_str(), 
-															  	pair.second.c_str(), 
-															  	val_json.get<std::string>().c_str()))){
-							return CPL_E_INTERNAL_ERROR;
-						}
-					} else {
-						if(!CPL_IS_OK(cpl_add_relation_property(relation_id, 
-															  	pair.first.c_str(), 
-															  	pair.second.c_str(), 
-															  	val_json.dump().c_str()))){
-							return CPL_E_INTERNAL_ERROR;
-						}		
-					}	
+						if(!val_json.is_array() && !val_json.is_object()){
+							if(!CPL_IS_OK(cpl_add_relation_property(relation_id, 
+																  	pair.first.c_str(), 
+																  	pair.second.c_str(), 
+																  	val_json.get<std::string>().c_str()))){
+								return CPL_E_INTERNAL_ERROR;
+							}
+						} else {
+							if(!CPL_IS_OK(cpl_add_relation_property(relation_id, 
+																  	pair.first.c_str(), 
+																  	pair.second.c_str(), 
+																  	val_json.dump().c_str()))){
+								return CPL_E_INTERNAL_ERROR;
+							}		
+						}	
+					}
 				}
 			}
 		}
@@ -1919,6 +1955,8 @@ import_document_json(const std::string& json_string,
 	if(document == NULL || document.empty()){
 		return CPL_E_INTERNAL_ERROR;
 	}
+
+	if(!document.is_object()) return CPL_E_INVALID_JSON;
 
  	std::map<std::string, cpl_id_t> lookup_tbl;
 
