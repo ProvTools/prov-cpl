@@ -64,7 +64,7 @@ ifneq ($(SUBPROJECT_SO_FILES),)
 endif
 ifeq ($(OUTPUT_TYPE),kernel)
 	@echo '  PYTHON  $(PWD_REL_SEP)setup.py'
-	@cd $(BUILD_DIR) && EXT_SUFFIX='' python $(abspath setup.py) build -v
+	@cd $(BUILD_DIR) && python $(abspath setup.py) build
 	@cd $(BUILD_DIR) \
 		&& echo $(WRAP_LIBRARY) \
 		&& /bin/cp -f $(CP_UPDATE_FLAG) `find build -name _$(PROJECT)\*.$(SOLIBRARY_EXT_PY)` $(WRAP_LIBRARY)
