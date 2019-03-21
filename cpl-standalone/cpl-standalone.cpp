@@ -471,7 +471,6 @@ cpl_create_object(const char* prefix,
 	CPL_ENSURE_NOT_NULL(prefix);
 	CPL_ENSURE_NOT_NULL(name);
 	CPL_ENSURE_O_TYPE(type);
-	CPL_ENSURE_NOT_NONE(bundle);
 
 	// Call the backend
 
@@ -482,7 +481,6 @@ cpl_create_object(const char* prefix,
 											   prefix,
 											   name,
 											   type,
-											   bundle,
 											   &id);
 	CPL_RUNTIME_VERIFY(ret);
 
@@ -529,7 +527,6 @@ cpl_lookup_object(const char* prefix,
 											   prefix,
 											   name,
 											   type,
-											   bundle_id,
 											   &id);
 	CPL_RUNTIME_VERIFY(ret);
 
@@ -579,7 +576,6 @@ cpl_lookup_object_ext(const char* prefix,
 												   prefix,
 												   name,
 												   type,
-												   bundle_id,
 												   flags,
 												   iterator,
 												   context);
@@ -684,7 +680,6 @@ cpl_add_relation(const cpl_id_t from_id,
 	CPL_ENSURE_NOT_NONE(from_id);
 	CPL_ENSURE_NOT_NONE(to_id);
 	CPL_ENSURE_R_TYPE(type);
-	CPL_ENSURE_NOT_NONE(bundle);
 
 
 	cpl_id_t id;
@@ -694,7 +689,6 @@ cpl_add_relation(const cpl_id_t from_id,
 													from_id,
 													to_id,
 													type,
-													bundle,
 													&id);
 
 
@@ -752,28 +746,7 @@ extern "C" EXPORT cpl_return_t
 cpl_create_bundle(const char* name,
 				  cpl_id_t* out_id)
 {
-	CPL_ENSURE_INITIALIZED;
-
-	// Argument check
-
-	CPL_ENSURE_NOT_NULL(name);
-
-	// Call the backend
-
-	cpl_id_t id;
-	cpl_return_t ret;
-
-	ret = cpl_db_backend->cpl_db_create_bundle(cpl_db_backend,
-											   name,
-											   cpl_session,
-											   &id);
-	CPL_RUNTIME_VERIFY(ret);
-
-
-	// Finish
-
-	if (out_id != NULL) *out_id = id;
-	return CPL_S_OBJECT_CREATED;
+	return cpl_create_object("news_prov", name, 4, 0, out_id);
 }
 
 /**
@@ -788,24 +761,7 @@ extern "C" EXPORT cpl_return_t
 cpl_lookup_bundle(const char* name,
 				  cpl_id_t* out_id)
 {
-	CPL_ENSURE_INITIALIZED;
-
-	// Argument check
-
-	CPL_ENSURE_NOT_NULL(name);
-
-	// Call the backend
-
-	cpl_return_t ret;
-	cpl_id_t id;
-	
-	ret = cpl_db_backend->cpl_db_lookup_bundle(cpl_db_backend,
-											   name,
-											   &id);
-	CPL_RUNTIME_VERIFY(ret);
-
-	if (out_id != NULL) *out_id = id;
-	return CPL_OK;
+	return cpl_lookup_object("news_prov", name, 4, 0, out_id);
 }
 
 
@@ -825,29 +781,7 @@ cpl_lookup_bundle_ext(const char* name,
 					  cpl_id_timestamp_iterator_t iterator,
 					  void* context)
 {
-	CPL_ENSURE_INITIALIZED;
-
-	// Argument check
-
-	CPL_ENSURE_NOT_NULL(name);
-	CPL_ENSURE_NOT_NULL(iterator);
-
-
-	// Call the backend
-
-	//TODO mess with flags
-
-	cpl_return_t ret;
-	ret = cpl_db_backend->cpl_db_lookup_bundle_ext(cpl_db_backend,
-												   name,
-												   flags,
-												   iterator,
-												   context);
-
-	if (ret == CPL_E_NOT_FOUND && (flags & CPL_L_NO_FAIL) == CPL_L_NO_FAIL) {
-		ret = CPL_S_NO_DATA;
-	}
-	return ret;
+	return cpl_lookup_object_ext("news_prov", name, 4, 0, flags, iterator, context);
 }
 
 /**
@@ -865,22 +799,7 @@ cpl_add_bundle_property(const cpl_id_t id,
 					    const char* key,
 					    const char* value)
 {
-	CPL_ENSURE_INITIALIZED;
-
-	// Check the arguments
-
-	CPL_ENSURE_NOT_NONE(id);
-	CPL_ENSURE_NOT_NULL(prefix);
-	CPL_ENSURE_NOT_NULL(key);
-	CPL_ENSURE_NOT_NULL(value);
-
-	// Call the backend
-
-	return cpl_db_backend->cpl_db_add_bundle_property(cpl_db_backend,
-													  id,
-													  prefix,
-													  key,
-													  value);
+	return cpl_add_object_property(id, prefix, key, value);
 };
 
 /**
@@ -1190,14 +1109,8 @@ extern "C" EXPORT cpl_return_t
 cpl_get_bundle_info(const cpl_id_t id,
 					cpl_bundle_info_t** out_info)
 {
-	CPL_ENSURE_INITIALIZED;
-	CPL_ENSURE_NOT_NONE(id);
-	CPL_ENSURE_NOT_NULL(out_info);
+	return cpl_get_object_info(id, (cpl_object_info_t**) out_info);
 
-	// Call the database backend
-
-	return cpl_db_backend->cpl_db_get_bundle_info(cpl_db_backend, id,
-												  out_info);
 }
 
 
@@ -1281,16 +1194,7 @@ cpl_get_bundle_properties(const cpl_id_t id,
 						  cpl_property_iterator_t iterator,
 						  void* context)
 {
-	CPL_ENSURE_INITIALIZED;
-
-	CPL_ENSURE_NOT_NONE(id);
-	CPL_ENSURE_NOT_NULL(iterator);
-
-	// Call the database backend
-
-	return cpl_db_backend->cpl_db_get_bundle_properties(cpl_db_backend,
-											    id, prefix, key,
-											    iterator, context);
+	return cpl_get_object_properties(id, prefix, key, iterator, context);
 }
 
 /**

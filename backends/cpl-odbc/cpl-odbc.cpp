@@ -642,22 +642,21 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 
 	PREPARE(create_object_stmts,
 			"INSERT INTO cpl_objects"
-			"            (id, prefix, name, type,"
-			"             bundle_id)"
-			"     VALUES (DEFAULT, ?, ?, ?, ?)"
+			"            (id, prefix, name, type)"
+			"     VALUES (DEFAULT, ?, ?, ?)"
 			"   RETURNING id;");
 
 	PREPARE(lookup_object_stmts,
 			"SELECT id"
 			"  FROM cpl_objects"
-			" WHERE prefix = ? AND name = ? AND type = ? AND bundle_id = ?"
+			" WHERE prefix = ? AND name = ? AND type = ?"
 			" ORDER BY creation_time DESC"
 			" LIMIT 1;");
 
 	PREPARE(lookup_object_nt_stmts,
 			"SELECT id"
 			"  FROM cpl_objects"
-			" WHERE prefix = ? AND name = ? AND bundle_id = ?"
+			" WHERE prefix = ? AND name = ?"
 			" ORDER BY creation_time DESC"
 			" LIMIT 1;");
 
@@ -678,12 +677,12 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 	PREPARE(lookup_object_ext_stmts,
 			"SELECT id, creation_time"
 			"  FROM cpl_objects"
-			" WHERE prefix = ? AND name = ? AND type = ? AND bundle_id = ?;");
+			" WHERE prefix = ? AND name = ? AND type = ?;");
 
 	PREPARE(lookup_object_nt_ext_stmts,
 			"SELECT id, creation_time"
 			"  FROM cpl_objects"
-			" WHERE prefix = ? AND name = ? AND bundle_id = ?;");
+			" WHERE prefix = ? AND name = ?;");
 
 	PREPARE(lookup_object_nb_ext_stmts,
 			"SELECT id, creation_time"
@@ -698,8 +697,8 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 	PREPARE(add_relation_stmts,
 			"INSERT INTO cpl_relations"
 			"            (id, from_id,"
-			"             to_id, type, bundle_id)"
-			"     VALUES (DEFAULT, ?, ?, ?, ?)"
+			"             to_id, type)"
+			"     VALUES (DEFAULT, ?, ?, ?)"
 			"   RETURNING id;");
 
 	PREPARE(create_bundle_stmts,
@@ -902,7 +901,7 @@ cpl_odbc_reconnect(cpl_odbc_t* odbc)
 
 static SQLHSTMT
 cpl_acquire_stmt(sema_t semaphore, mutex_t mutex, SQLHSTMT* stmt_array){
-	
+
 	sema_wait(semaphore);
 	mutex_lock(mutex);
 
@@ -1415,12 +1414,10 @@ cpl_odbc_create_object(struct _cpl_db_backend_t* backend,
 					   const char* prefix,
 					   const char* name,
 					   const int type,
-					   const cpl_id_t bundle,
 					   cpl_id_t* out_id)
 {
 	assert(backend != NULL && prefix != NULL
-			&& name != NULL && CPL_IS_OBJECT_TYPE(type)
-			&& bundle > 0); 
+			&& name != NULL && CPL_IS_OBJECT_TYPE(type));
 	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
 
 	SQL_START;
@@ -1437,7 +1434,6 @@ retry:
 	SQL_BIND_VARCHAR(stmt, 1, CPL_PREFIX_LEN, prefix);
 	SQL_BIND_VARCHAR(stmt, 2, CPL_NAME_LEN, name);
 	SQL_BIND_INTEGER(stmt, 3, type);
-	SQL_BIND_INTEGER(stmt, 4, bundle);
 
 	// Insert the new row to the objects table
 
@@ -1480,9 +1476,9 @@ cpl_odbc_lookup_object(struct _cpl_db_backend_t* backend,
 					   const char* prefix,
 					   const char* name,
 					   const int type,
-					   const cpl_id_t bundle_id,
 					   cpl_id_t* out_id)
 {
+	int bundle_id = 0;
 	assert(backend != NULL);
 	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
 
@@ -1496,21 +1492,11 @@ cpl_odbc_lookup_object(struct _cpl_db_backend_t* backend,
 	enum {A, NB, NT, NTNB} e;
 
 	if(type == 0){
-		if(bundle_id == CPL_NONE){
-			stmt = STMT_ACQUIRE(lookup_object_ntnb);
-			e = NTNB;
-		} else {
-			stmt = STMT_ACQUIRE(lookup_object_nt);
-			e = NT;
-		}
+		stmt = STMT_ACQUIRE(lookup_object_ntnb);
+		e = NTNB;
 	} else {
-		if(bundle_id == CPL_NONE){
-			stmt = STMT_ACQUIRE(lookup_object_nb);
-			e = NB;
-		} else {
-			stmt = STMT_ACQUIRE(lookup_object);
-			e = A;
-		}
+		stmt = STMT_ACQUIRE(lookup_object_nb);
+		e = NB;
 	}
 
 retry:
@@ -1588,11 +1574,11 @@ cpl_odbc_lookup_object_ext(struct _cpl_db_backend_t* backend,
 						   const char* prefix,
 						   const char* name,
 						   const int type,
-					       const cpl_id_t bundle_id,
 						   const int flags,
 						   cpl_id_timestamp_iterator_t callback,
 						   void* context)
 {
+	int bundle_id = 0;
 	assert(backend != NULL);
 	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
 
@@ -1608,21 +1594,11 @@ cpl_odbc_lookup_object_ext(struct _cpl_db_backend_t* backend,
 	enum {A, NB, NT, NTNB} e;
 
 	if(type == 0){
-		if(bundle_id == CPL_NONE){
-			stmt = STMT_ACQUIRE(lookup_object_ntnb_ext);
-			e = NTNB;
-		} else {
-			stmt = STMT_ACQUIRE(lookup_object_nt_ext);
-			e = NT;
-		}
+		stmt = STMT_ACQUIRE(lookup_object_ntnb_ext);
+		e = NTNB;
 	} else {
-		if(bundle_id == CPL_NONE){
-			stmt = STMT_ACQUIRE(lookup_object_nb_ext);
-			e = NB;
-		} else {
-			stmt = STMT_ACQUIRE(lookup_object_ext);
-			e = A;
-		}
+		stmt = STMT_ACQUIRE(lookup_object_nb_ext);
+		e = NB;
 	}
 
 retry:
@@ -1739,7 +1715,6 @@ cpl_odbc_add_relation(struct _cpl_db_backend_t* backend,
 						   const cpl_id_t from_id,
 						   const cpl_id_t to_id,
 						   const int type,
-						   const cpl_id_t bundle,
 						   cpl_id_t* out_id)
 {
 	assert(backend != NULL && from_id != CPL_NONE && to_id != CPL_NONE && CPL_IS_RELATION_TYPE(type));
@@ -1760,8 +1735,6 @@ retry:
 	SQL_BIND_INTEGER(stmt, 1, from_id);
 	SQL_BIND_INTEGER(stmt, 2, to_id);
 	SQL_BIND_INTEGER(stmt, 3, type);
-	SQL_BIND_INTEGER(stmt, 4, bundle);
-
 
 	// Execute
 	

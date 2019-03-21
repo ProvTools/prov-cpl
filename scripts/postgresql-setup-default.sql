@@ -88,10 +88,7 @@ CREATE TABLE IF NOT EXISTS cpl_objects (
        type INT,
        creation_time TIMESTAMP DEFAULT NOW(),
        bundle_id BIGINT,
-       PRIMARY KEY(id),
-       FOREIGN KEY(bundle_id)
-                   REFERENCES cpl_bundles(id)
-                   ON DELETE CASCADE);
+       PRIMARY KEY(id));
 
 CREATE TABLE IF NOT EXISTS cpl_relations (
        id BIGSERIAL,
