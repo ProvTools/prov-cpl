@@ -1170,9 +1170,13 @@ cpl_get_bundle_relations(const cpl_id_t id,
 
 	CPL_ENSURE_NOT_NONE(id);
 	CPL_ENSURE_NOT_NULL(iterator);
-
-	return cpl_db_backend->cpl_db_get_bundle_relations(cpl_db_backend, id,
-												iterator, context);
+//
+//	return cpl_db_backend->cpl_db_get_bundle_relations(cpl_db_backend, id,
+//												iterator, context);
+    return cpl_db_backend->cpl_db_get_object_relations(cpl_db_backend,
+                                                    id, CPL_D_ANCESTORS,
+                                                    0, iterator,
+                                                    context);
 }
 
 /**
@@ -1213,7 +1217,6 @@ cpl_get_prefixes(const cpl_id_t id,
 			     void* context)
 {
 	CPL_ENSURE_INITIALIZED;
-
 	CPL_ENSURE_NOT_NONE(id);
 	CPL_ENSURE_NOT_NULL(iterator);
 
@@ -1252,7 +1255,6 @@ cpl_cb_collect_object_info_vector(const cpl_object_info_t* info,
     e.prefix = info->prefix;
     e.name = info->name;
     e.type = info->type;
-    e.bundle_id = info->bundle_id;
 
 	std::vector<cplxx_object_info_t>& l =
 		*((std::vector<cplxx_object_info_t>*) context);
@@ -1294,7 +1296,8 @@ cpl_cb_collect_id_timestamp_vector(const cpl_id_t id,
 
 
 /**
- * The iterator callback for cpl_get_object_relations() that collects
+ * The iterator callback
+ *for cpl_get_object_relations() that collects
  * the passed-in information in an instance of list<cpl_relation_t>.
  *
  * @param relation_id the ID of the relation
@@ -1323,7 +1326,6 @@ cpl_cb_collect_relation_list(const cpl_id_t relation_id,
 	e.query_object_id = query_object_id;
 	e.other_object_id = other_object_id;
 	e.type = type;
-	e.bundle_id = bundle_id;
 
 	std::list<cpl_relation_t>& l =
 		*((std::list<cpl_relation_t>*) context);
@@ -1363,7 +1365,6 @@ cpl_cb_collect_relation_vector(const cpl_id_t relation_id,
 	e.query_object_id = query_object_id;
 	e.other_object_id = other_object_id;
 	e.type = type;
-	e.bundle_id = bundle_id;
 
 	std::vector<cpl_relation_t>& l =
 		*((std::vector<cpl_relation_t>*) context);
@@ -2007,7 +2008,10 @@ export_objects_json(const std::vector<cpl_id_t>& bundles,
 			return ret;
 
 		if(object_vec.empty()){
+			document["empty"] = "the initial vector was empty";
 			return CPL_OK;
+		} else {
+			document["empty"] = "the initial vector was not empty";
 		}
 
 		std::vector<cplxx_property_entry_t> property_vec;
@@ -2162,17 +2166,17 @@ export_bundle_json(const std::vector<cpl_id_t>& bundles,
 
  	boost::unordered_map<cpl_id_t, std::string> lookup_tbl;
 
-	if(!CPL_IS_OK(ret = export_bundle_prefixes_json(bundles, document))){
-		return ret;
-	}
+//	if(!CPL_IS_OK(ret = export_bundle_prefixes_json(bundles, document))){
+//		return ret;
+//	}
 
 	if(!CPL_IS_OK(ret = export_objects_json(bundles, lookup_tbl, document))){
 		return ret;
 	}
-
-	if(!CPL_IS_OK(ret = export_relations_json(bundles, lookup_tbl, document))){
-		return ret;
-	}
+//
+//	if(!CPL_IS_OK(ret = export_relations_json(bundles, lookup_tbl, document))){
+//		return ret;
+//	}
 
 	json_string = document.dump();
 

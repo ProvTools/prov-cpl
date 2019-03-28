@@ -640,7 +640,24 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 			"     VALUES (DEFAULT, ?, ?, ?, ?, ?)"
 			"   RETURNING id;");
 
-	PREPARE(create_object_stmts,
+	PREPARE(create_object_stmts,bjects"
+			" WHERE prefix = ? AND name = ? AND type = ?"
+			" ORDER BY creation_time DESC"
+			" LIMIT 1;");
+
+	PREPARE(lookup_object_ntnb_stmts,
+			"SELECT id"
+			"  FROM cpl_objects"
+			" WHERE prefix = ? AND name = ?"
+			" ORDER BY creation_time DESC"
+			" LIMIT 1;");
+
+	PREPARE(lookup_object_ext_stmts,
+			"SELECT id, creation_time"
+			"  FROM cpl_objects"
+			" WHERE prefix = ? AND name = ? AND type = ?;");
+
+	PREPARE(lookup_object_nt_ext_stmts,
 			"INSERT INTO cpl_objects"
 			"            (id, prefix, name, type)"
 			"     VALUES (DEFAULT, ?, ?, ?)"
@@ -662,24 +679,7 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 
 	PREPARE(lookup_object_nb_stmts,
 			"SELECT id"
-			"  FROM cpl_objects"
-			" WHERE prefix = ? AND name = ? AND type = ?"
-			" ORDER BY creation_time DESC"
-			" LIMIT 1;");
-
-	PREPARE(lookup_object_ntnb_stmts,
-			"SELECT id"
-			"  FROM cpl_objects"
-			" WHERE prefix = ? AND name = ?"
-			" ORDER BY creation_time DESC"
-			" LIMIT 1;");
-
-	PREPARE(lookup_object_ext_stmts,
-			"SELECT id, creation_time"
-			"  FROM cpl_objects"
-			" WHERE prefix = ? AND name = ? AND type = ?;");
-
-	PREPARE(lookup_object_nt_ext_stmts,
+			"  FROM cpl_o
 			"SELECT id, creation_time"
 			"  FROM cpl_objects"
 			" WHERE prefix = ? AND name = ?;");
@@ -740,14 +740,12 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 		"     VALUES (?, ?, ?);");
 
 	PREPARE(get_all_objects_stmts,
-			"SELECT id, creation_time, prefix, name, type,"
-			"       bundle_id"
+			"SELECT id, creation_time, prefix, name, type"
 			"  FROM cpl_objects"
 			" WHERE id > 0;");
 
 	PREPARE(get_object_info_stmts,
-			"SELECT creation_time, prefix, name, type,"
-			"       bundle_id"
+			"SELECT creation_time, prefix, name, type"
 			"  FROM cpl_objects"
 			" WHERE id = ?"
 			" LIMIT 1;");
@@ -760,14 +758,19 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 			" LIMIT 1;");
 
 	PREPARE(get_object_ancestors_stmts,
-			"SELECT id, to_id, type, bundle_id"
+			"SELECT id, to_id, type"
 			"  FROM cpl_relations"
 			" WHERE from_id = ?");
 
 	PREPARE(get_object_descendants_stmts,
-			"SELECT id, from_id, type, bundle_id"
+			"SELECT id, from_id, type"
 			"  FROM cpl_relations"
 			" WHERE to_id = ?");
+
+	PREPARE(get_object_relations_stmts,
+			"SELECT id, from_id, to_id, type"
+			"  FROM cpl_relations"
+			" WHERE from_id = ? OR to_id = ?");
 
 	PREPARE(get_object_properties_stmts,
 			"SELECT id, prefix, name, value"
@@ -811,9 +814,9 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 			" LIMIT 1;");
 
 	PREPARE(get_bundle_objects_stmts,
-			"SELECT id, creation_time, prefix, name, type"
-			"  FROM cpl_objects"
-			" WHERE bundle_id = ?;")
+			"SELECT O.id, O.creation_time, O.prefix, O.name, O.type"
+			"  FROM cpl_objects as O, cpl_relations as R"
+			" WHERE R.from_id = ? AND R.to_id = O.id;")
 
 	PREPARE(get_bundle_relations_stmts,
 			"SELECT id, from_id, to_id, type"
@@ -2413,9 +2416,6 @@ retry:
 	ret = SQLBindCol(stmt, 5, SQL_C_SLONG, &entry.type, 0, NULL);
 	if (!SQL_SUCCEEDED(ret)) goto err_close;
 
-    ret = SQLBindCol(stmt, 6, SQL_C_UBIGINT, &entry.bundle_id, 0,
-                     &cb_bundle_id);
-    if (!SQL_SUCCEEDED(ret)) goto err_close;
 
 
 
@@ -2556,8 +2556,6 @@ retry:
 	CPL_SQL_SIMPLE_FETCH_EXT(dynamically_allocated_string, 3, &p->name, true);
 	if (r == CPL_E_DB_NULL) p->name = strdup("");
 	CPL_SQL_SIMPLE_FETCH(int, 4, (int*) &p->type);
-	CPL_SQL_SIMPLE_FETCH_EXT(llong, 5, (long long*) &p->bundle_id, true);
-	if (r == CPL_E_DB_NULL) p->bundle_id = CPL_NONE;
 	
 	ret = SQLCloseCursor(stmt);
 	if (!SQL_SUCCEEDED(ret)) {
@@ -2667,8 +2665,6 @@ retry:
 	ret = SQLBindCol(stmt, 3, SQL_C_SLONG, &entry.type, 0, &ind_type);
 	if (!SQL_SUCCEEDED(ret)) goto err_close;
 
-	ret = SQLBindCol(stmt, 4, SQL_C_UBIGINT, &entry.bundle_id, 0, NULL);
-	if (!SQL_SUCCEEDED(ret)) goto err_close;
 
 
 	// Fetch the result
@@ -3405,7 +3401,6 @@ retry:
 	if (prefix != NULL) {
 		SQL_BIND_VARCHAR(stmt, 2, CPL_PREFIX_LEN, prefix);
 	}
-
 
 	// Execute
 	
