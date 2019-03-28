@@ -175,6 +175,7 @@ typedef struct _cpl_db_backend_t {
 								const cpl_id_t from_id,
 								const cpl_id_t to_id,
 								const int type,
+                                const cpl_id_t bundle,
 								cpl_id_t* out_id);
 
     /**

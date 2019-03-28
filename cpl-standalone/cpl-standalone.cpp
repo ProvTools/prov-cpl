@@ -689,6 +689,7 @@ cpl_add_relation(const cpl_id_t from_id,
 													from_id,
 													to_id,
 													type,
+													bundle,
 													&id);
 
 
@@ -1170,13 +1171,10 @@ cpl_get_bundle_relations(const cpl_id_t id,
 
 	CPL_ENSURE_NOT_NONE(id);
 	CPL_ENSURE_NOT_NULL(iterator);
-//
-//	return cpl_db_backend->cpl_db_get_bundle_relations(cpl_db_backend, id,
-//												iterator, context);
-    return cpl_db_backend->cpl_db_get_object_relations(cpl_db_backend,
-                                                    id, CPL_D_ANCESTORS,
-                                                    0, iterator,
-                                                    context);
+
+	return cpl_db_backend->cpl_db_get_bundle_relations(cpl_db_backend, id,
+												iterator, context);
+
 }
 
 /**
@@ -2077,7 +2075,12 @@ export_relations_json(const std::vector<cpl_id_t>& bundles,
 		if(!CPL_IS_OK(ret = cpl_get_bundle_relations(bundle, cpl_cb_collect_relation_vector, &relation_vec)))
 				return ret;
 
-		if(relation_vec.empty()) return CPL_OK;
+		if(relation_vec.empty()) {
+			document["relations"] = "the relations vector was empty";
+			return CPL_OK;
+		} else {
+			document["relations"] = "the relations vector has some stuff in it";
+		}
 
 		std::vector<cplxx_property_entry_t> property_vec;
 
@@ -2173,10 +2176,10 @@ export_bundle_json(const std::vector<cpl_id_t>& bundles,
 	if(!CPL_IS_OK(ret = export_objects_json(bundles, lookup_tbl, document))){
 		return ret;
 	}
-//
-//	if(!CPL_IS_OK(ret = export_relations_json(bundles, lookup_tbl, document))){
-//		return ret;
-//	}
+
+	if(!CPL_IS_OK(ret = export_relations_json(bundles, lookup_tbl, document))){
+		return ret;
+	}
 
 	json_string = document.dump();
 

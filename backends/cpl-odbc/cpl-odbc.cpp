@@ -640,24 +640,7 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 			"     VALUES (DEFAULT, ?, ?, ?, ?, ?)"
 			"   RETURNING id;");
 
-	PREPARE(create_object_stmts,bjects"
-			" WHERE prefix = ? AND name = ? AND type = ?"
-			" ORDER BY creation_time DESC"
-			" LIMIT 1;");
-
-	PREPARE(lookup_object_ntnb_stmts,
-			"SELECT id"
-			"  FROM cpl_objects"
-			" WHERE prefix = ? AND name = ?"
-			" ORDER BY creation_time DESC"
-			" LIMIT 1;");
-
-	PREPARE(lookup_object_ext_stmts,
-			"SELECT id, creation_time"
-			"  FROM cpl_objects"
-			" WHERE prefix = ? AND name = ? AND type = ?;");
-
-	PREPARE(lookup_object_nt_ext_stmts,
+	PREPARE(create_object_stmts,
 			"INSERT INTO cpl_objects"
 			"            (id, prefix, name, type)"
 			"     VALUES (DEFAULT, ?, ?, ?)"
@@ -678,8 +661,6 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 			" LIMIT 1;");
 
 	PREPARE(lookup_object_nb_stmts,
-			"SELECT id"
-			"  FROM cpl_o
 			"SELECT id, creation_time"
 			"  FROM cpl_objects"
 			" WHERE prefix = ? AND name = ?;");
@@ -697,8 +678,8 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 	PREPARE(add_relation_stmts,
 			"INSERT INTO cpl_relations"
 			"            (id, from_id,"
-			"             to_id, type)"
-			"     VALUES (DEFAULT, ?, ?, ?)"
+			"             to_id, type, bundle_id)"
+			"     VALUES (DEFAULT, ?, ?, ?, ?)"
 			"   RETURNING id;");
 
 	PREPARE(create_bundle_stmts,
@@ -767,10 +748,10 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 			"  FROM cpl_relations"
 			" WHERE to_id = ?");
 
-	PREPARE(get_object_relations_stmts,
-			"SELECT id, from_id, to_id, type"
-			"  FROM cpl_relations"
-			" WHERE from_id = ? OR to_id = ?");
+//	PREPARE(get_object_relations_stmts,
+//			"SELECT id, from_id, to_id, type"
+//			"  FROM cpl_relations"
+//			" WHERE from_id = ? OR to_id = ?");
 
 	PREPARE(get_object_properties_stmts,
 			"SELECT id, prefix, name, value"
@@ -1718,6 +1699,7 @@ cpl_odbc_add_relation(struct _cpl_db_backend_t* backend,
 						   const cpl_id_t from_id,
 						   const cpl_id_t to_id,
 						   const int type,
+						   const cpl_id_t bundle,
 						   cpl_id_t* out_id)
 {
 	assert(backend != NULL && from_id != CPL_NONE && to_id != CPL_NONE && CPL_IS_RELATION_TYPE(type));
@@ -1738,6 +1720,7 @@ retry:
 	SQL_BIND_INTEGER(stmt, 1, from_id);
 	SQL_BIND_INTEGER(stmt, 2, to_id);
 	SQL_BIND_INTEGER(stmt, 3, type);
+    SQL_BIND_INTEGER(stmt, 4, bundle);
 
 	// Execute
 	
