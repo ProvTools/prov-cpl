@@ -1363,6 +1363,7 @@ cpl_cb_collect_relation_vector(const cpl_id_t relation_id,
 	e.query_object_id = query_object_id;
 	e.other_object_id = other_object_id;
 	e.type = type;
+    e.bundle_id = bundle_id;
 
 	std::vector<cpl_relation_t>& l =
 		*((std::vector<cpl_relation_t>*) context);
@@ -2006,10 +2007,7 @@ export_objects_json(const std::vector<cpl_id_t>& bundles,
 			return ret;
 
 		if(object_vec.empty()){
-			document["empty"] = "the initial vector was empty";
 			return CPL_OK;
-		} else {
-			document["empty"] = "the initial vector was not empty";
 		}
 
 		std::vector<cplxx_property_entry_t> property_vec;
@@ -2066,14 +2064,19 @@ export_relations_json(const std::vector<cpl_id_t>& bundles,
 				      json& document)
 {	
 	if(bundles.size() == 1){
-
+        document["status"] = "in the relations function";
 		cpl_return_t ret;
 		cpl_id_t bundle = bundles.at(0);
 
 		std::vector<cpl_relation_t> relation_vec;
 
-		if(!CPL_IS_OK(ret = cpl_get_bundle_relations(bundle, cpl_cb_collect_relation_vector, &relation_vec)))
-				return ret;
+		if(!CPL_IS_OK(ret = cpl_get_bundle_relations(bundle, cpl_cb_collect_relation_vector, &relation_vec))) {
+		    document["ok"] = "the document was far from ok";
+		    return ret;
+		} else {
+		    document["ok"] = "the document is okay";
+		}
+
 
 		if(relation_vec.empty()) {
 			document["relations"] = "the relations vector was empty";

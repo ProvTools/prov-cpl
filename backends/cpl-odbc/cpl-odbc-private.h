@@ -154,12 +154,14 @@ typedef struct {
 	 */
 	sema_t add_relation_sem;
 	mutex_t add_relation_lock;
+	sema_t bundle_relation_helper_sem;
+	mutex_t bundle_relation_helper_lock;
 
 	/**
 	 * The statement that adds a new relation
 	 */
 	SQLHSTMT* add_relation_stmts;
-
+	SQLHSTMT* bundle_relation_helper_stmts;
 	/**
 	 * Lock for bundle creation
 	 */

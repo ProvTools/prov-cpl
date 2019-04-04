@@ -493,6 +493,7 @@ cpl_odbc_free_statement_handles(cpl_odbc_t* odbc)
 	FREE_HANDLE(lookup_object_nb_ext_stmts);
 	FREE_HANDLE(lookup_object_ntnb_ext_stmts);
 	FREE_HANDLE(add_relation_stmts);
+	FREE_HANDLE(bundle_relation_helper_stmts);
 	FREE_HANDLE(create_bundle_stmts);
 	FREE_HANDLE(lookup_bundle_stmts);
 	FREE_HANDLE(lookup_bundle_ext_stmts);
@@ -592,6 +593,7 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 	ALLOC_STMT(lookup_object_nb_ext_stmts);
 	ALLOC_STMT(lookup_object_ntnb_ext_stmts);
 	ALLOC_STMT(add_relation_stmts);
+	ALLOC_STMT(bundle_relation_helper_stmts);
 	ALLOC_STMT(create_bundle_stmts);
 	ALLOC_STMT(lookup_bundle_stmts);
 	ALLOC_STMT(lookup_bundle_ext_stmts);
@@ -678,9 +680,24 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 	PREPARE(add_relation_stmts,
 			"INSERT INTO cpl_relations"
 			"            (id, from_id,"
-			"             to_id, type, bundle_id)"
-			"     VALUES (DEFAULT, ?, ?, ?, ?)"
-			"   RETURNING id;");
+			"             to_id, type)"
+			"     VALUES (DEFAULT, ?, ?, ?)"
+            "   RETURNING id;");
+
+
+	PREPARE(bundle_relation_helper_stmts,
+			"INSERT INTO cpl_relations"
+			"            (id, from_id,"
+			"             to_id, type)"
+			"     VALUES (DEFAULT, ?, ?, ?);");
+	/*
+	 * WITH result AS (
+INSERT INTO public.cpl_relations (id, from_id, to_id, type)
+			 VALUES (DEFAULT, '9', '9', '9') RETURNING id)
+INSERT INTO public.cpl_relations (id, from_id, to_id, type)
+			VALUES(DEFAULT, '8', (SELECT id FROM result), '8');
+	 */
+	// INSERT INTO cpl_relations (id2, BundleID, RelationID, “BundleRelation”)
 
 	PREPARE(create_bundle_stmts,
 			"INSERT INTO cpl_bundles"
@@ -801,8 +818,9 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 
 	PREPARE(get_bundle_relations_stmts,
 			"SELECT id, from_id, to_id, type"
-			"  FROM cpl_relations"
-			" WHERE bundle_id = ?;")
+			"  FROM cpl_relations as R,"
+			"       cpl_relations as RinB"
+			" WHERE RinB.from_id = ? AND RinB.type = 20 AND R.id = RinB.to_id;")
 
 	PREPARE(get_bundle_properties_stmts,
 			"SELECT id, prefix, name, value"
@@ -971,6 +989,7 @@ cpl_create_odbc_backend(const char* connection_string,
 	sema_init(odbc->lookup_object_nb_ext_sem, 4);
 	sema_init(odbc->lookup_object_ntnb_ext_sem, 4);
 	sema_init(odbc->add_relation_sem, 4);
+	sema_init(odbc->bundle_relation_helper_sem, 4);
 	sema_init(odbc->create_bundle_sem, 4);
 	sema_init(odbc->lookup_bundle_sem, 4);
 	sema_init(odbc->lookup_bundle_ext_sem, 4);
@@ -1008,6 +1027,7 @@ cpl_create_odbc_backend(const char* connection_string,
 	mutex_init(odbc->lookup_object_nb_ext_lock);
 	mutex_init(odbc->lookup_object_ntnb_ext_lock);
 	mutex_init(odbc->add_relation_lock);
+	mutex_init(odbc->bundle_relation_helper_lock);
 	mutex_init(odbc->create_bundle_lock);
 	mutex_init(odbc->lookup_bundle_lock);
 	mutex_init(odbc->lookup_bundle_ext_lock);
@@ -1059,6 +1079,7 @@ err_sync:
 	sema_destroy(odbc->lookup_object_nb_ext_sem);
 	sema_destroy(odbc->lookup_object_ntnb_ext_sem);
 	sema_destroy(odbc->add_relation_sem);
+	sema_destroy(odbc->bundle_relation_helper_sem);
 	sema_destroy(odbc->create_bundle_sem);
 	sema_destroy(odbc->lookup_bundle_sem);
 	sema_destroy(odbc->lookup_bundle_ext_sem);
@@ -1096,6 +1117,7 @@ err_sync:
 	mutex_destroy(odbc->lookup_object_nb_ext_lock);
 	mutex_destroy(odbc->lookup_object_ntnb_ext_lock);
 	mutex_destroy(odbc->add_relation_lock);
+	mutex_destroy(odbc->bundle_relation_helper_lock);
 	mutex_destroy(odbc->create_bundle_lock);
 	mutex_destroy(odbc->lookup_bundle_lock);
 	mutex_destroy(odbc->lookup_bundle_ext_lock);
@@ -1197,6 +1219,7 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
 	sema_destroy(odbc->lookup_object_nb_ext_sem);
 	sema_destroy(odbc->lookup_object_ntnb_ext_sem);
 	sema_destroy(odbc->add_relation_sem);
+	sema_destroy(odbc->bundle_relation_helper_sem);
 	sema_destroy(odbc->create_bundle_sem);
 	sema_destroy(odbc->lookup_bundle_sem);
 	sema_destroy(odbc->lookup_bundle_ext_sem);
@@ -1234,6 +1257,7 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
 	mutex_destroy(odbc->lookup_object_nb_ext_lock);
 	mutex_destroy(odbc->lookup_object_ntnb_ext_lock);
 	mutex_destroy(odbc->add_relation_lock);
+	mutex_destroy(odbc->bundle_relation_helper_lock);
 	mutex_destroy(odbc->create_bundle_lock);
 	mutex_destroy(odbc->lookup_bundle_lock);
 	mutex_destroy(odbc->lookup_bundle_ext_lock);
@@ -1683,6 +1707,52 @@ err:
 	return CPL_E_STATEMENT_ERROR;
 }
 
+extern "C" cpl_return_t
+cpl_odbc_add_relation_helper(struct _cpl_db_backend_t* backend,
+							 const cpl_id_t from_id,
+							 const cpl_id_t to_id,
+							 const int type,
+							 const cpl_id_t bundle,
+							 cpl_id_t* out_id)
+{
+	assert(backend != NULL && from_id != CPL_NONE && to_id != CPL_NONE && CPL_IS_RELATION_TYPE(type));
+	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
+
+
+	SQL_START;
+
+	cpl_id_t id = CPL_NONE;
+	cpl_return_t r = CPL_E_INTERNAL_ERROR;
+
+	// Prepare the statement
+
+	SQLHSTMT stmt = STMT_ACQUIRE(bundle_relation_helper);
+
+	retry:
+
+	SQL_BIND_INTEGER(stmt, 1, from_id);
+	SQL_BIND_INTEGER(stmt, 2, to_id);
+	SQL_BIND_INTEGER(stmt, 3, type);
+	// Execute
+
+	SQL_EXECUTE(stmt);
+
+	// Fetch the result
+
+	// Cleanup
+
+	STMT_RELEASE(bundle_relation_helper, stmt);
+	if (out_id != NULL) *out_id = id;
+
+
+
+	return CPL_OK;
+	// Error handling
+
+	err:
+	STMT_RELEASE(bundle_relation_helper, stmt);
+	return CPL_E_STATEMENT_ERROR;
+}
 
 /**
  * Add a provenance relation
@@ -1720,8 +1790,6 @@ retry:
 	SQL_BIND_INTEGER(stmt, 1, from_id);
 	SQL_BIND_INTEGER(stmt, 2, to_id);
 	SQL_BIND_INTEGER(stmt, 3, type);
-    SQL_BIND_INTEGER(stmt, 4, bundle);
-
 	// Execute
 	
 	SQL_EXECUTE(stmt);
@@ -1738,9 +1806,14 @@ retry:
 
 	STMT_RELEASE(add_relation, stmt);
 	if (out_id != NULL) *out_id = id;
+
+
+
+	if (type == 19) {
+		cpl_odbc_add_relation_helper(backend, from_id, id, type, bundle, out_id);
+	}
+
 	return CPL_OK;
-
-
 	// Error handling
 
 err:
@@ -3894,6 +3967,7 @@ const cpl_db_backend_t CPL_ODBC_BACKEND = {
 	cpl_odbc_lookup_object_ext,
 	cpl_odbc_add_object_property,
 	cpl_odbc_add_relation,
+	cpl_odbc_add_relation_helper,
 	cpl_odbc_add_relation_property,
 	cpl_odbc_create_bundle,
 	cpl_odbc_lookup_bundle,

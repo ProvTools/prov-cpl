@@ -178,6 +178,14 @@ typedef struct _cpl_db_backend_t {
                                 const cpl_id_t bundle,
 								cpl_id_t* out_id);
 
+    cpl_return_t
+    (*cpl_db_add_relation_helper)(struct _cpl_db_backend_t* backend,
+                           const cpl_id_t from_id,
+                           const cpl_id_t to_id,
+                           const int type,
+                           const cpl_id_t bundle,
+                           cpl_id_t* out_id);
+
     /**
      * Add a property to the given relation
      *
