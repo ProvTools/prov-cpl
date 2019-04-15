@@ -690,14 +690,11 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 			"            (id, from_id,"
 			"             to_id, type)"
 			"     VALUES (DEFAULT, ?, ?, ?);");
-	/*
-	 * WITH result AS (
-INSERT INTO public.cpl_relations (id, from_id, to_id, type)
-			 VALUES (DEFAULT, '9', '9', '9') RETURNING id)
-INSERT INTO public.cpl_relations (id, from_id, to_id, type)
-			VALUES(DEFAULT, '8', (SELECT id FROM result), '8');
-	 */
-	// INSERT INTO cpl_relations (id2, BundleID, RelationID, “BundleRelation”)
+
+//    PREPARE(get_prefix_bundles_stmts,
+//            "SELECT O.id, O.creation_time, O.prefix, O.name, O.type"
+//            "  FROM cpl_objects as O"
+//            " WHERE O.prefix = ? AND O.type = 4;")
 
 	PREPARE(create_bundle_stmts,
 			"INSERT INTO cpl_bundles"
@@ -765,11 +762,6 @@ INSERT INTO public.cpl_relations (id, from_id, to_id, type)
 			"  FROM cpl_relations"
 			" WHERE to_id = ?");
 
-//	PREPARE(get_object_relations_stmts,
-//			"SELECT id, from_id, to_id, type"
-//			"  FROM cpl_relations"
-//			" WHERE from_id = ? OR to_id = ?");
-
 	PREPARE(get_object_properties_stmts,
 			"SELECT id, prefix, name, value"
 			"  FROM cpl_object_properties"
@@ -817,7 +809,7 @@ INSERT INTO public.cpl_relations (id, from_id, to_id, type)
 			" WHERE R.from_id = ? AND R.to_id = O.id;")
 
 	PREPARE(get_bundle_relations_stmts,
-			"SELECT id, from_id, to_id, type"
+			"SELECT R.id, R.from_id, R.to_id, R.type"
 			"  FROM cpl_relations as R,"
 			"       cpl_relations as RinB"
 			" WHERE RinB.from_id = ? AND RinB.type = 20 AND R.id = RinB.to_id;")
@@ -1809,9 +1801,7 @@ retry:
 
 
 
-	if (type == 19) {
-		cpl_odbc_add_relation_helper(backend, from_id, id, type, bundle, out_id);
-	}
+	cpl_odbc_add_relation_helper(backend, bundle, id, 20, bundle, out_id);
 
 	return CPL_OK;
 	// Error handling
@@ -3828,6 +3818,161 @@ err:
 	STMT_RELEASE(get_bundle_objects, stmt);
 	return CPL_E_STATEMENT_ERROR;
 }
+
+
+///**
+// * Returns all bundles belonging to a certain originator
+// *
+// * @param backend the pointer to the backend structure
+// * @param prefix the originator
+// * @param callback the iterator to be called for each matching object
+// * @param context the caller-provided iterator context
+// * @return CPL_OK or an error code
+// */
+//cpl_return_t
+//cpl_odbc_get_prefix_bundles(struct _cpl_db_backend_t* backend,
+//							const char* prefix,
+//							cpl_object_info_iterator_t callback,
+//							void* context)
+//{
+//	assert(backend != NULL);
+//	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
+//
+//	SQL_START;
+//
+//	cpl_return_t r = CPL_E_INTERNAL_ERROR;
+//	cplxx_object_info_t entry;
+//	std::list<cplxx_object_info_t> entries;
+//	SQL_TIMESTAMP_STRUCT t;
+//
+//	size_t prefix_size = CPL_PREFIX_LEN + 1;
+//	size_t name_size = CPL_NAME_LEN + 1;
+//
+//	char* entry_prefix = (char*) alloca(prefix_size);
+//	char* entry_name = (char*) alloca(name_size);
+//
+//	if (entry_prefix == NULL || entry_name == NULL) {
+//		return CPL_E_INSUFFICIENT_RESOURCES;
+//	}
+//
+//	// Get and execute the statement
+//
+//	SQLHSTMT stmt = STMT_ACQUIRE(get_prefix_bundles);
+//
+//	retry:
+//
+//	entries.clear();
+//
+//	SQL_BIND_INTEGER(stmt, 1, prefix);
+//
+//	// Execute
+//
+//	SQL_EXECUTE(stmt);
+//
+//	// Bind the columns
+//
+//	ret = SQLBindCol(stmt, 1, SQL_C_UBIGINT, &entry.id, 0, NULL);
+//	if (!SQL_SUCCEEDED(ret)) goto err_close;
+//
+//	ret = SQLBindCol(stmt, 2, SQL_C_TYPE_TIMESTAMP, &t, sizeof(t), NULL);
+//	if (!SQL_SUCCEEDED(ret)) goto err_close;
+//
+//	ret = SQLBindCol(stmt, 3, SQL_C_CHAR, entry_prefix, prefix_size,
+//					 NULL);
+//	if (!SQL_SUCCEEDED(ret)) goto err_close;
+//
+//	ret = SQLBindCol(stmt, 4, SQL_C_CHAR, entry_name, name_size, NULL);
+//	if (!SQL_SUCCEEDED(ret)) goto err_close;
+//
+//	ret = SQLBindCol(stmt, 5, SQL_C_SLONG, &entry.type, 0, NULL);
+//	if (!SQL_SUCCEEDED(ret)) goto err_close;
+//
+//	entry.bundle_id = id;
+//
+//
+//
+//	// Fetch the result
+//
+//	while (true) {
+//
+//		ret = SQLFetch(stmt);
+//		if (!SQL_SUCCEEDED(ret)) {
+//			if (ret == SQL_INVALID_HANDLE) {
+//				fprintf(stderr, "\nThe ODBC driver failed while running "
+//								"SQLFetch due to SQL_INVALID_HANDLE\n\n");
+//				goto err_close;
+//			}
+//			else if (ret != SQL_NO_DATA) {
+//				print_odbc_error("SQLFetch", stmt, SQL_HANDLE_STMT);
+//				goto err_close;
+//			}
+//			break;
+//		}
+//
+//		entry.creation_time = cpl_sql_timestamp_to_unix_time(t);
+//		entry.prefix = entry_prefix;
+//		entry.name = entry_name;
+//
+//		entries.push_back(entry);
+//	}
+//
+//	ret = SQLCloseCursor(stmt);
+//	if (!SQL_SUCCEEDED(ret)) {
+//		print_odbc_error("SQLCloseCursor", stmt, SQL_HANDLE_STMT);
+//		goto err;
+//	}
+//
+//
+//	// Unlock
+//
+//	STMT_RELEASE(get_bundle_objects, stmt);
+//
+//
+//	// If we did not get any data back, terminate
+//
+//	if (entries.empty()) return CPL_S_NO_DATA;
+//
+//
+//	// Call the user-provided callback function
+//
+//	if (callback != NULL) {
+//		std::list<cplxx_object_info_t>::iterator i;
+//		for (i = entries.begin(); i != entries.end(); i++) {
+//
+//			strncpy(entry_prefix, i->prefix.c_str(), prefix_size);
+//			strncpy(entry_name, i->name.c_str(), name_size);
+//			entry_prefix[prefix_size - 1] = '\0';
+//			entry_name[name_size - 1] = '\0';
+//
+//			cpl_object_info_t e;
+//			e.id = i->id;
+//			e.creation_time = i->creation_time;
+//			e.prefix = entry_prefix;
+//			e.name = entry_name;
+//			e.type = i->type;
+//			e.bundle_id = i->bundle_id;
+//
+//			r = callback(&e, context);
+//			if (!CPL_IS_OK(r)) return r;
+//		}
+//	}
+//
+//	return CPL_OK;
+//
+//
+//	// Error handling
+//
+//	err_close:
+//	ret = SQLCloseCursor(stmt);
+//	if (!SQL_SUCCEEDED(ret)) {
+//		print_odbc_error("SQLCloseCursor", stmt, SQL_HANDLE_STMT);
+//	}
+//
+//	err:
+//	STMT_RELEASE(get_bundle_objects, stmt);
+//	return CPL_E_STATEMENT_ERROR;
+//}
+
 
 typedef struct __get_bundle_relation__entry {
 	cpl_id_t relation_id;

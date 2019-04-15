@@ -506,10 +506,13 @@ extern cpl_session_t cpl_session;
  */
 #define CPL_AGENT 							3
 
+#define CPL_BUNDLE                          4
+
 
 #define CPL_ENTITY_STR						"entity"
 #define CPL_ACTIVITY_STR					"activity"
 #define CPL_AGENT_STR						"agent"
+#define CPL_BUNDLE_STR                      "bundle"
 
 #define CPL_IS_OBJECT_TYPE(r)			((r) > 0 && (r) < 4)
 

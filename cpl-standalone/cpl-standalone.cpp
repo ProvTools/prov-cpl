@@ -1142,16 +1142,16 @@ cpl_free_bundle_info(cpl_bundle_info_t* info)
  */
 extern "C" EXPORT cpl_return_t
 cpl_get_bundle_objects(const cpl_id_t id,
-					   cpl_object_info_iterator_t iterator,
-					   void* context)
+                       cpl_object_info_iterator_t iterator,
+                       void* context)
 {
-	CPL_ENSURE_INITIALIZED;
+    CPL_ENSURE_INITIALIZED;
 
-	CPL_ENSURE_NOT_NONE(id);
-	CPL_ENSURE_NOT_NULL(iterator);
+    CPL_ENSURE_NOT_NONE(id);
+    CPL_ENSURE_NOT_NULL(iterator);
 
-	return cpl_db_backend->cpl_db_get_bundle_objects(cpl_db_backend, id,
-												iterator, context);
+    return cpl_db_backend->cpl_db_get_bundle_objects(cpl_db_backend, id,
+                                                     iterator, context);
 }
 
 /**
@@ -1363,7 +1363,7 @@ cpl_cb_collect_relation_vector(const cpl_id_t relation_id,
 	e.query_object_id = query_object_id;
 	e.other_object_id = other_object_id;
 	e.type = type;
-    e.bundle_id = bundle_id;
+	e.bundle_id = bundle_id;
 
 	std::vector<cpl_relation_t>& l =
 		*((std::vector<cpl_relation_t>*) context);
@@ -1539,7 +1539,16 @@ prov_relation_data_t rdata_array[] =
 	"prov:agent", CPL_AGENT},
 	{ACTEDONBEHALFOF, ACTEDONBEHALFOF_STR,
 	"prov:delegate", CPL_AGENT,
-	"prov:responsible", CPL_AGENT}
+	"prov:responsible", CPL_AGENT},
+	{INBUNDLE, INBUNDLE_STR,
+      "prov:bundle", CPL_BUNDLE,
+      "prov:object", CPL_ENTITY},
+      {INBUNDLE, INBUNDLE_STR,
+      "prov:bundle", CPL_BUNDLE,
+      "prov:object", CPL_AGENT},
+      {INBUNDLE, INBUNDLE_STR,
+      "prov:bundle", CPL_BUNDLE,
+      "prov:object", CPL_ACTIVITY}
 };
 
 using json = nlohmann::json;
