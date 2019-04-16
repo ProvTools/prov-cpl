@@ -745,9 +745,10 @@ cpl_add_relation_property(const cpl_id_t id,
  */
 extern "C" EXPORT cpl_return_t
 cpl_create_bundle(const char* name,
+				  const char* prefix,
 				  cpl_id_t* out_id)
 {
-	return cpl_create_object("news_prov", name, 4, 0, out_id);
+	return cpl_create_object(prefix, name, 4, 0, out_id);
 }
 
 /**
@@ -760,9 +761,10 @@ cpl_create_bundle(const char* name,
  */
 extern "C" EXPORT cpl_return_t
 cpl_lookup_bundle(const char* name,
+				  const char* prefix,
 				  cpl_id_t* out_id)
 {
-	return cpl_lookup_object("news_prov", name, 4, 0, out_id);
+	return cpl_lookup_object(prefix, name, 4, 0, out_id);
 }
 
 
@@ -778,11 +780,12 @@ cpl_lookup_bundle(const char* name,
  */
 extern "C" EXPORT cpl_return_t
 cpl_lookup_bundle_ext(const char* name,
+					  const char* prefix,
 					  const int flags,
 					  cpl_id_timestamp_iterator_t iterator,
 					  void* context)
 {
-	return cpl_lookup_object_ext("news_prov", name, 4, 0, flags, iterator, context);
+	return cpl_lookup_object_ext(prefix, name, 4, 0, flags, iterator, context);
 }
 
 /**
@@ -901,14 +904,15 @@ cpl_free_session_info(cpl_session_info_t* info)
  * @return CPL_OK or an error code
  */
 extern "C" EXPORT cpl_return_t
-cpl_get_all_objects(const int flags,
+cpl_get_all_objects(const char* prefix,
+                    const int flags,
 					cpl_object_info_iterator_t iterator,
 					void* context)
 {
 	CPL_ENSURE_INITIALIZED;
 	CPL_ENSURE_NOT_NULL(iterator);
 
-	return cpl_db_backend->cpl_db_get_all_objects(cpl_db_backend, flags,
+	return cpl_db_backend->cpl_db_get_all_objects(cpl_db_backend, prefix, flags,
                                                   iterator, context);
 }
 
@@ -1875,7 +1879,7 @@ import_document_json(const std::string& json_string,
 
 	// Create bundle
 	cpl_id_t bundle_id;
-	if(!CPL_IS_OK(cpl_create_bundle(bundle_name.c_str(), &bundle_id))){
+	if(!CPL_IS_OK(cpl_create_bundle(bundle_name.c_str(), "", &bundle_id))){
 		goto error;
 	}
 
@@ -2073,25 +2077,18 @@ export_relations_json(const std::vector<cpl_id_t>& bundles,
 				      json& document)
 {	
 	if(bundles.size() == 1){
-        document["status"] = "in the relations function";
 		cpl_return_t ret;
 		cpl_id_t bundle = bundles.at(0);
 
 		std::vector<cpl_relation_t> relation_vec;
 
 		if(!CPL_IS_OK(ret = cpl_get_bundle_relations(bundle, cpl_cb_collect_relation_vector, &relation_vec))) {
-		    document["ok"] = "the document was far from ok";
 		    return ret;
-		} else {
-		    document["ok"] = "the document is okay";
 		}
 
 
 		if(relation_vec.empty()) {
-			document["relations"] = "the relations vector was empty";
 			return CPL_OK;
-		} else {
-			document["relations"] = "the relations vector has some stuff in it";
 		}
 
 		std::vector<cplxx_property_entry_t> property_vec;
@@ -2184,14 +2181,16 @@ export_bundle_json(const std::vector<cpl_id_t>& bundles,
 //	if(!CPL_IS_OK(ret = export_bundle_prefixes_json(bundles, document))){
 //		return ret;
 //	}
+    for (int i = 0; i<bundles.size(); i++) {
+        const std::vector<cpl_id_t>& sub_bundles = {bundles.at(i)};
+        if(!CPL_IS_OK(ret = export_objects_json(sub_bundles, lookup_tbl, document))){
+		    return ret;
+	    }
+	    if(!CPL_IS_OK(ret = export_relations_json(sub_bundles, lookup_tbl, document))){
+		    return ret;
+	    }
+    }
 
-	if(!CPL_IS_OK(ret = export_objects_json(bundles, lookup_tbl, document))){
-		return ret;
-	}
-
-	if(!CPL_IS_OK(ret = export_relations_json(bundles, lookup_tbl, document))){
-		return ret;
-	}
 
 	json_string = document.dump();
 

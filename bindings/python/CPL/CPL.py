@@ -501,8 +501,8 @@ class cpl_connection:
         return r
 
 
-    def create_bundle(self, name):
-        ret, idp = CPLDirect.cpl_create_bundle(name)
+    def create_bundle(self, name, prefix):
+        ret, idp = CPLDirect.cpl_create_bundle(name, prefix)
 
         if not CPLDirect.cpl_is_ok(ret):
             raise CPLException('Could not create' +
@@ -512,8 +512,8 @@ class cpl_connection:
         return r
 
 
-    def lookup_bundle(self, name):
-        ret, idp = CPLDirect.cpl_lookup_bundle(name)
+    def lookup_bundle(self, name, prefix):
+        ret, idp = CPLDirect.cpl_lookup_bundle(name, prefix)
 
         if not CPLDirect.cpl_is_ok(ret):
             raise CPLException('Could not find' +
@@ -546,7 +546,7 @@ class cpl_connection:
         return l
 
 
-    def get_all_objects(self, fast=False):
+    def get_all_objects(self, prefix, fast=False):
         '''
         Return all objects in the provenance database. If fast = True, then
         fetch only incomplete information about each object, so that it is
@@ -559,7 +559,7 @@ class cpl_connection:
             flags = 0
 
         vp = CPLDirect.new_std_vector_cplxx_object_info_tp()
-        ret = CPLDirect.cpl_get_all_objects(flags,
+        ret = CPLDirect.cpl_get_all_objects(prefix, flags,
             CPLDirect.cpl_cb_collect_object_info_vector, vp)
 
         if not CPLDirect.cpl_is_ok(ret):

@@ -737,7 +737,12 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 	PREPARE(get_all_objects_stmts,
 			"SELECT id, creation_time, prefix, name, type"
 			"  FROM cpl_objects"
-			" WHERE id > 0;");
+			" WHERE id > 0 AND prefix = ? AND type = 4;");
+
+//	PREPARE(get_all_objects_stmts,
+//			"SELECT id, creation_time, prefix, name, type"
+//			"  FROM cpl_objects"
+//			" WHERE id > 0;");
 
 	PREPARE(get_object_info_stmts,
 			"SELECT creation_time, prefix, name, type"
@@ -2405,6 +2410,7 @@ err_r:
  */
 cpl_return_t
 cpl_odbc_get_all_objects(struct _cpl_db_backend_t* backend,
+						 const char* prefix,
 						 const int flags,
 						 cpl_object_info_iterator_t callback,
 						 void* context)
@@ -2436,6 +2442,8 @@ cpl_odbc_get_all_objects(struct _cpl_db_backend_t* backend,
 	SQLHSTMT stmt = STMT_ACQUIRE(get_all_objects);
 	
 retry:
+
+	SQL_BIND_VARCHAR(stmt, 1, CPL_PREFIX_LEN, prefix);
 
 	entries.clear();
 

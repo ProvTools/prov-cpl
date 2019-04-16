@@ -323,6 +323,7 @@ typedef struct _cpl_db_backend_t {
      */
     cpl_return_t
     (*cpl_db_get_all_objects)(struct _cpl_db_backend_t* backend,
+                              const char * prefix,
                               const int flags,
                               cpl_object_info_iterator_t callback,
                               void* context);

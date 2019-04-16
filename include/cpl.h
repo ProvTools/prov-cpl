@@ -720,6 +720,7 @@ cpl_add_relation_property(const cpl_id_t id,
  */
 EXPORT cpl_return_t
 cpl_create_bundle(const char* name,
+				  const char* prefix,
 				  cpl_id_t* out_id);
 
 /**
@@ -732,6 +733,7 @@ cpl_create_bundle(const char* name,
  */
 EXPORT cpl_return_t
 cpl_lookup_bundle(const char* name,
+				  const char* prefix,
 				  cpl_id_t* out_id);
 
 /**
@@ -746,6 +748,7 @@ cpl_lookup_bundle(const char* name,
  */
 EXPORT cpl_return_t
 cpl_lookup_bundle_ext(const char* name,
+					  const char* prefix,
 					  const int flags,
  					  cpl_id_timestamp_iterator_t iterator,
 					  void* context);
@@ -820,7 +823,8 @@ cpl_free_session_info(cpl_session_info_t* info);
  * @return CPL_OK or an error code
  */
 EXPORT cpl_return_t
-cpl_get_all_objects(const int flags,
+cpl_get_all_objects( const char* prefix,
+					const int flags,
 					cpl_object_info_iterator_t iterator,
 					void* context);
 

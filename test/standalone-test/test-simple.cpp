@@ -354,7 +354,7 @@ test_simple(void)
 
 	// Object creation
 
-	ret = cpl_create_bundle("Bundle", &bun);
+	ret = cpl_create_bundle("Bundle", "test", &bun);
 	print(L_DEBUG, "cpl_create_bundle --> %llx [%d]", bun, ret);
 	CPL_VERIFY(cpl_create_bundle, ret);
 	if (with_delays) delay();
@@ -387,7 +387,7 @@ test_simple(void)
 
 	cpl_id_t objx;
 
-	ret = cpl_lookup_bundle("Bundle", &objx);
+	ret = cpl_lookup_bundle("Bundle", "test", &objx);
 	print(L_DEBUG, "cpl_bundle --> %llx [%d]", objx ,ret);
 	CPL_VERIFY(cpl_lookup_object, ret);
 	if (bun!=objx)throw CPLException("Bundle lookup returned the wrong object");
@@ -635,7 +635,7 @@ test_simple(void)
     // Object listing
     
     std::vector<cplxx_object_info_t> oiv;
-    ret = cpl_get_all_objects(0, cpl_cb_collect_object_info_vector, &oiv);
+    ret = cpl_get_all_objects("*", 0, cpl_cb_collect_object_info_vector, &oiv);
 	print(L_DEBUG, "cpl_get_all_objects --> %d objects [%d]",
           (int) oiv.size(), ret);
 	CPL_VERIFY(cpl_get_all_objects, ret);

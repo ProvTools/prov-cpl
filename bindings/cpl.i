@@ -231,9 +231,11 @@ cpl_is_ok(cpl_return_t ret);
 
 cpl_return_t
 cpl_create_bundle(const char* name,
+                  const char* prefix,
                   unsigned long long* OUTPUT);
 cpl_return_t
 cpl_lookup_bundle(const char* name,
+                  const char* prefix,
                   unsigned long long* OUTPUT);
 
 cpl_return_t
