@@ -93,13 +93,7 @@ CREATE TABLE IF NOT EXISTS cpl_relations (
        from_id BIGINT,
        to_id BIGINT,
        type INT,
-       PRIMARY KEY(id),
-       FOREIGN KEY(from_id)
-                   REFERENCES cpl_objects(id)
-                   ON DELETE CASCADE,
-       FOREIGN KEY(to_id)
-                   REFERENCES cpl_objects(id)
-                   ON DELETE CASCADE);
+       PRIMARY KEY(id);
 
 CREATE TABLE IF NOT EXISTS cpl_prefixes (
       id BIGINT,
@@ -142,7 +136,7 @@ INSERT INTO cpl_bundles (id, prefix, name, type)
   VALUES (0, NULL, NULL, NULL);
 INSERT INTO cpl_objects (id, prefix, name, type)
   VALUES (0, NULL, NULL, NULL);
-INSERT INTO cpl_relations (id, from_id, to_id, type, bundle_id)
+INSERT INTO cpl_relations (id, from_id, to_id, type)
   VALUES (0, NULL, NULL, NULL, NULL);
 
 CREATE OR REPLACE RULE cpl_relation_properties_ignore_duplicate_inserts AS
