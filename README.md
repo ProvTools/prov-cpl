@@ -215,8 +215,11 @@ The bindings currently only implement basic JSON document handling.
 * Improve querying with CypherToSQL tool
 
 
+
+
 # About the Library
 A breif overview of the main modules and API functions for the purpose of the fake new provenance project.
+
 
 ## Modules
 
@@ -240,6 +243,7 @@ Contains some shell scripts used to configure the PSQL backend. The one specific
 
 ### test, rpm, rest-service
 I haven't used these at all, other than to edit a few test functions to use new API function signatures. You probably won't need to open or worry about these directories.
+
 
 ## API functions
 
