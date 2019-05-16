@@ -218,7 +218,7 @@ The bindings currently only implement basic JSON document handling.
 
 
 # About the Library
-A breif overview of the main modules and API functions for the purpose of the fake new provenance project.
+A breif overview of the main modules and API functions for the purpose of the fake news provenance project.
 
 
 ## Modules
@@ -249,7 +249,7 @@ I haven't used these at all, other than to edit a few test functions to use new 
 
 It's important to understand that pretty much every API function works on the same few layers. As an example, if you made a call to create_object in your python code, that would call the python binding for create_object which would in turn invoke the cpl_create_object function in cpl-standalone. cpl_create_object would call cpl_db_create_object in backends/cpl-odbc, which would execute a prepared create_object statement (found in the same file) on the database to insert the specified object. On every level there are input validatation checks. Keeping in mind that most of these functions are the same wrapper around a different database action, here's a really breif description of the main ones you'll use. These can be found in cpl-standalone.cpp and are all called by the language-specific bindings.
 
-### cpl_create_object(const char* prefix, const char* name, const int type, const cpl_id_t bundle, cpl_id_t* out_id)
+### cpl_create_object
 Creates an object in the database with: 
 - a prefix (same thing as originator, basically a reference to what experiment this object belongs to, passed in by the user)
 - a name, which can be anything but should ideally be somewhat unique
@@ -263,26 +263,26 @@ Takes the same parameters as cpl_create_object, returns the object ID if it exis
 ### cpl_lookup_or_create_object
 Same parameters as the lookup and create functions; automatically creates the specified object if it fails on lookup. 
 
-### cpl_add_object_property (const cpl_id_t id, const char* prefix, const char* key, const char* value)
+### cpl_add_object_property 
 Adds a property to an object by modifying the cpl_object_properties table in the database. Requires a key and a value. Properties are a good way to make objects unique, or to include additional metadata about an object without conforming to the prov-json specification. As an example, if I wanted to add a property to my Margo Seltzer object, my key could be "pets" and value "cat named sushi". 
 
 ### cpl_lookup_object_by_property
 Takes a key and value and returns an object with the matching property. If I wanted to find an author with a cat named sushi, I could do a lookup_by_property call and find out that Margo Seltzer matches that criteria. If you've created multiple objects with the same name but added different properties, as I have done with having multiple articles with the same object name but different URLs added as properties, then you should use this call instead of the regular lookup.
 
-### cpl_add_relation(const cpl_id_t from_id, const cpl_id_t to_id, const int type, const cpl_id_t bundle, cpl_id_t* out_id)
+### cpl_add_relation
 Modifies the cpl_relations database table and adds a relation from one object to another. Relations are one of several types, as defined in cpl.h. In this version of the project there is an "InBundle" relationship type (19) that represents an objects membership to a bundle, and consequently, that bundle's ownership of the object. Each relation type is defined between specific object types. Only an entity and an agent can have the "wasAttributedTo" relationship. The "InBundle" relationship is defined between a bundle and an entity, agent, or activity. The relations enum can be found in cpl_standalone.cpp.
 - Note: As of right now the "in bundle" relationship must be established by a call to add_relation after create_object, but it could easily be bundled with create_object as the bundle ID must be supplied anyway. However, when an object is found by lookup, a second call to add_relation is absolutely necessary to place the existing object within an additional bundle grouping.
 
-### cpl_add_relation_property(const cpl_id_t id, const char* prefix, const char* key, const char* value)
+### cpl_add_relation_property
 Similar to add_object_property, takes a key and value and associates it with a specific relation id in the cpl_relation_properties table
 
 ### cpl_get_relation_properties
 Analogous to get_object_properties
 
-### cpl_create_bundle(const char* name, const char* prefix, cpl_id_t* out_id)
+### cpl_create_bundle
 Since bundles are just objects in this prov-cpl version, this is just a wrapper around create_object that creates an object of type "bundle" and returns a "bundle id" to the application, such that this object can be treated the same as as a bundle from previous versions (minimal change to the language-specific bindings).
 
-### cpl_lookup_bundle(const char* name, const char* prefix, cpl_id_t* out_id)
+### cpl_lookup_bundle
 Again, this is just a wrapper around cpl_lookup_object and serves to maintain the API despite the fact that bundles all live in the objects database table.
 
 ### cpl_add_bundle_property
@@ -291,7 +291,7 @@ A wrapper around add_object_property for adding properties to a bundle. This cou
 ### cpl_get_bundle_properties
 A wrapper around get_object_properties.
 
-### cpl_get_all_objects(const char* prefix, const int flags, cpl_object_info_iterator_t iterator, void* context)
+### cpl_get_all_objects
 WARNING! This function does something different in this version. It used to return all objects in the database, but has been rewritten so that it returns only the *bundles* belonging to a specific originator (the prefix parameter). It is used in the case when you want a single graph representing multiple bundles/articles. Example: If you want to represent 4 articles by Margo Seltzer in the same graph, analyze them all using a specific prefix value (i.e. "margo-article-group") and then fetch all associated bundles using get_all_objects and use the *list* of bundles to generate one prov json file for the grouping, which can then be graphed. 
 
 ### export_bundle_json
