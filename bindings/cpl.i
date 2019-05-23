@@ -239,6 +239,12 @@ cpl_lookup_bundle(const char* name,
                   unsigned long long* OUTPUT);
 
 cpl_return_t
+cpl_lookup_relation(const cpl_id_t from_id,
+                    const cpl_id_t to_id,
+                    const long type,
+                    unsigned long long* OUTPUT);
+
+cpl_return_t
 cpl_create_object(const char* prefix,
                   const char* name,
                   const int type,
@@ -263,7 +269,6 @@ cpl_return_t
 cpl_add_relation(const cpl_id_t from_id,
                  const cpl_id_t to_id,
                  const int type,
-                 const cpl_id_t bundle,
                  unsigned long long* OUTPUT);
 
 cpl_return_t

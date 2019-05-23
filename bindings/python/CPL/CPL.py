@@ -80,7 +80,8 @@ WASENDEDBY = CPLDirect.WASENDEDBY
 HADPLAN = CPLDirect.HADPLAN
 WASASSOCIATEDWITH = CPLDirect.WASASSOCIATEDWITH
 ACTEDONBEHALFOF = CPLDirect.ACTEDONBEHALFOF
-NUM_R_TYPES = CPLDirect. CPL_NUM_R_TYPES
+NUM_R_TYPES = CPLDirect.CPL_NUM_R_TYPES
+BUNDLE_RELATION = CPLDirect.BUNDLE_RELATION
 
 # Object Types 
 ENTITY = CPLDirect.CPL_ENTITY
@@ -336,7 +337,7 @@ class cpl_relation:
     '''
 
 
-    def __init__(self, id, aid, did, type, bundle, direction):
+    def __init__(self, id, aid, did, type, direction):
         '''
         Create an instance of cpl_relation_t
         '''
@@ -344,7 +345,6 @@ class cpl_relation:
         self.ancestor = cpl_object(aid)
         self.descendant = cpl_object(did)
         self.type = type
-        self.bundle = cpl_bundle(bundle)
 
         if direction == D_ANCESTORS:
             self.base  = self.descendant
@@ -545,6 +545,27 @@ class cpl_connection:
         CPLDirect.delete_std_vector_cpl_id_timestamp_tp(vp)
         return l
 
+
+    def lookup_relation(self, from_id, to_id, type):
+        ret, idp = CPLDirect.cpl_lookup_relation(from_id, to_id, type)
+
+        if not CPLDirect.cpl_is_ok(ret):
+            raise CPLException('Could not find' +
+                               ' relation: ' + CPLDirect.cpl_error_string(ret), ret)
+        r = cpl_relation(idp, to_id, from_id, type, D_ANCESTORS)
+        return r
+
+    def create_relation(self, src, dest, type):
+        '''
+        Add relation type from self to dest.
+        '''
+
+        ret, idp = CPLDirect.cpl_add_relation(src, dest, type)
+        if not CPLDirect.cpl_is_ok(ret):
+            raise CPLException('Could not add relation: ' +
+                               CPLDirect.cpl_error_string(ret), ret)
+        r = cpl_relation(idp, src, dest, type, D_ANCESTORS)
+        return r
 
     def get_all_objects(self, prefix, fast=False):
         '''
@@ -967,39 +988,6 @@ class cpl_object:
         Return a string representation of this object
         '''
         return str(self.id)
-
-
-    def relation_to(self, dest, type, bundle):
-        '''
-        Add relation type from self to dest.
-        '''
-
-        bundle = bundle.id
-        ret, idp = CPLDirect.cpl_add_relation(self.id, dest.id, type, bundle)
-        if not CPLDirect.cpl_is_ok(ret):
-            raise CPLException('Could not add relation: ' +
-                    CPLDirect.cpl_error_string(ret), ret)
-
-        r = cpl_relation(idp, dest.id, self.id, type, bundle, D_ANCESTORS)
-
-        return r
-
-
-    def relation_from(self, src, type, bundle):
-        '''
-        Add relation type from src to self.
-        '''
-
-        bundle = bundle.id
-        ret, idp = CPLDirect.cpl_add_relation(src.id, self.id, type, bundle)
-        if not CPLDirect.cpl_is_ok(ret):
-            raise CPLException('Could not add relation: ' +
-                    CPLDirect.cpl_error_string(ret), ret)
-
-        r = cpl_relation(idp, self.id, src.id, type, bundle, D_DESCENDANTS)
-
-        return r
-
 
     def add_property(self, prefix, name, value):
         '''

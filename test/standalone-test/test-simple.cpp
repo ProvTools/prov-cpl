@@ -444,7 +444,7 @@ test_simple(void)
 
 	// Relation creation
 
-	ret = cpl_add_relation(obj1, obj2, WASATTRIBUTEDTO , bun, &rel1);
+	ret = cpl_add_relation(obj1, obj2, WASATTRIBUTEDTO, &rel1);
 	print(L_DEBUG, "cpl_relation --> %d", ret);
 	CPL_VERIFY(cpl_add_relation, ret);
 	if (with_delays) delay();
@@ -460,12 +460,12 @@ test_simple(void)
 
 	*/
 
-	ret = cpl_add_relation(obj1, obj3, WASGENERATEDBY, bun, &rel2);
+	ret = cpl_add_relation(obj1, obj3, WASGENERATEDBY, &rel2);
 	print(L_DEBUG, "cpl_relation --> %d", ret);
 	CPL_VERIFY(cpl_add_relation, ret);
 	if (with_delays) delay();
 
-	ret = cpl_add_relation(obj3, obj2, WASASSOCIATEDWITH, bun, &rel3);
+	ret = cpl_add_relation(obj3, obj2, WASASSOCIATEDWITH, &rel3);
 	print(L_DEBUG, "cpl_relation --> %d", ret);
 	CPL_VERIFY(cpl_add_relation, ret);
 	if (with_delays) delay();

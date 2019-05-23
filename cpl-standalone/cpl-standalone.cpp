@@ -670,7 +670,6 @@ extern "C" EXPORT cpl_return_t
 cpl_add_relation(const cpl_id_t from_id,
 			  	   const cpl_id_t to_id,
 				   const int type,
-				   const cpl_id_t bundle,
 				   cpl_id_t* out_id)
 {
 	CPL_ENSURE_INITIALIZED;
@@ -689,7 +688,6 @@ cpl_add_relation(const cpl_id_t from_id,
 													from_id,
 													to_id,
 													type,
-													bundle,
 													&id);
 
 
@@ -786,6 +784,32 @@ cpl_lookup_bundle_ext(const char* name,
 					  void* context)
 {
 	return cpl_lookup_object_ext(prefix, name, 4, 0, flags, iterator, context);
+}
+
+/**
+ * Look up a relation by from_id, to_id and type.
+ * If multiple relations match, get the latest one.
+ *
+ * @param from_id object id of source
+ * @param to_id object id of destination
+ * @param type the type of the relation
+ * @return CPL_OK or an error code
+ */
+extern "C" EXPORT cpl_return_t
+cpl_lookup_relation(const cpl_id_t from_id,
+                    const cpl_id_t to_id,
+                    const long type,
+                    cpl_id_t* out_id)
+{
+    CPL_ENSURE_INITIALIZED;
+    CPL_ENSURE_NOT_NONE(from_id);
+    CPL_ENSURE_NOT_NONE(to_id);
+    CPL_ENSURE_R_TYPE(type);
+
+    // Call the database backend
+    return cpl_db_backend->cpl_db_lookup_relation(cpl_db_backend,
+                                                            from_id, to_id, type,
+                                                            out_id);
 }
 
 /**
@@ -1812,7 +1836,7 @@ import_relations_json(const cpl_id_t bundle_id,
 					return CPL_E_INTERNAL_ERROR;
 				}
 
-				if(!CPL_IS_OK(cpl_add_relation(source, dest, entry.type, bundle_id, &relation_id))){
+				if(!CPL_IS_OK(cpl_add_relation(source, dest, entry.type, &relation_id))){
 					return CPL_E_INTERNAL_ERROR;
 				}
 
@@ -1906,7 +1930,7 @@ import_document_json(const std::string& json_string,
 		if(CPL_IS_OK(cpl_lookup_object(pair.first.c_str(), pair.second.c_str(), CPL_NONE, bundle_id, &source))){
 
 			if(!CPL_IS_OK(cpl_add_relation(source, id_string.first,
-						ALTERNATEOF, bundle_id, NULL))){
+						ALTERNATEOF, NULL))){
 				goto error;		
 			}
 		}

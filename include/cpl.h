@@ -309,6 +309,7 @@ extern cpl_session_t cpl_session;
 #define	WASASSOCIATEDWITH		17
 #define ACTEDONBEHALFOF			18
 #define INBUNDLE                19
+#define BUNDLE_RELATION         20
 
 #define WASINFLUENCEDBY_STR			"wasInfluencedBy"
 #define ALTERNATEOF_STR				"alternateOf"
@@ -693,7 +694,6 @@ EXPORT cpl_return_t
 cpl_add_relation(const cpl_id_t from_id,
 		  	     const cpl_id_t to_id,
 			     const int type,
-			     const cpl_id_t bundle,
 			     cpl_id_t* out_id);
 
 /**
@@ -753,6 +753,20 @@ cpl_lookup_bundle_ext(const char* name,
  					  cpl_id_timestamp_iterator_t iterator,
 					  void* context);
 
+/**
+ * Look up a relation by from_id, to_id and type.
+ * If multiple relations match, get the latest one.
+ *
+ * @param from_id object id of source
+ * @param to_id object id of destination
+ * @param type the type of the relation
+ * @return CPL_OK or an error code
+ */
+EXPORT cpl_return_t
+cpl_lookup_relation(const cpl_id_t from_id,
+                    const cpl_id_t to_id,
+                    const long type,
+                    cpl_id_t* out_id);
 /**
  * Add a property to the given relation.
  *
@@ -963,8 +977,8 @@ cpl_free_bundle_info(cpl_bundle_info_t* info);
  */
 EXPORT cpl_return_t
 cpl_get_bundle_objects(const cpl_id_t id,
-					   cpl_object_info_iterator_t iterator,
-					   void* context);
+                       cpl_object_info_iterator_t iterator,
+                       void* context);
 
 /**
  * Get all relations belonging to a bundle

@@ -194,6 +194,17 @@ typedef struct {
 	 */
 	SQLHSTMT* lookup_bundle_ext_stmts;
 
+    /**
+    * The lock for lookup_relation
+    */
+    sema_t lookup_relation_sem;
+    mutex_t lookup_relation_lock;
+
+    /**
+     * The statement for looking up a relation
+     */
+    SQLHSTMT* lookup_relation_stmts;
+
 	/**
 	 * The lock for add_object_property
 	 */
