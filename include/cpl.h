@@ -767,6 +767,17 @@ cpl_lookup_relation(const cpl_id_t from_id,
                     const cpl_id_t to_id,
                     const long type,
                     cpl_id_t* out_id);
+
+/**
+ * Search object properties by value, with wildcards
+ *
+ * @param value the value of the object property
+ * @return CPL_OK or an error code
+ */
+EXPORT cpl_return_t
+cpl_lookup_object_property_wildcard(const char* value,
+                    cpl_id_t* out_id);
+
 /**
  * Add a property to the given relation.
  *

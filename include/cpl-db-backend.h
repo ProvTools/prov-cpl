@@ -239,23 +239,36 @@ typedef struct _cpl_db_backend_t {
 	 					  	cpl_id_timestamp_iterator_t iterator,
 						  	void* context);
 
-/**
- * Lookup an relation based on from_id, to_id and type
- *
- * @param backend the pointer to the backend structure
- * @param prefix the property prefix
- * @param key the property name
- * @param value the property value
- * @param callback the iterator callback function
- * @param context the user context to be passed to the iterator function
- * @return CPL_OK or an error code
- */
+    /**
+     * Lookup an relation based on from_id, to_id and type
+     *
+     * @param backend the pointer to the backend structure
+     * @param from_id source of the relation
+     * @param too_id destination of the relation
+     * @param type the type of the relation
+     * @param out_id pointer to store the object ID
+     * @return CPL_OK or an error code
+     */
     cpl_return_t
     (*cpl_db_lookup_relation)(struct _cpl_db_backend_t* backend,
                                const cpl_id_t from_id,
                                const cpl_id_t to_id,
                                const long type,
                                cpl_id_t* out_id);
+
+    /**
+     * Lookup an object property based on value, with wildcards
+     *
+     * @param backend the pointer to the backend structure
+     * @param value the fragment to search for
+     * @param out_id pointer to store the object ID
+     * @return CPL_OK or an error code
+     */
+    cpl_return_t
+    (*cpl_db_lookup_object_property_wildcard)(struct _cpl_db_backend_t* backend,
+                              const char* value,
+                              cpl_id_t* out_id);
+
     /**
      * Add a property to the given bundle
      *

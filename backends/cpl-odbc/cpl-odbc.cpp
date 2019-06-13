@@ -497,6 +497,7 @@ cpl_odbc_free_statement_handles(cpl_odbc_t* odbc)
 	FREE_HANDLE(lookup_bundle_stmts);
 	FREE_HANDLE(lookup_bundle_ext_stmts);
 	FREE_HANDLE(lookup_relation_stmts);
+	FREE_HANDLE(lookup_object_property_wildcard_stmts);
 	FREE_HANDLE(add_object_property_stmts);
 	FREE_HANDLE(add_relation_property_stmts);
 	FREE_HANDLE(add_bundle_property_stmts);
@@ -557,7 +558,7 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 				  SQL_ATTR_ODBC_VERSION,
 				  (void *) SQL_OV_ODBC3, 0);
 	SQLAllocHandle(SQL_HANDLE_DBC, odbc->db_environment, &odbc->db_connection);
-	
+
 	ret = SQLDriverConnect(odbc->db_connection, NULL,
 						   connection_string_copy, l_connection_string,
 						   outstr, sizeof(outstr), &outstrlen,
@@ -580,7 +581,7 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 	for(int i = 0; i < CPL_STMT_MAX; i++){ \
 		SQLAllocHandle(SQL_HANDLE_STMT, odbc->db_connection, &odbc->handle[i]); \
 	}}
-	
+
 	ALLOC_STMT(create_session_stmts);
 	ALLOC_STMT(create_object_stmts);
 	ALLOC_STMT(lookup_object_stmts);
@@ -597,6 +598,7 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 	ALLOC_STMT(lookup_bundle_stmts);
 	ALLOC_STMT(lookup_bundle_ext_stmts);
 	ALLOC_STMT(lookup_relation_stmts);
+	ALLOC_STMT(lookup_object_property_wildcard_stmts);
 	ALLOC_STMT(add_object_property_stmts);
 	ALLOC_STMT(add_relation_property_stmts);
 	ALLOC_STMT(add_bundle_property_stmts);
@@ -707,6 +709,11 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
             "  FROM cpl_relations"
             " WHERE from_id = ? AND to_id = ? AND type = ?"
             " LIMIT 1;");
+
+    PREPARE(lookup_object_property_wildcard_stmts,
+            "SELECT id"
+            "  FROM cpl_object_properties"
+            " WHERE value LIKE ?;");
 
     PREPARE(add_object_property_stmts,
 			"INSERT INTO cpl_object_properties"
@@ -980,6 +987,7 @@ cpl_create_odbc_backend(const char* connection_string,
 	sema_init(odbc->lookup_bundle_sem, 4);
 	sema_init(odbc->lookup_bundle_ext_sem, 4);
 	sema_init(odbc->lookup_relation_sem, 4);
+	sema_init(odbc->lookup_object_property_wildcard_sem, 4);
 	sema_init(odbc->add_object_property_sem, 4);
 	sema_init(odbc->add_relation_property_sem, 4);
 	sema_init(odbc->add_bundle_property_sem, 4);
@@ -1018,6 +1026,7 @@ cpl_create_odbc_backend(const char* connection_string,
 	mutex_init(odbc->lookup_bundle_lock);
 	mutex_init(odbc->lookup_bundle_ext_lock);
 	mutex_init(odbc->lookup_relation_lock);
+	mutex_init(odbc->lookup_object_property_wildcard_lock);
 	mutex_init(odbc->add_object_property_lock);
 	mutex_init(odbc->add_relation_property_lock);
 	mutex_init(odbc->add_bundle_property_lock);
@@ -1041,7 +1050,7 @@ cpl_create_odbc_backend(const char* connection_string,
 	mutex_init(odbc->get_bundle_properties_with_key_lock);
 	mutex_init(odbc->get_prefixes_lock);
 	// Open the database connection
-	
+
 	r = cpl_odbc_connect(odbc);
 	if (!CPL_IS_OK(r)) goto err_sync;
 
@@ -1070,6 +1079,7 @@ err_sync:
 	sema_destroy(odbc->lookup_bundle_sem);
 	sema_destroy(odbc->lookup_bundle_ext_sem);
 	sema_destroy(odbc->lookup_relation_sem);
+	sema_destroy(odbc->lookup_object_property_wildcard_sem);
 	sema_destroy(odbc->add_object_property_sem);
 	sema_destroy(odbc->add_relation_property_sem);
 	sema_destroy(odbc->add_bundle_property_sem);
@@ -1108,6 +1118,7 @@ err_sync:
 	mutex_destroy(odbc->lookup_bundle_lock);
 	mutex_destroy(odbc->lookup_bundle_ext_lock);
 	mutex_destroy(odbc->lookup_relation_lock);
+	mutex_destroy(odbc->lookup_object_property_wildcard_lock);
 	mutex_destroy(odbc->add_object_property_lock);
 	mutex_destroy(odbc->add_relation_property_lock);
 	mutex_destroy(odbc->add_bundle_property_lock);
@@ -1172,7 +1183,7 @@ cpl_create_odbc_backend_dsn(const char* dsn,
 
 
 	// Create the backend
-	
+
 	return cpl_create_odbc_backend(conn.c_str(), db_type, out);
 }
 
@@ -1194,7 +1205,7 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
 	if (!CPL_IS_OK(r)) {
 		fprintf(stderr, "Warning: Could not terminate the ODBC connection.\n");
 	}
-	
+
 	sema_destroy(odbc->create_session_sem);
 	sema_destroy(odbc->create_object_sem);
 	sema_destroy(odbc->lookup_object_sem);
@@ -1210,6 +1221,7 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
 	sema_destroy(odbc->lookup_bundle_sem);
 	sema_destroy(odbc->lookup_bundle_ext_sem);
 	sema_destroy(odbc->lookup_relation_sem);
+	sema_destroy(odbc->lookup_object_property_wildcard_sem);
 	sema_destroy(odbc->add_object_property_sem);
 	sema_destroy(odbc->add_relation_property_sem);
 	sema_destroy(odbc->add_bundle_property_sem);
@@ -1232,7 +1244,7 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
 	sema_destroy(odbc->get_bundle_properties_sem);
 	sema_destroy(odbc->get_bundle_properties_with_key_sem);
 	sema_destroy(odbc->get_prefixes_sem);
-	
+
 	mutex_destroy(odbc->create_session_lock);
 	mutex_destroy(odbc->create_object_lock);
 	mutex_destroy(odbc->lookup_object_lock);
@@ -1248,6 +1260,7 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
 	mutex_destroy(odbc->lookup_bundle_lock);
 	mutex_destroy(odbc->lookup_bundle_ext_lock);
 	mutex_destroy(odbc->lookup_relation_lock);
+	mutex_destroy(odbc->lookup_object_property_wildcard_lock);
 	mutex_destroy(odbc->add_object_property_lock);
 	mutex_destroy(odbc->add_relation_property_lock);
 	mutex_destroy(odbc->add_bundle_property_lock);
@@ -1271,7 +1284,7 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
 	mutex_destroy(odbc->get_bundle_properties_with_key_lock);
 	mutex_destroy(odbc->get_prefixes_lock);
 	delete odbc;
-	
+
 	return CPL_OK;
 }
 
@@ -1356,7 +1369,7 @@ cpl_odbc_create_session(struct _cpl_db_backend_t* backend,
 
 	SQLHSTMT stmt = STMT_ACQUIRE(create_session);
 
-	
+
 	// Bind the statement parameters
 
 retry:
@@ -1421,7 +1434,7 @@ cpl_odbc_create_object(struct _cpl_db_backend_t* backend,
 	cpl_return_t r = CPL_E_INTERNAL_ERROR;
 
 	SQLHSTMT stmt = STMT_ACQUIRE(create_object);
-	
+
 	// Bind the statement parameters
 
 retry:
@@ -1433,7 +1446,7 @@ retry:
 	// Insert the new row to the objects table
 
 	SQL_EXECUTE(stmt);
-	
+
 
 	r = cpl_sql_fetch_single_llong(stmt, (long long*) &id, 1);
 	if (!CPL_IS_OK(r)) {
@@ -1507,7 +1520,7 @@ retry:
 	}
 
 	// Execute
-	
+
 	SQL_EXECUTE(stmt);
 
 
@@ -1533,7 +1546,7 @@ retry:
 		case NT: STMT_RELEASE(lookup_object_nt, stmt); break;
 		case NTNB: STMT_RELEASE(lookup_object_ntnb, stmt); break;
 	}
-	
+
 	if (out_id != NULL) *out_id = id;
 	return CPL_OK;
 
@@ -1609,7 +1622,7 @@ retry:
 	}
 
 	// Execute
-	
+
 	SQL_EXECUTE(stmt);
 
 
@@ -1640,7 +1653,7 @@ retry:
 		entry.timestamp = cpl_sql_timestamp_to_unix_time(t);
 		entries.push_back(entry);
 	}
-	
+
 	ret = SQLCloseCursor(stmt);
 	if (!SQL_SUCCEEDED(ret)) {
 		print_odbc_error("SQLCloseCursor", stmt, SQL_HANDLE_STMT);
@@ -1730,7 +1743,7 @@ retry:
 	SQL_BIND_INTEGER(stmt, 2, to_id);
 	SQL_BIND_INTEGER(stmt, 3, type);
 	// Execute
-	
+
 	SQL_EXECUTE(stmt);
 
 	// Fetch the result
@@ -1758,7 +1771,7 @@ err:
 
 /**
  * Determine whether the given object has the given ancestor
- * 
+ *
  * @param backend the pointer to the backend structure
  * @param object_id the object ID
  * @param query_object_id the object that we want to determine whether it
@@ -1774,7 +1787,7 @@ cpl_odbc_has_immediate_ancestor(struct _cpl_db_backend_t* backend,
 {
 	assert(backend != NULL);
 	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
-	
+
 	SQL_START;
 
 	cpl_return_t r = CPL_E_INTERNAL_ERROR;
@@ -1791,7 +1804,7 @@ retry:
 
 
 	// Execute
-	
+
 	SQL_EXECUTE(stmt);
 
 
@@ -1857,7 +1870,7 @@ retry:
 
 
 	// Execute
-	
+
 	SQL_EXECUTE(stmt);
 
 
@@ -1910,7 +1923,7 @@ retry:
 
 
 	// Execute
-	
+
 	SQL_EXECUTE(stmt);
 
 
@@ -1943,7 +1956,7 @@ cpl_odbc_create_bundle(struct _cpl_db_backend_t* backend,
 					   const cpl_session_t session,
 					   cpl_id_t* out_id)
 {
-	assert(backend != NULL && name != NULL); 
+	assert(backend != NULL && name != NULL);
 	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
 
 	SQL_START;
@@ -1952,7 +1965,7 @@ cpl_odbc_create_bundle(struct _cpl_db_backend_t* backend,
 	cpl_return_t r = CPL_E_INTERNAL_ERROR;
 
 	SQLHSTMT stmt = STMT_ACQUIRE(create_bundle);
-	
+
 	// Bind the statement parameters
 
 retry:
@@ -1963,7 +1976,7 @@ retry:
 	// Insert the new row to the objects table
 
 	SQL_EXECUTE(stmt);
-	
+
 
 	r = cpl_sql_fetch_single_llong(stmt, (long long*) &id, 1);
 	if (!CPL_IS_OK(r)) {
@@ -2000,7 +2013,7 @@ cpl_odbc_lookup_bundle(struct _cpl_db_backend_t* backend,
 {
 	assert(backend != NULL);
 	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
-	
+
 	SQL_START;
 
 	cpl_id_t id = CPL_NONE;
@@ -2016,7 +2029,7 @@ retry:
 
 
 	// Execute
-	
+
 	SQL_EXECUTE(stmt);
 
 
@@ -2032,7 +2045,7 @@ retry:
 	// Cleanup
 
 	STMT_RELEASE(lookup_bundle, stmt);
-	
+
 	if (out_id != NULL) *out_id = id;
 	return CPL_OK;
 
@@ -2081,7 +2094,7 @@ retry:
 
 
 	// Execute
-	
+
 	SQL_EXECUTE(stmt);
 
 
@@ -2112,7 +2125,7 @@ retry:
 		entry.timestamp = cpl_sql_timestamp_to_unix_time(t);
 		entries.push_back(entry);
 	}
-	
+
 	ret = SQLCloseCursor(stmt);
 	if (!SQL_SUCCEEDED(ret)) {
 		print_odbc_error("SQLCloseCursor", stmt, SQL_HANDLE_STMT);
@@ -2210,6 +2223,43 @@ cpl_odbc_lookup_relation(struct _cpl_db_backend_t* backend,
     return CPL_E_STATEMENT_ERROR;
 }
 
+extern "C" cpl_return_t
+cpl_odbc_lookup_object_property_wildcard(struct _cpl_db_backend_t* backend,
+                         const char* value,
+                         cpl_id_t* out_id) {
+    assert(backend != NULL);
+    cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
+    SQL_START;
+
+    cpl_id_t id = CPL_NONE;
+    cpl_return_t r = CPL_E_INTERNAL_ERROR;
+
+    // Prepare the statement
+    SQLHSTMT stmt = STMT_ACQUIRE(lookup_object_property_wildcard);
+
+    retry:
+    SQL_BIND_VARCHAR(stmt, 1, strlen(value), value);
+
+    // Execute
+    SQL_EXECUTE(stmt);
+
+    // Fetch the result
+    r = cpl_sql_fetch_single_llong(stmt, (long long*) &id, 1);
+    if (!CPL_IS_OK(r)) {
+        STMT_RELEASE(lookup_object_property_wildcard, stmt);
+        return r;
+    }
+
+    // Cleanup
+    STMT_RELEASE(lookup_object_property_wildcard, stmt);
+    if (out_id != NULL) *out_id = id;
+    return CPL_OK;
+
+    // Error handling
+    err:
+    STMT_RELEASE(lookup_object_property_wildcard, stmt);
+    return CPL_E_STATEMENT_ERROR;
+}
 
 /**
  * Add a property to the given bundle
@@ -2244,7 +2294,7 @@ retry:
 
 
 	// Execute
-	
+
 	SQL_EXECUTE(stmt);
 
 
@@ -2293,7 +2343,7 @@ retry:
 
 
 	// Execute
-	
+
 	SQL_EXECUTE(stmt);
 
 
@@ -2347,7 +2397,7 @@ retry:
 
 
 	// Execute
-	
+
 	SQL_EXECUTE(stmt);
 
 
@@ -2370,7 +2420,7 @@ retry:
 	// Cleanup
 
 	STMT_RELEASE(get_session_info, stmt);
-	
+
 	*out_info = p;
 	return CPL_OK;
 
@@ -2434,7 +2484,7 @@ cpl_odbc_get_all_objects(struct _cpl_db_backend_t* backend,
 	// Get and execute the statement
 
 	SQLHSTMT stmt = STMT_ACQUIRE(get_all_objects);
-	
+
 retry:
 
 	SQL_BIND_VARCHAR(stmt, 1, CPL_PREFIX_LEN, prefix);
@@ -2442,7 +2492,7 @@ retry:
 	entries.clear();
 
 	// Execute
-	
+
 	SQL_EXECUTE(stmt);
 
 
@@ -2493,7 +2543,7 @@ retry:
 
 		entries.push_back(entry);
 	}
-	
+
 	ret = SQLCloseCursor(stmt);
 	if (!SQL_SUCCEEDED(ret)) {
 		print_odbc_error("SQLCloseCursor", stmt, SQL_HANDLE_STMT);
@@ -2566,9 +2616,9 @@ cpl_odbc_get_object_info(struct _cpl_db_backend_t* backend,
 						 cpl_object_info_t** out_info)
 {
 	assert(backend != NULL);
-	
+
 	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
-	
+
 	SQL_START;
 
 	cpl_return_t r = CPL_E_INTERNAL_ERROR;
@@ -2590,7 +2640,7 @@ retry:
 
 
 	// Execute
-	
+
 	SQL_EXECUTE(stmt);
 
 
@@ -2604,7 +2654,7 @@ retry:
 	CPL_SQL_SIMPLE_FETCH_EXT(dynamically_allocated_string, 3, &p->name, true);
 	if (r == CPL_E_DB_NULL) p->name = strdup("");
 	CPL_SQL_SIMPLE_FETCH(int, 4, (int*) &p->type);
-	
+
 	ret = SQLCloseCursor(stmt);
 	if (!SQL_SUCCEEDED(ret)) {
 		print_odbc_error("SQLCloseCursor", stmt, SQL_HANDLE_STMT);
@@ -2615,7 +2665,7 @@ retry:
 	// Cleanup
 
 	STMT_RELEASE(get_object_info, stmt);
-	
+
 	*out_info = p;
 	return CPL_OK;
 
@@ -2638,10 +2688,10 @@ err_r:
 
 
 /**
- * 
+ *
  * An entry in the result set of the queries issued by
  * cpl_odbc_get_object_relations().
- */ 
+ */
 typedef struct __get_object_relation__entry {
 	cpl_id_t relation_id;
 	cpl_id_t other_id;
@@ -2673,7 +2723,7 @@ cpl_odbc_get_object_relations(struct _cpl_db_backend_t* backend,
 {
 	assert(backend != NULL);
 	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
-	
+
 	SQL_START;
 
 	cpl_return_t r = CPL_E_INTERNAL_ERROR;
@@ -2698,7 +2748,7 @@ retry:
 
 
 	// Execute
-	
+
 	SQL_EXECUTE(stmt);
 
 
@@ -2730,7 +2780,7 @@ retry:
 
 		entries.push_back(entry);
 	}
-	
+
 	ret = SQLCloseCursor(stmt);
 	if (!SQL_SUCCEEDED(ret)) {
 		print_odbc_error("SQLCloseCursor", stmt, SQL_HANDLE_STMT);
@@ -2849,7 +2899,7 @@ retry:
 
 
 	// Execute
-	
+
 	SQL_EXECUTE(stmt);
 
 
@@ -2894,7 +2944,7 @@ retry:
 
 		entries.push_back(e);
 	}
-	
+
 	ret = SQLCloseCursor(stmt);
 	if (!SQL_SUCCEEDED(ret)) {
 		print_odbc_error("SQLCloseCursor", stmt, SQL_HANDLE_STMT);
@@ -2920,7 +2970,7 @@ retry:
 
 	if (callback != NULL) {
 		for (i = entries.begin(); i != entries.end(); i++) {
-			r = callback(id, (const char*) (*i)->prefix, 
+			r = callback(id, (const char*) (*i)->prefix,
 						 (const char*) (*i)->key,
 						 (const char*) (*i)->value,
 						 context);
@@ -2998,7 +3048,7 @@ retry:
 
 
 	// Execute
-	
+
 	SQL_EXECUTE(stmt);
 
 
@@ -3023,7 +3073,7 @@ retry:
 
 		entries.push_back(entry);
 	}
-	
+
 	ret = SQLCloseCursor(stmt);
 	if (!SQL_SUCCEEDED(ret)) {
 		print_odbc_error("SQLCloseCursor", stmt, SQL_HANDLE_STMT);
@@ -3098,7 +3148,7 @@ cpl_odbc_get_relation_properties(struct _cpl_db_backend_t* backend,
 	cpl_return_t r = CPL_E_INTERNAL_ERROR;
 	std::list<__get_properties__entry_t*>::iterator i;
 
-	SQLHSTMT stmt; 
+	SQLHSTMT stmt;
 
 
 	if (prefix == NULL || key == NULL) {
@@ -3122,7 +3172,7 @@ retry:
 
 
 	// Execute
-	
+
 	SQL_EXECUTE(stmt);
 
 
@@ -3167,7 +3217,7 @@ retry:
 
 		entries.push_back(e);
 	}
-	
+
 	ret = SQLCloseCursor(stmt);
 	if (!SQL_SUCCEEDED(ret)) {
 		print_odbc_error("SQLCloseCursor", stmt, SQL_HANDLE_STMT);
@@ -3283,7 +3333,7 @@ retry:
 
 
 	// Execute
-	
+
 	SQL_EXECUTE(stmt);
 
 
@@ -3328,7 +3378,7 @@ retry:
 
 		entries.push_back(e);
 	}
-	
+
 	ret = SQLCloseCursor(stmt);
 	if (!SQL_SUCCEEDED(ret)) {
 		print_odbc_error("SQLCloseCursor", stmt, SQL_HANDLE_STMT);
@@ -3408,7 +3458,7 @@ typedef struct __get_prefixes__entry {
  * @param backend the pointer to the backend structure
  * @param id the the relation ID
  * @param prefix the prefix to fetch - or NULL for all prefixes
- * @param iri the 
+ * @param iri the
  * @param context the user context to be passed to the iterator function
  * @return CPL_OK, CPL_S_NO_DATA, or an error code
  */
@@ -3451,7 +3501,7 @@ retry:
 	}
 
 	// Execute
-	
+
 	SQL_EXECUTE(stmt);
 
 	// Bind the columns
@@ -3491,7 +3541,7 @@ retry:
 
 		entries.push_back(e);
 	}
-	
+
 	ret = SQLCloseCursor(stmt);
 	if (!SQL_SUCCEEDED(ret)) {
 		print_odbc_error("SQLCloseCursor", stmt, SQL_HANDLE_STMT);
@@ -3573,7 +3623,7 @@ retry:
 	SQL_BIND_INTEGER(stmt, 1, id);
 
 	// Execute
-	
+
 	SQL_EXECUTE(stmt);
 
 	// Cleanup
@@ -3604,9 +3654,9 @@ cpl_odbc_get_bundle_info(struct _cpl_db_backend_t* backend,
 						 cpl_bundle_info_t** out_info)
 {
 	assert(backend != NULL);
-	
+
 	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
-	
+
 	SQL_START;
 
 	cpl_return_t r = CPL_E_INTERNAL_ERROR;
@@ -3628,7 +3678,7 @@ retry:
 
 
 	// Execute
-	
+
 	SQL_EXECUTE(stmt);
 
 
@@ -3638,7 +3688,7 @@ retry:
 	CPL_SQL_SIMPLE_FETCH(timestamp_as_unix_time, 2, &p->creation_time);
 	CPL_SQL_SIMPLE_FETCH_EXT(dynamically_allocated_string, 3, &p->name, true);
 	if (r == CPL_E_DB_NULL) p->name = strdup("");
-	
+
 	ret = SQLCloseCursor(stmt);
 	if (!SQL_SUCCEEDED(ret)) {
 		print_odbc_error("SQLCloseCursor", stmt, SQL_HANDLE_STMT);
@@ -3649,7 +3699,7 @@ retry:
 	// Cleanup
 
 	STMT_RELEASE(get_bundle_info, stmt);
-	
+
 	*out_info = p;
 	return CPL_OK;
 
@@ -3706,7 +3756,7 @@ cpl_odbc_get_bundle_objects(struct _cpl_db_backend_t* backend,
 	// Get and execute the statement
 
 	SQLHSTMT stmt = STMT_ACQUIRE(get_bundle_objects);
-	
+
 retry:
 
 	entries.clear();
@@ -3714,7 +3764,7 @@ retry:
 	SQL_BIND_INTEGER(stmt, 1, id);
 
 	// Execute
-	
+
 	SQL_EXECUTE(stmt);
 
 	// Bind the columns
@@ -3763,7 +3813,7 @@ retry:
 
 		entries.push_back(entry);
 	}
-	
+
 	ret = SQLCloseCursor(stmt);
 	if (!SQL_SUCCEEDED(ret)) {
 		print_odbc_error("SQLCloseCursor", stmt, SQL_HANDLE_STMT);
@@ -4001,7 +4051,7 @@ cpl_odbc_get_bundle_relations(struct _cpl_db_backend_t* backend,
 
 	assert(backend != NULL);
 	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
-	
+
 	SQL_START;
 
 	cpl_return_t r = CPL_E_INTERNAL_ERROR;
@@ -4020,7 +4070,7 @@ retry:
 
 
 	// Execute
-	
+
 	SQL_EXECUTE(stmt);
 
 
@@ -4056,7 +4106,7 @@ retry:
 
 		entries.push_back(entry);
 	}
-	
+
 	ret = SQLCloseCursor(stmt);
 	if (!SQL_SUCCEEDED(ret)) {
 		print_odbc_error("SQLCloseCursor", stmt, SQL_HANDLE_STMT);
@@ -4119,6 +4169,7 @@ const cpl_db_backend_t CPL_ODBC_BACKEND = {
 	cpl_odbc_lookup_bundle,
 	cpl_odbc_lookup_bundle_ext,
 	cpl_odbc_lookup_relation,
+	cpl_odbc_lookup_object_property_wildcard,
 	cpl_odbc_add_bundle_property,
 	cpl_odbc_add_prefix,
 	cpl_odbc_has_immediate_ancestor,

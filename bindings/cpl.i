@@ -245,6 +245,10 @@ cpl_lookup_relation(const cpl_id_t from_id,
                     unsigned long long* OUTPUT);
 
 cpl_return_t
+cpl_lookup_object_property_wildcard(const char* value,
+                    unsigned long long* OUTPUT);
+
+cpl_return_t
 cpl_create_object(const char* prefix,
                   const char* name,
                   const int type,
