@@ -100,7 +100,7 @@ CREATE TABLE IF NOT EXISTS cpl_prefixes (
       prefix VARCHAR(255) NOT NULL,
       iri VARCHAR(4095) NOT NULL,
       FOREIGN KEY(id)
-            REFERENCES cpl_bundles(id)
+            REFERENCES cpl_objects(id)
             ON DELETE CASCADE);
 
 CREATE TABLE IF NOT EXISTS cpl_bundle_properties (

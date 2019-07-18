@@ -266,7 +266,7 @@ public class CPLObject {
      *
      * @return a vector of all provenance objects
      */
-    public static Vector<CPLObject> getAllObjects() {
+    public static Vector<CPLObject> getAllObjects(String prefix) {
 
 		SWIGTYPE_p_std_vector_cplxx_object_info_t pVector
 			= CPLDirect.new_std_vector_cplxx_object_info_tp();
@@ -275,7 +275,7 @@ public class CPLObject {
 		Vector<CPLObject> result = new Vector<CPLObject>();
 
 		try {
-            int r = CPLDirect.cpl_get_all_objects(CPLDirect.CPL_I_FAST,
+            int r = CPLDirect.cpl_get_all_objects(prefix, CPLDirect.CPL_I_FAST,
 					CPLDirect.cpl_cb_collect_object_info_vector, pv);
 			CPLException.assertSuccess(r);
 
@@ -291,7 +291,6 @@ public class CPLObject {
                 o.name = e.getName();
                 o.type = e.getType();
                 
-                o.bundleId = e.getBundle_id();
                 o.knowbundle = true;
 
 				result.add(o);
@@ -374,8 +373,6 @@ public class CPLObject {
 			prefix = info.getPrefix();
 			name = info.getName();
 			type = info.getType();
-
-			bundleId = info.getBundle_id();
 
 			creationTime = info.getCreation_time();
 
@@ -529,7 +526,6 @@ public class CPLObject {
 						this,
 						new CPLObject(e.getOther_object_id()),
 						e.getType(),
-						new CPLBundle(e.getBundle_id()),
 						direction == D_ANCESTORS));
 			}
 		}

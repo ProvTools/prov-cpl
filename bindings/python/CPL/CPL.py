@@ -565,7 +565,7 @@ class cpl_connection:
 
     def create_relation(self, src, dest, type):
         '''
-        Add relation type from self to dest.
+        Add relation type from src to dest.
         '''
 
         ret, idp = CPLDirect.cpl_add_relation(src, dest, type)
@@ -755,8 +755,7 @@ class cpl_connection:
         l = []
         for entry in v:
             a = cpl_relation(entry.id, entry.query_object_id,
-                entry.other_object_id, entry.type, 
-                entry.bundle_id, D_DESCENDANTS)
+                entry.other_object_id, entry.type, D_DESCENDANTS)
             l.append(a)
 
         CPLDirect.delete_std_vector_cpl_relation_tp(vp)
@@ -1053,14 +1052,12 @@ class cpl_object:
         if direction == D_ANCESTORS:
             for entry in v:
                 a = cpl_relation(entry.id, entry.other_object_id,
-                    entry.query_object_id, entry.type, 
-                    entry.bundle_id, direction)
+                    entry.query_object_id, entry.type, direction)
                 l.append(a)
         else:
             for entry in v:
                 a = cpl_relation(entry.id, entry.query_object_id,
-                    entry.other_object_id, entry.type, 
-                    entry.bundle_id, direction)
+                    entry.other_object_id, entry.type, direction)
                 l.append(a)
 
         CPLDirect.delete_std_vector_cpl_relation_tp(vp)

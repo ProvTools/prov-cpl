@@ -52,7 +52,7 @@ public class ProvFactory{
      */
 	public ProvFactory(String p, String bundleName){
 		prefix = prefix;
-		bundle = CPLBundle.create(bundleName);
+		bundle = CPLBundle.create(bundleName, prefix);
 	}
 
     /**
@@ -87,8 +87,8 @@ public class ProvFactory{
      *
      * @param name bundle name
      */
-	public void setBundle(String name){
-		bundle = CPLBundle.create(name);
+	public void setBundle(String name, String prefix){
+		bundle = CPLBundle.create(name, prefix);
 	}
 
     /**
@@ -384,7 +384,7 @@ public class ProvFactory{
      * @return CPLRelation
      */    
     public CPLRelation createWasInfluencedBy(CPLObject source, CPLObject dest) {
-        return CPLRelation.create(source, dest, CPLRelation.WASINFLUENCEDBY, bundle);
+        return CPLRelation.create(source, dest, CPLRelation.WASINFLUENCEDBY);
     }
     
     /**
@@ -395,7 +395,7 @@ public class ProvFactory{
      * @return CPLRelation
      */    
     public CPLRelation createWasAssociatedWith(CPLObject source, CPLObject dest) {
-        return CPLRelation.create(source, dest, CPLRelation.WASASSOCIATEDWITH, bundle);
+        return CPLRelation.create(source, dest, CPLRelation.WASASSOCIATEDWITH);
     }
 
     /**
@@ -406,7 +406,7 @@ public class ProvFactory{
      * @return CPLRelation
      */    
     public CPLRelation createWasRevisionOf(CPLObject source, CPLObject dest) {
-        CPLRelation e = CPLRelation.create(source, dest, CPLRelation.WASDERIVEDFROM, bundle);
+        CPLRelation e = CPLRelation.create(source, dest, CPLRelation.WASDERIVEDFROM);
         e.addProperty("prov", "type", "Revision");
         return e;
     }
@@ -419,7 +419,7 @@ public class ProvFactory{
      * @return CPLRelation
      */  
     public CPLRelation createHadPrimarySource(CPLObject source, CPLObject dest) {
-        CPLRelation e = CPLRelation.create(source, dest, CPLRelation.WASDERIVEDFROM, bundle);
+        CPLRelation e = CPLRelation.create(source, dest, CPLRelation.WASDERIVEDFROM);
         e.addProperty("prov", "type", "PrimarySource");
         return e;
     }
@@ -432,7 +432,7 @@ public class ProvFactory{
      * @return CPLRelation
      */  
     public CPLRelation createWasQuotedFrom(CPLObject source, CPLObject dest) {
-        CPLRelation e = CPLRelation.create(source, dest, CPLRelation.WASDERIVEDFROM, bundle);
+        CPLRelation e = CPLRelation.create(source, dest, CPLRelation.WASDERIVEDFROM);
         e.addProperty("prov", "type", "Quotation");
         return e;
     }
@@ -445,7 +445,7 @@ public class ProvFactory{
      * @return CPLRelation
      */    
     public CPLRelation createWasDerivedFrom(CPLObject source, CPLObject dest) {
-        return CPLRelation.create(source, dest, CPLRelation.WASDERIVEDFROM, bundle);
+        return CPLRelation.create(source, dest, CPLRelation.WASDERIVEDFROM);
     }
 
     /**
@@ -456,7 +456,7 @@ public class ProvFactory{
      * @return CPLRelation
      */    
     public CPLRelation createUsed(CPLObject source, CPLObject dest) {
-        return CPLRelation.create(source, dest, CPLRelation.USED, bundle);
+        return CPLRelation.create(source, dest, CPLRelation.USED);
     }
 
     /**
@@ -467,7 +467,7 @@ public class ProvFactory{
      * @return CPLRelation
      */    
     public CPLRelation createActedOnBehalfOf(CPLObject source, CPLObject dest) {
-        return CPLRelation.create(source, dest, CPLRelation.ACTEDONBEHALFOF, bundle);
+        return CPLRelation.create(source, dest, CPLRelation.ACTEDONBEHALFOF);
     }
 
     /**
@@ -478,7 +478,7 @@ public class ProvFactory{
      * @return CPLRelation
      */    
     public CPLRelation createWasInformedBy(CPLObject source, CPLObject dest) {
-        return CPLRelation.create(source, dest, CPLRelation.WASINFORMEDBY, bundle);
+        return CPLRelation.create(source, dest, CPLRelation.WASINFORMEDBY);
     }
 
     /**
@@ -489,7 +489,7 @@ public class ProvFactory{
      * @return CPLRelation
      */    
     public CPLRelation createHadDictionaryMember(CPLObject source, CPLObject dest) {
-        return CPLRelation.create(source, dest, CPLRelation.HADDICTIONARYMEMBER, bundle);
+        return CPLRelation.create(source, dest, CPLRelation.HADDICTIONARYMEMBER);
     }
 
     /**
@@ -500,7 +500,7 @@ public class ProvFactory{
      * @return CPLRelation
      */    
     public CPLRelation createWasEndedBy(CPLObject source, CPLObject dest) {
-        return CPLRelation.create(source, dest, CPLRelation.WASENDEDBY, bundle);
+        return CPLRelation.create(source, dest, CPLRelation.WASENDEDBY);
     }
 
     /**
@@ -511,7 +511,7 @@ public class ProvFactory{
      * @return CPLRelation
      */    
     public CPLRelation createHadMember(CPLObject source, CPLObject dest) {
-        return CPLRelation.create(source, dest, CPLRelation.HADMEMBER, bundle);
+        return CPLRelation.create(source, dest, CPLRelation.HADMEMBER);
     }
 
     /**
@@ -522,7 +522,7 @@ public class ProvFactory{
      * @return CPLRelation
      */    
     public CPLRelation createAlternateOf(CPLObject source, CPLObject dest) {
-        return CPLRelation.create(source, dest, CPLRelation.ALTERNATEOF, bundle);
+        return CPLRelation.create(source, dest, CPLRelation.ALTERNATEOF);
     }
 
     /**
@@ -533,7 +533,7 @@ public class ProvFactory{
      * @return CPLRelation
      */    
     public CPLRelation createSpecializationOf(CPLObject source, CPLObject dest) {
-        return CPLRelation.create(source, dest, CPLRelation.SPECIALIZATIONOF, bundle);
+        return CPLRelation.create(source, dest, CPLRelation.SPECIALIZATIONOF);
     }
 
     /**
@@ -544,7 +544,7 @@ public class ProvFactory{
      * @return CPLRelation
      */    
     public CPLRelation createWasAttributedTo(CPLObject source, CPLObject dest) {
-        return CPLRelation.create(source, dest, CPLRelation.WASATTRIBUTEDTO, bundle);
+        return CPLRelation.create(source, dest, CPLRelation.WASATTRIBUTEDTO);
     }
 
     /**
@@ -555,7 +555,7 @@ public class ProvFactory{
      * @return CPLRelation
      */    
     public CPLRelation createMentionOf(CPLObject source, CPLObject dest) {
-        return CPLRelation.create(source, dest, CPLRelation.WASINFORMEDBY, bundle);
+        return CPLRelation.create(source, dest, CPLRelation.WASINFORMEDBY);
     }
 
     /**
@@ -566,7 +566,7 @@ public class ProvFactory{
      * @return CPLRelation
      */    
     public CPLRelation createWasInvalidatedBy(CPLObject source, CPLObject dest) {
-        return CPLRelation.create(source, dest, CPLRelation.WASINFORMEDBY, bundle);
+        return CPLRelation.create(source, dest, CPLRelation.WASINFORMEDBY);
     }
 
     /**
@@ -577,7 +577,7 @@ public class ProvFactory{
      * @return CPLRelation
      */    
     public CPLRelation createDerivedByInsertionFrom(CPLObject source, CPLObject dest) {
-        return CPLRelation.create(source, dest, CPLRelation.DERIVEDBYINSERTIONFROM, bundle);
+        return CPLRelation.create(source, dest, CPLRelation.DERIVEDBYINSERTIONFROM);
     }
 
     /**
@@ -588,7 +588,7 @@ public class ProvFactory{
      * @return CPLRelation
      */   
     public CPLRelation createDerivedByRemovalFrom(CPLObject source, CPLObject dest) {
-        return CPLRelation.create(source, dest, CPLRelation.DERIVEDBYREMOVALFROM, bundle);
+        return CPLRelation.create(source, dest, CPLRelation.DERIVEDBYREMOVALFROM);
     }
 
     /**
@@ -599,7 +599,7 @@ public class ProvFactory{
      * @return CPLRelation
      */    
     public CPLRelation createWasGeneratedBy(CPLObject source, CPLObject dest) {
-        return CPLRelation.create(source, dest, CPLRelation.WASGENERATEDBY, bundle);
+        return CPLRelation.create(source, dest, CPLRelation.WASGENERATEDBY);
     }
 
     /**
@@ -610,7 +610,7 @@ public class ProvFactory{
      * @return CPLRelation
      */    
     public CPLRelation createWasStartedBy(CPLObject source, CPLObject dest) {
-        return CPLRelation.create(source, dest, CPLRelation.WASSTARTEDBY, bundle);
+        return CPLRelation.create(source, dest, CPLRelation.WASSTARTEDBY);
     }
 
     /**
@@ -621,7 +621,7 @@ public class ProvFactory{
      * @return CPLRelation
      */    
     public CPLRelation createHadPlan(CPLObject source, CPLObject dest) {
-        return CPLRelation.create(source, dest, CPLRelation.HADPLAN, bundle);
+        return CPLRelation.create(source, dest, CPLRelation.HADPLAN);
     }
 
 }

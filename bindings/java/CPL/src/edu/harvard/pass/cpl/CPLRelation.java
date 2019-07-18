@@ -79,9 +79,6 @@ public class CPLRelation {
 	/// The type of the relation
 	private int type;
 
-	/// The bundle/bundle
-	private CPLBundle bundle;
-
 	/// The direction of the query
 	private boolean otherIsAncestor;
 
@@ -98,13 +95,12 @@ public class CPLRelation {
 	 * @param otherIsAncestor the dependency direction
 	 */
 	CPLRelation(BigInteger id, CPLObject base, CPLObject other,
-			int type, CPLBundle bundle, boolean otherIsAncestor) {
+			int type, boolean otherIsAncestor) {
 
 		this.id = id;
 		this.base = base;
 		this.other = other;
 		this.type = type;
-		this.bundle = bundle;
 		this.otherIsAncestor = otherIsAncestor;
 	}
 
@@ -113,17 +109,16 @@ public class CPLRelation {
 	}
 
 	// TODO dest == null case
-	public static CPLRelation create(CPLObject source, CPLObject dest,  int type, CPLBundle bundle){
+	public static CPLRelation create(CPLObject source, CPLObject dest, int type){
 
 		BigInteger[] id = {nullId};
-		int r = CPLDirect.cpl_add_relation(source.getId(), dest.getId(), type, bundle.getId(), id);
+		int r = CPLDirect.cpl_add_relation(source.getId(), dest.getId(), type, id);
 		CPLException.assertSuccess(r);
 
 		CPLRelation a = new CPLRelation(id[0]);
 		a.base = source;
 		a.other = dest;
 		a.type = type;
-		a.bundle = bundle;
 		a.otherIsAncestor = false;
 
 		return a;
@@ -216,16 +211,6 @@ public class CPLRelation {
 	 */
 	public CPLObject getDescendant() {
 		return !otherIsAncestor ? other : base;
-	}
-
-
-	/**
-	 * Get the bundle of the relation
-	 *
-	 * @return the bundle
-	 */
-	public CPLBundle getbundle() {
-		return bundle;
 	}
 
 

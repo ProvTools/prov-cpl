@@ -216,7 +216,6 @@ typedef cpl_return_t (*cpl_relation_iterator_t)
 						 const cpl_id_t query_object_id,
 						 const cpl_id_t other_object_id,
 						 const int type,
-						 const cpl_id_t bundle_id,
 						 void* context);
 
 /**
@@ -236,9 +235,6 @@ typedef struct cpl_relation {
 
 	/// The type of the relation.
 	int type;
-
-	/// The ID of the bundle object
-	cpl_id_t bundle_id;
 
 } cpl_relation_t;
 
@@ -988,8 +984,8 @@ cpl_free_bundle_info(cpl_bundle_info_t* info);
  */
 EXPORT cpl_return_t
 cpl_get_bundle_objects(const cpl_id_t id,
-                       cpl_object_info_iterator_t iterator,
-                       void* context);
+					   cpl_object_info_iterator_t iterator,
+					   void* context);
 
 /**
  * Get all relations belonging to a bundle

@@ -1399,7 +1399,6 @@ cpl_cb_collect_relation_vector(const cpl_id_t relation_id,
 							   const cpl_id_t query_object_id,
 							   const cpl_id_t other_object_id,
 							   const int type,
-							   const cpl_id_t bundle_id,
 							   void* context)
 {
 	if (context == NULL) return CPL_E_INVALID_ARGUMENT;
@@ -1409,7 +1408,6 @@ cpl_cb_collect_relation_vector(const cpl_id_t relation_id,
 	e.query_object_id = query_object_id;
 	e.other_object_id = other_object_id;
 	e.type = type;
-	e.bundle_id = bundle_id;
 
 	std::vector<cpl_relation_t>& l =
 		*((std::vector<cpl_relation_t>*) context);

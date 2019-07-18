@@ -258,7 +258,6 @@ cpl_cb_collect_relation_vector(const cpl_id_t relation_id,
 							   const cpl_id_t query_object_id,
 							   const cpl_id_t other_object_id,
 							   const int type,
-							   const cpl_id_t bundle_id,
 							   void* context);
 
 /**

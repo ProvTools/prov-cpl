@@ -97,7 +97,7 @@ public class test {
 		 */
 
 		System.out.print("CPLBundle.create(\" Bundle\")");
-		CPLBundle bundle = CPLBundle.create("Bundle");
+		CPLBundle bundle = CPLBundle.create("Bundle", PREFIX);
 		System.out.println(": " + bundle);
 
 		System.out.println("CPLBundle.addPrefix()");
@@ -133,7 +133,7 @@ public class test {
 		 */
 
 		System.out.print("CPLBundle.lookup(\"Bundle\")");
-		CPLBundle bundlex = CPLBundle.lookup("Bundle");
+		CPLBundle bundlex = CPLBundle.lookup("Bundle", PREFIX);
 		System.out.println(": " + bundlex);
 		if (!bundle.equals(bundlex))
 			throw new RuntimeException("Bundle lookup returned the wrong bundle");
@@ -171,10 +171,12 @@ public class test {
 			throw new RuntimeException("Object lookup did not return the right object");
 
         System.out.print("CPLObject.getAllObjects()");
-        Vector<CPLObject> objall = CPLObject.getAllObjects();
+        Vector<CPLObject> objall = CPLObject.getAllObjects(PREFIX);
 		System.out.println(": " + objall.size() + " results");
-		if (!objall.contains(entity))
-			throw new RuntimeException("getAllObjects() is missing an object");
+		if (objall.size() != 1)
+			throw new RuntimeException("getAllObjects() has the wrong number of objects");
+		if (objall.firstElement().getId().compareTo(bundle.getId()) == 1)
+			throw new RuntimeException("getAllObjects() has the wrong objects");
 
 		System.out.println();
 
@@ -209,6 +211,38 @@ public class test {
 
 		System.out.println();
 
+
+		/*
+		 * Relation creation
+		 */
+
+		System.out.print("CPLRelation.create(entity, agent)");
+		CPLRelation r1 = CPLRelation.create(entity, agent,
+											CPLRelation.WASATTRIBUTEDTO);
+		System.out.println();
+
+		System.out.print("CPLRelation.create(entity, activity)");
+		CPLRelation r2 = CPLRelation.create(entity, activity,
+									    CPLRelation.WASGENERATEDBY);
+		System.out.println();
+
+		System.out.print("CPLRelation.create(activity, agent)");
+		CPLRelation r3 = CPLRelation.create(activity, agent,
+										CPLRelation.WASASSOCIATEDWITH);
+		System.out.println();
+
+		System.out.print("CPLRelation.create(bundle, agent)");
+        CPLBundleRelation r4 = CPLBundleRelation.create(bundle, r1);
+		System.out.println();
+
+		System.out.print("CPLRelation.create(bundle, agent)");
+        CPLBundleRelation r5 = CPLBundleRelation.create(bundle, r2);
+		System.out.println();
+
+		System.out.print("CPLRelation.create(bundle, agent)");
+        CPLBundleRelation r6 = CPLBundleRelation.create(bundle, r3);
+		System.out.println();
+
 		/*
 		 * Bundle objects
 		 */
@@ -219,27 +253,6 @@ public class test {
 		if(bovec.size() != 3){
 			throw new RuntimeException("getBundleObjects() returned an incorrect vector");
 		}
-		/*
-		 * Relation creation
-		 */
-
-		System.out.print("CPLRelation.create(entity, agent)");
-		CPLRelation r1 = CPLRelation.create(entity, agent,
-											CPLRelation.WASATTRIBUTEDTO,
-											bundle);
-		System.out.println();
-
-		System.out.print("CPLRelation.create(entity, activity)");
-		CPLRelation r2 = CPLRelation.create(entity, activity,
-									    CPLRelation.WASGENERATEDBY,
-									    bundle);
-		System.out.println();
-
-		System.out.print("CPLRelation.create(activity, agent)");
-		CPLRelation r3 = CPLRelation.create(activity, agent,
-										CPLRelation.WASASSOCIATEDWITH,
-										bundle);
-		System.out.println();
 
 		/*
 		 * Relation lookup

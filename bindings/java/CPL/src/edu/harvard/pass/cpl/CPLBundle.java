@@ -81,10 +81,10 @@ public class CPLBundle {
 	 * @param name the bundle name
      * @return the new bundle
 	 */
-	public static CPLBundle create(String name) {
+	public static CPLBundle create(String name, String prefix) {
 
 		BigInteger[] id = {nullId};
-		int r = CPLDirect.cpl_create_bundle(name, id);
+		int r = CPLDirect.cpl_create_bundle(name, prefix, id);
 		CPLException.assertSuccess(r);
 
 		CPLBundle o = new CPLBundle(id[0]);
@@ -99,10 +99,10 @@ public class CPLBundle {
 	 * @param name the bundle name
 	 * @return the bundles, or null if not found
 	 */
-	public static CPLBundle tryLookup(String name) {
+	public static CPLBundle tryLookup(String name, String prefix) {
 
 		BigInteger[] id = {nullId};
-		int r = CPLDirect.cpl_lookup_bundle(name,
+		int r = CPLDirect.cpl_lookup_bundle(name, prefix,
 											id);
 
 		if (CPLException.isError(r)) {
@@ -120,10 +120,11 @@ public class CPLBundle {
 	 * Lookup an existing bundle
 	 *
 	 * @param name the bundle name
+	 * @param prefix the prefix for the bundle
 	 * @return the bundle
 	 */
-	public static CPLBundle lookup(String name) {
-		CPLBundle o = tryLookup(name);
+	public static CPLBundle lookup(String name, String prefix) {
+		CPLBundle o = tryLookup(name, prefix);
 		if (o == null) throw new CPLException(CPLDirect.CPL_E_NOT_FOUND);
 		return o;
 	}
@@ -135,7 +136,7 @@ public class CPLBundle {
 	 * @param name the bundle name
 	 * @return the collection of bundle, or an empty collection if not found
 	 */
-	public static Vector<CPLBundle> tryLookupAll(String name) {
+	public static Vector<CPLBundle> tryLookupAll(String name, String prefix) {
 
 		SWIGTYPE_p_std_vector_cpl_id_timestamp_t pVector
 			= CPLDirect.new_std_vector_cpl_id_timestamp_tp();
@@ -144,7 +145,7 @@ public class CPLBundle {
 		Vector<CPLBundle> result = new Vector<CPLBundle>();
 
 		try {
-            int r = CPLDirect.cpl_lookup_bundle_ext(name,
+            int r = CPLDirect.cpl_lookup_bundle_ext(prefix, name,
                     CPLDirect.CPL_L_NO_FAIL,
 					CPLDirect.cpl_cb_collect_id_timestamp_vector, pv);
 			CPLException.assertSuccess(r);
@@ -176,8 +177,8 @@ public class CPLBundle {
 	 * @param name the bundle name
 	 * @return the collection of bundle
 	 */
-	public static Vector<CPLBundle> lookupAll(String name) {
-		Vector<CPLBundle> r = tryLookupAll(name);
+	public static Vector<CPLBundle> lookupAll(String name, String prefix) {
+		Vector<CPLBundle> r = tryLookupAll(name, prefix);
 		if (r.isEmpty()) throw new CPLException(CPLDirect.CPL_E_NOT_FOUND);
 		return r;
 	}
@@ -236,7 +237,7 @@ public class CPLBundle {
 
 
 		// Fetch the info from CPL
-		
+
 		SWIGTYPE_p_p_cpl_bundle_info_t ppInfo
 			= CPLDirect.new_cpl_bundle_info_tpp();
 
@@ -495,7 +496,6 @@ public class CPLBundle {
 						new CPLObject(e.getQuery_object_id()),
 						new CPLObject(e.getOther_object_id()),
 						e.getType(),
-						new CPLBundle(id),
 						true));
 			}
 		}
