@@ -169,9 +169,6 @@ typedef struct cpl_object_info {
 	/// The object type.
 	int type;
 
-	/// The object ID of the bundle
-	cpl_id_t bundle_id;
-
 } cpl_object_info_t;
 
 /**
