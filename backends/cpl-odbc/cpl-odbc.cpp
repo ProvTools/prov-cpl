@@ -484,14 +484,10 @@ cpl_odbc_free_statement_handles(cpl_odbc_t* odbc)
 {	
 	FREE_HANDLE(create_session_stmts);
 	FREE_HANDLE(create_object_stmts);
-	FREE_HANDLE(lookup_object_stmts);
 	FREE_HANDLE(lookup_object_nt_stmts);
-	FREE_HANDLE(lookup_object_nb_stmts);
-	FREE_HANDLE(lookup_object_ntnb_stmts);
-	FREE_HANDLE(lookup_object_ext_stmts);
+	FREE_HANDLE(lookup_object_t_stmts);
 	FREE_HANDLE(lookup_object_nt_ext_stmts);
-	FREE_HANDLE(lookup_object_nb_ext_stmts);
-	FREE_HANDLE(lookup_object_ntnb_ext_stmts);
+	FREE_HANDLE(lookup_object_t_ext_stmts);
 	FREE_HANDLE(add_relation_stmts);
 	FREE_HANDLE(create_bundle_stmts);
 	FREE_HANDLE(lookup_bundle_stmts);
@@ -584,15 +580,10 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 	
 	ALLOC_STMT(create_session_stmts);
 	ALLOC_STMT(create_object_stmts);
-	ALLOC_STMT(lookup_object_stmts);
 	ALLOC_STMT(lookup_object_nt_stmts);
-	ALLOC_STMT(lookup_object_nb_stmts);
-	ALLOC_STMT(lookup_object_ntnb_stmts);
-	ALLOC_STMT(lookup_object_ext_stmts);
-	ALLOC_STMT(lookup_object_ext_stmts);
+	ALLOC_STMT(lookup_object_t_stmts);
 	ALLOC_STMT(lookup_object_nt_ext_stmts);
-	ALLOC_STMT(lookup_object_nb_ext_stmts);
-	ALLOC_STMT(lookup_object_ntnb_ext_stmts);
+	ALLOC_STMT(lookup_object_t_ext_stmts);
 	ALLOC_STMT(add_relation_stmts);
 	ALLOC_STMT(create_bundle_stmts);
 	ALLOC_STMT(lookup_bundle_stmts);
@@ -650,13 +641,6 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 			"     VALUES (DEFAULT, ?, ?, ?)"
 			"   RETURNING id;");
 
-	PREPARE(lookup_object_stmts,
-			"SELECT id"
-			"  FROM cpl_objects"
-			" WHERE prefix = ? AND name = ? AND type = ?"
-			" ORDER BY creation_time DESC"
-			" LIMIT 1;");
-
 	PREPARE(lookup_object_nt_stmts,
 			"SELECT id"
 			"  FROM cpl_objects"
@@ -664,20 +648,22 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 			" ORDER BY creation_time DESC"
 			" LIMIT 1;");
 
-	PREPARE(lookup_object_nb_stmts,
-			"SELECT id, creation_time"
-			"  FROM cpl_objects"
-			" WHERE prefix = ? AND name = ?;");
+	PREPARE(lookup_object_t_stmts,
+            "SELECT id"
+            "  FROM cpl_objects"
+            " WHERE prefix = ? AND name = ? AND type = ?"
+            " ORDER BY creation_time DESC"
+            " LIMIT 1;");
 
-	PREPARE(lookup_object_nb_ext_stmts,
+	PREPARE(lookup_object_nt_ext_stmts,
 			"SELECT id, creation_time"
 			"  FROM cpl_objects"
-			" WHERE prefix = ? AND name = ? AND type = ?;");
+			" WHERE prefix = ? AND name = ?");
 
-	PREPARE(lookup_object_ntnb_ext_stmts,
+	PREPARE(lookup_object_t_ext_stmts,
 			"SELECT id, creation_time"
 			"  FROM cpl_objects"
-			" WHERE prefix = ? AND name = ?;");
+			" WHERE prefix = ? AND name = ?  AND type = ?;");
 
 	PREPARE(add_relation_stmts,
 			"INSERT INTO cpl_relations"
@@ -974,14 +960,10 @@ cpl_create_odbc_backend(const char* connection_string,
 
 	sema_init(odbc->create_session_sem, 4);
 	sema_init(odbc->create_object_sem, 4);
-	sema_init(odbc->lookup_object_sem, 4);
 	sema_init(odbc->lookup_object_nt_sem, 4);
-	sema_init(odbc->lookup_object_nb_sem, 4);
-	sema_init(odbc->lookup_object_ntnb_sem, 4);
-	sema_init(odbc->lookup_object_ext_sem, 4);
+	sema_init(odbc->lookup_object_t_sem, 4);
 	sema_init(odbc->lookup_object_nt_ext_sem, 4);
-	sema_init(odbc->lookup_object_nb_ext_sem, 4);
-	sema_init(odbc->lookup_object_ntnb_ext_sem, 4);
+	sema_init(odbc->lookup_object_t_ext_sem, 4);
 	sema_init(odbc->add_relation_sem, 4);
 	sema_init(odbc->create_bundle_sem, 4);
 	sema_init(odbc->lookup_bundle_sem, 4);
@@ -1013,14 +995,10 @@ cpl_create_odbc_backend(const char* connection_string,
 
 	mutex_init(odbc->create_session_lock);
 	mutex_init(odbc->create_object_lock);
-	mutex_init(odbc->lookup_object_lock);
 	mutex_init(odbc->lookup_object_nt_lock);
-	mutex_init(odbc->lookup_object_nb_lock);
-	mutex_init(odbc->lookup_object_ntnb_lock);
-	mutex_init(odbc->lookup_object_ext_lock);
+	mutex_init(odbc->lookup_object_t_lock);
 	mutex_init(odbc->lookup_object_nt_ext_lock);
-	mutex_init(odbc->lookup_object_nb_ext_lock);
-	mutex_init(odbc->lookup_object_ntnb_ext_lock);
+	mutex_init(odbc->lookup_object_t_ext_lock);
 	mutex_init(odbc->add_relation_lock);
 	mutex_init(odbc->create_bundle_lock);
 	mutex_init(odbc->lookup_bundle_lock);
@@ -1066,14 +1044,10 @@ cpl_create_odbc_backend(const char* connection_string,
 err_sync:
 	sema_destroy(odbc->create_session_sem);
 	sema_destroy(odbc->create_object_sem);
-	sema_destroy(odbc->lookup_object_sem);
 	sema_destroy(odbc->lookup_object_nt_sem);
-	sema_destroy(odbc->lookup_object_nb_sem);
-	sema_destroy(odbc->lookup_object_ntnb_sem);
-	sema_destroy(odbc->lookup_object_ext_sem);
+	sema_destroy(odbc->lookup_object_t_sem);
 	sema_destroy(odbc->lookup_object_nt_ext_sem);
-	sema_destroy(odbc->lookup_object_nb_ext_sem);
-	sema_destroy(odbc->lookup_object_ntnb_ext_sem);
+	sema_destroy(odbc->lookup_object_t_ext_sem);
 	sema_destroy(odbc->add_relation_sem);
 	sema_destroy(odbc->create_bundle_sem);
 	sema_destroy(odbc->lookup_bundle_sem);
@@ -1105,14 +1079,10 @@ err_sync:
 
 	mutex_destroy(odbc->create_session_lock);
 	mutex_destroy(odbc->create_object_lock);
-	mutex_destroy(odbc->lookup_object_lock);
 	mutex_destroy(odbc->lookup_object_nt_lock);
-	mutex_destroy(odbc->lookup_object_nb_lock);
-	mutex_destroy(odbc->lookup_object_ntnb_lock);
-	mutex_destroy(odbc->lookup_object_ext_lock);
+	mutex_destroy(odbc->lookup_object_t_lock);
 	mutex_destroy(odbc->lookup_object_nt_ext_lock);
-	mutex_destroy(odbc->lookup_object_nb_ext_lock);
-	mutex_destroy(odbc->lookup_object_ntnb_ext_lock);
+	mutex_destroy(odbc->lookup_object_t_ext_lock);
 	mutex_destroy(odbc->add_relation_lock);
 	mutex_destroy(odbc->create_bundle_lock);
 	mutex_destroy(odbc->lookup_bundle_lock);
@@ -1208,14 +1178,10 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
 	
 	sema_destroy(odbc->create_session_sem);
 	sema_destroy(odbc->create_object_sem);
-	sema_destroy(odbc->lookup_object_sem);
 	sema_destroy(odbc->lookup_object_nt_sem);
-	sema_destroy(odbc->lookup_object_nb_sem);
-	sema_destroy(odbc->lookup_object_ntnb_sem);
-	sema_destroy(odbc->lookup_object_ext_sem);
+	sema_destroy(odbc->lookup_object_t_sem);
 	sema_destroy(odbc->lookup_object_nt_ext_sem);
-	sema_destroy(odbc->lookup_object_nb_ext_sem);
-	sema_destroy(odbc->lookup_object_ntnb_ext_sem);
+	sema_destroy(odbc->lookup_object_t_ext_sem);
 	sema_destroy(odbc->add_relation_sem);
 	sema_destroy(odbc->create_bundle_sem);
 	sema_destroy(odbc->lookup_bundle_sem);
@@ -1247,14 +1213,10 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
 	
 	mutex_destroy(odbc->create_session_lock);
 	mutex_destroy(odbc->create_object_lock);
-	mutex_destroy(odbc->lookup_object_lock);
 	mutex_destroy(odbc->lookup_object_nt_lock);
-	mutex_destroy(odbc->lookup_object_nb_lock);
-	mutex_destroy(odbc->lookup_object_ntnb_lock);
-	mutex_destroy(odbc->lookup_object_ext_lock);
+	mutex_destroy(odbc->lookup_object_t_lock);
 	mutex_destroy(odbc->lookup_object_nt_ext_lock);
-	mutex_destroy(odbc->lookup_object_nb_ext_lock);
-	mutex_destroy(odbc->lookup_object_ntnb_ext_lock);
+	mutex_destroy(odbc->lookup_object_t_ext_lock);
 	mutex_destroy(odbc->add_relation_lock);
 	mutex_destroy(odbc->create_bundle_lock);
 	mutex_destroy(odbc->lookup_bundle_lock);
@@ -1486,7 +1448,6 @@ cpl_odbc_lookup_object(struct _cpl_db_backend_t* backend,
 					   const int type,
 					   cpl_id_t* out_id)
 {
-	int bundle_id = 0;
 	assert(backend != NULL);
 	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
 
@@ -1497,14 +1458,14 @@ cpl_odbc_lookup_object(struct _cpl_db_backend_t* backend,
 
 	SQLHSTMT stmt;
 
-	enum {A, NB, NT, NTNB} e;
+	enum {T, NT} e;
 
 	if(type == 0){
-		stmt = STMT_ACQUIRE(lookup_object_ntnb);
-		e = NTNB;
+		stmt = STMT_ACQUIRE(lookup_object_nt);
+		e = NT;
 	} else {
-		stmt = STMT_ACQUIRE(lookup_object_nb);
-		e = NB;
+		stmt = STMT_ACQUIRE(lookup_object_t);
+		e = T;
 	}
 
 retry:
@@ -1513,10 +1474,7 @@ retry:
 	SQL_BIND_VARCHAR(stmt, 2, CPL_NAME_LEN, name);
 
 	switch(e){
-		case NT: SQL_BIND_INTEGER(stmt, 3, bundle_id); break;
-		case A: SQL_BIND_INTEGER(stmt, 4, bundle_id);
-		case NB:  SQL_BIND_INTEGER(stmt, 3, type);
-		case NTNB: break;
+		case T: SQL_BIND_INTEGER(stmt, 3, type); break;
 	}
 
 	// Execute
@@ -1529,10 +1487,8 @@ retry:
 	r = cpl_sql_fetch_single_llong(stmt, (long long*) &id, 1);
 	if (!CPL_IS_OK(r)) {
 		switch(e){
-			case A: STMT_RELEASE(lookup_object, stmt); break;
-			case NB: STMT_RELEASE(lookup_object_nb, stmt); break;
+			case T: STMT_RELEASE(lookup_object_t, stmt); break;
 			case NT: STMT_RELEASE(lookup_object_nt, stmt); break;
-			case NTNB: STMT_RELEASE(lookup_object_ntnb, stmt); break;
 		}
 		return r;
 	}
@@ -1541,10 +1497,8 @@ retry:
 	// Cleanup
 
 	switch(e){
-		case A: STMT_RELEASE(lookup_object, stmt); break;
-		case NB: STMT_RELEASE(lookup_object_nb, stmt); break;
+		case T: STMT_RELEASE(lookup_object_t, stmt); break;
 		case NT: STMT_RELEASE(lookup_object_nt, stmt); break;
-		case NTNB: STMT_RELEASE(lookup_object_ntnb, stmt); break;
 	}
 	
 	if (out_id != NULL) *out_id = id;
@@ -1555,10 +1509,8 @@ retry:
 
 	err:
 		switch(e){
-			case A: STMT_RELEASE(lookup_object, stmt); break;
-			case NB: STMT_RELEASE(lookup_object_nb, stmt); break;
+			case T: STMT_RELEASE(lookup_object_t, stmt); break;
 			case NT: STMT_RELEASE(lookup_object_nt, stmt); break;
-			case NTNB: STMT_RELEASE(lookup_object_ntnb, stmt); break;
 		}
 		return CPL_E_STATEMENT_ERROR;
 }
@@ -1586,7 +1538,6 @@ cpl_odbc_lookup_object_ext(struct _cpl_db_backend_t* backend,
 						   cpl_id_timestamp_iterator_t callback,
 						   void* context)
 {
-	int bundle_id = 0;
 	assert(backend != NULL);
 	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
 
@@ -1599,14 +1550,14 @@ cpl_odbc_lookup_object_ext(struct _cpl_db_backend_t* backend,
 
 	SQLHSTMT stmt;
 
-	enum {A, NB, NT, NTNB} e;
+	enum {T, NT} e;
 
 	if(type == 0){
-		stmt = STMT_ACQUIRE(lookup_object_ntnb_ext);
-		e = NTNB;
+		stmt = STMT_ACQUIRE(lookup_object_nt_ext);
+		e = NT;
 	} else {
-		stmt = STMT_ACQUIRE(lookup_object_nb_ext);
-		e = NB;
+		stmt = STMT_ACQUIRE(lookup_object_t_ext);
+		e = T;
 	}
 
 retry:
@@ -1615,10 +1566,7 @@ retry:
 	SQL_BIND_VARCHAR(stmt, 2, CPL_NAME_LEN, name);
 
 	switch(e){
-		case NT: SQL_BIND_INTEGER(stmt, 3, bundle_id); break;
-		case A: SQL_BIND_INTEGER(stmt, 4, bundle_id);
-		case NB:  SQL_BIND_INTEGER(stmt, 3, type);
-		case NTNB: break;
+		case T: SQL_BIND_INTEGER(stmt, 3, type); break;
 	}
 
 	// Execute
@@ -1664,10 +1612,8 @@ retry:
 	// Unlock
 
 	switch(e){
-		case A: STMT_RELEASE(lookup_object_ext, stmt); break;
-		case NB: STMT_RELEASE(lookup_object_nb_ext, stmt); break;
+		case T: STMT_RELEASE(lookup_object_t_ext, stmt); break;
 		case NT: STMT_RELEASE(lookup_object_nt_ext, stmt); break;
-		case NTNB: STMT_RELEASE(lookup_object_ntnb_ext, stmt); break;
 	}
 
 
@@ -1699,10 +1645,8 @@ err_close:
 
 err:
 	switch(e){
-		case A: STMT_RELEASE(lookup_object_ext, stmt); break;
-		case NB: STMT_RELEASE(lookup_object_nb_ext, stmt); break;
+		case T: STMT_RELEASE(lookup_object_t_ext, stmt); break;
 		case NT: STMT_RELEASE(lookup_object_nt_ext, stmt); break;
-		case NTNB: STMT_RELEASE(lookup_object_ntnb_ext, stmt); break;
 	}
 	return CPL_E_STATEMENT_ERROR;
 }
@@ -2538,9 +2482,6 @@ retry:
 		entry.creation_time = cpl_sql_timestamp_to_unix_time(t);
 		entry.prefix = entry_prefix;
 		entry.name = entry_name;
-
-		if (cb_bundle_id <= 0) entry.bundle_id = CPL_NONE;
-
 		entries.push_back(entry);
 	}
 	
@@ -3784,9 +3725,6 @@ retry:
 	ret = SQLBindCol(stmt, 5, SQL_C_SLONG, &entry.type, 0, NULL);
 	if (!SQL_SUCCEEDED(ret)) goto err_close;
 
-    entry.bundle_id = id;
-
-
 
 	// Fetch the result
 
@@ -4085,8 +4023,6 @@ retry:
 
 	ret = SQLBindCol(stmt, 4, SQL_C_SLONG, &entry.type, 0, &ind_type);
 	if (!SQL_SUCCEEDED(ret)) goto err_close;
-
-	entry.bundle_id = id;
 
 
 	// Fetch the result

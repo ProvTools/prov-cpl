@@ -277,10 +277,6 @@ def p_object(obj):
     p_id(i.object.id)
     sys.stdout.write('prefix:' + i.prefix + ' name:' + i.name +
         ' type:' + __object_list[i.type-1])
-    if i.bundle is not None:
-        sys.stdout.write(' bundle_id:' + str(i.bundle) + ' ')
-    else:
-        sys.stdout.write(' bundle_id:none ')
     print 'creation_time:' + str(i.creation_time)
     print
 
@@ -366,7 +362,7 @@ class cpl_relation:
             arrow = ' <-- '
         return (str(self.base) + arrow + str(self.other) +
             ' [type:' + relation_type_to_str(self.type) +
-            '; id: ' + self.id + ']')
+            '; id: ' + str(self.id) + ']')
 
     def properties(self, prefix=None, key=None):
         '''
@@ -461,7 +457,7 @@ class cpl_connection:
 
 
     def __create_or_lookup_cpl_object(self, prefix,
-             name, type=None, create=None, bundle=None):
+             name, type=None, create=None):
         '''
         Create or lookup a CPL object
 
@@ -473,24 +469,18 @@ class cpl_connection:
                 None: lookup or create
                 True: create only
                 False: lookup only
-            bundle:
-                Id of bundle into which to place this object, can be none
         '''
-        if bundle == None:
-            bundle_id = NONE
-        else:
-            bundle_id = bundle.id
 
         if create == None:
             ret, idp = CPLDirect.cpl_lookup_or_create_object(prefix, name,
-                              type, bundle_id)
+                              type)
             if ret == S_OBJECT_CREATED:
                 ret = S_OK
         elif create:
             ret, idp = CPLDirect.cpl_create_object(prefix,
-                        name, type, bundle_id)
+                        name, type)
         else:
-            ret, idp = CPLDirect.cpl_lookup_object(prefix, name, type, bundle_id)
+            ret, idp = CPLDirect.cpl_lookup_object(prefix, name, type)
             if ret == E_NOT_FOUND:
                 raise LookupError('Not found')
         if not CPLDirect.cpl_is_ok(ret):
@@ -600,52 +590,48 @@ class cpl_connection:
         l = []
         if v != S_NO_DATA :
             for e in v:
-                if e.bundle_id == NONE:
-                    bundle = None
-                else:
-                    bundle = cpl_object(e.bundle_id)
                 l.append(cpl_object_info(cpl_object(e.id),
                     e.creation_time, e.prefix, e.name,
-                    e.type, bundle))
+                    e.type))
 
         CPLDirect.delete_std_vector_cplxx_object_info_tp(vp)
         return l
             
 
-    def get_object(self, prefix, name, type, bundle):
+    def get_object(self, prefix, name, type):
         '''
         Get the object, with the designated prefix (string),
         name (int), type (int), and bundle (ID) creating it if necessary.
 
         '''
         return self.__create_or_lookup_cpl_object(prefix, name, type,
-                create=None, bundle=bundle)
+                create=None)
 
 
-    def create_object(self, prefix, name, type, bundle):
+    def create_object(self, prefix, name, type):
         '''
         Create object, returns None if object already exists.
         '''
         return self.__create_or_lookup_cpl_object(prefix, name, type,
-                create=True, bundle=bundle)
+                create=True)
 
 
-    def lookup_object(self, prefix, name, type, bundle=None):
+    def lookup_object(self, prefix, name, type):
         '''
         Look up object; raise LookupError if the object does not exist.
         '''
         o = self.__create_or_lookup_cpl_object(prefix, name, type,
-                create=False, bundle=bundle)
+                create=False)
         return o
 
 
-    def try_lookup_object(self, prefix, name, type, bundle=None):
+    def try_lookup_object(self, prefix, name, type):
         '''
         Look up object; returns None if the object does not exist.
         '''
         try:
             o = self.__create_or_lookup_cpl_object(prefix, name, type,
-                    create=False, bundle=bundle)
+                    create=False)
         except LookupError:
             o = None
         return o
@@ -689,15 +675,14 @@ class cpl_connection:
         return o
 
 
-    def lookup_all_objects(self, prefix, name, type, bundle):
+    def lookup_all_objects(self, prefix, name, type):
         '''
         Return all objects that have the specified prefix, name,
         type, or bundle.
         '''
         
-        bundle = bundle.id
         vp = CPLDirect.new_std_vector_cpl_id_timestamp_tp()
-        ret = CPLDirect.cpl_lookup_object_ext(prefix, name, type, bundle,
+        ret = CPLDirect.cpl_lookup_object_ext(prefix, name, type,
             L_NO_FAIL, CPLDirect.cpl_cb_collect_id_timestamp_vector, vp)
 
         if not CPLDirect.cpl_is_ok(ret):
@@ -942,7 +927,7 @@ class cpl_object_info:
     '''
 
     def __init__(self, object, creation_time,
-            prefix, name, type, bundle):
+            prefix, name, type):
         '''
         Create an instance of this object
         '''
@@ -952,7 +937,6 @@ class cpl_object_info:
         self.prefix = prefix
         self.name = name
         self.type = type
-        self.bundle = bundle
 
 
 
@@ -1019,14 +1003,9 @@ class cpl_object:
         op = CPLDirect.cpl_dereference_pp_cpl_object_info_t(objectpp)
         object = CPLDirect.cpl_object_info_tp_value(op)
 
-        if object.bundle_id == NONE:
-            bundle = None
-        else:
-            bundle = cpl_bundle(object.bundle_id)
-
         _info = cpl_object_info(self,
                 object.creation_time,
-                object.prefix, object.name, object.type, bundle)
+                object.prefix, object.name, object.type)
 
         CPLDirect.cpl_free_object_info(op)
         CPLDirect.delete_cpl_object_info_tpp(objectpp)

@@ -72,12 +72,6 @@ public class CPLObject {
 	/// The object type (cache)
 	private int type = 0;
 
-	/// The object bundle (cache)
-	private BigInteger bundleId = null;
-
-	/// Whether we know the bundle
-	private boolean knowbundle = false;
-
 	/// The creation time (cache)
 	private long creationTime = 0;
 
@@ -100,15 +94,12 @@ public class CPLObject {
 	 * @param prefix the namespace prefix
 	 * @param name the object name
 	 * @param type the object type
-	 * @param bundle the object bundle
      * @return the new object
 	 */
-	public static CPLObject create(String prefix, String name, int type,
-			CPLBundle bundle) {
+	public static CPLObject create(String prefix, String name, int type) {
 
 		BigInteger[] id = {nullId};
-		int r = CPLDirect.cpl_create_object(prefix, name, type,
-				bundle == null ? nullId : bundle.getId(), id);
+		int r = CPLDirect.cpl_create_object(prefix, name, type, id);
 		CPLException.assertSuccess(r);
 
 		CPLObject o = new CPLObject(id[0]);
@@ -125,16 +116,12 @@ public class CPLObject {
 	 * @param prefix the prefix
 	 * @param name the object name
 	 * @param type the object type, 0 if none
-	 * @param bundle the object bundle, null if none
 	 * @return the object, or null if not found
 	 */
-	public static CPLObject tryLookup(String prefix, String name,
-			int type, CPLBundle bundle) {
+	public static CPLObject tryLookup(String prefix, String name, int type) {
 
 		BigInteger[] id = {nullId};
-		int r = CPLDirect.cpl_lookup_object(prefix, name, type,
-											bundle == null ? nullId : bundle.getId(),
-											id);
+		int r = CPLDirect.cpl_lookup_object(prefix, name, type, id);
 
 		if (CPLException.isError(r)) {
 			if (r == CPLDirect.CPL_E_NOT_FOUND) return null;
@@ -155,12 +142,10 @@ public class CPLObject {
 	 * @param prefix the prefix
 	 * @param name the object name
 	 * @param type the object type, 0 if none
-	 * @param bundle the object bundle, null if none
 	 * @return the object
 	 */
-	public static CPLObject lookup(String prefix, String name,
-			int type, CPLBundle bundle) {
-		CPLObject o = tryLookup(prefix, name, type, bundle);
+	public static CPLObject lookup(String prefix, String name, int type) {
+		CPLObject o = tryLookup(prefix, name, type);
 		if (o == null) throw new CPLException(CPLDirect.CPL_E_NOT_FOUND);
 		return o;
 	}
@@ -172,11 +157,9 @@ public class CPLObject {
 	 * @param prefix the prefix
 	 * @param name the object name
 	 * @param type the object type, 0 if none
-	 * @param bundle the object bundle, null if none
 	 * @return the collection of objects, or an empty collection if not found
 	 */
-	public static Vector<CPLObject> tryLookupAll(String prefix, String name,
-			int type, CPLBundle bundle) {
+	public static Vector<CPLObject> tryLookupAll(String prefix, String name, int type) {
 
 		SWIGTYPE_p_std_vector_cpl_id_timestamp_t pVector
 			= CPLDirect.new_std_vector_cpl_id_timestamp_tp();
@@ -186,7 +169,6 @@ public class CPLObject {
 
 		try {
             int r = CPLDirect.cpl_lookup_object_ext(prefix, name, type,
-            		bundle == null ? nullId : bundle.getId(),
                     CPLDirect.CPL_L_NO_FAIL,
 					CPLDirect.cpl_cb_collect_id_timestamp_vector, pv);
 			CPLException.assertSuccess(r);
@@ -220,12 +202,11 @@ public class CPLObject {
 	 * @param prefix the prefix
 	 * @param name the object name
 	 * @param type the object type, 0 if none
-	 * @param bundle the object bundle, null if none
 	 * @return the collection of objects
 	 */
 	public static Vector<CPLObject> lookupAll(String prefix, String name,
-			int type, CPLBundle bundle) {
-		Vector<CPLObject> r = tryLookupAll(prefix, name, type, bundle);
+			int type) {
+		Vector<CPLObject> r = tryLookupAll(prefix, name, type);
 		if (r.isEmpty()) throw new CPLException(CPLDirect.CPL_E_NOT_FOUND);
 		return r;
 	}
@@ -237,15 +218,13 @@ public class CPLObject {
 	 * @param prefix the prefix
 	 * @param name the object name
 	 * @param type the object type
-	 * @param bundle the object bundle (if the object does not exist)
 	 * @return the object
 	 */
 	public static CPLObject lookupOrCreate(String prefix, String name,
-			int type, CPLBundle bundle) {
+			int type) {
 
 		BigInteger[] id = {nullId};
-		int r = CPLDirect.cpl_lookup_or_create_object(prefix, name, type,
-				bundle == null ? nullId : bundle.getId(), id);
+		int r = CPLDirect.cpl_lookup_or_create_object(prefix, name, type, id);
 
 		if (CPLException.isError(r)) {
 			if (r == CPLDirect.CPL_E_NOT_FOUND) return null;
@@ -290,8 +269,6 @@ public class CPLObject {
                 o.prefix = e.getPrefix();
                 o.name = e.getName();
                 o.type = e.getType();
-                
-                o.knowbundle = true;
 
 				result.add(o);
 			}
@@ -353,7 +330,7 @@ public class CPLObject {
 	 */
 	protected boolean fetchInfo() {
 
-		if (prefix != null && knowbundle && knowCreationInfo)
+		if (prefix != null && knowCreationInfo)
 			return false;
 
 
@@ -377,7 +354,6 @@ public class CPLObject {
 			creationTime = info.getCreation_time();
 
 			knowCreationInfo = true;
-			knowbundle = true;
 
 			CPLDirect.cpl_free_object_info(info);
 		}
@@ -432,16 +408,6 @@ public class CPLObject {
 
 
 	/**
-	 * Get the object bundle
-	 *
-	 * @return the bundle, or null if none
-	 */
-	public BigInteger getbundleId() {
-		if (!knowbundle) fetchInfo();
-		return bundleId;
-	}
-
-	/**
 	 * Get the creation time of this object
 	 *
 	 * @return the time expressed as Unix time
@@ -478,11 +444,6 @@ public class CPLObject {
 		sb.append("\n");
 
 		if (detail) {
-
-			sb.append("bundle ID        : ");
-			sb.append(getbundleId());
-			sb.append("\n");
-
 			sb.append("Creation time       : ");
 			sb.append(new java.sql.Date(1000L * getCreationTime()));
 			sb.append(" ");

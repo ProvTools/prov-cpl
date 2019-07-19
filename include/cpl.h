@@ -590,7 +590,6 @@ cpl_error_string(cpl_return_t error);
  * @param prefix the object prefix, must be an existing bundle prefix
  * @param name the object name
  * @param type the object type
- * @param bundle the ID of the bundle that should contain this object
  * @param out_id the pointer to store the ID of the newly created object
  * @return CPL_OK or an error code
  */
@@ -598,7 +597,6 @@ EXPORT cpl_return_t
 cpl_create_object(const char* prefix,
 				  const char* name,
 				  const int type,
-				  const cpl_id_t bundle,
 				  cpl_id_t* out_id);
 
 /**
@@ -608,7 +606,6 @@ cpl_create_object(const char* prefix,
  * @param prefix the object prefix
  * @param name the object name
  * @param type the object type, CPL_NONE for no type
- * @param bundle_id the bundle ID, CPL_NONE for no ID
  * @param out_id the pointer to store the object ID
  * @return CPL_OK or an error code
  */
@@ -616,7 +613,6 @@ EXPORT cpl_return_t
 cpl_lookup_object(const char* prefix,
 				  const char* name,
 				  const int type,
-				  const cpl_id_t bundle_id,
 				  cpl_id_t* out_id);
 
 /**
@@ -626,7 +622,6 @@ cpl_lookup_object(const char* prefix,
  * @param prefix the object prefix
  * @param name the object name
  * @param type the object type, CPL_NONE for no type
- * @param bundle_id the bundle ID, CPL_NONE for no ID
  * @param flags a logical combination of CPL_L_* flags
  * @param iterator the iterator to be called for each matching object
  * @param context the caller-provided iterator context
@@ -636,7 +631,6 @@ EXPORT cpl_return_t
 cpl_lookup_object_ext(const char* prefix,
 					  const char* name,
 					  const int type,
-					  const cpl_id_t bundle_id,
 					  const int flags,
 					  cpl_id_timestamp_iterator_t iterator,
 					  void* context);
@@ -647,7 +641,6 @@ cpl_lookup_object_ext(const char* prefix,
  * @param prefix the object prefix
  * @param name the object name
  * @param type the object type
- * @param bundle the ID of the bundle that should contain this object
  * @param out_id the pointer to store the ID of the newly created object
  * @return CPL_OK or an error code
  */
@@ -655,7 +648,6 @@ EXPORT cpl_return_t
 cpl_lookup_or_create_object(const char* prefix,
 							const char* name,
 							const int type,
-							const cpl_id_t bundle,
 							cpl_id_t* out_id);
 
 /**

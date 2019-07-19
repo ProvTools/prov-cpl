@@ -453,7 +453,6 @@ cpl_error_string(cpl_return_t code)
  * @param prefix the namespace prefix
  * @param name the object name
  * @param type the object type
- * @param bundle the ID of the object that should contain this object
  * @param out_id the pointer to store the ID of the newly created object
  * @return CPL_OK or an error code
  */
@@ -461,7 +460,6 @@ extern "C" EXPORT cpl_return_t
 cpl_create_object(const char* prefix,
 				  const char* name,
 				  const int type,
-				  const cpl_id_t bundle,
 				  cpl_id_t* out_id)
 {
 	CPL_ENSURE_INITIALIZED;
@@ -499,7 +497,6 @@ cpl_create_object(const char* prefix,
  * @param prefix the namespace prefix
  * @param name the object name
  * @param type the object type, CPL_NONE for no type
- * @param bundle_id the bundle ID, CPL_NONE for no bundle
  * @param out_id the pointer to store the object ID
  * @return CPL_OK or an error code
  */
@@ -507,7 +504,6 @@ extern "C" EXPORT cpl_return_t
 cpl_lookup_object(const char* prefix,
 				  const char* name,
 				  const int type,
-				  const cpl_id_t bundle_id,
 				  cpl_id_t* out_id)
 {
 	CPL_ENSURE_INITIALIZED;
@@ -543,7 +539,6 @@ cpl_lookup_object(const char* prefix,
  * @param prefix the object prefix
  * @param name the object name
  * @param type the object type, CPL_NONE for no type
- * @param bundle_id the bundle ID, CPL_NONE for no bundle
  * @param flags a logical combination of CPL_L_* flags
  * @param iterator the iterator to be called for each matching object
  * @param context the caller-provided iterator context
@@ -553,7 +548,6 @@ extern "C" EXPORT cpl_return_t
 cpl_lookup_object_ext(const char* prefix,
 					  const char* name,
 					  const int type,
-				  	  const cpl_id_t bundle_id,
 					  const int flags,
 					  cpl_id_timestamp_iterator_t iterator,
 					  void* context)
@@ -593,7 +587,6 @@ cpl_lookup_object_ext(const char* prefix,
  * @param prefix the namespace prefix
  * @param name the object name
  * @param type the object type
- * @param bundle the ID of the object that should contain this object
  * @param out_id the pointer to store the ID of the newly created object
  * @return CPL_OK or an error code
  */
@@ -601,7 +594,6 @@ extern "C" EXPORT cpl_return_t
 cpl_lookup_or_create_object(const char* prefix,
 							const char* name,
 							const int type,
-							const cpl_id_t bundle,
 							cpl_id_t* out_id)
 {
 	CPL_ENSURE_INITIALIZED;
@@ -611,10 +603,10 @@ cpl_lookup_or_create_object(const char* prefix,
 	//TODO think about locks here
 	cpl_shared_semaphore_wait(cpl_lookup_or_create_object_semaphore);
 
-	r = cpl_lookup_object(prefix, name, type, bundle, out_id);
+	r = cpl_lookup_object(prefix, name, type, out_id);
 	if (r != CPL_E_NOT_FOUND) goto out;
 
-	r = cpl_create_object(prefix, name, type, bundle, out_id);
+	r = cpl_create_object(prefix, name, type, out_id);
 	if (CPL_IS_OK(r)) r = CPL_S_OBJECT_CREATED;
 
 out:
@@ -746,7 +738,7 @@ cpl_create_bundle(const char* name,
 				  const char* prefix,
 				  cpl_id_t* out_id)
 {
-	return cpl_create_object(prefix, name, 4, 0, out_id);
+	return cpl_create_object(prefix, name, CPL_BUNDLE, out_id);
 }
 
 /**
@@ -762,7 +754,7 @@ cpl_lookup_bundle(const char* name,
 				  const char* prefix,
 				  cpl_id_t* out_id)
 {
-	return cpl_lookup_object(prefix, name, 4, 0, out_id);
+	return cpl_lookup_object(prefix, name, CPL_BUNDLE, out_id);
 }
 
 
@@ -783,7 +775,7 @@ cpl_lookup_bundle_ext(const char* name,
 					  cpl_id_timestamp_iterator_t iterator,
 					  void* context)
 {
-	return cpl_lookup_object_ext(prefix, name, 4, 0, flags, iterator, context);
+	return cpl_lookup_object_ext(prefix, name, CPL_BUNDLE, flags, iterator, context);
 }
 
 /**
@@ -825,9 +817,7 @@ cpl_lookup_object_property_wildcard(const char* value,
     CPL_ENSURE_INITIALIZED;
 
     // Call the database backend
-    return cpl_db_backend->cpl_db_lookup_object_property_wildcard(cpl_db_backend,
-                                                         value,
-                                                  out_id);
+    return cpl_db_backend->cpl_db_lookup_object_property_wildcard(cpl_db_backend, value, out_id);
 }
 
 /**
@@ -1360,7 +1350,6 @@ cpl_cb_collect_relation_list(const cpl_id_t relation_id,
 							 const cpl_id_t query_object_id,
 							 const cpl_id_t other_object_id,
 							 const int type,
-							 const cpl_id_t bundle_id,
 							 void* context)
 {
 	if (context == NULL) return CPL_E_INVALID_ARGUMENT;
@@ -1751,7 +1740,7 @@ import_objects_json(const int type,
 
 		token_pair_t pair = name_to_tokens(it.key());
 
-		if(!CPL_IS_OK(cpl_create_object(pair.first.c_str(), pair.second.c_str(), type, bundle_id, &obj_id))){
+		if(!CPL_IS_OK(cpl_create_object(pair.first.c_str(), pair.second.c_str(), type, &obj_id))){
 			return CPL_E_INTERNAL_ERROR;
 		}
 
@@ -1821,7 +1810,6 @@ import_relations_json(const cpl_id_t bundle_id,
 					if(!CPL_IS_OK(cpl_lookup_object(pair.first.c_str(), 
 													pair.second.c_str(),
 													entry.source_t,
-													CPL_NONE,
 													&source))){
 						return CPL_E_INTERNAL_ERROR;
 					}				
@@ -1844,7 +1832,6 @@ import_relations_json(const cpl_id_t bundle_id,
 					if(!CPL_IS_OK(cpl_lookup_object(pair.first.c_str(), 
 													pair.second.c_str(),
 													entry.dest_t,
-													CPL_NONE,
 													&dest))){
 						return CPL_E_INTERNAL_ERROR;
 					}				
@@ -1943,7 +1930,7 @@ import_document_json(const std::string& json_string,
 		token_pair_t pair = name_to_tokens(id_string.second);
 
 		cpl_id_t source;
-		if(CPL_IS_OK(cpl_lookup_object(pair.first.c_str(), pair.second.c_str(), CPL_NONE, bundle_id, &source))){
+		if(CPL_IS_OK(cpl_lookup_object(pair.first.c_str(), pair.second.c_str(), CPL_NONE, &source))){
 
 			if(!CPL_IS_OK(cpl_add_relation(source, id_string.first,
 						ALTERNATEOF, NULL))){

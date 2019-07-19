@@ -105,24 +105,24 @@ public class test {
 
 		System.out.print("CPLObject.create(\"Entity\", bundle)");
 		CPLObject entity = CPLObject.create(PREFIX, "Entity",
-										  CPLObject.ENTITY, bundle);
+										  CPLObject.ENTITY);
 		System.out.println(": " + entity);
 
 		System.out.print("CPLObject.create(\"Agent\", bundle)");
 		CPLObject agent = CPLObject.create(PREFIX, "Agent",
-										  CPLObject.AGENT, bundle);
+										  CPLObject.AGENT);
 		System.out.println(": " + agent);
 
 		System.out.print("CPLObject.lookupOrCreate(\"Entity\", bundle)");
 		CPLObject entityt = CPLObject.lookupOrCreate(PREFIX, "Entity",
-													 CPLObject.ENTITY, bundle);
+													 CPLObject.ENTITY);
 		System.out.println(": " + entityt);
 		if (!entity.equals(entityt))
 			throw new RuntimeException("Object lookup returned the wrong object");
 
 		System.out.print("CPLObject.lookupOrCreate(\"Activity\", bundle)");
 		CPLObject activity = CPLObject.lookupOrCreate(PREFIX, "Activity", 
-											  CPLObject.ACTIVITY, bundle);
+											  CPLObject.ACTIVITY);
 		System.out.println(": " + activity);
 
 		System.out.println();
@@ -139,31 +139,31 @@ public class test {
 			throw new RuntimeException("Bundle lookup returned the wrong bundle");
 
 		System.out.print("CPLObject.lookup(\"Entity\")");
-		CPLObject entityx = CPLObject.lookup(PREFIX, "Entity", CPLObject.ENTITY, bundle);
+		CPLObject entityx = CPLObject.lookup(PREFIX, "Entity", CPLObject.ENTITY);
 		System.out.println(": " + entityx);
 		if (!entity.equals(entityx))
 			throw new RuntimeException("Object lookup returned the wrong object");
 
 		System.out.print("CPLObject.tryLookup(\"Agent\")");
-		CPLObject agentx = CPLObject.tryLookup(PREFIX, "Agent", CPLObject.AGENT, bundle);
+		CPLObject agentx = CPLObject.tryLookup(PREFIX, "Agent", CPLObject.AGENT);
 		System.out.println(": " + agentx);
 		if (!agent.equals(agentx))
 			throw new RuntimeException("Object lookup returned the wrong object");
 
 		System.out.print("CPLObject.tryLookup(\"Activity\")");
-		CPLObject activityx = CPLObject.tryLookup(PREFIX, "Activity", CPLObject.ACTIVITY, bundle);
+		CPLObject activityx = CPLObject.tryLookup(PREFIX, "Activity", CPLObject.ACTIVITY);
 		System.out.println(": " + activityx);
 		if (!activity.equals(activityx))
 			throw new RuntimeException("Object lookup returned the wrong object");
 
 		System.out.print("CPLObject.tryLookup(...should fail...)");
-		CPLObject objfx = CPLObject.tryLookup(PREFIX, "%%%%%%", 42, null);
+		CPLObject objfx = CPLObject.tryLookup(PREFIX, "%%%%%%", 42);
 		if (objfx == null) System.out.println(": OK");
 		if (objfx != null)
 			throw new RuntimeException("Object lookup did not fail as expected");
 
 		System.out.print("CPLObject.lookupAll(\"Entity\")");
-		Vector<CPLObject> entityv = CPLObject.lookupAll(PREFIX, "Entity", CPLObject.ENTITY, bundle);
+		Vector<CPLObject> entityv = CPLObject.lookupAll(PREFIX, "Entity", CPLObject.ENTITY);
 		System.out.println(": " + (entityv.contains(entity) ? "" : "not ") + "found "
                 + "(" + entityv.size() + " result" + (entityv.size() == 1 ? "" : "s")
                 + ")");
@@ -487,7 +487,8 @@ public class test {
 			System.out.println("  " + e);
 		}
 
-		System.out.println();		
+		System.out.println();
+		System.out.println("Success");
 	}
 }
 

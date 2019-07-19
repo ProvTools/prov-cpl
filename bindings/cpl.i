@@ -252,21 +252,18 @@ cpl_return_t
 cpl_create_object(const char* prefix,
                   const char* name,
                   const int type,
-                  const cpl_id_t bundle,
                   unsigned long long* OUTPUT);
 
 cpl_return_t
 cpl_lookup_object(const char* prefix,
                   const char* name,
                   const int type,
-                  const cpl_id_t bundle_id,
                   unsigned long long* OUTPUT);
 
 cpl_return_t
 cpl_lookup_or_create_object(const char* prefix,
                             const char* name,
                             const int type,
-                            const cpl_id_t bundle,
                             unsigned long long* OUTPUT);
 
 cpl_return_t

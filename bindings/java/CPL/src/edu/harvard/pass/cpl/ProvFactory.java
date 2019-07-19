@@ -107,7 +107,7 @@ public class ProvFactory{
      * @return CPLObject
      */
     public CPLObject createEntity(String name) {
-        return CPLObject.create(prefix, name, CPLObject.ENTITY, bundle);
+        return CPLObject.create(prefix, name, CPLObject.ENTITY);
     }
 
     /**
@@ -117,7 +117,7 @@ public class ProvFactory{
      * @return CPLObject
      */
     public CPLObject createAgent(String name) {
-        return CPLObject.create(prefix, name, CPLObject.AGENT, bundle);
+        return CPLObject.create(prefix, name, CPLObject.AGENT);
     }
 
     /**
@@ -127,7 +127,7 @@ public class ProvFactory{
      * @return CPLObject
      */
     public CPLObject createActivity(String name) {
-        return CPLObject.create(prefix, name, CPLObject.ACTIVITY, bundle);
+        return CPLObject.create(prefix, name, CPLObject.ACTIVITY);
     }
 
     /**
@@ -137,7 +137,7 @@ public class ProvFactory{
      * @return CPLObject
      */
     public CPLObject createEmptyDictionary(String name) {
-        CPLObject v = CPLObject.create(prefix, name, CPLObject.ENTITY, bundle);
+        CPLObject v = CPLObject.create(prefix, name, CPLObject.ENTITY);
         v.addProperty("prov", "type", "EmptyDictionary");
         return v;
     }
@@ -149,7 +149,7 @@ public class ProvFactory{
      * @return CPLObject
      */
     public CPLObject createDictionary(String name) {
-        CPLObject v = CPLObject.create(prefix, name, CPLObject.ENTITY, bundle);
+        CPLObject v = CPLObject.create(prefix, name, CPLObject.ENTITY);
         v.addProperty("prov", "type", "Dictionary");
         return v;
     }
@@ -161,7 +161,7 @@ public class ProvFactory{
      * @return CPLObject
      */
     public CPLObject createPerson(String name) {
-        CPLObject v = CPLObject.create(prefix, name, CPLObject.AGENT, bundle);
+        CPLObject v = CPLObject.create(prefix, name, CPLObject.AGENT);
         v.addProperty("prov", "type", "Person");
         return v;
     }
@@ -173,7 +173,7 @@ public class ProvFactory{
      * @return CPLObject
      */
     public CPLObject createSoftwareAgent(String name) {
-        CPLObject v = CPLObject.create(prefix, name, CPLObject.AGENT, bundle);
+        CPLObject v = CPLObject.create(prefix, name, CPLObject.AGENT);
         v.addProperty("prov", "type", "SoftwareAgent");
         return v;
     }
@@ -185,7 +185,7 @@ public class ProvFactory{
      * @return CPLObject
      */
     public CPLObject createEmptyCollection(String name) {
-        CPLObject v = CPLObject.create(prefix, name, CPLObject.ENTITY, bundle);
+        CPLObject v = CPLObject.create(prefix, name, CPLObject.ENTITY);
         v.addProperty("prov", "type", "EmptyCollection");
         return v;
     }
@@ -197,7 +197,7 @@ public class ProvFactory{
      * @return CPLObject
      */
     public CPLObject createCollection(String name) {
-        CPLObject v = CPLObject.create(prefix, name, CPLObject.ENTITY, bundle);
+        CPLObject v = CPLObject.create(prefix, name, CPLObject.ENTITY);
         v.addProperty("prov", "type", "Collection");
         return v;
     }
@@ -209,7 +209,7 @@ public class ProvFactory{
      * @return CPLObject
      */
     public CPLObject createDocument(String name) {
-        CPLObject v = CPLObject.create(prefix, name, CPLObject.ENTITY, bundle);
+        CPLObject v = CPLObject.create(prefix, name, CPLObject.ENTITY);
         v.addProperty("prov", "type", "Document");
         return v;
     }
@@ -221,7 +221,7 @@ public class ProvFactory{
      * @return CPLObject
      */
     public CPLObject createOrganization(String name) {
-        CPLObject v = CPLObject.create(prefix, name, CPLObject.AGENT, bundle);
+        CPLObject v = CPLObject.create(prefix, name, CPLObject.AGENT);
         v.addProperty("prov", "type", "Organization");
         return v;
     }
@@ -233,7 +233,7 @@ public class ProvFactory{
      * @return CPLObject
      */
     public CPLObject createPlan(String name) {
-        CPLObject v = CPLObject.create(prefix, name, CPLObject.AGENT, bundle);
+        CPLObject v = CPLObject.create(prefix, name, CPLObject.AGENT);
         v.addProperty("prov", "type", "Plan");
         return v;
     }
@@ -245,7 +245,7 @@ public class ProvFactory{
      * @return CPLObject
      */
    public CPLObject lookupOrCreateEntity(String name) {
-        return CPLObject.lookupOrCreate(prefix, name, CPLObject.ENTITY, bundle);
+        return CPLObject.lookupOrCreate(prefix, name, CPLObject.ENTITY);
     }
 
     /**
@@ -255,7 +255,7 @@ public class ProvFactory{
      * @return CPLObject
      */
     public CPLObject lookupOrCreateAgent(String name) {
-        return CPLObject.lookupOrCreate(prefix, name, CPLObject.AGENT, bundle);
+        return CPLObject.lookupOrCreate(prefix, name, CPLObject.AGENT);
     }
 
     /**
@@ -265,7 +265,7 @@ public class ProvFactory{
      * @return CPLObject
      */
     public CPLObject lookupOrCreateActivity(String name) {
-        return CPLObject.lookupOrCreate(prefix, name, CPLObject.ACTIVITY, bundle);
+        return CPLObject.lookupOrCreate(prefix, name, CPLObject.ACTIVITY);
     }
 
     /**
@@ -275,7 +275,7 @@ public class ProvFactory{
      * @return CPLObject
      */
     public CPLObject lookupOrCreateEmptyDictionary(String name) {
-        CPLObject v = CPLObject.lookupOrCreate(prefix, name, CPLObject.ENTITY, bundle);
+        CPLObject v = CPLObject.lookupOrCreate(prefix, name, CPLObject.ENTITY);
         v.addProperty("prov", "type", "EmptyDictionary");
         return v;
     }
@@ -287,7 +287,7 @@ public class ProvFactory{
      * @return CPLObject
      */
     public CPLObject lookupOrCreatePerson(String name) {
-        CPLObject v = CPLObject.lookupOrCreate(prefix, name, CPLObject.AGENT, bundle);
+        CPLObject v = CPLObject.lookupOrCreate(prefix, name, CPLObject.AGENT);
         v.addProperty("prov", "type", "Person");
         return v;
     }
@@ -299,7 +299,7 @@ public class ProvFactory{
      * @return CPLObject
      */
     public CPLObject lookupOrCreateSoftwareAgent(String name) {
-        CPLObject v = CPLObject.lookupOrCreate(prefix, name, CPLObject.AGENT, bundle);
+        CPLObject v = CPLObject.lookupOrCreate(prefix, name, CPLObject.AGENT);
         v.addProperty("prov", "type", "SoftwareAgent");
         return v;
     }
@@ -311,7 +311,7 @@ public class ProvFactory{
      * @return CPLObject
      */
     public CPLObject lookupOrCreateEmptyCollection(String name) {
-        CPLObject v = CPLObject.lookupOrCreate(prefix, name, CPLObject.ENTITY, bundle);
+        CPLObject v = CPLObject.lookupOrCreate(prefix, name, CPLObject.ENTITY);
         v.addProperty("prov", "type", "EmptyCollection");
         return v;
     }
@@ -323,7 +323,7 @@ public class ProvFactory{
      * @return CPLObject
      */
     public CPLObject lookupOrCreateDictionary(String name) {
-        CPLObject v = CPLObject.lookupOrCreate(prefix, name, CPLObject.ENTITY, bundle);
+        CPLObject v = CPLObject.lookupOrCreate(prefix, name, CPLObject.ENTITY);
         v.addProperty("prov", "type", "Dictionary");
         return v;
     }
@@ -335,7 +335,7 @@ public class ProvFactory{
      * @return CPLObject
      */
     public CPLObject lookupOrCreateCollection(String name) {
-        CPLObject v = CPLObject.lookupOrCreate(prefix, name, CPLObject.ENTITY, bundle);
+        CPLObject v = CPLObject.lookupOrCreate(prefix, name, CPLObject.ENTITY);
         v.addProperty("prov", "type", "Collection");
         return v;
     }
@@ -347,7 +347,7 @@ public class ProvFactory{
      * @return CPLObject
      */
     public CPLObject lookupOrCreateDocument(String name) {
-        CPLObject v = CPLObject.lookupOrCreate(prefix, name, CPLObject.ENTITY, bundle);
+        CPLObject v = CPLObject.lookupOrCreate(prefix, name, CPLObject.ENTITY);
         v.addProperty("prov", "type", "Document");
         return v;
     }
@@ -359,7 +359,7 @@ public class ProvFactory{
      * @return CPLObject
      */
     public CPLObject lookupOrCreateOrganization(String name) {
-        CPLObject v = CPLObject.lookupOrCreate(prefix, name, CPLObject.AGENT, bundle);
+        CPLObject v = CPLObject.lookupOrCreate(prefix, name, CPLObject.AGENT);
         v.addProperty("prov", "type", "Organization");
         return v;
     }
@@ -371,7 +371,7 @@ public class ProvFactory{
      * @return CPLObject
      */
     public CPLObject lookupOrCreatePlan(String name) {
-        CPLObject v = CPLObject.lookupOrCreate(prefix, name, CPLObject.AGENT, bundle);
+        CPLObject v = CPLObject.lookupOrCreate(prefix, name, CPLObject.AGENT);
         v.addProperty("prov", "type", "Plan");
         return v;
     }

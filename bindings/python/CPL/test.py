@@ -60,7 +60,7 @@ print
 bundle_name = 'Bundle'
 print ('Create bundle name:' +
 	bundle_name)
-bundle = c.create_bundle(bundle_name)
+bundle = c.create_bundle(bundle_name, prefix)
 CPL.p_bundle(bundle, False)
 
 print ('Add bundle prefix:' + prefix + ':' + iri)
@@ -70,19 +70,19 @@ entity_name = 'Entity'
 entity_type = CPL.ENTITY
 print ('Create object name:' + str(entity_name) + ' type:' + str(entity_type) +
     ' bundle:' + str(bundle.id))
-entity = c.create_object(prefix, entity_name, entity_type, bundle)
+entity = c.create_object(prefix, entity_name, entity_type)
 CPL.p_object(entity)
 
 agent_name = 'Agent'
 agent_type = CPL.AGENT
 print ('Create object name:' +
-	str(agent_name) + ' type:' + str(agent_type) + ' bundle:' + str(bundle.id))
-agent = c.create_object(prefix, agent_name, agent_type, bundle)
+	str(agent_name) + ' type:' + str(agent_type))
+agent = c.create_object(prefix, agent_name, agent_type)
 CPL.p_object(agent)
 
 print('Lookup or create object:' + str(entity_name) + ' type:' + str(entity_type) +
  	' bundle:' + str(bundle.id))
-entityt = c.get_object(prefix, entity_name, entity_type, bundle = bundle)
+entityt = c.get_object(prefix, entity_name, entity_type)
 CPL.p_object(entityt)
 if entity.id != entity.id:
 	print "Lookup returned wrong object!"
@@ -91,8 +91,8 @@ if entity.id != entity.id:
 activity_name = 'Activity'
 activity_type = CPL.ACTIVITY
 print ('Create object name:' +
-	str(activity_name) + ' type:' + str(activity_type) + ' bundle:' + str(bundle.id))
-activity = c.create_object(prefix, activity_name, activity_type, bundle)
+	str(activity_name) + ' type:' + str(activity_type))
+activity = c.create_object(prefix, activity_name, activity_type)
 CPL.p_object(activity)
 
 # Lookup Objects
@@ -101,41 +101,33 @@ print '----- Lookup object tests -----'
 print
 
 print ('Looking up bundle name:' + str(bundle_name))
-bundle_check = c.lookup_bundle(bundle_name)
+bundle_check = c.lookup_bundle(bundle_name, prefix)
 if bundle.id != bundle_check.id:
 	sys.stdout.write('Lookup returned wrong bundle:' + str(bundle_check.id))
 	sys.exit(1)
 
 print ('Looking up object name:' + str(entity_name) + ' type:' + str(entity_type))
-entity_check = c.lookup_object(prefix, entity_name, entity_type, bundle)
+entity_check = c.lookup_object(prefix, entity_name, entity_type)
 if entity.id != entity_check.id:
 	sys.stdout.write('Lookup returned wrong object:' + str(entity_check.id))
 	sys.exit(1)
 
 print ('Looking up object name:' + str(agent_name) + ' type:' + str(agent_type))
-agent_check = c.lookup_object(prefix, agent_name, agent_type, bundle)
+agent_check = c.lookup_object(prefix, agent_name, agent_type)
 if agent.id != agent_check.id:
 	sys.stdout.write('Lookup returned wrong object:' + str(agent_check.id))
 	sys.exit(1)
 
 print ('Looking up object name:' + str(activity_name) + ' type:' + str(activity_type))
-activity_check = c.lookup_object(prefix, activity_name, activity_type, bundle)
+activity_check = c.lookup_object(prefix, activity_name, activity_type)
 if activity.id != activity_check.id:
 	sys.stdout.write('Lookup returned wrong object:' + str(activity_check.id))
 	sys.exit(1)
 
-print ('Looking up object in wrong bundle name:' +
- 	str(entity_name) + ' type:' + str(entity_type) + ' bundle:Agent')
-try:
-	fail0 = c.lookup_object(prefix, entity_name, entity_type, agent)
-except LookupError:
-	pass
-else:
-	if fail0 != None:
-	 	sys.stdout.write('Lookup returned an object:' + str(fail0.id))
-	 	sys.exit(1)
-
 print 'Look up non-existent object (type failure)'
+print(prefix)
+print(bundle_name)
+print(entity_type)
 fail1 = c.try_lookup_object(prefix, bundle_name, entity_type)
 if fail1:
 	print 'Returned an object:' + str(fail1.id)
@@ -154,7 +146,7 @@ if fail3:
 	sys.exit(1)
 
 print 'Look up all objects with name:' + str(entity_name) + ' type:' + str(entity_type)
-entity_all = c.lookup_all_objects(prefix, entity_name, entity_type, bundle)
+entity_all = c.lookup_all_objects(prefix, entity_name, entity_type)
 i = 0
 for t in entity_all:
 	CPL.p_id(t.id, with_newline = True)
@@ -164,7 +156,7 @@ for t in entity_all:
 		break
 
 print 'All objects'
-all_objects = c.get_all_objects(True)
+all_objects = c.get_all_objects(prefix, True)
 i = 0
 for t in all_objects:
 	CPL.p_id(t.object.id, with_newline = False)
@@ -173,12 +165,6 @@ for t in all_objects:
 		print '  ... (' + str(len(all_objects)) + ' objects total)'
 		break
 
-print "Lookup all objects with bundle_id:" + str(bundle.id)
-bundle_objects = c.get_bundle_objects(bundle)
-if len(bundle_objects) != 3:
-	print 'Returned wrong number of objects:' + str(len(bundle_objects))
-	sys.exit(1)
-
 # Relations
 
 print
@@ -186,22 +172,47 @@ print '----- Create relation tests -----'
 print
 
 print 'relation wasAttributedTo from Entity to Agent'
-r1 = entity.relation_to(agent, CPL.WASATTRIBUTEDTO, bundle)
+r1 = c.create_relation(entity.id, agent.id, CPL.WASATTRIBUTEDTO)
 if not r1:
 	print 'ERROR: ignoring duplicate'
 	sys.exit(1)
 
 print 'relation wasGeneratedBy from Entity to Activity'
-r2 = entity.relation_to(activity, CPL.WASGENERATEDBY, bundle)
+r2 = c.create_relation(entity.id, activity.id, CPL.WASGENERATEDBY)
 if not r2:
 	print 'ERROR: ignoring duplicate'
 	sys.exit(1)
 
-print 'relation wasAssociatedWith from Activity to Agent'
-r3 = agent.relation_from(activity, CPL.WASASSOCIATEDWITH, bundle)
+print 'relation wasAssociatedWith from Agent to Activity'
+r3 = c.create_relation(agent.id, activity.id, CPL.WASASSOCIATEDWITH)
 if not r3:
 	print 'ERROR: ignoring duplicate'
 	sys.exit(1)
+
+print 'relation bundleRelation from bundle to r1'
+r4 = c.create_relation(bundle.id, r1.id, CPL.BUNDLE_RELATION)
+if not r3:
+	print 'ERROR: ignoring duplicate'
+	sys.exit(1)
+
+print 'relation bundleRelation from bundle to r2'
+r5 = c.create_relation(bundle.id, r2.id, CPL.BUNDLE_RELATION)
+if not r3:
+	print 'ERROR: ignoring duplicate'
+	sys.exit(1)
+
+print 'relation bundleRelation from bundle to r3'
+r6 = c.create_relation(bundle.id, r3.id, CPL.BUNDLE_RELATION)
+if not r3:
+	print 'ERROR: ignoring duplicate'
+	sys.exit(1)
+
+print "Lookup all objects with bundle_id:" + str(bundle.id)
+bundle_objects = c.get_bundle_objects(bundle)
+if len(bundle_objects) != 3:
+	print 'Returned wrong number of objects:' + str(len(bundle_objects))
+	sys.exit(1)
+
 
 print
 print '----- Lookup relation tests -----'
@@ -211,31 +222,38 @@ print 'getting relations from Entity'
 entity_anc = entity.relations(CPL.D_ANCESTORS)
 if len(entity_anc) != 2:
 	print 'Returned wrong number of relations:' + str(len(entity_anc))
+	sys.exit(1)
+
 
 print 'getting relations to Entity'
 entity_desc = entity.relations(CPL.D_DESCENDANTS)
 if len(entity_desc) != 0:
 	print 'Returned wrong number of relations: ' + str(len(entity_anc))
+	sys.exit(1)
 
 print 'getting relations from Agent'
 agent_anc = agent.relations(CPL.D_ANCESTORS)
-if len(agent_anc) != 0:
+if len(agent_anc) != 1:
 	print 'Returned wrong number of relations: ' + str(len(agent_anc))
+	sys.exit(1)
 
 print 'getting relations to Agent'
 agent_desc = agent.relations(CPL.D_DESCENDANTS)
-if len(agent_desc) != 2:
+if len(agent_desc) != 1:
 	print 'Returned wrong number of relations: ' + str(len(agent_anc))
+	sys.exit(1)
 
 print 'getting relations from Activity'
 activity_anc = activity.relations(CPL.D_ANCESTORS)
-if len(activity_anc) != 1:
+if len(activity_anc) != 0:
 	print 'Returned wrong number of relations: ' + str(len(activity_anc))
+	sys.exit(1)
 
 print 'getting relations to Activity'
 activity_desc = activity.relations(CPL.D_DESCENDANTS)
-if len(activity_desc) != 1:
+if len(activity_desc) != 2:
 	print 'Returned wrong number of relations: ' + str(len(activity_anc))
+	sys.exit(1)
 
 print "Lookup all relations with bundle " + bundle_name
 bundle_relations = c.get_bundle_relations(bundle)
@@ -333,3 +351,5 @@ print bundle.properties()
 print
 print "Closing connection"
 c.close()
+
+print "Success"
