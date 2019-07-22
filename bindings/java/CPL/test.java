@@ -121,7 +121,7 @@ public class test {
 			throw new RuntimeException("Object lookup returned the wrong object");
 
 		System.out.print("CPLObject.lookupOrCreate(\"Activity\", bundle)");
-		CPLObject activity = CPLObject.lookupOrCreate(PREFIX, "Activity", 
+		CPLObject activity = CPLObject.lookupOrCreate(PREFIX, "Activity",
 											  CPLObject.ACTIVITY);
 		System.out.println(": " + activity);
 
@@ -427,7 +427,7 @@ public class test {
 		System.out.println();
 
 		System.out.println();
-	
+
 		/*
 		 * List relation properties
 		 */
@@ -465,7 +465,7 @@ public class test {
 		System.out.println();
 
 		System.out.println();
-	
+
 		/*
 		 * List relation properties
 		 */

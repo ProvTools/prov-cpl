@@ -452,12 +452,12 @@ test_simple(void)
 	CPL_VERIFY(cpl_add_relation, ret);
 	if (with_delays) delay();
 
-    ret = cpl_add_relation(bun, rel3, BUNDLE_RELATION, &rel4);
+    ret = cpl_add_relation(bun, rel3, BUNDLERELATION, &rel4);
     print(L_DEBUG, "cpl_relation --> %d", ret);
     CPL_VERIFY(cpl_add_relation, ret);
     if (with_delays) delay();
 
-	ret = cpl_add_relation(bun, rel2, BUNDLE_RELATION, &rel5);
+	ret = cpl_add_relation(bun, rel2, BUNDLERELATION, &rel5);
     print(L_DEBUG, "cpl_relation --> %d", ret);
     CPL_VERIFY(cpl_add_relation, ret);
     if (with_delays) delay();

@@ -190,19 +190,19 @@ if not r3:
 	sys.exit(1)
 
 print 'relation bundleRelation from bundle to r1'
-r4 = c.create_relation(bundle.id, r1.id, CPL.BUNDLE_RELATION)
+r4 = c.create_relation(bundle.id, r1.id, CPL.BUNDLERELATION)
 if not r3:
 	print 'ERROR: ignoring duplicate'
 	sys.exit(1)
 
 print 'relation bundleRelation from bundle to r2'
-r5 = c.create_relation(bundle.id, r2.id, CPL.BUNDLE_RELATION)
+r5 = c.create_relation(bundle.id, r2.id, CPL.BUNDLERELATION)
 if not r3:
 	print 'ERROR: ignoring duplicate'
 	sys.exit(1)
 
 print 'relation bundleRelation from bundle to r3'
-r6 = c.create_relation(bundle.id, r3.id, CPL.BUNDLE_RELATION)
+r6 = c.create_relation(bundle.id, r3.id, CPL.BUNDLERELATION)
 if not r3:
 	print 'ERROR: ignoring duplicate'
 	sys.exit(1)

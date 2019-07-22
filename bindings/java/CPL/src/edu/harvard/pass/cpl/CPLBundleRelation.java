@@ -9,7 +9,7 @@ import java.math.BigInteger;
  */
 public class CPLBundleRelation {
 
-    private static final int BUNDLE_RELATION 		= CPLDirectConstants.BUNDLE_RELATION;
+    private static final int BUNDLERELATION 		= CPLDirectConstants.BUNDLERELATION;
 
     /// The null object
     private static BigInteger nullId = BigInteger.ZERO;
@@ -23,7 +23,7 @@ public class CPLBundleRelation {
     public static CPLBundleRelation create(CPLBundle bundle, CPLRelation relation){
         BigInteger[] id = {nullId};
 
-        int r = CPLDirect.cpl_add_relation(bundle.getId(), relation.getId(), BUNDLE_RELATION, id);
+        int r = CPLDirect.cpl_add_relation(bundle.getId(), relation.getId(), BUNDLERELATION, id);
         CPLException.assertSuccess(r);
 
         CPLBundleRelation a = new CPLBundleRelation(id[0]);

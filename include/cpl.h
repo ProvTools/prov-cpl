@@ -302,7 +302,7 @@ extern cpl_session_t cpl_session;
 #define	WASASSOCIATEDWITH		17
 #define ACTEDONBEHALFOF			18
 #define INBUNDLE                19
-#define BUNDLE_RELATION         20
+#define BUNDLERELATION          20
 
 #define WASINFLUENCEDBY_STR			"wasInfluencedBy"
 #define ALTERNATEOF_STR				"alternateOf"
