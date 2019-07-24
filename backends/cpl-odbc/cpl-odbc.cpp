@@ -703,13 +703,13 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 
     PREPARE(add_object_property_stmts,
 			"INSERT INTO cpl_object_properties"
-			"            (id, prefix, name, value)"
-			"     VALUES (?, ?, ?, ?);");
+			"            (id, prefix, name, value, type)"
+			"     VALUES (?, ?, ?, ?, ?);");
 
 	PREPARE(add_relation_property_stmts,
 		"INSERT INTO cpl_relation_properties"
-		"            (id, prefix, name, value)"
-		"     VALUES (?, ?, ?, ?);");
+		"            (id, prefix, name, value, type)"
+		"     VALUES (?, ?, ?, ?, ?);");
 
 	PREPARE(add_bundle_property_stmts,
 		"INSERT INTO cpl_bundle_properties"
@@ -752,27 +752,27 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 	PREPARE(get_object_properties_stmts,
 			"SELECT id, prefix, name, value"
 			"  FROM cpl_object_properties"
-			" WHERE id = ?;");
+			" WHERE id = ? AND type = ?;");
 
 	PREPARE(get_object_properties_with_key_stmts,
 			"SELECT id, prefix, name, value"
 			"  FROM cpl_object_properties"
-			" WHERE id = ? AND prefix = ? AND name = ?;");
+			" WHERE id = ? AND prefix = ? AND name = ? AND type = ?;");
 
 	PREPARE(lookup_object_by_property_stmts,
 			"SELECT id"
 			"  FROM cpl_object_properties"
-			" WHERE prefix = ? AND name = ? AND value = ?;");
+			" WHERE prefix = ? AND name = ? AND value = ? AND type = ?;");
 
 	PREPARE(get_relation_properties_stmts,
 			"SELECT id, prefix, name, value"
 			" FROM cpl_relation_properties"
-			" WHERE id = ?");
+			" WHERE id = ? AND type = ?");
 
 	PREPARE(get_relation_properties_with_key_stmts,
 			"SELECT id, prefix, name, value"
 			"  FROM cpl_relation_properties"
-			" WHERE id = ? AND prefix = ? AND name = ?;");
+			" WHERE id = ? AND prefix = ? AND name = ? AND type = ?;");
 
 	PREPARE(has_immediate_ancestor_stmts,
 			"SELECT id"
@@ -1794,7 +1794,8 @@ cpl_odbc_add_object_property(struct _cpl_db_backend_t* backend,
                       const cpl_id_t id,
                       const char* prefix,
                       const char* key,
-                      const char* value)
+                      const char* value,
+                      const int type)
 {
     assert(backend != NULL);
     cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
@@ -1811,7 +1812,7 @@ retry:
 	SQL_BIND_VARCHAR(stmt, 2, CPL_PREFIX_LEN, prefix);
 	SQL_BIND_VARCHAR(stmt, 3, CPL_KEY_LEN, key);
 	SQL_BIND_VARCHAR(stmt, 4, CPL_VALUE_LEN, value);
-
+    SQL_BIND_INTEGER(stmt, 5, type);
 
 	// Execute
 	
@@ -1847,7 +1848,8 @@ cpl_odbc_add_relation_property(struct _cpl_db_backend_t* backend,
                       const cpl_id_t id,
                       const char* prefix,
                       const char* key,
-                      const char* value)
+                      const char* value,
+                      const int type)
 {
     assert(backend != NULL);
     cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
@@ -1864,7 +1866,7 @@ retry:
 	SQL_BIND_VARCHAR(stmt, 2, CPL_PREFIX_LEN, prefix);
 	SQL_BIND_VARCHAR(stmt, 3, CPL_KEY_LEN, key);
 	SQL_BIND_VARCHAR(stmt, 4, CPL_VALUE_LEN, value);
-
+    SQL_BIND_INTEGER(stmt, 5, type);
 
 	// Execute
 	
@@ -2784,6 +2786,7 @@ typedef struct __get_properties__entry {
 	SQLCHAR prefix[CPL_PREFIX_LEN];
 	SQLCHAR key[CPL_KEY_LEN];
 	SQLCHAR value[CPL_VALUE_LEN];
+    int type;
 } __get_properties__entry_t;
 
 
@@ -2803,6 +2806,7 @@ cpl_odbc_get_object_properties(struct _cpl_db_backend_t* backend,
 						const cpl_id_t id,
 						const char* prefix,
 						const char* key,
+						int type,
 						cpl_property_iterator_t callback,
 						void* context)
 {
@@ -2835,7 +2839,10 @@ retry:
 	if (prefix != NULL && key != NULL) {
 		SQL_BIND_VARCHAR(stmt, 2, CPL_PREFIX_LEN, prefix);
 		SQL_BIND_VARCHAR(stmt, 3, CPL_KEY_LEN, key);
-	}
+        SQL_BIND_INTEGER(stmt, 4, type);
+    } else {
+        SQL_BIND_INTEGER(stmt, 2, type);
+    }
 
 
 	// Execute
@@ -2859,7 +2866,6 @@ retry:
 	ret = SQLBindCol(stmt, 4, SQL_C_CHAR, entry.value, sizeof(entry.value),
 			&ind_value);
 	if (!SQL_SUCCEEDED(ret)) goto err_close;
-
 
 	// Fetch the result
 
@@ -2913,7 +2919,8 @@ retry:
 			r = callback(id, (const char*) (*i)->prefix, 
 						 (const char*) (*i)->key,
 						 (const char*) (*i)->value,
-						 context);
+                         type,
+                         context);
 			if (!CPL_IS_OK(r)) goto err_free;
 		}
 	}
@@ -2962,6 +2969,7 @@ cpl_odbc_lookup_object_by_property(struct _cpl_db_backend_t* backend,
 							const char* prefix,
 							const char* key,
 							const char* value,
+							const int type,
 							cpl_property_iterator_t callback,
 							void* context)
 {
@@ -2985,7 +2993,7 @@ retry:
 	SQL_BIND_VARCHAR(stmt, 1, CPL_PREFIX_LEN, prefix);
 	SQL_BIND_VARCHAR(stmt, 2, CPL_KEY_LEN, key);
 	SQL_BIND_VARCHAR(stmt, 3, CPL_VALUE_LEN, value);
-
+    SQL_BIND_INTEGER(stmt, 4, type);
 
 	// Execute
 	
@@ -3036,7 +3044,7 @@ retry:
 	if (callback != NULL) {
 		std::list<cpl_id_t>::iterator i;
 		for (i = entries.begin(); i != entries.end(); i++) {
-			r = callback(*i, prefix, key, value, context);
+			r = callback(*i, prefix, key, value, type, context);
 			if (!CPL_IS_OK(r)) return r;
 		}
 	}
@@ -3073,6 +3081,7 @@ cpl_odbc_get_relation_properties(struct _cpl_db_backend_t* backend,
 						const cpl_id_t id,
 						const char* prefix,
 						const char* key,
+						const int type,
 						cpl_property_iterator_t callback,
 						void* context)
 {
@@ -3108,6 +3117,9 @@ retry:
 	if (prefix != NULL && key != NULL) {
 		SQL_BIND_VARCHAR(stmt, 2, CPL_PREFIX_LEN, prefix);
 		SQL_BIND_VARCHAR(stmt, 3, CPL_KEY_LEN, key);
+        SQL_BIND_INTEGER(stmt, 4, type);
+	} else {
+        SQL_BIND_INTEGER(stmt, 2, type);
 	}
 
 
@@ -3187,7 +3199,8 @@ retry:
 						 (const char*) (*i)->prefix,
 						 (const char*) (*i)->key,
 						 (const char*) (*i)->value,
-						 context);
+                         type,
+                         context);
 			if (!CPL_IS_OK(r)) goto err_free;
 		}
 	}
@@ -3349,7 +3362,8 @@ retry:
 						 (const char*) (*i)->prefix,
 						 (const char*) (*i)->key,
 						 (const char*) (*i)->value,
-						 context);
+                         0,
+                         context);
 			if (!CPL_IS_OK(r)) goto err_free;
 		}
 	}

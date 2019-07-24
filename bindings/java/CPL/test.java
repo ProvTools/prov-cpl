@@ -35,9 +35,10 @@
 import edu.harvard.pass.cpl.*;
 
 import java.io.File;
+import java.util.Optional;
 import java.util.Vector;
 import java.math.BigInteger;
-
+import java.util.Random;
 
 /**
  * CPL test
@@ -76,6 +77,8 @@ public class test {
      * The real main function
      */
     public void run() throws Exception {
+		Random r = new Random();
+		String rand = "_" + r.nextInt(10000000);
 
 		System.out.println("CPL ver. " + CPL.VERSION_STR);
 		System.out.println();
@@ -96,32 +99,36 @@ public class test {
 		 * Create objects
 		 */
 
+		String bundle_name = "Bundle" + rand;
 		System.out.print("CPLBundle.create(\" Bundle\")");
-		CPLBundle bundle = CPLBundle.create("Bundle", PREFIX);
+		CPLBundle bundle = CPLBundle.create(bundle_name, PREFIX);
 		System.out.println(": " + bundle);
 
 		System.out.println("CPLBundle.addPrefix()");
 		bundle.addPrefix(PREFIX, IRI);
 
-		System.out.print("CPLObject.create(\"Entity\", bundle)");
-		CPLObject entity = CPLObject.create(PREFIX, "Entity",
+		String entity_name = "Entity" + rand;
+		System.out.print("CPLObject.create(\"Entity\")");
+		CPLObject entity = CPLObject.create(PREFIX, entity_name,
 										  CPLObject.ENTITY);
 		System.out.println(": " + entity);
 
-		System.out.print("CPLObject.create(\"Agent\", bundle)");
-		CPLObject agent = CPLObject.create(PREFIX, "Agent",
+		String agent_name = "Agent" + rand;
+		System.out.print("CPLObject.create(\"Agent\")");
+		CPLObject agent = CPLObject.create(PREFIX, agent_name,
 										  CPLObject.AGENT);
 		System.out.println(": " + agent);
 
-		System.out.print("CPLObject.lookupOrCreate(\"Entity\", bundle)");
-		CPLObject entityt = CPLObject.lookupOrCreate(PREFIX, "Entity",
+		System.out.print("CPLObject.lookupOrCreate(\"Entity\")");
+		CPLObject entityt = CPLObject.lookupOrCreate(PREFIX, entity_name,
 													 CPLObject.ENTITY);
 		System.out.println(": " + entityt);
 		if (!entity.equals(entityt))
 			throw new RuntimeException("Object lookup returned the wrong object");
 
-		System.out.print("CPLObject.lookupOrCreate(\"Activity\", bundle)");
-		CPLObject activity = CPLObject.lookupOrCreate(PREFIX, "Activity",
+		String activity_name = "Activity" + rand;
+		System.out.print("CPLObject.lookupOrCreate(\"Activity\")");
+		CPLObject activity = CPLObject.lookupOrCreate(PREFIX, activity_name,
 											  CPLObject.ACTIVITY);
 		System.out.println(": " + activity);
 
@@ -133,25 +140,25 @@ public class test {
 		 */
 
 		System.out.print("CPLBundle.lookup(\"Bundle\")");
-		CPLBundle bundlex = CPLBundle.lookup("Bundle", PREFIX);
+		CPLBundle bundlex = CPLBundle.lookup(bundle_name, PREFIX);
 		System.out.println(": " + bundlex);
 		if (!bundle.equals(bundlex))
 			throw new RuntimeException("Bundle lookup returned the wrong bundle");
 
 		System.out.print("CPLObject.lookup(\"Entity\")");
-		CPLObject entityx = CPLObject.lookup(PREFIX, "Entity", CPLObject.ENTITY);
+		CPLObject entityx = CPLObject.lookup(PREFIX, entity_name, CPLObject.ENTITY);
 		System.out.println(": " + entityx);
 		if (!entity.equals(entityx))
 			throw new RuntimeException("Object lookup returned the wrong object");
 
 		System.out.print("CPLObject.tryLookup(\"Agent\")");
-		CPLObject agentx = CPLObject.tryLookup(PREFIX, "Agent", CPLObject.AGENT);
+		CPLObject agentx = CPLObject.tryLookup(PREFIX, agent_name, CPLObject.AGENT);
 		System.out.println(": " + agentx);
 		if (!agent.equals(agentx))
 			throw new RuntimeException("Object lookup returned the wrong object");
 
 		System.out.print("CPLObject.tryLookup(\"Activity\")");
-		CPLObject activityx = CPLObject.tryLookup(PREFIX, "Activity", CPLObject.ACTIVITY);
+		CPLObject activityx = CPLObject.tryLookup(PREFIX, activity_name, CPLObject.ACTIVITY);
 		System.out.println(": " + activityx);
 		if (!activity.equals(activityx))
 			throw new RuntimeException("Object lookup returned the wrong object");
@@ -163,7 +170,7 @@ public class test {
 			throw new RuntimeException("Object lookup did not fail as expected");
 
 		System.out.print("CPLObject.lookupAll(\"Entity\")");
-		Vector<CPLObject> entityv = CPLObject.lookupAll(PREFIX, "Entity", CPLObject.ENTITY);
+		Vector<CPLObject> entityv = CPLObject.lookupAll(PREFIX, entity_name, CPLObject.ENTITY);
 		System.out.println(": " + (entityv.contains(entity) ? "" : "not ") + "found "
                 + "(" + entityv.size() + " result" + (entityv.size() == 1 ? "" : "s")
                 + ")");
@@ -173,9 +180,9 @@ public class test {
         System.out.print("CPLObject.getAllObjects()");
         Vector<CPLObject> objall = CPLObject.getAllObjects(PREFIX);
 		System.out.println(": " + objall.size() + " results");
-		if (objall.size() != 1)
-			throw new RuntimeException("getAllObjects() has the wrong number of objects");
-		if (objall.firstElement().getId().compareTo(bundle.getId()) == 1)
+
+		Optional<CPLObject> found = objall.stream().filter(obj -> obj.getId().equals(bundle.getId())).findFirst();
+		if (found.isEmpty())
 			throw new RuntimeException("getAllObjects() has the wrong objects");
 
 		System.out.println();
@@ -250,7 +257,7 @@ public class test {
 		System.out.print("CPLObject.getBundleObjects(bundle)");
 		Vector<CPLObject> bovec = bundle.getObjects();
 		System.out.println(": " + bovec.size() + " results");
-		if(bovec.size() != 3){
+		if(bovec.size() != 3 || !bovec.contains(entity) || !bovec.contains(agent) || !bovec.contains(activity)){
 			throw new RuntimeException("getBundleObjects() returned an incorrect vector");
 		}
 
@@ -261,7 +268,7 @@ public class test {
 		System.out.print("entity.getRelations(D_ANCESTORS)");
 		Vector<CPLRelation> rvec = entity.getRelations(CPLObject.D_ANCESTORS, 0);
 		System.out.println(": " + rvec.size() + " results");
-		if(rvec.size() != 2) {
+		if(rvec.size() != 2 || !rvec.contains(r1) || !rvec.contains(r2)) {
 			throw new RuntimeException("Relation lookup returned an incorrect vector");
 		}
 
@@ -282,21 +289,21 @@ public class test {
 		System.out.print("agent.getRelations(D_DESCENDANTS)");
 		rvec = agent.getRelations(CPLObject.D_DESCENDANTS, 0);
 		System.out.println(": " + rvec.size() + " results");
-		if(rvec.size() != 2) {
+		if(rvec.size() != 2 || !rvec.contains(r1) || !rvec.contains(r3)) {
 			throw new RuntimeException("Relation lookup returned an incorrect vector");
 		}
 
 		System.out.print("activity.getRelations(D_ANCESTORS)");
 		rvec = activity.getRelations(CPLObject.D_ANCESTORS, 0);
 		System.out.println(": " + rvec.size() + " results");
-		if(rvec.size() != 1) {
+		if(rvec.size() != 1 || !rvec.contains(r3)) {
 			throw new RuntimeException("Relation lookup returned an incorrect vector");
 		}
 
 		System.out.print("activity.getRelations(D_DESCENDANTS)");
 		Vector<CPLRelation> rlvec = activity.getRelations(CPLObject.D_DESCENDANTS, 0);
 		System.out.println(": " + rlvec.size() + " results");
-		if(rlvec.size() != 1) {
+		if(rlvec.size() != 1 || !rlvec.contains(r2)) {
 			throw new RuntimeException("Relation lookup returned an incorrect vector");
 		}
 		System.out.println();
@@ -307,8 +314,8 @@ public class test {
 
 		System.out.print("CPLObject.getBundleRelations(bundle)");
 		Vector<CPLRelation> brvec = bundle.getRelations();
-		System.out.println(": " + bovec.size() + " results");
-		if(bovec.size() != 3){
+		System.out.println(": " + brvec.size() + " results");
+		if(brvec.size() != 3 || !brvec.contains(r1) || !brvec.contains(r2) || !brvec.contains(r3)){
 			throw new RuntimeException("getBundleRelations() returned an incorrect vector");
 		}
 		/*
@@ -344,151 +351,212 @@ public class test {
 		 * Add object properties
 		 */
 
-		System.out.print("entity.addProperty(\"LABEL\", \"1\")");
-		entity.addProperty(PREFIX, "LABEL", "1");
+		System.out.print("entity.addStringProperty(\"LABEL\", \"1\")");
+		entity.addStringProperty(PREFIX, "LABEL", "1");
+		CPLPropertyEntry<String> e_prop_str = new CPLPropertyEntry<>(PREFIX, "LABEL", "1");
 		System.out.println();
 
-		System.out.print("agent.addProperty(\"LABEL\", \"2\")");
-		agent.addProperty(PREFIX, "LABEL", "2");
+		System.out.print("entity.addNumericalProperty(\"LABEL\", 2.5)");
+		entity.addNumericalProperty(PREFIX, "LABEL", 2.5);
+		CPLPropertyEntry<Double> e_prop_num = new CPLPropertyEntry<>(PREFIX, "LABEL", 2.5);
 		System.out.println();
 
-		System.out.print("activity.addProperty(\"LABEL\", \"3\")");
-		activity.addProperty(PREFIX, "LABEL", "3");
+		System.out.print("entity.addBooleanProperty(\"LABEL\", true)");
+		entity.addBooleanProperty(PREFIX, "LABEL", true);
+		CPLPropertyEntry<Boolean> e_prop_bool = new CPLPropertyEntry<>(PREFIX, "LABEL", true);
 		System.out.println();
 
-		System.out.print("activity.addProperty(\"TAG\", \"Hello\")");
-		activity.addProperty(PREFIX, "TAG", "Hello");
+		System.out.print("agent.addStringProperty(\"LABEL\", \"2\")");
+		agent.addStringProperty(PREFIX, "LABEL", "2");
+		CPLPropertyEntry<String> a_prop_str = new CPLPropertyEntry<>(PREFIX, "LABEL", "2");
+		System.out.println();
+
+		System.out.print("activity.addStringProperty(\"LABEL\", \"3\")");
+		activity.addStringProperty(PREFIX, "LABEL", "3");
+		CPLPropertyEntry<String> ac_prop_str = new CPLPropertyEntry<>(PREFIX, "LABEL", "3");
+		System.out.println();
+
+		System.out.print("activity.addStringProperty(\"TAG\", \"Hello\")");
+		activity.addStringProperty(PREFIX, "TAG", "Hello");
+		CPLPropertyEntry<String> ac_prop_str2 = new CPLPropertyEntry<>(PREFIX, "TAG", "Hello");
 		System.out.println();
 
 		System.out.println();
 
 
 		/*
-		 * List object properties
+		 * Object properties
 		 */
 
 		System.out.println("Properties of activity:");
 
-		System.out.println("activity.getProperties():");
-		for (CPLPropertyEntry e : activity.getProperties()) {
-			System.out.println("  " + e);
+		System.out.println("activity.getStringProperties():");
+		Vector<CPLPropertyEntry<String>> stringProps = activity.getStringProperties();
+		if(stringProps.size() != 2 || !stringProps.contains(ac_prop_str) || !stringProps.contains(ac_prop_str2)){
+			throw new RuntimeException("getStringProperties() returned an incorrect vector");
 		}
 
-		System.out.println("activity.getProperties(\"LABEL\"):");
-		for (CPLPropertyEntry e : activity.getProperties(PREFIX, "LABEL")) {
-			System.out.println("  " + e);
+		System.out.println("activity.getStringProperties(\"LABEL\"):");
+		stringProps = activity.getStringProperties(PREFIX, "LABEL");
+		if (stringProps.size() != 1 || !stringProps.contains(ac_prop_str)) {
+			throw new RuntimeException("getStringProperties(\"LABEL\") returned an incorrect vector");
 		}
 
-		System.out.println("activity.getProperties(\"HELLO\"):");
-		for (CPLPropertyEntry e : activity.getProperties(PREFIX, "HELLO")) {
-			System.out.println("  " + e);
+		System.out.println("activity.getStringProperties(\"TAG\"):");
+		stringProps = activity.getStringProperties(PREFIX, "TAG");
+		if (stringProps.size() != 1 || !stringProps.contains(ac_prop_str2)) {
+			throw new RuntimeException("getStringProperties(\"TAG\") returned an incorrect vector");
 		}
 
 		System.out.println();
 
+
+		System.out.println("Properties of entity:");
+
+		System.out.println("entity.getStringProperties():");
+		stringProps = entity.getStringProperties();
+		if(stringProps.size() != 1 || !stringProps.contains(e_prop_str)){
+			throw new RuntimeException("getStringProperties() returned an incorrect vector");
+		}
+
+		System.out.println("entity.getNumericalProperties():");
+		Vector<CPLPropertyEntry<Double>> numProps = entity.getNumericalProperties();
+		if(numProps.size() != 1 || !numProps.contains(e_prop_num)){
+			throw new RuntimeException("getNumericalProperties() returned an incorrect vector");
+		}
+
+		System.out.println("entity.getBooleanProperties():");
+		Vector<CPLPropertyEntry<Boolean>> boolProps = entity.getBooleanProperties();
+		if(boolProps.size() != 1 || !boolProps.contains(e_prop_bool)){
+			throw new RuntimeException("getBooleanProperties() returned an incorrect vector");
+		}
+
+		System.out.println();
 
 		/*
 		 * Lookup object by property
 		 */
 
-		System.out.print("CPLObject.lookupByProperty(\"LABEL\", \"3\")");
-		Vector<CPLObject> lv = CPLObject.lookupByProperty(PREFIX, "LABEL",
+		System.out.print("CPLObject.lookupByStringProperty(\"LABEL\", \"3\")");
+		Vector<CPLObject> lv = CPLObject.lookupByStringProperty(PREFIX, "LABEL",
 				"3");
 		System.out.print(": ");
-		if (lv.contains(activity)) {
-			System.out.println("found");
-		}
-		else {
+		if (!lv.contains(activity)) {
 			System.out.println("not found");
 			throw new RuntimeException("Lookup by property did not return the correct object");
 		}
 
 		System.out.println();
 
+		System.out.print("CPLObject.lookupByNumericalProperty(\"LABEL\", 2.5)");
+		lv = CPLObject.lookupByNumericalProperty(PREFIX, "LABEL",
+				2.5);
+		System.out.print(": ");
+		if (!lv.contains(entity)) {
+			System.out.println("not found");
+			throw new RuntimeException("Lookup by property did not return the correct object");
+		}
+
+		System.out.println();
+
+		System.out.print("CPLObject.lookupByBooleanProperty(\"LABEL\", true)");
+		lv = CPLObject.lookupByBooleanProperty(PREFIX, "LABEL",
+				true);
+		System.out.print(": ");
+		if (!lv.contains(entity)) {
+			System.out.println("not found");
+			throw new RuntimeException("Lookup by property did not return the correct object");
+		}
+
+		System.out.println();
 
 		/*
 		 * Add relation properties
 		 */
 
-		System.out.print("r1.addProperty(\"LABEL\", \"1\")");
-		r1.addProperty(PREFIX, "LABEL", "1");
+		System.out.print("r1.addStringProperty(\"LABEL\", \"1\")");
+		r1.addStringProperty(PREFIX, "LABEL", "1");
+		CPLPropertyEntry<String> r1_prop_str = new CPLPropertyEntry<>(PREFIX, "LABEL", "1");
 		System.out.println();
 
-		System.out.print("r2.addProperty(\"LABEL\", \"2\")");
-		r2.addProperty(PREFIX, "LABEL", "2");
+		System.out.print("r1.addNumericalProperty(\"LABEL\", 4.5)");
+		r1.addNumericalProperty(PREFIX, "LABEL", 4.5);
+		CPLPropertyEntry<Double> r1_prop_num = new CPLPropertyEntry<>(PREFIX, "LABEL", 4.5);
 		System.out.println();
 
-		System.out.print("r3.addProperty(\"LABEL\", \"3\")");
-		r3.addProperty(PREFIX, "LABEL", "3");
+		System.out.print("r1.addBooleanProperty(\"LABEL\", false)");
+		r1.addBooleanProperty(PREFIX, "LABEL", false);
+		CPLPropertyEntry<Boolean> r1_prop_bool = new CPLPropertyEntry<>(PREFIX, "LABEL", false);
 		System.out.println();
 
-		System.out.print("r3.addProperty(\"TAG\", \"Hello\")");
-		r3.addProperty(PREFIX, "TAG", "Hello");
+		System.out.print("r2.addStringProperty(\"LABEL\", \"2\")");
+		r2.addStringProperty(PREFIX, "LABEL", "2");
+		CPLPropertyEntry<String> r2_prop_str = new CPLPropertyEntry<>(PREFIX, "LABEL", "2");
+		System.out.println();
+
+		System.out.print("r3.addStringProperty(\"LABEL\", \"3\")");
+		r3.addStringProperty(PREFIX, "LABEL", "3");
+		CPLPropertyEntry<String> r3_prop_str = new CPLPropertyEntry<>(PREFIX, "LABEL", "3");
+		System.out.println();
+
+		System.out.print("r3.addStringProperty(\"TAG\", \"Hello\")");
+		r3.addStringProperty(PREFIX, "TAG", "Hello");
+		CPLPropertyEntry<String> r3_prop_str2 = new CPLPropertyEntry<>(PREFIX, "TAG", "Hello");
 		System.out.println();
 
 		System.out.println();
+
 
 		/*
-		 * List relation properties
+		 * Relation properties
 		 */
+		System.out.println("Properties of r1:");
+
+		System.out.println("r1.getStringProperties():");
+		stringProps = r1.getStringProperties();
+		if(stringProps.size() != 1 || !stringProps.contains(r1_prop_str)){
+			throw new RuntimeException("getStringProperties() returned an incorrect vector");
+		}
+
+		System.out.println("r1.getNumericalProperties():");
+		numProps = r1.getNumericalProperties();
+		if(numProps.size() != 1 || !numProps.contains(r1_prop_num)){
+			throw new RuntimeException("getNumericalProperties() returned an incorrect vector");
+		}
+
+		System.out.println("r1.getBooleanProperties():");
+		boolProps = r1.getBooleanProperties();
+		if(boolProps.size() != 1 || !boolProps.contains(r1_prop_bool)){
+			throw new RuntimeException("getBooleanProperties() returned an incorrect vector");
+		}
+
+		System.out.println();
 
 		System.out.println("Properties of r3:");
 
-		System.out.println("r3.getProperties():");
-		for (CPLPropertyEntry e : r3.getProperties()) {
-			System.out.println("  " + e);
+		System.out.println("r3.getStringProperties():");
+		stringProps = r3.getStringProperties();
+		if(stringProps.size() != 2 || !stringProps.contains(r3_prop_str) || !stringProps.contains(r3_prop_str2)){
+			throw new RuntimeException("getStringProperties() returned an incorrect vector");
 		}
 
-		System.out.println("r3.getProperties(\"LABEL\"):");
-		for (CPLPropertyEntry e : r3.getProperties(PREFIX, "LABEL")) {
-			System.out.println("  " + e);
+		System.out.println("r3.getStringProperties(\"LABEL\"):");
+		stringProps = r3.getStringProperties(PREFIX, "LABEL");
+		if (stringProps.size() != 1 || !stringProps.contains(r3_prop_str)) {
+			throw new RuntimeException("getStringProperties(\"LABEL\") returned an incorrect vector");
 		}
 
-		System.out.println("r3.getProperties(\"HELLO\"):");
-		for (CPLPropertyEntry e : r3.getProperties(PREFIX, "HELLO")) {
-			System.out.println("  " + e);
+		System.out.println("r3.getStringProperties(\"TAG\"):");
+		stringProps = r3.getStringProperties(PREFIX, "TAG");
+		if (stringProps.size() != 1 || !stringProps.contains(r3_prop_str2)) {
+			throw new RuntimeException("getStringProperties(\"TAG\") returned an incorrect vector");
 		}
+		
+
+		//TODO: delete the bundle
 
 		System.out.println();
-
-		/*
-		 * Add bundle properties
-		 */
-
-
-		System.out.print("bundle.addProperty(\"LABEL\", \"3\")");
-		bundle.addProperty(PREFIX, "LABEL", "3");
-		System.out.println();
-
-		System.out.print("bundle.addProperty(\"TAG\", \"Hello\")");
-		bundle.addProperty(PREFIX, "TAG", "Hello");
-		System.out.println();
-
-		System.out.println();
-
-		/*
-		 * List relation properties
-		 */
-
-		System.out.println("Properties of bundle:");
-
-		System.out.println("bundle.getProperties():");
-		for (CPLPropertyEntry e : bundle.getProperties()) {
-			System.out.println("  " + e);
-		}
-
-		System.out.println("bundle.getProperties(\"LABEL\"):");
-		for (CPLPropertyEntry e : bundle.getProperties(PREFIX, "LABEL")) {
-			System.out.println("  " + e);
-		}
-
-		System.out.println("bundle.getProperties(\"HELLO\"):");
-		for (CPLPropertyEntry e : bundle.getProperties(PREFIX, "HELLO")) {
-			System.out.println("  " + e);
-		}
-
-		System.out.println();
-		System.out.println("Success");
+		System.out.println("All tests passed.");
 	}
 }
 

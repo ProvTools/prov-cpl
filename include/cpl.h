@@ -250,6 +250,7 @@ typedef cpl_return_t (*cpl_property_iterator_t)
 						 const char* prefix,
 						 const char* key,
 						 const char* value,
+						 const int type,
 						 void* context);
 
 /**
@@ -327,6 +328,14 @@ extern cpl_session_t cpl_session;
 #define CPL_IS_RELATION_TYPE(r)			((r) > 0 && (r) < 20)
 
 #define CPL_NUM_R_TYPES					19
+
+/***************************************************************************/
+/** Object Property Types                                                 **/
+/***************************************************************************/
+#define     STRINGPROPERTY              0
+#define     NUMERICALPROPERTY           1
+#define     BOOLEANPROPERTY             2
+
 /***************************************************************************/
 /** Return Codes                                                          **/
 /***************************************************************************/
@@ -660,10 +669,41 @@ cpl_lookup_or_create_object(const char* prefix,
  * @return CPL_OK or an error code
  */
 EXPORT cpl_return_t
-cpl_add_object_property(const cpl_id_t id,
+cpl_add_object_string_property(const cpl_id_t id,
 					    const char* prefix,
 					    const char* key,
 	                    const char* value);
+
+/**
+ * Add a property to the given object.
+ *
+ * @param id the object ID
+ * @param prefix the prefix
+ * @param key the key
+ * @param value the value
+ * @return CPL_OK or an error code
+ */
+EXPORT cpl_return_t
+cpl_add_object_numerical_property(const cpl_id_t id,
+                        const char* prefix,
+                        const char* key,
+                        const double value);
+
+/**
+ * Add a property to the given object.
+ *
+ * @param id the object ID
+ * @param prefix the prefix
+ * @param key the key
+ * @param value the value
+ * @return CPL_OK or an error code
+ */
+EXPORT cpl_return_t
+cpl_add_object_boolean_property(const cpl_id_t id,
+                        const char* prefix,
+                        const char* key,
+                        const bool value);
+
 
 /**
 * Add a relation
@@ -691,11 +731,40 @@ cpl_add_relation(const cpl_id_t from_id,
  * @return CPL_OK or an error code
  */
 EXPORT cpl_return_t
-cpl_add_relation_property(const cpl_id_t id,
+cpl_add_relation_string_property(const cpl_id_t id,
 						  const char* prefix,
 						  const char* key,
 		                  const char* value);
 
+/**
+ * Add a property to the given relation.
+ *
+ * @param id the object ID
+  * @param prefix the prefix
+ * @param key the key
+ * @param value the value
+ * @return CPL_OK or an error code
+ */
+EXPORT cpl_return_t
+cpl_add_relation_numerical_property(const cpl_id_t id,
+                          const char* prefix,
+                          const char* key,
+                          const double value);
+
+/**
+ * Add a property to the given relation.
+ *
+ * @param id the object ID
+  * @param prefix the prefix
+ * @param key the key
+ * @param value the value
+ * @return CPL_OK or an error code
+ */
+EXPORT cpl_return_t
+cpl_add_relation_boolean_property(const cpl_id_t id,
+                          const char* prefix,
+                          const char* key,
+                          const bool value);
 /**
  * Create a bundle.
  *
@@ -762,21 +831,6 @@ cpl_lookup_relation(const cpl_id_t from_id,
 EXPORT cpl_return_t
 cpl_lookup_object_property_wildcard(const char* value,
                     cpl_id_t* out_id);
-
-/**
- * Add a property to the given relation.
- *
- * @param id the object ID
- * @param prefix the namespace prefix
- * @param key the key
- * @param value the value
- * @return CPL_OK or an error code
- */
-EXPORT cpl_return_t
-cpl_add_bundle_property(const cpl_id_t id,
-					    const char* prefix,
-					    const char* key,
-	                    const char* value);
 
 /**
  * Add a prefix to a bundle.
@@ -892,11 +946,49 @@ cpl_get_object_relations(const cpl_id_t id,
  * @return CPL_OK, CPL_S_NO_DATA, or an error code
  */
 EXPORT cpl_return_t
-cpl_get_object_properties(const cpl_id_t id,
+cpl_get_object_string_properties(const cpl_id_t id,
 	                      const char* prefix,
 				          const char* key,
 				          cpl_property_iterator_t iterator,
 				          void* context);
+
+/**
+ * Get the properties associated with the given provenance object.
+ *
+ * @param id the the object ID
+ * @param prefix the property prefix to fetch - or NULL
+ *               (along with key)for all properties
+ * @param key the property key to fetch - or NULL
+ *            (along with prefix) for all keys
+ * @param iterator the iterator callback function
+ * @param context the user context to be passed to the iterator function
+ * @return CPL_OK, CPL_S_NO_DATA, or an error code
+ */
+EXPORT cpl_return_t
+cpl_get_object_numerical_properties(const cpl_id_t id,
+                          const char* prefix,
+                          const char* key,
+                          cpl_property_iterator_t iterator,
+                          void* context);
+
+/**
+ * Get the properties associated with the given provenance object.
+ *
+ * @param id the the object ID
+ * @param prefix the property prefix to fetch - or NULL
+ *               (along with key)for all properties
+ * @param key the property key to fetch - or NULL
+ *            (along with prefix) for all keys
+ * @param iterator the iterator callback function
+ * @param context the user context to be passed to the iterator function
+ * @return CPL_OK, CPL_S_NO_DATA, or an error code
+ */
+EXPORT cpl_return_t
+cpl_get_object_boolean_properties(const cpl_id_t id,
+                          const char* prefix,
+                          const char* key,
+                          cpl_property_iterator_t iterator,
+                          void* context);
 
 /**
  * Lookup an object based on a property value.
@@ -909,12 +1001,45 @@ cpl_get_object_properties(const cpl_id_t id,
  * @return CPL_OK, CPL_E_NOT_FOUND, or an error code
  */
 EXPORT cpl_return_t
-cpl_lookup_object_by_property(const char* prefix,
+cpl_lookup_object_by_string_property(const char* prefix,
 							  const char* key,
 					          const char* value,
 					          cpl_property_iterator_t iterator,
 					          void* context);
 
+/**
+ * Lookup an object based on a property value.
+ *
+ * @param prefix the property prefix
+ * @param key the property name
+ * @param value the property value
+ * @param iterator the iterator callback function
+ * @param context the user context to be passed to the iterator function
+ * @return CPL_OK, CPL_E_NOT_FOUND, or an error code
+ */
+EXPORT cpl_return_t
+cpl_lookup_object_by_numerical_property(const char* prefix,
+                              const char* key,
+                              const double value,
+                              cpl_property_iterator_t iterator,
+                              void* context);
+
+/**
+ * Lookup an object based on a property value.
+ *
+ * @param prefix the property prefix
+ * @param key the property name
+ * @param value the property value
+ * @param iterator the iterator callback function
+ * @param context the user context to be passed to the iterator function
+ * @return CPL_OK, CPL_E_NOT_FOUND, or an error code
+ */
+EXPORT cpl_return_t
+cpl_lookup_object_by_boolean_property(const char* prefix,
+                              const char* key,
+                              const bool value,
+                              cpl_property_iterator_t iterator,
+                              void* context);
 /**
  * Get the properties associated with the given provenance object.
  * 
@@ -928,12 +1053,49 @@ cpl_lookup_object_by_property(const char* prefix,
  * @return CPL_OK, CPL_S_NO_DATA, or an error code
  */
 EXPORT cpl_return_t
-cpl_get_relation_properties(const cpl_id_t id,
+cpl_get_relation_string_properties(const cpl_id_t id,
 							const char* prefix,
 				            const char* key,
 				            cpl_property_iterator_t iterator,
 				            void* context);
 
+/**
+ * Get the properties associated with the given provenance object.
+ *
+ * @param id the the object ID
+ * @param prefix the property prefix to fetch - or NULL
+ *               (along with key)for all properties
+ * @param key the property key to fetch - or NULL
+ *            (along with prefix) for all keys
+ * @param iterator the iterator callback function
+ * @param context the user context to be passed to the iterator function
+ * @return CPL_OK, CPL_S_NO_DATA, or an error code
+ */
+EXPORT cpl_return_t
+cpl_get_relation_numerical_properties(const cpl_id_t id,
+                            const char* prefix,
+                            const char* key,
+                            cpl_property_iterator_t iterator,
+                            void* context);
+
+/**
+ * Get the properties associated with the given provenance object.
+ *
+ * @param id the the object ID
+ * @param prefix the property prefix to fetch - or NULL
+ *               (along with key)for all properties
+ * @param key the property key to fetch - or NULL
+ *            (along with prefix) for all keys
+ * @param iterator the iterator callback function
+ * @param context the user context to be passed to the iterator function
+ * @return CPL_OK, CPL_S_NO_DATA, or an error code
+ */
+EXPORT cpl_return_t
+cpl_get_relation_boolean_properties(const cpl_id_t id,
+                            const char* prefix,
+                            const char* key,
+                            cpl_property_iterator_t iterator,
+                            void* context);
 /**
  * Deletes a bundle and all objects and relations belonging to it.
  *
@@ -988,25 +1150,6 @@ EXPORT cpl_return_t
 cpl_get_bundle_relations(const cpl_id_t id,
 					     cpl_relation_iterator_t iterator,
 					     void* context);
-
-/**
- * Get the properties associated with the given provenance bundle.
- *
- * @param id the the bundle ID
- * @param prefix the property prefix to fetch - or NULL 
- *               (along with key)for all properties
- * @param key the property key to fetch - or NULL 
- *            (along with prefix) for all keys
- * @param iterator the iterator callback function
- * @param context the user context to be passed to the iterator function
- * @return CPL_OK, CPL_S_NO_DATA, or an error code
- */
-EXPORT cpl_return_t
-cpl_get_bundle_properties(const cpl_id_t id,
-						  const char* prefix,
-			              const char* key,
-			              cpl_property_iterator_t iterator,
-			              void* context);
 
 /**
  * Get the prefixes associated with the given provenance bundle.

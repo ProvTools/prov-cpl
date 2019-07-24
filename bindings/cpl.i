@@ -141,20 +141,47 @@ cpl_convert_p_std_vector_cplxx_object_info_t_to_p_void(
     return (void*) p;
 }
 
-typedef std::vector<cplxx_property_entry_t> std_vector_cplxx_property_entry_t;
+typedef std::vector<cplxx_string_property_entry_t> std_vector_cplxx_string_property_entry_t;
 
-inline std::vector<cplxx_property_entry_t>&
-cpl_dereference_p_std_vector_cplxx_property_entry_t(
-        std_vector_cplxx_property_entry_t* p) {
+inline std::vector<cplxx_string_property_entry_t>&
+cpl_dereference_p_std_vector_cplxx_string_property_entry_t(
+        std_vector_cplxx_string_property_entry_t* p) {
     return *p;
 }
 
+typedef std::vector<cplxx_numerical_property_entry_t> std_vector_cplxx_numerical_property_entry_t;
+
+inline std::vector<cplxx_numerical_property_entry_t>&
+cpl_dereference_p_std_vector_cplxx_numerical_property_entry_t(
+        std_vector_cplxx_numerical_property_entry_t* p) {
+return *p;
+}
+
+typedef std::vector<cplxx_boolean_property_entry_t> std_vector_cplxx_boolean_property_entry_t;
+
+inline std::vector<cplxx_boolean_property_entry_t>&
+cpl_dereference_p_std_vector_cplxx_boolean_property_entry_t(
+        std_vector_cplxx_boolean_property_entry_t* p) {
+return *p;
+}
+
 inline void*
-cpl_convert_p_std_vector_cplxx_property_entry_t_to_p_void(
-        std_vector_cplxx_property_entry_t* p) {
+cpl_convert_p_std_vector_cplxx_string_property_entry_t_to_p_void(
+        std_vector_cplxx_string_property_entry_t* p) {
     return (void*) p;
 }
 
+inline void*
+cpl_convert_p_std_vector_cplxx_numerical_property_entry_t_to_p_void(
+        std_vector_cplxx_numerical_property_entry_t* p) {
+    return (void*) p;
+}
+
+inline void*
+cpl_convert_p_std_vector_cplxx_boolean_property_entry_t_to_p_void(
+        std_vector_cplxx_boolean_property_entry_t* p) {
+    return (void*) p;
+}
 typedef std::vector<cplxx_prefix_entry_t> std_vector_cplxx_prefix_entry_t;
 
 inline std::vector<cplxx_prefix_entry_t>&
@@ -317,15 +344,35 @@ inline void*
 cpl_convert_p_std_vector_cplxx_object_info_t_to_p_void(
         std_vector_cplxx_object_info_t* p);
 
-%template (cplxx_property_entry_t_vector) std::vector<cplxx_property_entry_t>;
+%template (cplxx_string_property_entry_t_vector) std::vector<cplxx_string_property_entry_t>;
 
-inline std::vector<cplxx_property_entry_t>&
-cpl_dereference_p_std_vector_cplxx_property_entry_t(
-    std_vector_cplxx_property_entry_t* p);
+inline std::vector<cplxx_string_property_entry_t>&
+cpl_dereference_p_std_vector_cplxx_string_property_entry_t(
+    std_vector_cplxx_string_property_entry_t* p);
+
+%template (cplxx_numerical_property_entry_t_vector) std::vector<cplxx_numerical_property_entry_t>;
+
+inline std::vector<cplxx_numerical_property_entry_t>&
+cpl_dereference_p_std_vector_cplxx_numerical_property_entry_t(
+        std_vector_cplxx_numerical_property_entry_t* p);
+
+%template (cplxx_boolean_property_entry_t_vector) std::vector<cplxx_boolean_property_entry_t>;
+
+inline std::vector<cplxx_boolean_property_entry_t>&
+cpl_dereference_p_std_vector_cplxx_boolean_property_entry_t(
+        std_vector_cplxx_boolean_property_entry_t* p);
 
 inline void*
-cpl_convert_p_std_vector_cplxx_property_entry_t_to_p_void(
-        std_vector_cplxx_property_entry_t* p);
+cpl_convert_p_std_vector_cplxx_string_property_entry_t_to_p_void(
+        std_vector_cplxx_string_property_entry_t* p);
+
+inline void*
+cpl_convert_p_std_vector_cplxx_numerical_property_entry_t_to_p_void(
+        std_vector_cplxx_numerical_property_entry_t* p);
+
+inline void*
+cpl_convert_p_std_vector_cplxx_boolean_property_entry_t_to_p_void(
+        std_vector_cplxx_boolean_property_entry_t* p);
 
 %template (cplxx_prefix_entry_t_vector) std::vector<cplxx_prefix_entry_t>;
 
@@ -405,8 +452,14 @@ cpl_convert_p_std_vector_cpl_id_t_to_p_void(
 %pointer_functions(std_vector_cplxx_object_info_t,
         std_vector_cplxx_object_info_tp);
 
-%pointer_functions(std_vector_cplxx_property_entry_t,
-        std_vector_cplxx_property_entry_tp);
+%pointer_functions(std_vector_cplxx_string_property_entry_t,
+        std_vector_cplxx_string_property_entry_tp);
+
+%pointer_functions(std_vector_cplxx_numerical_property_entry_t,
+        std_vector_cplxx_numerical_property_entry_tp);
+
+%pointer_functions(std_vector_cplxx_boolean_property_entry_t,
+        std_vector_cplxx_boolean_property_entry_tp);
 
 %pointer_functions(std_vector_cplxx_prefix_entry_t,
         std_vector_cplxx_prefix_entry_tp);

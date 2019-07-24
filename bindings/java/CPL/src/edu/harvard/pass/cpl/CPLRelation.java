@@ -230,12 +230,37 @@ public class CPLRelation {
 	 * @param key the key
 	 * @param value the value
 	 */
-	public void addProperty(String prefix, String key, String value) {
+	public void addStringProperty(String prefix, String key, String value) {
 
-		int r = CPLDirect.cpl_add_relation_property(id, prefix, key, value);
+		int r = CPLDirect.cpl_add_relation_string_property(id, prefix, key, value);
 		CPLException.assertSuccess(r);
 	}
 
+	/**
+	 * Add a property
+	 *
+	 * @param the namespace prefix
+	 * @param key the key
+	 * @param value the value
+	 */
+	public void addNumericalProperty(String prefix, String key, double value) {
+
+		int r = CPLDirect.cpl_add_relation_numerical_property(id, prefix, key, value);
+		CPLException.assertSuccess(r);
+	}
+
+	/**
+	 * Add a property
+	 *
+	 * @param the namespace prefix
+	 * @param key the key
+	 * @param value the value
+	 */
+	public void addBooleanProperty(String prefix, String key, boolean value) {
+
+		int r = CPLDirect.cpl_add_relation_boolean_property(id, prefix, key, value);
+		CPLException.assertSuccess(r);
+	}
 
 	/**
 	 * Get the properties of an ancestry edge
@@ -244,44 +269,135 @@ public class CPLRelation {
 	 * @param key the property name or null for all entries
 	 * @return the vector of property entries
 	 */
-	public Vector<CPLPropertyEntry> getProperties(String prefix, String key) {
-				SWIGTYPE_p_std_vector_cplxx_property_entry_t pVector
-			= CPLDirect.new_std_vector_cplxx_property_entry_tp();
+	public Vector<CPLPropertyEntry<String>> getStringProperties(String prefix, String key) {
+				SWIGTYPE_p_std_vector_cplxx_string_property_entry_t pVector
+			= CPLDirect.new_std_vector_cplxx_string_property_entry_tp();
 		SWIGTYPE_p_void pv = CPLDirect
-			.cpl_convert_p_std_vector_cplxx_property_entry_t_to_p_void(pVector);
-		Vector<CPLPropertyEntry> result = null;
+			.cpl_convert_p_std_vector_cplxx_string_property_entry_t_to_p_void(pVector);
+		Vector<CPLPropertyEntry<String>> result = null;
 
 		try {
-			int r = CPLDirect.cpl_get_relation_properties(id, prefix, key,
+			int r = CPLDirect.cpl_get_relation_string_properties(id, prefix, key,
 					CPLDirect.cpl_cb_collect_properties_vector, pv);
 			CPLException.assertSuccess(r);
 
-			cplxx_property_entry_t_vector v = CPLDirect
-				.cpl_dereference_p_std_vector_cplxx_property_entry_t(pVector);
+			cplxx_string_property_entry_t_vector v = CPLDirect
+				.cpl_dereference_p_std_vector_cplxx_string_property_entry_t(pVector);
 			long l = v.size();
-			result = new Vector<CPLPropertyEntry>((int) l);
+			result = new Vector<CPLPropertyEntry<String>>((int) l);
 			for (long i = 0; i < l; i++) {
-				cplxx_property_entry_t e = v.get((int) i);
-				result.add(new CPLPropertyEntry(e.getPrefix(),
+				cplxx_string_property_entry_t e = v.get((int) i);
+				result.add(new CPLPropertyEntry<String>(e.getPrefix(),
 							e.getKey(),
 							e.getValue()));
 			}
 		}
 		finally {
-			CPLDirect.delete_std_vector_cplxx_property_entry_tp(pVector);
+			CPLDirect.delete_std_vector_cplxx_string_property_entry_tp(pVector);
 		}
 
 		return result;
 	}
 
+	/**
+	 * Get the properties of an ancestry edge
+	 *
+	 * @param prefix the namespace prefix or null for all entries
+	 * @param key the property name or null for all entries
+	 * @return the vector of property entries
+	 */
+	public Vector<CPLPropertyEntry<Double>> getNumericalProperties(String prefix, String key) {
+		SWIGTYPE_p_std_vector_cplxx_numerical_property_entry_t pVector
+				= CPLDirect.new_std_vector_cplxx_numerical_property_entry_tp();
+		SWIGTYPE_p_void pv = CPLDirect
+				.cpl_convert_p_std_vector_cplxx_numerical_property_entry_t_to_p_void(pVector);
+		Vector<CPLPropertyEntry<Double>> result = null;
+
+		try {
+			int r = CPLDirect.cpl_get_relation_numerical_properties(id, prefix, key,
+					CPLDirect.cpl_cb_collect_properties_vector, pv);
+			CPLException.assertSuccess(r);
+
+			cplxx_numerical_property_entry_t_vector v = CPLDirect
+					.cpl_dereference_p_std_vector_cplxx_numerical_property_entry_t(pVector);
+			long l = v.size();
+			result = new Vector<CPLPropertyEntry<Double>>((int) l);
+			for (long i = 0; i < l; i++) {
+				cplxx_numerical_property_entry_t e = v.get((int) i);
+				result.add(new CPLPropertyEntry<Double>(e.getPrefix(),
+						e.getKey(),
+						e.getValue()));
+			}
+		}
+		finally {
+			CPLDirect.delete_std_vector_cplxx_numerical_property_entry_tp(pVector);
+		}
+
+		return result;
+	}
+
+	/**
+	 * Get the properties of an ancestry edge
+	 *
+	 * @param prefix the namespace prefix or null for all entries
+	 * @param key the property name or null for all entries
+	 * @return the vector of property entries
+	 */
+	public Vector<CPLPropertyEntry<Boolean>> getBooleanProperties(String prefix, String key) {
+		SWIGTYPE_p_std_vector_cplxx_boolean_property_entry_t pVector
+				= CPLDirect.new_std_vector_cplxx_boolean_property_entry_tp();
+		SWIGTYPE_p_void pv = CPLDirect
+				.cpl_convert_p_std_vector_cplxx_boolean_property_entry_t_to_p_void(pVector);
+		Vector<CPLPropertyEntry<Boolean>> result = null;
+
+		try {
+			int r = CPLDirect.cpl_get_relation_boolean_properties(id, prefix, key,
+					CPLDirect.cpl_cb_collect_properties_vector, pv);
+			CPLException.assertSuccess(r);
+
+			cplxx_boolean_property_entry_t_vector v = CPLDirect
+					.cpl_dereference_p_std_vector_cplxx_boolean_property_entry_t(pVector);
+			long l = v.size();
+			result = new Vector<CPLPropertyEntry<Boolean>>((int) l);
+			for (long i = 0; i < l; i++) {
+				cplxx_boolean_property_entry_t e = v.get((int) i);
+				result.add(new CPLPropertyEntry<Boolean>(e.getPrefix(),
+						e.getKey(),
+						e.getValue()));
+			}
+		}
+		finally {
+			CPLDirect.delete_std_vector_cplxx_boolean_property_entry_tp(pVector);
+		}
+
+		return result;
+	}
 
 	/**
 	 * Get all properties of a relation
 	 *
 	 * @return the vector of property entries
 	 */
-	public Vector<CPLPropertyEntry> getProperties() {
-		return getProperties(null, null);
+	public Vector<CPLPropertyEntry<String>> getStringProperties() {
+		return getStringProperties(null, null);
+	}
+
+	/**
+	 * Get all properties of a relation
+	 *
+	 * @return the vector of property entries
+	 */
+	public Vector<CPLPropertyEntry<Double>> getNumericalProperties() {
+		return getNumericalProperties(null, null);
+	}
+
+	/**
+	 * Get all properties of a relation
+	 *
+	 * @return the vector of property entries
+	 */
+	public Vector<CPLPropertyEntry<Boolean>> getBooleanProperties() {
+		return getBooleanProperties(null, null);
 	}
 }
 

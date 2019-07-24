@@ -168,7 +168,8 @@ __relation_dict = {"wasInfluencedBy"    :1,
 
 __object_list = ["entity",
                  "activity",
-                 "agent"]
+                 "agent",
+                 "bundle"]
 
 __object_dict = {"entity"   :1,
                  "activity" :2,
@@ -280,24 +281,6 @@ def p_object(obj):
     print 'creation_time:' + str(i.creation_time)
     print
 
-
-def p_bundle(bun, with_session = False):
-    '''
-    Print information about a bundle
-
-    Method calls:
-        p_bundle(bun, with_session = False)
-    '''
-
-    i = bun.info()
-    p_id(i.bundle.id)
-    sys.stdout.write(' name:' + i.name)
-    if with_session:
-        print 'creation_time:' + str(i.creation_time)
-        p_session(i.creation_session)
-    print
-
-
 def p_session(session):
     '''
     Print information about a session
@@ -364,35 +347,92 @@ class cpl_relation:
             ' [type:' + relation_type_to_str(self.type) +
             '; id: ' + str(self.id) + ']')
 
-    def properties(self, prefix=None, key=None):
+    def string_properties(self, prefix=None, key=None):
         '''
         Return all the properties associated with the current relation.
 
         If key is set to something other than None, return only those
         properties matching key.
         '''
-        vp = CPLDirect.new_std_vector_cplxx_property_entry_tp()
+        vp = CPLDirect.new_std_vector_cplxx_string_property_entry_tp()
 
-        ret = CPLDirect.cpl_get_relation_properties(self.id, prefix, key,
-            CPLDirect.cpl_cb_collect_properties_vector, vp)
+        ret = CPLDirect.cpl_get_relation_string_properties(self.id, prefix, key,
+                                                           CPLDirect.cpl_cb_collect_properties_vector, vp)
         if not CPLDirect.cpl_is_ok(ret):
-            CPLDirect.delete_std_vector_cplxx_property_entry_tp(vp)
+            CPLDirect.delete_std_vector_cplxx_string_property_entry_tp(vp)
             raise CPLException('Error retrieving properties: ' +
-                    CPLDirect.cpl_error_string(ret), ret)
+                               CPLDirect.cpl_error_string(ret), ret)
 
-        v = CPLDirect.cpl_dereference_p_std_vector_cplxx_property_entry_t(vp)
+        v = CPLDirect.cpl_dereference_p_std_vector_cplxx_string_property_entry_t(vp)
         l = []
         for e in v:
             l.append([e.prefix, e.key, e.value])
-        CPLDirect.delete_std_vector_cplxx_property_entry_tp(vp)
+        CPLDirect.delete_std_vector_cplxx_string_property_entry_tp(vp)
         return l
 
-    def add_property(self, prefix, name, value):
+    def numerical_properties(self, prefix=None, key=None):
+        '''
+        Return all the properties associated with the current relation.
+
+        If key is set to something other than None, return only those
+        properties matching key.
+        '''
+        vp = CPLDirect.new_std_vector_cplxx_numerical_property_entry_tp()
+
+        ret = CPLDirect.cpl_get_relation_numerical_properties(self.id, prefix, key,
+                                                           CPLDirect.cpl_cb_collect_properties_vector, vp)
+        if not CPLDirect.cpl_is_ok(ret):
+            CPLDirect.delete_std_vector_cplxx_numerical_property_entry_tp(vp)
+            raise CPLException('Error retrieving properties: ' +
+                               CPLDirect.cpl_error_string(ret), ret)
+
+        v = CPLDirect.cpl_dereference_p_std_vector_cplxx_numerical_property_entry_t(vp)
+        l = []
+        for e in v:
+            l.append([e.prefix, e.key, e.value])
+        CPLDirect.delete_std_vector_cplxx_numerical_property_entry_tp(vp)
+        return l
+
+    def boolean_properties(self, prefix=None, key=None):
+        '''
+        Return all the properties associated with the current relation.
+
+        If key is set to something other than None, return only those
+        properties matching key.
+        '''
+        vp = CPLDirect.new_std_vector_cplxx_boolean_property_entry_tp()
+
+        ret = CPLDirect.cpl_get_relation_boolean_properties(self.id, prefix, key,
+                                                           CPLDirect.cpl_cb_collect_properties_vector, vp)
+        if not CPLDirect.cpl_is_ok(ret):
+            CPLDirect.delete_std_vector_cplxx_boolean_property_entry_tp(vp)
+            raise CPLException('Error retrieving properties: ' +
+                               CPLDirect.cpl_error_string(ret), ret)
+
+        v = CPLDirect.cpl_dereference_p_std_vector_cplxx_boolean_property_entry_t(vp)
+        l = []
+        for e in v:
+            l.append([e.prefix, e.key, e.value])
+        CPLDirect.delete_std_vector_cplxx_boolean_property_entry_tp(vp)
+        return l
+
+    def add_string_property(self, prefix, name, value):
         '''
         Add name/value pair as a property to current object.
         '''
-        return CPLDirect.cpl_add_relation_property(self.id, prefix, name, value)
+        return CPLDirect.cpl_add_relation_string_property(self.id, prefix, name, value)
 
+    def add_numerical_property(self, prefix, name, value):
+        '''
+        Add name/value pair as a property to current object.
+        '''
+        return CPLDirect.cpl_add_relation_numerical_property(self.id, prefix, name, value)
+
+    def add_boolean_property(self, prefix, name, value):
+        '''
+        Add name/value pair as a property to current object.
+        '''
+        return CPLDirect.cpl_add_relation_boolean_property(self.id, prefix, name, value)
 
 #
 # CPL Connection
@@ -506,7 +546,7 @@ class cpl_connection:
             raise CPLException('Could not create' +
                 ' provenance bundle: ' + CPLDirect.cpl_error_string(ret), ret)
         
-        r = cpl_bundle(idp)
+        r = cpl_object(idp)
         return r
 
 
@@ -517,7 +557,7 @@ class cpl_connection:
             raise CPLException('Could not find' +
                 ' provenance bundle: ' + CPLDirect.cpl_error_string(ret), ret)
         
-        r = cpl_bundle(idp)
+        r = cpl_object(idp)
         return r
 
     def lookup_all_bundles(self, name):
@@ -636,23 +676,14 @@ class cpl_connection:
             o = None
         return o
 
-
-    def lookup_by_property(self, prefix, key, value):
-        '''
-        Return all objects that have the key/value property specified; raise
-        LookupError if no such object is found.
-        '''
-        vp = CPLDirect.new_std_vector_cpl_id_tp()
-        ret = CPLDirect.cpl_lookup_object_by_property(prefix, key, value,
-            CPLDirect.cpl_cb_collect_property_lookup_vector, vp)
-
+    def __lookup_by_property_helper(self, vp, ret):
         if ret == E_NOT_FOUND:
             CPLDirect.delete_std_vector_cpl_id_tp(vp)
             raise LookupError('Not found')
         if not CPLDirect.cpl_is_ok(ret):
             CPLDirect.delete_std_vector_cpl_id_tp(vp)
             raise CPLException('Unable to lookup by property ' +
-                    CPLDirect.cpl_error_string(ret), ret)
+                               CPLDirect.cpl_error_string(ret), ret)
 
         v = CPLDirect.cpl_dereference_p_std_vector_cpl_id_t(vp)
         l = []
@@ -662,18 +693,70 @@ class cpl_connection:
         CPLDirect.delete_std_vector_cpl_id_tp(vp)
         return l
 
+    def lookup_by_string_property(self, prefix, key, value):
+        '''
+        Return all objects that have the key/value property specified; raise
+        LookupError if no such object is found.
+        '''
+        vp = CPLDirect.new_std_vector_cpl_id_tp()
+        ret = CPLDirect.cpl_lookup_object_by_string_property(prefix, key, value,
+            CPLDirect.cpl_cb_collect_property_lookup_vector, vp)
+        return self.__lookup_by_property_helper(vp, ret)
 
-    def try_lookup_by_property(self, prefix, key, value):
+    def lookup_by_numerical_property(self, prefix, key, value):
+        '''
+        Return all objects that have the key/value property specified; raise
+        LookupError if no such object is found.
+        '''
+        vp = CPLDirect.new_std_vector_cpl_id_tp()
+        ret = CPLDirect.cpl_lookup_object_by_numerical_property(prefix, key, value,
+                                                      CPLDirect.cpl_cb_collect_property_lookup_vector, vp)
+        return self.__lookup_by_property_helper(vp, ret)
+
+
+    def lookup_by_boolean_property(self, prefix, key, value):
+        '''
+        Return all objects that have the key/value property specified; raise
+        LookupError if no such object is found.
+        '''
+        vp = CPLDirect.new_std_vector_cpl_id_tp()
+        ret = CPLDirect.cpl_lookup_object_by_boolean_property(prefix, key, value,
+                                                      CPLDirect.cpl_cb_collect_property_lookup_vector, vp)
+        return self.__lookup_by_property_helper(vp, ret)
+
+
+    def try_lookup_by_string_property(self, prefix, key, value):
         '''
         Return all objects that have the key/value property specified, but do
         not fail if no such object is found -- return an empty list instead.
         '''
         try:
-            o = self.lookup_by_property(prefix, key, value)
+            o = self.lookup_by_string_property(prefix, key, value)
         except LookupError:
             o = []
         return o
 
+    def try_lookup_by_numerical_property(self, prefix, key, value):
+        '''
+        Return all objects that have the key/value property specified, but do
+        not fail if no such object is found -- return an empty list instead.
+        '''
+        try:
+            o = self.lookup_by_numerical_property(prefix, key, value)
+        except LookupError:
+            o = []
+        return o
+
+    def try_lookup_by_boolean_property(self, prefix, key, value):
+        '''
+        Return all objects that have the key/value property specified, but do
+        not fail if no such object is found -- return an empty list instead.
+        '''
+        try:
+            o = self.lookup_by_boolean_property(prefix, key, value)
+        except LookupError:
+            o = []
+        return o
 
     def lookup_all_objects(self, prefix, name, type):
         '''
@@ -790,7 +873,7 @@ class cpl_connection:
         if not CPLDirect.cpl_is_ok(ret): 
             raise CPLException('Error importing document:' +
                     CPLDirect.cpl_error_string(ret), ret)
-        return cpl_bundle(idp)
+        return cpl_object(idp)
         
 
     def export_bundle_json(self, bundles):
@@ -980,12 +1063,23 @@ class cpl_object:
         '''
         return str(self.id)
 
-    def add_property(self, prefix, name, value):
+    def add_string_property(self, prefix, name, value):
         '''
         Add name/value pair as a property to current object.
         '''
-        return CPLDirect.cpl_add_object_property(self.id, prefix, name, value)
+        return CPLDirect.cpl_add_object_string_property(self.id, prefix, name, value)
 
+    def add_numerical_property(self, prefix, name, value):
+        '''
+        Add name/value pair as a property to current object.
+        '''
+        return CPLDirect.cpl_add_object_numerical_property(self.id, prefix, name, value)
+
+    def add_boolean_property(self, prefix, name, value):
+        '''
+        Add name/value pair as a property to current object.
+        '''
+        return CPLDirect.cpl_add_object_boolean_property(self.id, prefix, name, value)
 
     def info(self):
         '''
@@ -1043,173 +1137,71 @@ class cpl_object:
         return l
 
 
-    def properties(self, prefix=None, key=None):
+    def string_properties(self, prefix=None, key=None):
         '''
         Return all the properties associated with the current object.
 
         If prefix/key is set to something other than None, return only those
         properties matching prefix/key.
         '''
-        vp = CPLDirect.new_std_vector_cplxx_property_entry_tp()
+        vp = CPLDirect.new_std_vector_cplxx_string_property_entry_tp()
 
-        ret = CPLDirect.cpl_get_object_properties(self.id, prefix, key,
-            CPLDirect.cpl_cb_collect_properties_vector, vp)
+        ret = CPLDirect.cpl_get_object_string_properties(self.id, prefix, key,
+                                                          CPLDirect.cpl_cb_collect_properties_vector, vp)
         if not CPLDirect.cpl_is_ok(ret):
-            CPLDirect.delete_std_vector_cplxx_property_entry_tp(vp)
+            CPLDirect.delete_std_vector_cplxx_string_property_entry_tp(vp)
             raise CPLException('Error retrieving properties: ' +
-                    CPLDirect.cpl_error_string(ret), ret)
+                               CPLDirect.cpl_error_string(ret), ret)
 
-        v = CPLDirect.cpl_dereference_p_std_vector_cplxx_property_entry_t(vp)
+        v = CPLDirect.cpl_dereference_p_std_vector_cplxx_string_property_entry_t(vp)
         l = []
         for e in v:
             l.append([e.prefix, e.key, e.value])
-        CPLDirect.delete_std_vector_cplxx_property_entry_tp(vp)
+        CPLDirect.delete_std_vector_cplxx_string_property_entry_tp(vp)
         return l
 
-
-
-#
-# Information about a provenance bundle
-#
-
-class cpl_bundle_info:
-    '''
-    Information about a provenance bundle
-    '''
-
-    def __init__(self, bundle, creation_session, creation_time,
-            name):
+    def numerical_properties(self, prefix=None, key=None):
         '''
-        Create an instance of this object
-        '''
-
-        self.bundle = bundle
-        self.creation_session = creation_session
-        self.creation_time = creation_time
-        self.name = name
-
-
-
-#
-# CPL Provenance bundle
-#
-
-class cpl_bundle:
-    '''
-    CPL Provenance bundle
-    '''
-
-
-    def __init__(self, id):
-        '''
-        Create a new instance of a provenance bundle from its internal ID
-        '''
-        self.id = id
-
-
-    def __eq__(self, other):
-        '''
-        Compare this and the other bundle and return true if they are equal
-        '''
-        if isinstance(other, self.__class__):
-            return self.id == other.id
-        else:
-            return False
-
-
-    def __ne__(self, other):
-        '''
-        Compare this and the other object and return true if they are not equal
-        '''
-        return self.id != other.id
-
-
-    def __str__(self):
-        '''
-        Return a string representation of this object
-        '''
-        return str(self.id)
-
-    def add_prefix(self, prefix, iri):
-        '''
-        Add prefix/iri pair to current bundle.
-        '''
-        return CPLDirect.cpl_add_prefix(self.id, prefix, iri)
-
-    def add_property(self, prefix, name, value):
-        '''
-        Add prefix/name/value as a property to current bundle.
-        '''
-        return CPLDirect.cpl_add_bundle_property(self.id, prefix, name, value)
-
-
-    def info(self):
-        '''
-        Return cpl_bundle_info_t corresponding to the current bundle.
-        '''
-        bundlepp = CPLDirect.new_cpl_bundle_info_tpp()
-
-        ret = CPLDirect.cpl_get_bundle_info(self.id,
-            CPLDirect.cpl_convert_pp_cpl_bundle_info_t(bundlepp))
-        if not CPLDirect.cpl_is_ok(ret):
-            CPLDirect.delete_cpl_bundle_info_tpp(bundlepp)
-            raise CPLException('Unable to get bundle info: ' +
-                    CPLDirect.cpl_error_string(ret), ret)
-
-        op = CPLDirect.cpl_dereference_pp_cpl_bundle_info_t(bundlepp)
-        bundle = CPLDirect.cpl_bundle_info_tp_value(op)
-
-        _info = cpl_bundle_info(self,
-                cpl_session(bundle.creation_session), bundle.creation_time,
-                bundle.name)
-
-        CPLDirect.cpl_free_bundle_info(op)
-        CPLDirect.delete_cpl_bundle_info_tpp(bundlepp)
-
-        return _info
-
-    def properties(self, prefix=None, key=None):
-        '''
-        Return all the properties associated with the current bundle.
+        Return all the properties associated with the current object.
 
         If prefix/key is set to something other than None, return only those
         properties matching prefix/key.
         '''
-        vp = CPLDirect.new_std_vector_cplxx_property_entry_tp()
+        vp = CPLDirect.new_std_vector_cplxx_numerical_property_entry_tp()
 
-        ret = CPLDirect.cpl_get_bundle_properties(self.id, prefix, key,
-            CPLDirect.cpl_cb_collect_properties_vector, vp)
+        ret = CPLDirect.cpl_get_object_numerical_properties(self.id, prefix, key,
+                                                          CPLDirect.cpl_cb_collect_properties_vector, vp)
         if not CPLDirect.cpl_is_ok(ret):
-            CPLDirect.delete_std_vector_cplxx_property_entry_tp(vp)
+            CPLDirect.delete_std_vector_cplxx_numerical_property_entry_tp(vp)
             raise CPLException('Error retrieving properties: ' +
-                    CPLDirect.cpl_error_string(ret), ret)
+                               CPLDirect.cpl_error_string(ret), ret)
 
-        v = CPLDirect.cpl_dereference_p_std_vector_cplxx_property_entry_t(vp)
+        v = CPLDirect.cpl_dereference_p_std_vector_cplxx_numerical_property_entry_t(vp)
         l = []
         for e in v:
-            l.append((e.prefix, e.key, e.value))
-        CPLDirect.delete_std_vector_cplxx_property_entry_tp(vp)
+            l.append([e.prefix, e.key, e.value])
+        CPLDirect.delete_std_vector_cplxx_numerical_property_entry_tp(vp)
         return l
 
-    def prefixes(self, prefix):
+    def boolean_properties(self, prefix=None, key=None):
         '''
-        Return all the prefixes associated with the current bundle.
+        Return all the properties associated with the current object.
 
-        If prefix return only those properties matching prefix.
+        If prefix/key is set to something other than None, return only those
+        properties matching prefix/key.
         '''
-        vp = CPLDirect.new_std_vector_cplxx_prefix_entry_tp()
+        vp = CPLDirect.new_std_vector_cplxx_boolean_property_entry_tp()
 
-        ret = CPLDirect.cpl_get_prefixes(self.id, prefix,
-            CPLDirect.cpl_cb_collect_prefixes_vector, vp)
+        ret = CPLDirect.cpl_get_object_boolean_properties(self.id, prefix, key,
+                                                  CPLDirect.cpl_cb_collect_properties_vector, vp)
         if not CPLDirect.cpl_is_ok(ret):
-            CPLDirect.delete_std_vector_cplxx_prefix_entry_tp(vp)
+            CPLDirect.delete_std_vector_cplxx_boolean_property_entry_tp(vp)
             raise CPLException('Error retrieving properties: ' +
-                    CPLDirect.cpl_error_string(ret), ret)
+                               CPLDirect.cpl_error_string(ret), ret)
 
-        v = CPLDirect.cpl_dereference_p_std_vector_cplxx_prefix_entry_t(vp)
+        v = CPLDirect.cpl_dereference_p_std_vector_cplxx_boolean_property_entry_t(vp)
         l = []
         for e in v:
-            l.append((e.prefix, e.iri))
-        CPLDirect.delete_std_vector_cplxx_prefix_entry_tp(vp)
+            l.append([e.prefix, e.key, e.value])
+        CPLDirect.delete_std_vector_cplxx_boolean_property_entry_tp(vp)
         return l
-

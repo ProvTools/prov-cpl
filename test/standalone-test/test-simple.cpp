@@ -180,8 +180,9 @@ cb_get_properties(const cpl_id_t id,
 				  const char* prefix,
 				  const char* key,
 				  const char* value,
+				  const int type,
 				  void* context)
-{	
+{
 	std::multimap<std::string, std::string>* m
 		= (std::multimap<std::string, std::string>*) context;
 	std::string name = prefix;
@@ -189,7 +190,7 @@ cb_get_properties(const cpl_id_t id,
 	name.append(key);
 	m->insert(std::pair<std::string, std::string>(name,
 				std::string(value)));
-	
+
 	print(L_DEBUG, "  %llx %s:%s = %s",
 			id, prefix, key, value);
 
@@ -215,7 +216,7 @@ cb_get_prefixes(const cpl_id_t id,
 		= (std::multimap<std::string, std::string>*) context;
 	m->insert(std::pair<std::string, std::string>(std::string(prefix),
 				std::string(iri)));
-	
+
 	print(L_DEBUG, "  %llx %s = %s",
 			id, prefix, iri);
 
@@ -235,6 +236,7 @@ cb_lookup_by_property(const cpl_id_t id,
 					  const char* prefix,
 					  const char* key,
 					  const char* value,
+					  const int type,
 					  void* context)
 {
 	std::set<cpl_id_t>* s
@@ -291,7 +293,6 @@ contains(std::multimap<std::string, std::string>& m, const char* key,
 	}
 	return false;
 }
-
 
 /**
  * Check whether the set contains the given pair
@@ -727,22 +728,22 @@ test_simple(void)
 
 	// Object properties
 
-	ret = cpl_add_object_property(obj1, "test", "LABEL", "1");
+	ret = cpl_add_object_string_property(obj1, "test", "LABEL", "1");
 	print(L_DEBUG, "cpl_add_object_property --> %d", ret);
 	CPL_VERIFY(cpl_add_object_property, ret);
 	if (with_delays) delay();
 
-	ret = cpl_add_object_property(obj2, "test", "LABEL", "2");
+	ret = cpl_add_object_numerical_property(obj2, "test", "LABEL", 2.5);
 	print(L_DEBUG, "cpl_add_object_property --> %d", ret);
 	CPL_VERIFY(cpl_add_object_property, ret);
 	if (with_delays) delay();
 
-	ret = cpl_add_object_property(obj3, "test", "LABEL", "3");
+	ret = cpl_add_object_boolean_property(obj3, "test", "LABEL", true);
 	print(L_DEBUG, "cpl_add_object_property --> %d", ret);
 	CPL_VERIFY(cpl_add_object_property, ret);
 	if (with_delays) delay();
 
-	ret = cpl_add_object_property(obj3, "test", "TAG", "Hello");
+	ret = cpl_add_object_string_property(obj3, "test", "TAG", "Hello");
 	print(L_DEBUG, "cpl_add_object_property --> %d", ret);
 	CPL_VERIFY(cpl_add_object_property, ret);
 	if (with_delays) delay();
@@ -753,73 +754,102 @@ test_simple(void)
 
 	std::multimap<std::string, std::string> pctx;
 
-	print(L_DEBUG, "All:");
+	print(L_DEBUG, "All String:");
 	pctx.clear();
-	ret = cpl_get_object_properties(obj3, NULL, NULL,
+	ret = cpl_get_object_string_properties(obj3, NULL, NULL,
 			cb_get_properties, &pctx);
-	print(L_DEBUG, "cpl_get_object_properties --> %d", ret);
-	CPL_VERIFY(cpl_get_object_properties, ret);
-	if (!contains(pctx, "test:LABEL", "3"))
-		throw CPLException("The object is missing a property.");
+	print(L_DEBUG, "cpl_get_object_string_properties --> %d", ret);
+	CPL_VERIFY(cpl_get_object_string_properties, ret);
 	if (!contains(pctx, "test:TAG", "Hello"))
 		throw CPLException("The object is missing a property.");
-	if (pctx.size() != 2)
+	if (pctx.size() != 1)
 		throw CPLException("The object has unexpected properties.");
 
-	print(L_DEBUG, "test:LABEL:");
+	print(L_DEBUG, "String test:LABEL:");
 	pctx.clear();
-	ret = cpl_get_object_properties(obj3, "test", "LABEL",
+	ret = cpl_get_object_string_properties(obj1, "test", "LABEL",
 			cb_get_properties, &pctx);
-	print(L_DEBUG, "cpl_get_object_properties --> %d", ret);
-	CPL_VERIFY(cpl_get_object_properties, ret);
-	if (!contains(pctx, "test:LABEL", "3"))
+	print(L_DEBUG, "cpl_get_object_string_properties --> %d", ret);
+	CPL_VERIFY(cpl_get_object_string_properties, ret);
+	if (!contains(pctx, "test:LABEL", "1"))
 		throw CPLException("The object is missing a property.");
 	if (pctx.size() != 1)
 		throw CPLException("The object has unexpected properties.");
 	if (with_delays) delay();
 
-	print(L_DEBUG, "test:HELLO:");
-	pctx.clear();
-	ret = cpl_get_object_properties(obj3, "test", "HELLO",
+    print(L_DEBUG, "numerical test:LABEL:");
+    pctx.clear();
+
+    ret = cpl_get_object_numerical_properties(obj2, "test", "LABEL",
+                                              cb_get_properties, &pctx);
+    print(L_DEBUG, "cpl_get_object_numerical_properties --> %d", ret);
+    CPL_VERIFY(cpl_get_object_numerical_properties, ret);
+    if (!contains(pctx, "test:LABEL", "2.500000"))
+        throw CPLException("The object is missing a property.");
+    if (pctx.size() != 1)
+        throw CPLException("The object has unexpected properties.");
+    if (with_delays) delay();
+    pctx.clear();
+
+	print(L_DEBUG, "boolean test:LABEL:");
+    ret = cpl_get_object_boolean_properties(obj3, "test", NULL,
 			cb_get_properties, &pctx);
-	print(L_DEBUG, "cpl_get_object_properties --> %d", ret);
-	CPL_VERIFY(cpl_get_object_properties, ret);
-	if (pctx.size() != 0)
+	print(L_DEBUG, "cpl_get_object_boolean_properties --> %d", ret);
+	CPL_VERIFY(cpl_get_object_boolean_properties, ret);
+    if (!contains(pctx, "test:LABEL", "1"))
+        throw CPLException("The object is missing a property.");
+    if (pctx.size() != 1)
 		throw CPLException("The object has unexpected properties.");
 	if (with_delays) delay();
+    pctx.clear();
 
-	print(L_DEBUG, " ");
+    print(L_DEBUG, " ");
 
-	std::set<cpl_id_t> lctx;
-	ret = cpl_lookup_object_by_property("test", "LABEL", "3",
+    std::set<cpl_id_t> lctx;
+	ret = cpl_lookup_object_by_string_property("test", "LABEL", "1",
 			cb_lookup_by_property, &lctx);
-	print(L_DEBUG, "cpl_lookup_object_by_property --> %d", ret);
+	print(L_DEBUG, "cpl_lookup_object_by_string_property --> %d", ret);
 	CPL_VERIFY(cpl_lookup_object_by_property, ret);
-	if (!contains(lctx, obj3))
+	if (!contains(lctx, obj1))
 		throw CPLException("The object is missing in the result set.");
 	if (with_delays) delay();
 
+    ret = cpl_lookup_object_by_numerical_property("test", "LABEL", 2.5,
+                                               cb_lookup_by_property, &lctx);
+    print(L_DEBUG, "cpl_lookup_object_by_string_property --> %d", ret);
+    CPL_VERIFY(cpl_lookup_object_by_property, ret);
+    if (!contains(lctx, obj2))
+        throw CPLException("The object is missing in the result set.");
+    if (with_delays) delay();
+
+    ret = cpl_lookup_object_by_boolean_property("test", "LABEL", true,
+                                               cb_lookup_by_property, &lctx);
+    print(L_DEBUG, "cpl_lookup_object_by_string_property --> %d", ret);
+    CPL_VERIFY(cpl_lookup_object_by_property, ret);
+    if (!contains(lctx, obj3))
+        throw CPLException("The object is missing in the result set.");
+    if (with_delays) delay();
 	print(L_DEBUG, " ");
 
 
 	// Relation properties
 
-	ret = cpl_add_relation_property(rel1, "test", "LABEL", "1");
+	ret = cpl_add_relation_string_property(rel1, "test", "LABEL", "1");
 	print(L_DEBUG, "cpl_add_relation_property --> %d", ret);
 	CPL_VERIFY(cpl_add_relation_property, ret);
 	if (with_delays) delay();
 
-	ret = cpl_add_relation_property(rel2, "test", "LABEL", "2");
+	ret = cpl_add_relation_numerical_property(rel2, "test", "LABEL", 2.5);
 	print(L_DEBUG, "cpl_add_relation_property --> %d", ret);
 	CPL_VERIFY(cpl_add_relation_property, ret);
 	if (with_delays) delay();
 
-	ret = cpl_add_relation_property(rel3, "test", "LABEL", "3");
+	ret = cpl_add_relation_boolean_property(rel3, "test", "LABEL", false);
 	print(L_DEBUG, "cpl_add_relation_property --> %d", ret);
 	CPL_VERIFY(cpl_add_relation_property, ret);
 	if (with_delays) delay();
 
-	ret = cpl_add_relation_property(rel3, "test", "TAG", "Hello");
+	ret = cpl_add_relation_string_property(rel3, "test", "TAG", "Hello");
 	print(L_DEBUG, "cpl_add_relation_property --> %d", ret);
 	CPL_VERIFY(cpl_add_relation_property, ret);
 	if (with_delays) delay();
@@ -830,39 +860,51 @@ test_simple(void)
 
 	print(L_DEBUG, "All:");
 	pctx.clear();
-	ret = cpl_get_relation_properties(rel3, NULL, NULL,
+	ret = cpl_get_relation_string_properties(rel3, NULL, NULL,
 			cb_get_properties, &pctx);
 	print(L_DEBUG, "cpl_get_relation_properties --> %d", ret);
 	CPL_VERIFY(cpl_get_relation_properties, ret);
-	if (!contains(pctx, "test:LABEL", "3"))
-		throw CPLException("The relation is missing a property.");
 	if (!contains(pctx, "test:TAG", "Hello"))
 		throw CPLException("The relation is missing a property.");
-	if (pctx.size() != 2)
+	if (pctx.size() != 1)
 		throw CPLException("The relation has unexpected properties.");
 
-	print(L_DEBUG, "test:LABEL:");
+	print(L_DEBUG, "string test:LABEL:");
 	pctx.clear();
-	ret = cpl_get_relation_properties(rel3, "test", "LABEL",
+	ret = cpl_get_relation_string_properties(rel1, "test", "LABEL",
 			cb_get_properties, &pctx);
-	print(L_DEBUG, "cpl_get_relation_properties --> %d", ret);
+	print(L_DEBUG, "cpl_get_relation_string_properties --> %d", ret);
 	CPL_VERIFY(cpl_get_relation_properties, ret);
-	if (!contains(pctx, "test:LABEL", "3"))
+	if (!contains(pctx, "test:LABEL", "1"))
 		throw CPLException("The relation is missing a property.");
 	if (pctx.size() != 1)
 		throw CPLException("The relation has unexpected properties.");
 	if (with_delays) delay();
+    pctx.clear();
 
-	print(L_DEBUG, "test:HELLO:");
-	pctx.clear();
-	ret = cpl_get_relation_properties(rel3, "test", "HELLO",
+	print(L_DEBUG, "numerical test:LABEL:");
+    ret = cpl_get_relation_numerical_properties(rel2, "test", NULL,
 			cb_get_properties, &pctx);
-	print(L_DEBUG, "cpl_get_relation_properties --> %d", ret);
+	print(L_DEBUG, "cpl_get_relation_numerical_properties --> %d", ret);
 	CPL_VERIFY(cpl_get_relation_properties, ret);
-	if (pctx.size() != 0)
-		throw CPLException("The relation has unexpected properties.");
-	if (with_delays) delay();
+    if (!contains(pctx, "test:LABEL", "2.500000"))
+        throw CPLException("The relation is missing a property.");
+    if (pctx.size() != 1)
+        throw CPLException("The relation has unexpected properties.");
+    if (with_delays) delay();
+    pctx.clear();
 
+    print(L_DEBUG, "boolean test:LABEL:");
+    ret = cpl_get_relation_boolean_properties(rel3, "test", NULL,
+                                                cb_get_properties, &pctx);
+    print(L_DEBUG, "cpl_get_relation_boolean_properties --> %d", ret);
+    CPL_VERIFY(cpl_get_relation_properties, ret);
+    if (!contains(pctx, "test:LABEL", "0"))
+        throw CPLException("The relation is missing a property.");
+    if (pctx.size() != 1)
+        throw CPLException("The relation has unexpected properties.");
+    if (with_delays) delay();
+    pctx.clear();
 	print(L_DEBUG, " ");
 
 	print(L_DEBUG, "Bundle prefixes:");

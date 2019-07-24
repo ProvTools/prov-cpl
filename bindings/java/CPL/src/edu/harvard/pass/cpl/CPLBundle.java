@@ -45,26 +45,10 @@ import java.math.BigInteger;
  *
  * @author Jackson Okuhn
  */
-public class CPLBundle {
-
-	/// The null object
-	private static BigInteger nullId = BigInteger.ZERO;
-
-	/// The internal bundle ID
-	BigInteger id;
-
-	/// The bundle name (cache)
-	private String name = null;
-
-	/// The creation time (cache)
-	private long creationTime = 0;
+public class CPLBundle extends CPLObject {
 
 	/// The creation session (cache)
 	private CPLSession creationSession = null;
-
-	/// Whether the bundle creation information is known
-	private boolean knowCreationInfo = false;
-
 
 	/**
 	 * Create an instance of CPLBundle from its ID
@@ -72,7 +56,7 @@ public class CPLBundle {
 	 * @param id the internal CPL bundle ID
 	 */
 	public CPLBundle(BigInteger id) {
-		this.id = id;
+		super(id);
 	}
 
 	/**
@@ -183,48 +167,6 @@ public class CPLBundle {
 		return r;
 	}
 
-
-	/**
-	 * Determine whether this and the other bundle are equal
-	 *
-	 * @param other the other bundle
-	 * @return true if they are equal
-	 */
-	@Override
-	public boolean equals(Object other) {
-		if (other instanceof CPLBundle) {
-			CPLBundle o = (CPLBundle) other;
-			return this.id.equals(o.id);
-		}
-		else {
-			return false;
-		}
-	}
-
-
-	/**
-	 * Compute the hash code of this bundle
-	 *
-	 * @return the hash code
-	 */
-	@Override
-	public int hashCode() {
-		return id.hashCode();
-	}
-
-
-	/**
-	 * Return a string representation of the bundle. Note that this is based
-	 * on the internal bundle ID, since the name might not be known.
-	 *
-	 * @return the string representation
-	 */
-	@Override
-	public String toString() {
-		return id.toString(16);
-	}
-
-
 	/**
 	 * Fetch the bundle info if it is not already present
 	 *
@@ -271,27 +213,6 @@ public class CPLBundle {
 		return true;
 	}
 
-
-	/**
-	 * Get the ID of the bundle
-	 *
-	 * @return the internal ID of this bundle
-	 */
-	public BigInteger getId() {
-		return id;
-	}
-
-	/**
-	 * Get the bundle name
-	 *
-	 * @return the name
-	 */
-	public String getName() {
-		if (name == null) fetchInfo();
-		return name;
-	}
-
-
 	/**
 	 * Get the session that created this bundle
 	 *
@@ -300,63 +221,6 @@ public class CPLBundle {
 	public CPLSession getCreationSession() {
 		if (!knowCreationInfo) fetchInfo();
 		return creationSession;
-	}
-
-
-	/**
-	 * Get the creation time of this bundle
-	 *
-	 * @return the time expressed as Unix time
-	 */
-	public long getCreationTime() {
-		if (!knowCreationInfo) fetchInfo();
-		return creationTime;
-	}
-
-
-	/**
-	 * Create a more detailed string representation of the bundle
-	 *
-	 * @param detail whether to provide even more detail
-	 * @return a multi-line string describing the bundle
-	 */
-	public String toString(boolean detail) {
-
-		StringBuilder sb = new StringBuilder();
-
-		sb.append("Name      ");
-		if (detail) sb.append("          : "); else sb.append(": ");
-		sb.append(getName());
-		sb.append("\n");
-
-		if (detail) {
-
-			sb.append("Creation session    : ");
-			sb.append(getCreationSession());
-			sb.append("\n");
-
-			sb.append("Creation time       : ");
-			sb.append(new java.sql.Date(1000L * getCreationTime()));
-			sb.append(" ");
-			sb.append(new java.sql.Time(1000L * getCreationTime()));
-			sb.append("\n");
-		}
-
-		return sb.toString();
-	}
-
-
-	/**
-	 * Add a property
-	 *
-	 * @param prefix the prefix
-	 * @param key the key
-	 * @param value the value
-	 */
-	public void addProperty(String prefix, String key, String value) {
-
-		int r = CPLDirect.cpl_add_bundle_property(id, prefix, key, value);
-		CPLException.assertSuccess(r);
 	}
 
 	/**
@@ -369,54 +233,6 @@ public class CPLBundle {
 
 		int r = CPLDirect.cpl_add_prefix(id, prefix, iri);
 		CPLException.assertSuccess(r);
-	}
-
-	/**
-	 * Get the properties of a bundle
-	 *
-	 * @param prefix the namespace prefix or null for all entries
-	 * @param key the property name or null for all entries
-	 * @return the vector of property entries
-	 */
-	public Vector<CPLPropertyEntry> getProperties(String prefix, String key) {
-
-		SWIGTYPE_p_std_vector_cplxx_property_entry_t pVector
-			= CPLDirect.new_std_vector_cplxx_property_entry_tp();
-		SWIGTYPE_p_void pv = CPLDirect
-			.cpl_convert_p_std_vector_cplxx_property_entry_t_to_p_void(pVector);
-		Vector<CPLPropertyEntry> result = null;
-
-		try {
-			int r = CPLDirect.cpl_get_bundle_properties(id, prefix, key,
-					CPLDirect.cpl_cb_collect_properties_vector, pv);
-			CPLException.assertSuccess(r);
-
-			cplxx_property_entry_t_vector v = CPLDirect
-				.cpl_dereference_p_std_vector_cplxx_property_entry_t(pVector);
-			long l = v.size();
-			result = new Vector<CPLPropertyEntry>((int) l);
-			for (long i = 0; i < l; i++) {
-				cplxx_property_entry_t e = v.get((int) i);
-				result.add(new CPLPropertyEntry(e.getPrefix(),
-							e.getKey(),
-							e.getValue()));
-			}
-		}
-		finally {
-			CPLDirect.delete_std_vector_cplxx_property_entry_tp(pVector);
-		}
-
-		return result;
-	}
-
-
-	/**
-	 * Get all properties of a bundle
-	 *
-	 * @return the vector of property entries
-	 */
-	public Vector<CPLPropertyEntry> getProperties() {
-		return getProperties(null, null);
 	}
 
 	/**

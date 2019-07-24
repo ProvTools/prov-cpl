@@ -239,7 +239,7 @@ Contains most of the header files for this project. If you make any changes to a
 This directory holds some of the root makefiles for the project. You shouldn't have to worry about it unless your build of prov-cpl is failing.
 
 ### scripts
-Contains some shell scripts used to configure the PSQL backend. The one specific to the database spec for this project is scripts/postgresql-setup-article-prov.sql
+Contains some shell scripts used to configure the PSQL backend. The one specific to the database spec for this project is scripts/postgresql-setup.sql
 
 ### test, rpm, rest-service
 I haven't used these at all, other than to edit a few test functions to use new API function signatures. You probably won't need to open or worry about these directories.

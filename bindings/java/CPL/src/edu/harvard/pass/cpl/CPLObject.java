@@ -48,7 +48,7 @@ import java.math.BigInteger;
 public class CPLObject {
 
 	/// The null object
-	private static BigInteger nullId = BigInteger.ZERO;
+	static BigInteger nullId = BigInteger.ZERO;
 
 	/// Traversal direction: Ancestors
 	public static final int D_ANCESTORS = CPLDirectConstants.CPL_D_ANCESTORS;
@@ -64,19 +64,19 @@ public class CPLObject {
 	BigInteger id;
 
 	/// The object prefix (cache)
-	private String prefix = null;
+	String prefix = null;
 
 	/// The object name (cache)
-	private String name = null;
+	String name = null;
 
 	/// The object type (cache)
-	private int type = 0;
+	int type = 0;
 
 	/// The creation time (cache)
-	private long creationTime = 0;
+	long creationTime = 0;
 
 	/// Whether the object creation information is known
-	private boolean knowCreationInfo = false;
+	boolean knowCreationInfo = false;
 
 
 	/**
@@ -505,12 +505,37 @@ public class CPLObject {
 	 * @param key the key
 	 * @param value the value
 	 */
-	public void addProperty(String prefix, String key, String value) {
+	public void addStringProperty(String prefix, String key, String value) {
 
-		int r = CPLDirect.cpl_add_object_property(id, prefix, key, value);
+		int r = CPLDirect.cpl_add_object_string_property(id, prefix, key, value);
 		CPLException.assertSuccess(r);
 	}
 
+	/**
+	 * Add a property
+	 *
+	 * @param prefix the prefix
+	 * @param key the key
+	 * @param value the value
+	 */
+	public void addNumericalProperty(String prefix, String key, double value) {
+
+		int r = CPLDirect.cpl_add_object_numerical_property(id, prefix, key, value);
+		CPLException.assertSuccess(r);
+	}
+
+	/**
+	 * Add a property
+	 *
+	 * @param prefix the prefix
+	 * @param key the key
+	 * @param value the value
+	 */
+	public void addBooleanProperty(String prefix, String key, boolean value) {
+
+		int r = CPLDirect.cpl_add_object_boolean_property(id, prefix, key, value);
+		CPLException.assertSuccess(r);
+	}
 
 	/**
 	 * Lookup an object based on the property value
@@ -521,31 +546,19 @@ public class CPLObject {
 	 * @param failOnNotFound whether to fail if no matching objects were found
 	 * @return the vector of objects
 	 */
-	protected static Vector<CPLObject> lookupByProperty(String prefix, String key,
-			String value, boolean failOnNotFound) {
+	protected static Vector<CPLObject> lookupByStringProperty(String prefix, String key,
+																 String value, boolean failOnNotFound) {
 
 		SWIGTYPE_p_std_vector_cpl_id_t pVector
-			= CPLDirect.new_std_vector_cpl_id_tp();
+				= CPLDirect.new_std_vector_cpl_id_tp();
 		SWIGTYPE_p_void pv = CPLDirect
-			.cpl_convert_p_std_vector_cpl_id_t_to_p_void(pVector);
+				.cpl_convert_p_std_vector_cpl_id_t_to_p_void(pVector);
 		Vector<CPLObject> result = null;
 
 		try {
-			int r = CPLDirect.cpl_lookup_object_by_property(prefix, key, value,
+			int r = CPLDirect.cpl_lookup_object_by_string_property(prefix, key, value,
 					CPLDirect.cpl_cb_collect_property_lookup_vector, pv);
-			if (!failOnNotFound && r == CPLDirectConstants.CPL_E_NOT_FOUND) {
-				return new Vector<CPLObject>();
-			}
-			CPLException.assertSuccess(r);
-
-			cpl_id_t_vector v = CPLDirect
-				.cpl_dereference_p_std_vector_cpl_id_t(pVector);
-			long l = v.size();
-			result = new Vector<CPLObject>((int) l);
-			for (long i = 0; i < l; i++) {
-				BigInteger e = v.get((int) i);
-				result.add(new CPLObject(e));
-			}
+			result = lookupByPropertyHelper(failOnNotFound, r, pVector);
 		}
 		finally {
 			CPLDirect.delete_std_vector_cpl_id_tp(pVector);
@@ -554,6 +567,84 @@ public class CPLObject {
 		return result;
 	}
 
+	/**
+	 * Lookup an object based on the property value
+	 *
+	 * @param prefix the prefix
+	 * @param key the key
+	 * @param value the value
+	 * @param failOnNotFound whether to fail if no matching objects were found
+	 * @return the vector of objects
+	 */
+	protected static Vector<CPLObject> lookupByNumericalProperty(String prefix, String key,
+														double value, boolean failOnNotFound) {
+
+		SWIGTYPE_p_std_vector_cpl_id_t pVector
+				= CPLDirect.new_std_vector_cpl_id_tp();
+		SWIGTYPE_p_void pv = CPLDirect
+				.cpl_convert_p_std_vector_cpl_id_t_to_p_void(pVector);
+		Vector<CPLObject> result = null;
+
+		try {
+			int r = CPLDirect.cpl_lookup_object_by_numerical_property(prefix, key, value,
+					CPLDirect.cpl_cb_collect_property_lookup_vector, pv);
+			result = lookupByPropertyHelper(failOnNotFound, r, pVector);
+		}
+		finally {
+			CPLDirect.delete_std_vector_cpl_id_tp(pVector);
+		}
+
+		return result;
+	}
+
+	/**
+	 * Lookup an object based on the property value
+	 *
+	 * @param prefix the prefix
+	 * @param key the key
+	 * @param value the value
+	 * @param failOnNotFound whether to fail if no matching objects were found
+	 * @return the vector of objects
+	 */
+	protected static Vector<CPLObject> lookupByBooleanProperty(String prefix, String key,
+														boolean value, boolean failOnNotFound) {
+
+		SWIGTYPE_p_std_vector_cpl_id_t pVector
+				= CPLDirect.new_std_vector_cpl_id_tp();
+		SWIGTYPE_p_void pv = CPLDirect
+				.cpl_convert_p_std_vector_cpl_id_t_to_p_void(pVector);
+		Vector<CPLObject> result = null;
+
+		try {
+			int r = CPLDirect.cpl_lookup_object_by_boolean_property(prefix, key, value,
+					CPLDirect.cpl_cb_collect_property_lookup_vector, pv);
+			result = lookupByPropertyHelper(failOnNotFound, r, pVector);
+		}
+		finally {
+			CPLDirect.delete_std_vector_cpl_id_tp(pVector);
+		}
+
+		return result;
+	}
+
+	private static Vector<CPLObject> lookupByPropertyHelper(
+			boolean failOnNotFound, int r, SWIGTYPE_p_std_vector_cpl_id_t pVector) {
+		Vector<CPLObject> result = null;
+		if (!failOnNotFound && r == CPLDirectConstants.CPL_E_NOT_FOUND) {
+			return new Vector<CPLObject>();
+		}
+		CPLException.assertSuccess(r);
+
+		cpl_id_t_vector v = CPLDirect
+				.cpl_dereference_p_std_vector_cpl_id_t(pVector);
+		long l = v.size();
+		result = new Vector<CPLObject>((int) l);
+		for (long i = 0; i < l; i++) {
+			BigInteger e = v.get((int) i);
+			result.add(new CPLObject(e));
+		}
+		return result;
+	}
 
 	/**
 	 * Get the properties of an object
@@ -562,45 +653,138 @@ public class CPLObject {
 	 * @param key the property name or null for all entries
 	 * @return the vector of property entries
 	 */
-	public Vector<CPLPropertyEntry> getProperties(String prefix, String key) {
+	public Vector<CPLPropertyEntry<String>> getStringProperties(String prefix, String key) {
 
-		SWIGTYPE_p_std_vector_cplxx_property_entry_t pVector
-			= CPLDirect.new_std_vector_cplxx_property_entry_tp();
+		SWIGTYPE_p_std_vector_cplxx_string_property_entry_t pVector
+			= CPLDirect.new_std_vector_cplxx_string_property_entry_tp();
 		SWIGTYPE_p_void pv = CPLDirect
-			.cpl_convert_p_std_vector_cplxx_property_entry_t_to_p_void(pVector);
-		Vector<CPLPropertyEntry> result = null;
+			.cpl_convert_p_std_vector_cplxx_string_property_entry_t_to_p_void(pVector);
+		Vector<CPLPropertyEntry<String>> result = null;
 
 		try {
-			int r = CPLDirect.cpl_get_object_properties(id, prefix, key,
+			int r = CPLDirect.cpl_get_object_string_properties(id, prefix, key,
 					CPLDirect.cpl_cb_collect_properties_vector, pv);
 			CPLException.assertSuccess(r);
 
-			cplxx_property_entry_t_vector v = CPLDirect
-				.cpl_dereference_p_std_vector_cplxx_property_entry_t(pVector);
+			cplxx_string_property_entry_t_vector v = CPLDirect
+				.cpl_dereference_p_std_vector_cplxx_string_property_entry_t(pVector);
 			long l = v.size();
-			result = new Vector<CPLPropertyEntry>((int) l);
+			result = new Vector<CPLPropertyEntry<String>>((int) l);
 			for (long i = 0; i < l; i++) {
-				cplxx_property_entry_t e = v.get((int) i);
-				result.add(new CPLPropertyEntry(e.getPrefix(),
+				cplxx_string_property_entry_t e = v.get((int) i);
+				result.add(new CPLPropertyEntry<String>(e.getPrefix(),
 							e.getKey(),
 							e.getValue()));
 			}
 		}
 		finally {
-			CPLDirect.delete_std_vector_cplxx_property_entry_tp(pVector);
+			CPLDirect.delete_std_vector_cplxx_string_property_entry_tp(pVector);
 		}
 
 		return result;
 	}
 
+	/**
+	 * Get the properties of an object
+	 *
+	 * @param prefix the namespace prefix or null for all entries
+	 * @param key the property name or null for all entries
+	 * @return the vector of property entries
+	 */
+	public Vector<CPLPropertyEntry<Double>> getNumericalProperties(String prefix, String key) {
+
+		SWIGTYPE_p_std_vector_cplxx_numerical_property_entry_t pVector
+				= CPLDirect.new_std_vector_cplxx_numerical_property_entry_tp();
+		SWIGTYPE_p_void pv = CPLDirect
+				.cpl_convert_p_std_vector_cplxx_numerical_property_entry_t_to_p_void(pVector);
+		Vector<CPLPropertyEntry<Double>> result = null;
+
+		try {
+			int r = CPLDirect.cpl_get_object_numerical_properties(id, prefix, key,
+					CPLDirect.cpl_cb_collect_properties_vector, pv);
+			CPLException.assertSuccess(r);
+
+			cplxx_numerical_property_entry_t_vector v = CPLDirect
+					.cpl_dereference_p_std_vector_cplxx_numerical_property_entry_t(pVector);
+			long l = v.size();
+			result = new Vector<CPLPropertyEntry<Double>>((int) l);
+			for (long i = 0; i < l; i++) {
+				cplxx_numerical_property_entry_t e = v.get((int) i);
+				result.add(new CPLPropertyEntry<Double>(e.getPrefix(),
+						e.getKey(),
+						e.getValue()));
+			}
+		}
+		finally {
+			CPLDirect.delete_std_vector_cplxx_numerical_property_entry_tp(pVector);
+		}
+
+		return result;
+	}
+
+	/**
+	 * Get the properties of an object
+	 *
+	 * @param prefix the namespace prefix or null for all entries
+	 * @param key the property name or null for all entries
+	 * @return the vector of property entries
+	 */
+	public Vector<CPLPropertyEntry<Boolean>> getBooleanProperties(String prefix, String key) {
+
+		SWIGTYPE_p_std_vector_cplxx_boolean_property_entry_t pVector
+				= CPLDirect.new_std_vector_cplxx_boolean_property_entry_tp();
+		SWIGTYPE_p_void pv = CPLDirect
+				.cpl_convert_p_std_vector_cplxx_boolean_property_entry_t_to_p_void(pVector);
+		Vector<CPLPropertyEntry<Boolean>> result = null;
+
+		try {
+			int r = CPLDirect.cpl_get_object_boolean_properties(id, prefix, key,
+					CPLDirect.cpl_cb_collect_properties_vector, pv);
+			CPLException.assertSuccess(r);
+
+			cplxx_boolean_property_entry_t_vector v = CPLDirect
+					.cpl_dereference_p_std_vector_cplxx_boolean_property_entry_t(pVector);
+			long l = v.size();
+			result = new Vector<CPLPropertyEntry<Boolean>>((int) l);
+			for (long i = 0; i < l; i++) {
+				cplxx_boolean_property_entry_t e = v.get((int) i);
+				result.add(new CPLPropertyEntry<Boolean>(e.getPrefix(),
+						e.getKey(),
+						e.getValue()));
+			}
+		}
+		finally {
+			CPLDirect.delete_std_vector_cplxx_boolean_property_entry_tp(pVector);
+		}
+
+		return result;
+	}
 
 	/**
 	 * Get all properties of an object
 	 *
 	 * @return the vector of property entries
 	 */
-	public Vector<CPLPropertyEntry> getProperties() {
-		return getProperties(null, null);
+	public Vector<CPLPropertyEntry<String>> getStringProperties() {
+		return getStringProperties(null, null);
+	}
+
+	/**
+	 * Get all properties of an object
+	 *
+	 * @return the vector of property entries
+	 */
+	public Vector<CPLPropertyEntry<Double>> getNumericalProperties() {
+		return getNumericalProperties(null, null);
+	}
+
+	/**
+	 * Get all properties of an object
+	 *
+	 * @return the vector of property entries
+	 */
+	public Vector<CPLPropertyEntry<Boolean>> getBooleanProperties() {
+		return getBooleanProperties(null, null);
 	}
 
 	/**
@@ -611,11 +795,36 @@ public class CPLObject {
 	 * @param value the value
 	 * @throws CPLException if no matching object is found
 	 */
-	public static Vector<CPLObject> lookupByProperty(String prefix, String key,
+	public static Vector<CPLObject> lookupByStringProperty(String prefix, String key,
 			String value) {
-		return lookupByProperty(prefix, key, value, true);
+		return lookupByStringProperty(prefix, key, value, true);
 	}
 
+	/**
+	 * Lookup an object based on the property value
+	 *
+	 * @param prefix the prefix
+	 * @param key the key
+	 * @param value the value
+	 * @throws CPLException if no matching object is found
+	 */
+	public static Vector<CPLObject> lookupByNumericalProperty(String prefix, String key,
+													 double value) {
+		return lookupByNumericalProperty(prefix, key, value, true);
+	}
+
+	/**
+	 * Lookup an object based on the property value
+	 *
+	 * @param prefix the prefix
+	 * @param key the key
+	 * @param value the value
+	 * @throws CPLException if no matching object is found
+	 */
+	public static Vector<CPLObject> lookupByBooleanProperty(String prefix, String key,
+													 boolean value) {
+		return lookupByBooleanProperty(prefix, key, value, true);
+	}
 
 	/**
 	 * Lookup an object based on the property value, but do not fail if no
@@ -626,9 +835,37 @@ public class CPLObject {
 	 * @param value the value
 	 * @return the vector of matching objects (empty if not found)
 	 */
-	public static Vector<CPLObject> tryLookupByProperty(String prefix, String key,
+	public static Vector<CPLObject> tryLookupByStringProperty(String prefix, String key,
 			String value) {
-		return lookupByProperty(prefix, key, value, false);
+		return lookupByStringProperty(prefix, key, value, false);
+	}
+
+	/**
+	 * Lookup an object based on the property value, but do not fail if no
+	 * objects are found
+	 *
+	 * @param prefix the prefix
+	 * @param key the key
+	 * @param value the value
+	 * @return the vector of matching objects (empty if not found)
+	 */
+	public static Vector<CPLObject> tryLookupByNumericalProperty(String prefix, String key,
+														double value) {
+		return lookupByNumericalProperty(prefix, key, value, false);
+	}
+
+	/**
+	 * Lookup an object based on the property value, but do not fail if no
+	 * objects are found
+	 *
+	 * @param prefix the prefix
+	 * @param key the key
+	 * @param value the value
+	 * @return the vector of matching objects (empty if not found)
+	 */
+	public static Vector<CPLObject> tryLookupByBooleanProperty(String prefix, String key,
+														boolean value) {
+		return lookupByBooleanProperty(prefix, key, value, false);
 	}
 }
 
