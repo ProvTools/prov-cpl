@@ -853,58 +853,6 @@ cpl_add_relation_boolean_property(const cpl_id_t id,
 };
 
 /**
- * Create a bundle.
- *
- * @param name the object name
- * @param out_id the pointer to store the ID of the newly created object
- * @return CPL_OK or an error code
- */
-extern "C" EXPORT cpl_return_t
-cpl_create_bundle(const char* name,
-				  const char* prefix,
-				  cpl_id_t* out_id)
-{
-	return cpl_create_object(prefix, name, CPL_BUNDLE, out_id);
-}
-
-/**
- * Look up a bundle by name. If multiple bundles share the same name,
- * get the latest one.
- *
- * @param name the bundle name
- * @param out_id the pointer to store the object ID
- * @return CPL_OK or an error code
- */
-extern "C" EXPORT cpl_return_t
-cpl_lookup_bundle(const char* name,
-				  const char* prefix,
-				  cpl_id_t* out_id)
-{
-	return cpl_lookup_object(prefix, name, CPL_BUNDLE, out_id);
-}
-
-
-/**
- * Look up a bundle by name. If multiple bundles share the same name,
- * return all of them.
- *
- * @param name the bundle name
- * @param flags a logical combination of CPL_L_* flags
- * @param iterator the iterator to be called for each matching bundle
- * @param context the caller-provided iterator context
- * @return CPL_OK or an error code
- */
-extern "C" EXPORT cpl_return_t
-cpl_lookup_bundle_ext(const char* name,
-					  const char* prefix,
-					  const int flags,
-					  cpl_id_timestamp_iterator_t iterator,
-					  void* context)
-{
-	return cpl_lookup_object_ext(prefix, name, CPL_BUNDLE, flags, iterator, context);
-}
-
-/**
  * Look up a relation by from_id, to_id and type.
  * If multiple relations match, get the latest one.
  *
@@ -1398,54 +1346,6 @@ cpl_get_relation_boolean_properties(const cpl_id_t id,
     return cpl_db_backend->cpl_db_get_relation_properties(cpl_db_backend,
                                                           id, prefix, key, BOOLEANPROPERTY,
                                                           iterator, context);
-}
-
-/**
- * Deletes a bundle and all objects and relations belonging to it.
- *
- * @param id the bundle ID
- * @return CPL_OK, or an error code
- */
-extern "C" EXPORT cpl_return_t
-cpl_delete_bundle(const cpl_id_t id)
-{
-    CPL_ENSURE_INITIALIZED;
-    CPL_ENSURE_NOT_NONE(id);
-
-    return cpl_db_backend->cpl_db_delete_bundle(cpl_db_backend, id);
-}
-
-/**
- * Get information about the given provenance bundle.
- *
- * @param id the bundle ID
- * @param out_info the pointer to store the bundle info structure
- * @return CPL_OK or an error code
- */
-extern "C" EXPORT cpl_return_t
-cpl_get_bundle_info(const cpl_id_t id,
-					cpl_bundle_info_t** out_info)
-{
-	return cpl_get_object_info(id, (cpl_object_info_t**) out_info);
-
-}
-
-
-/**
- * Free cpl_bundle_info_t.
- *
- * @param info the pointer to the bundle info structure.
- * @return CPL_OK or an error code
- */
-extern "C" EXPORT cpl_return_t
-cpl_free_bundle_info(cpl_bundle_info_t* info)
-{
-	CPL_ENSURE_NOT_NULL(info);
-
-	if (info->name != NULL) free(info->name);
-
-	free(info);
-	return CPL_OK;
 }
 
 /**
@@ -2216,7 +2116,7 @@ import_document_json(const std::string& json_string,
 
 	// Create bundle
 	cpl_id_t bundle_id;
-	if(!CPL_IS_OK(cpl_create_bundle(bundle_name.c_str(), "", &bundle_id))){
+	if(!CPL_IS_OK(cpl_create_object(bundle_name.c_str(), "", CPL_BUNDLE, &bundle_id))){
 		goto error;
 	}
 
@@ -2262,7 +2162,7 @@ import_document_json(const std::string& json_string,
 	return CPL_OK;
 
 error:
-	cpl_delete_bundle(bundle_id);
+    //Delete bundle?
 	return CPL_E_INTERNAL_ERROR;
 }
 

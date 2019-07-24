@@ -171,9 +171,9 @@ print 'All objects (will return only the bundles)'
 all_objects = c.get_all_objects(prefix, True)
 all_objects_ids = [e.object.id for e in all_objects]
 if bundle.id not in all_objects_ids:
-	print 'ERROR: All objects is missing an object:' + str(entity.id)
+	print 'ERROR: All objects is missing an object:' + str(bundle.id)
 	sys.exit(1)
-i = 0
+
 # for t in all_objects:
 # 	CPL.p_id(t.object.id, with_newline = False)
 # 	i += 1

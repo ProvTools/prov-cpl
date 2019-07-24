@@ -195,7 +195,6 @@ public class CPLObject {
 		return result;
 	}
 
-
 	/**
 	 * Lookup an existing object
 	 *

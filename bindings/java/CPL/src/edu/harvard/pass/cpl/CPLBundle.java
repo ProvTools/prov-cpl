@@ -57,6 +57,7 @@ public class CPLBundle extends CPLObject {
 	 */
 	public CPLBundle(BigInteger id) {
 		super(id);
+		this.type = CPLDirect.CPL_BUNDLE;
 	}
 
 	/**
@@ -68,10 +69,11 @@ public class CPLBundle extends CPLObject {
 	public static CPLBundle create(String name, String prefix) {
 
 		BigInteger[] id = {nullId};
-		int r = CPLDirect.cpl_create_bundle(name, prefix, id);
+		int r = CPLDirect.cpl_create_object(prefix, name, CPLDirect.CPL_BUNDLE, id);
 		CPLException.assertSuccess(r);
 
 		CPLBundle o = new CPLBundle(id[0]);
+		o.prefix = prefix;
 		o.name = name;
 
 		return o;
@@ -84,20 +86,20 @@ public class CPLBundle extends CPLObject {
 	 * @return the bundles, or null if not found
 	 */
 	public static CPLBundle tryLookup(String name, String prefix) {
-
-		BigInteger[] id = {nullId};
-		int r = CPLDirect.cpl_lookup_bundle(name, prefix,
-											id);
-
+		BigInteger[] id = new BigInteger[]{nullId};
+		int r = CPLDirect.cpl_lookup_object(prefix, name, CPLDirect.CPL_BUNDLE, id);
 		if (CPLException.isError(r)) {
-			if (r == CPLDirect.CPL_E_NOT_FOUND) return null;
-			throw new CPLException(r);
+			if (r == -11) {
+				return null;
+			} else {
+				throw new CPLException(r);
+			}
+		} else {
+			CPLBundle o = new CPLBundle(id[0]);
+			o.prefix = prefix;
+			o.name = name;
+			return o;
 		}
-
-		CPLBundle o = new CPLBundle(id[0]);
-		o.name = name;
-
-		return o;
 	}
 
 	/**
@@ -121,36 +123,14 @@ public class CPLBundle extends CPLObject {
 	 * @return the collection of bundle, or an empty collection if not found
 	 */
 	public static Vector<CPLBundle> tryLookupAll(String name, String prefix) {
-
-		SWIGTYPE_p_std_vector_cpl_id_timestamp_t pVector
-			= CPLDirect.new_std_vector_cpl_id_timestamp_tp();
-		SWIGTYPE_p_void pv = CPLDirect
-			.cpl_convert_p_std_vector_cpl_id_timestamp_t_to_p_void(pVector);
-		Vector<CPLBundle> result = new Vector<CPLBundle>();
-
-		try {
-            int r = CPLDirect.cpl_lookup_bundle_ext(prefix, name,
-                    CPLDirect.CPL_L_NO_FAIL,
-					CPLDirect.cpl_cb_collect_id_timestamp_vector, pv);
-			CPLException.assertSuccess(r);
-
-			cpl_id_timestamp_t_vector v = CPLDirect
-				.cpl_dereference_p_std_vector_cpl_id_timestamp_t(pVector);
-			long l = v.size();
-			for (long i = 0; i < l; i++) {
-				cpl_id_timestamp_t e = v.get((int) i);
-                BigInteger id = e.getId();
-
-                CPLBundle o = new CPLBundle(id);
-                o.name = name;
-
-				result.add(o);
-			}
+		Vector<CPLObject> objs =  CPLObject.tryLookupAll(name, prefix, CPLDirect.CPL_BUNDLE);
+		Vector<CPLBundle> result = new Vector<>();
+		for (CPLObject o : objs) {
+			CPLBundle b = new CPLBundle(o.id);
+			b.name = o.name;
+			b.prefix = o.name;
+			result.add(b);
 		}
-		finally {
-			CPLDirect.delete_std_vector_cpl_id_timestamp_tp(pVector);
-		}
-
 		return result;
 	}
 
@@ -165,52 +145,6 @@ public class CPLBundle extends CPLObject {
 		Vector<CPLBundle> r = tryLookupAll(name, prefix);
 		if (r.isEmpty()) throw new CPLException(CPLDirect.CPL_E_NOT_FOUND);
 		return r;
-	}
-
-	/**
-	 * Fetch the bundle info if it is not already present
-	 *
-	 * @return true if the info was just fetched, false if we already had it
-	 */
-	protected boolean fetchInfo() {
-
-		if (name != null && knowCreationInfo)
-			return false;
-
-
-		// Fetch the info from CPL
-
-		SWIGTYPE_p_p_cpl_bundle_info_t ppInfo
-			= CPLDirect.new_cpl_bundle_info_tpp();
-
-		try {
-			int r = CPLDirect.cpl_get_bundle_info(id,
-					CPLDirect.cpl_convert_pp_cpl_bundle_info_t(ppInfo));
-			CPLException.assertSuccess(r);
-
-			cpl_bundle_info_t info
-				= CPLDirect.cpl_dereference_pp_cpl_bundle_info_t(ppInfo);
-
-			name = info.getName();
-
-			BigInteger creationSessionId = info.getCreation_session();
-			if (CPL.isNone(creationSessionId)) {
-				creationSession = null;		// This should never happen!
-			}
-			else {
-				creationSession = new CPLSession(creationSessionId);
-			}
-			creationTime = info.getCreation_time();
-
-			knowCreationInfo = true;
-
-			CPLDirect.cpl_free_bundle_info(info);
-		}
-		finally {
-			CPLDirect.delete_cpl_bundle_info_tpp(ppInfo);
-		}
-
-		return true;
 	}
 
 	/**
@@ -235,16 +169,6 @@ public class CPLBundle extends CPLObject {
 		CPLException.assertSuccess(r);
 	}
 
-	/**
-	 * Deletes a bundle and all objects and relations belonging to it.
-	 */
-	public void delete() {
-
-		int r = CPLDirect.cpl_delete_bundle(id);
-		if (CPLException.isError(r)){
-			throw new CPLException(r);
-		}
-	}
 
 	/**
 	 * Get all objects belonging to a bundle

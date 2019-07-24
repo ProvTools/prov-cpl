@@ -87,6 +87,7 @@ BUNDLERELATION = CPLDirect.BUNDLERELATION
 ENTITY = CPLDirect.CPL_ENTITY
 ACTIVITY = CPLDirect.CPL_ACTIVITY
 AGENT = CPLDirect.CPL_AGENT
+BUNDLE = CPLDirect.CPL_BUNDLE
 NUM_O_TYPES = CPLDirect.CPL_NUM_O_TYPES
 
 # Return Codes
@@ -540,7 +541,7 @@ class cpl_connection:
         return r
 
     def create_bundle(self, name, prefix):
-        ret, idp = CPLDirect.cpl_create_bundle(name, prefix)
+        ret, idp = CPLDirect.cpl_create_object(prefix, name, BUNDLE)
 
         if not CPLDirect.cpl_is_ok(ret):
             raise CPLException('Could not create' +
@@ -551,7 +552,7 @@ class cpl_connection:
 
 
     def lookup_bundle(self, name, prefix):
-        ret, idp = CPLDirect.cpl_lookup_bundle(name, prefix)
+        ret, idp = CPLDirect.cpl_lookup_object(prefix, name, BUNDLE)
 
         if not CPLDirect.cpl_is_ok(ret):
             raise CPLException('Could not find' +
@@ -566,7 +567,7 @@ class cpl_connection:
         '''
 
         vp = CPLDirect.new_std_vector_cpl_id_timestamp_tp()
-        ret = CPLDirect.cpl_lookup_bundle_ext(name,
+        ret = CPLDirect.cpl_lookup_object_ext(name,
             L_NO_FAIL, CPLDirect.cpl_cb_collect_id_timestamp_vector, vp)
 
         if not CPLDirect.cpl_is_ok(ret):
@@ -828,18 +829,6 @@ class cpl_connection:
 
         CPLDirect.delete_std_vector_cpl_relation_tp(vp)
         return l
-
-
-    def delete_bundle(self, bundle):
-        '''
-        Delete the specified bundle and everything in it.
-        '''
-        ret = CPLDirect.cpl_delete_bundle(bundle.id)
-        if not CPLDirect.cpl_is_ok(ret):
-            raise CPLException('Error deleting bundle: ' +
-                    CPLDirect.cpl_error_string(ret), ret)
-        return None
-
 
     def validate_json(self, json):
         '''

@@ -54,7 +54,6 @@
 typedef cpl_db_backend_t* p_cpl_db_backend_t;
 typedef cpl_session_info_t* p_cpl_session_info_t;
 typedef cpl_object_info_t* p_cpl_object_info_t;
-typedef cpl_bundle_info_t* p_cpl_bundle_info_t;
 
 inline _cpl_db_backend_t*
 cpl_dereference_pp_cpl_db_backend_t(p_cpl_db_backend_t* p) {
@@ -71,11 +70,6 @@ cpl_dereference_pp_cpl_object_info_t(p_cpl_object_info_t* p) {
     return *p;
 }
 
-inline cpl_bundle_info_t*
-cpl_dereference_pp_cpl_bundle_info_t(p_cpl_bundle_info_t* p) {
-    return *p;
-}
-
 inline cpl_session_info_t**
 cpl_convert_pp_cpl_session_info_t(p_cpl_session_info_t* p) {
     return p;
@@ -83,11 +77,6 @@ cpl_convert_pp_cpl_session_info_t(p_cpl_session_info_t* p) {
 
 inline cpl_object_info_t**
 cpl_convert_pp_cpl_object_info_t(p_cpl_object_info_t* p) {
-    return p;
-}
-
-inline cpl_bundle_info_t**
-cpl_convert_pp_cpl_bundle_info_t(p_cpl_bundle_info_t* p) {
     return p;
 }
 
@@ -225,17 +214,11 @@ cpl_dereference_pp_cpl_session_info_t(p_cpl_session_info_t* p);
 inline cpl_object_info_t*
 cpl_dereference_pp_cpl_object_info_t(p_cpl_object_info_t* p);
 
-inline cpl_bundle_info_t*
-cpl_dereference_pp_cpl_bundle_info_t(p_cpl_bundle_info_t* p);
-
 inline cpl_session_info_t**
 cpl_convert_pp_cpl_session_info_t(p_cpl_session_info_t* p);
 
 inline cpl_object_info_t**
 cpl_convert_pp_cpl_object_info_t(p_cpl_object_info_t* p);
-
-inline cpl_bundle_info_t**
-cpl_convert_pp_cpl_bundle_info_t(p_cpl_bundle_info_t* p);
 
 inline int
 cpl_is_ok(cpl_return_t ret);
@@ -255,15 +238,6 @@ cpl_is_ok(cpl_return_t ret);
  */
 
 %include typemaps.i
-
-cpl_return_t
-cpl_create_bundle(const char* name,
-                  const char* prefix,
-                  unsigned long long* OUTPUT);
-cpl_return_t
-cpl_lookup_bundle(const char* name,
-                  const char* prefix,
-                  unsigned long long* OUTPUT);
 
 cpl_return_t
 cpl_lookup_relation(const cpl_id_t from_id,
@@ -433,14 +407,12 @@ cpl_convert_p_std_vector_cpl_id_t_to_p_void(
 %pointer_functions(p_cpl_db_backend_t, cpl_db_backend_tpp);
 %pointer_functions(p_cpl_session_info_t, cpl_session_info_tpp);
 %pointer_functions(p_cpl_object_info_t, cpl_object_info_tpp);
-%pointer_functions(p_cpl_bundle_info_t, cpl_bundle_info_tpp);
 
 %pointer_functions(cpl_session_t, cpl_session_tp);
 %pointer_functions(cpl_id_t, cpl_id_tp);
 
 %pointer_functions(cpl_session_info_t, cpl_session_info_tp);
 %pointer_functions(cpl_object_info_t, cpl_object_info_tp);
-%pointer_functions(cpl_bundle_info_t, cpl_bundle_info_tp);
 
 %pointer_functions(std_vector_cpl_id_timestamp_t,
         std_vector_cpl_id_timestamp_tp);

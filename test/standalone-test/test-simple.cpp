@@ -68,26 +68,6 @@ print_session_info(cpl_session_info_t* info)
 }
 
 /**
- * Print the cpl_bundle_info_t structure
- *
- * @param info the info structure
- */
-static void
-print_bundle_info(cpl_bundle_info_t* info)
-{
-	time_t creation_time = (time_t) info->creation_time;
-	char* s_creation_time = ctime(&creation_time);
-	if (s_creation_time[strlen(s_creation_time)-1] == '\n') {
-		s_creation_time[strlen(s_creation_time)-1] = '\0';
-	}
-
-	print(L_DEBUG, "  ID               : %llx", info->id);
-	print(L_DEBUG, "  Creation Session : %llx", info->creation_session);
-	print(L_DEBUG, "  Creation Time    : %s", s_creation_time);
-	print(L_DEBUG, "  Name             : %s", info->name);
-}
-
-/**
  * Print the cpl_object_info_t structure
  *
  * @param info the info structure
@@ -355,7 +335,7 @@ test_simple(void)
 
 	// Object creation
 
-	ret = cpl_create_bundle("Bundle", "test", &bun);
+	ret = cpl_create_object("test", "Bundle", CPL_BUNDLE, &bun);
 	print(L_DEBUG, "cpl_create_bundle --> %llx [%d]", bun, ret);
 	CPL_VERIFY(cpl_create_bundle, ret);
 	if (with_delays) delay();
@@ -388,7 +368,7 @@ test_simple(void)
 
 	cpl_id_t objx;
 
-	ret = cpl_lookup_bundle("Bundle", "test", &objx);
+	ret = cpl_lookup_object("test", "Bundle", CPL_BUNDLE, &objx);
 	print(L_DEBUG, "cpl_bundle --> %llx [%d]", objx ,ret);
 	CPL_VERIFY(cpl_lookup_bundle, ret);
 	if (bun!=objx)throw CPLException("Bundle lookup returned the wrong object");
@@ -663,14 +643,14 @@ test_simple(void)
 
 	// Bundle and object info
 
-	cpl_bundle_info_t* bun_info = NULL;
+	cpl_object_info* bun_info = NULL;
 
-	ret = cpl_get_bundle_info(bun, &bun_info);
+	ret = cpl_get_object_info(bun, &bun_info);
 	print(L_DEBUG, "cpl_get_bundle_info --> %d", ret);
 	CPL_VERIFY(cpl_get_bundle_info, ret);
 	if (with_delays) delay();
 
-	print_bundle_info(bun_info);
+	print_object_info(bun_info);
 	if (bun_info->id != bun
 //			|| bun_info->creation_session != session
 //			|| (!with_delays && !check_time(bun_info->creation_time))
@@ -678,7 +658,7 @@ test_simple(void)
 		throw CPLException("The returned bundle information is incorrect");
 	}
 
-	ret = cpl_free_bundle_info(bun_info);
+	ret = cpl_free_object_info(bun_info);
 	CPL_VERIFY(cpl_free_bundle_info, ret);
 	if (with_delays) delay();
 
@@ -782,6 +762,7 @@ test_simple(void)
 
     ret = cpl_get_object_numerical_properties(obj2, "test", "LABEL",
                                               cb_get_properties, &pctx);
+    print(L_DEBUG, "cpl_get_object_numerical_properties --> %d", ret);
     print(L_DEBUG, "cpl_get_object_numerical_properties --> %d", ret);
     CPL_VERIFY(cpl_get_object_numerical_properties, ret);
     if (!contains(pctx, "test:LABEL", "2.500000"))
@@ -920,7 +901,6 @@ test_simple(void)
 	if (with_delays) delay();
 
 
-	cpl_delete_bundle(bun);
 	cpl_detach();
 }
 
