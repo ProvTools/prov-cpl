@@ -475,19 +475,6 @@ if [prefix, 'TAG' + rand, True] not in string_properties:
 	print "ERROR: Wrong property was returned"
 	sys.exit(1)
 
-
-#TODO: uncomment this when deleting bundles is implemented
-
-# print
-# print "Deleting bundle"
-# c.delete_bundle(bundle)
-# try:
-# 	c.lookup_bundle(bundle_name, prefix)
-# except CPL.CPLException:
-# 	print "ERROR: Bundle was not deleted"
-# 	sys.exit(1)
-
-
 # Exit
 print "Closing connection"
 c.close()

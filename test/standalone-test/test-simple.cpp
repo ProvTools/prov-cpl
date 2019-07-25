@@ -652,9 +652,9 @@ test_simple(void)
 
 	print_object_info(bun_info);
 	if (bun_info->id != bun
-//			|| bun_info->creation_session != session
-//			|| (!with_delays && !check_time(bun_info->creation_time))
-			|| strcmp(bun_info->name, "Bundle") != 0) {
+			|| (!with_delays && !check_time(bun_info->creation_time))
+            || strcmp(bun_info->prefix, "test") != 0
+            || strcmp(bun_info->name, "Bundle") != 0) {
 		throw CPLException("The returned bundle information is incorrect");
 	}
 
@@ -673,7 +673,7 @@ test_simple(void)
 
     print_object_info(info);
 	if (info->id != obj1
-//			|| (!with_delays && !check_time(info->creation_time))
+			|| (!with_delays && !check_time(info->creation_time))
 			|| strcmp(info->prefix, "test") != 0
 			|| strcmp(info->name, "Entity") != 0
 			|| info->type != CPL_ENTITY) {
@@ -693,7 +693,7 @@ test_simple(void)
 
 	print_object_info(info);
 	if (info->id != obj2
-//			|| (!with_delays && !check_time(info->creation_time))
+			|| (!with_delays && !check_time(info->creation_time))
 			|| strcmp(info->prefix, "test") != 0
 			|| strcmp(info->name, "Agent") != 0
 			|| info->type != CPL_AGENT) {

@@ -552,9 +552,6 @@ public class test {
 			throw new RuntimeException("getStringProperties(\"TAG\") returned an incorrect vector");
 		}
 		
-
-		//TODO: delete the bundle
-
 		System.out.println();
 		System.out.println("All tests passed.");
 	}
