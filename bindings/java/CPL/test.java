@@ -37,8 +37,8 @@ import edu.harvard.pass.cpl.*;
 import java.io.File;
 import java.util.Optional;
 import java.util.Vector;
-import java.math.BigInteger;
 import java.util.Random;
+import java.math.BigInteger;
 
 /**
  * CPL test
@@ -100,11 +100,11 @@ public class test {
 		 */
 
 		String bundle_name = "Bundle" + rand;
-		System.out.print("CPLBundle.create(\" Bundle\")");
-		CPLBundle bundle = CPLBundle.create(bundle_name, PREFIX);
+		System.out.print("CPLObject.create(\" Bundle\")");
+		CPLObject bundle = CPLObject.create(PREFIX, bundle_name, CPLObject.BUNDLE);
 		System.out.println(": " + bundle);
 
-		System.out.println("CPLBundle.addPrefix()");
+		System.out.println("CPLObject.addPrefix()");
 		bundle.addPrefix(PREFIX, IRI);
 
 		String entity_name = "Entity" + rand;
@@ -139,8 +139,8 @@ public class test {
 		 * Lookup objects
 		 */
 
-		System.out.print("CPLBundle.lookup(\"Bundle\")");
-		CPLBundle bundlex = CPLBundle.lookup(bundle_name, PREFIX);
+		System.out.print("CPLObject.lookup(\"Bundle\")");
+		CPLObject bundlex = CPLObject.lookup(PREFIX, bundle_name, CPLObject.BUNDLE);
 		System.out.println(": " + bundlex);
 		if (!bundle.equals(bundlex))
 			throw new RuntimeException("Bundle lookup returned the wrong bundle");
@@ -177,13 +177,25 @@ public class test {
 		if (!entityv.contains(entity))
 			throw new RuntimeException("Object lookup did not return the right object");
 
-        System.out.print("CPLObject.getAllObjects()");
-        Vector<CPLObject> objall = CPLObject.getAllObjects(PREFIX);
+        System.out.print("CPLObject.getAllObjectsByType()");
+        Vector<CPLObject> objall = CPLObject.getAllObjectsByType(PREFIX, CPLDirect.CPL_BUNDLE);
 		System.out.println(": " + objall.size() + " results");
+		if(objall.size() != 1) {
+			throw new RuntimeException("Get all objects by type returned an incorrect vector");
+		}
+		if (!objall.contains(bundle)) {
+			throw new RuntimeException("Get all objects by type returned an incorrect vector");
+		}
 
-		Optional<CPLObject> found = objall.stream().filter(obj -> obj.getId().equals(bundle.getId())).findFirst();
-		if (found.isEmpty())
-			throw new RuntimeException("getAllObjects() has the wrong objects");
+		System.out.print("CPLObject.getAllObjects()");
+		objall = CPLObject.getAllObjects(PREFIX);
+		System.out.println(": " + objall.size() + " results");
+		if(objall.size() != 4) {
+			throw new RuntimeException("Get all objects returned an incorrect vector");
+		}
+		if (!objall.contains(bundle) || !objall.contains(entity) || !objall.contains(agent) || !objall.contains(activity)) {
+			throw new RuntimeException("Get all objects returned an incorrect vector");
+		}
 
 		System.out.println();
 
@@ -192,8 +204,8 @@ public class test {
 		 * Check objects created back from their internal IDs
 		 */
 
-		System.out.print("new CPLBundle(new CPLId(bundle.getId().toString()))");
-		bundlex = new CPLBundle(bundle.getId());
+		System.out.print("new CPLObject(new CPLId(bundle.getId().toString()))");
+		bundlex = new CPLObject(bundle.getId());
 		System.out.println(": " + bundlex);
 		if (!bundle.equals(bundlex))
 			throw new RuntimeException("Bundle recreation from ID failed");
@@ -255,7 +267,7 @@ public class test {
 		 */
 
 		System.out.print("CPLObject.getBundleObjects(bundle)");
-		Vector<CPLObject> bovec = bundle.getObjects();
+		Vector<CPLObject> bovec = bundle.getBundleObjects();
 		System.out.println(": " + bovec.size() + " results");
 		if(bovec.size() != 3 || !bovec.contains(entity) || !bovec.contains(agent) || !bovec.contains(activity)){
 			throw new RuntimeException("getBundleObjects() returned an incorrect vector");
@@ -313,7 +325,7 @@ public class test {
 		 */
 
 		System.out.print("CPLObject.getBundleRelations(bundle)");
-		Vector<CPLRelation> brvec = bundle.getRelations();
+		Vector<CPLRelation> brvec = bundle.getBundleRelations();
 		System.out.println(": " + brvec.size() + " results");
 		if(brvec.size() != 3 || !brvec.contains(r1) || !brvec.contains(r2) || !brvec.contains(r3)){
 			throw new RuntimeException("getBundleRelations() returned an incorrect vector");
@@ -551,7 +563,7 @@ public class test {
 		if (stringProps.size() != 1 || !stringProps.contains(r3_prop_str2)) {
 			throw new RuntimeException("getStringProperties(\"TAG\") returned an incorrect vector");
 		}
-		
+
 		System.out.println();
 		System.out.println("All tests passed.");
 	}

@@ -155,8 +155,7 @@ entity_all = c.lookup_all_objects(prefix, entity_name, entity_type)
 if len(entity_all) != 1:
 	print 'ERROR: Returned the wrong number of objects:' + str(len(entity_all))
 	sys.exit(1)
-entity_ids = [e.id for e in entity_all]
-if entity.id not in entity_ids:
+if entity not in entity_all:
 	print 'ERROR: Lookup all objects with name is missing an object:' + str(entity.id)
 	sys.exit(1)
 
@@ -167,11 +166,32 @@ if entity.id not in entity_ids:
 # 		print '  ... (' + str(len(entity_all)) + ' objects total)'
 # 		break
 
-print 'All objects (will return only the bundles)'
-all_objects = c.get_all_objects(prefix, True)
-all_objects_ids = [e.object.id for e in all_objects]
-if bundle.id not in all_objects_ids:
-	print 'ERROR: All objects is missing an object:' + str(bundle.id)
+print 'Get objects'
+all_object_infos = c.get_all_objects(prefix)
+all_objects = [e.object for e in all_object_infos]
+if len(all_object_infos) != 4:
+	print 'ERROR: Returned the wrong number of objects:' + str(len(all_object_infos))
+	sys.exit(1)
+if bundle not in all_objects:
+	print 'ERROR: Get objects is missing an object:' + str(bundle.id)
+	sys.exit(1)
+if activity not in all_objects:
+	print 'ERROR: Get objects is missing an object:' + str(activity.id)
+	sys.exit(1)
+if agent not in all_objects:
+	print 'ERROR: Get objects is missing an object:' + str(agent.id)
+	sys.exit(1)
+if entity not in all_objects:
+	print 'ERROR: Get objects is missing an object:' + str(entity.id)
+	sys.exit(1)
+
+all_object_infos = c.get_all_objects(prefix, CPL.BUNDLE)
+all_objects = [e.object for e in all_object_infos]
+if len(all_objects) != 1:
+	print 'ERROR: Returned the wrong number of objects:' + str(len(all_objects))
+	sys.exit(1)
+if bundle not in all_objects:
+	print 'ERROR: Get objects is missing an object object:' + str(bundle.id)
 	sys.exit(1)
 
 # for t in all_objects:
@@ -228,14 +248,13 @@ bundle_objects = c.get_bundle_objects(bundle)
 if len(bundle_objects) != 3:
 	print 'ERROR: Returned wrong number of objects:' + str(len(bundle_objects))
 	sys.exit(1)
-bundle_objects_ids = [e.id for e in bundle_objects]
-if entity.id not in bundle_objects_ids:
+if entity not in bundle_objects:
 	print 'ERROR: Bundle is missing an object:' + str(entity.id)
 	sys.exit(1)
-if agent.id not in bundle_objects_ids:
+if agent not in bundle_objects:
 	print 'ERROR: Bundle is missing an object:' + str(agent.id)
 	sys.exit(1)
-if activity.id not in bundle_objects_ids:
+if activity not in bundle_objects:
 	print 'ERROR: Bundle is missing an object:' + str(activity.id)
 	sys.exit(1)
 
@@ -380,8 +399,7 @@ numerical_obj = c.lookup_by_numerical_property(prefix, 'LABEL' + rand, 3.5)
 if len(numerical_obj) != 1:
 	print 'ERROR: Returned the wrong number of objects:' + str(len(numerical_obj))
 	sys.exit(1)
-numerical_obj_ids = [e.id for e in numerical_obj]
-if activity.id not in numerical_obj_ids:
+if activity not in numerical_obj:
 	print 'ERROR: Lookup by numerical property is missing an object:' + str(activity.id)
 	sys.exit(1)
 
@@ -390,8 +408,7 @@ boolean_obj = c.lookup_by_boolean_property(prefix, 'TAG' + rand, True)
 if len(boolean_obj) != 1:
 	print 'ERROR: Returned the wrong number of objects:' + str(len(boolean_obj))
 	sys.exit(1)
-boolean_obj_ids = [e.id for e in boolean_obj]
-if activity.id not in boolean_obj_ids:
+if activity not in boolean_obj:
 	print 'ERROR: Lookup by boolean property is missing an object:' + str(activity.id)
 	sys.exit(1)
 
@@ -400,11 +417,10 @@ string_obj = c.lookup_by_string_property(prefix, 'LABEL' + rand, '1')
 if len(string_obj) != 2:
 	print 'ERROR: Returned the wrong number of objects:' + str(len(string_obj))
 	sys.exit(1)
-string_obj_ids = [e.id for e in string_obj]
-if entity.id not in string_obj_ids:
+if entity not in string_obj:
 	print 'ERROR: Lookup by string property is missing an object:' + str(entity.id)
 	sys.exit(1)
-if activity.id not in string_obj_ids:
+if activity not in string_obj:
 	print 'ERROR: Lookup by string property is missing an object:' + str(activity.id)
 	sys.exit(1)
 

@@ -628,15 +628,27 @@ test_simple(void)
     // Object listing
 
     std::vector<cplxx_object_info_t> oiv;
-    ret = cpl_get_all_objects("test", 0, cpl_cb_collect_object_info_vector, &oiv);
+    ret = cpl_get_all_objects("test", 0, CPL_BUNDLE, cpl_cb_collect_object_info_vector, &oiv);
 	print(L_DEBUG, "cpl_get_all_objects --> %d objects [%d]",
           (int) oiv.size(), ret);
 	CPL_VERIFY(cpl_get_all_objects, ret);
-	if (oiv.size() != 1)
-	    throw CPLException("Object listing return the wrong number of objects");
+    if (oiv.size() != 1)
+	    throw CPLException("Get all objects return the wrong number of objects");
 	if (oiv[0].id != bun)
-	    throw CPLException("Object listing did not return the right object");
+	    throw CPLException("Get all objects did not return the right object");
 	if (with_delays) delay();
+
+    std::vector<cplxx_object_info_t> oiv2;
+    ret = cpl_get_all_objects("test", 0, 0, cpl_cb_collect_object_info_vector, &oiv2);
+    print(L_DEBUG, "cpl_get_all_objects --> %d objects [%d]",
+          (int) oiv2.size(), ret);
+    CPL_VERIFY(cpl_get_all_objects, ret);
+    if (oiv2.size() != 4)
+        throw CPLException("Get all objects return the wrong number of objects");
+
+    if (oiv2[0].id != bun)
+        throw CPLException("Get all objects did not return the right object");
+    if (with_delays) delay();
 
 	print(L_DEBUG, " ");
 

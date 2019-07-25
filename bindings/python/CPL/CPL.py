@@ -606,7 +606,7 @@ class cpl_connection:
         r = cpl_relation(idp, src, dest, type, D_ANCESTORS)
         return r
 
-    def get_all_objects(self, prefix, fast=False):
+    def get_all_objects(self, prefix, type = 0, fast=False):
         '''
         Return all objects in the provenance database. If fast = True, then
         fetch only incomplete information about each object, so that it is
@@ -619,7 +619,7 @@ class cpl_connection:
             flags = 0
 
         vp = CPLDirect.new_std_vector_cplxx_object_info_tp()
-        ret = CPLDirect.cpl_get_all_objects(prefix, flags,
+        ret = CPLDirect.cpl_get_all_objects(prefix, flags, type,
             CPLDirect.cpl_cb_collect_object_info_vector, vp)
 
         if not CPLDirect.cpl_is_ok(ret):

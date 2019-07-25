@@ -16,17 +16,28 @@ public class CPLBundleRelation {
 
     private 	BigInteger id;
 
+    /// The bundle object
+    private CPLObject bundle;
+
+    /// The relation
+    private CPLRelation relation;
+
     CPLBundleRelation(BigInteger id){
         this.id = id;
     }
 
-    public static CPLBundleRelation create(CPLBundle bundle, CPLRelation relation){
+    public static CPLBundleRelation create(CPLObject bundle, CPLRelation relation){
+        if (bundle.getType() != CPLDirect.CPL_BUNDLE) {
+            throw new CPLException("Cannot create bundle relation from non-bundle", CPLDirect.CPL_E_INVALID_ARGUMENT);
+        }
         BigInteger[] id = {nullId};
 
         int r = CPLDirect.cpl_add_relation(bundle.getId(), relation.getId(), BUNDLERELATION, id);
         CPLException.assertSuccess(r);
 
         CPLBundleRelation a = new CPLBundleRelation(id[0]);
+        a.bundle = bundle;
+        a.relation = relation;
         return a;
     }
 

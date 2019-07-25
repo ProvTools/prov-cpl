@@ -262,13 +262,24 @@ typedef struct {
 	/**
 	 * The lock for get_all_objects
 	 */
-	sema_t get_all_objects_sem;
-	mutex_t get_all_objects_lock;
+	sema_t get_all_objects_nt_sem;
+	mutex_t get_all_objects_nt_lock;
 
 	/**
 	 * The statement that returns information about all provenance objects
 	 */
-	SQLHSTMT* get_all_objects_stmts;
+	SQLHSTMT* get_all_objects_nt_stmts;
+
+    /**
+ * The lock for get_all_objects
+ */
+    sema_t get_all_objects_t_sem;
+    mutex_t get_all_objects_t_lock;
+
+    /**
+     * The statement that returns information about all provenance objects
+     */
+    SQLHSTMT* get_all_objects_t_stmts;
 
 	/**
 	 * The lock for get_object_info

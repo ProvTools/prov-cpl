@@ -994,13 +994,14 @@ cpl_free_session_info(cpl_session_info_t* info)
 extern "C" EXPORT cpl_return_t
 cpl_get_all_objects(const char* prefix,
                     const int flags,
+					const int type,
 					cpl_object_info_iterator_t iterator,
 					void* context)
 {
 	CPL_ENSURE_INITIALIZED;
 	CPL_ENSURE_NOT_NULL(iterator);
 
-	return cpl_db_backend->cpl_db_get_all_objects(cpl_db_backend, prefix, flags,
+	return cpl_db_backend->cpl_db_get_all_objects(cpl_db_backend, prefix, flags, type,
                                                   iterator, context);
 }
 

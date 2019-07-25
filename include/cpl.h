@@ -830,6 +830,7 @@ cpl_free_session_info(cpl_session_info_t* info);
 EXPORT cpl_return_t
 cpl_get_all_objects( const char* prefix,
 					const int flags,
+					const int type,
 					cpl_object_info_iterator_t iterator,
 					void* context);
 

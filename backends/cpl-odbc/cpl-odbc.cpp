@@ -495,8 +495,9 @@ cpl_odbc_free_statement_handles(cpl_odbc_t* odbc)
 	FREE_HANDLE(add_relation_property_stmts);
 	FREE_HANDLE(add_prefix_stmts);
 	FREE_HANDLE(get_session_info_stmts);
-	FREE_HANDLE(get_all_objects_stmts);
-	FREE_HANDLE(get_object_info_stmts);
+	FREE_HANDLE(get_all_objects_nt_stmts);
+    FREE_HANDLE(get_all_objects_t_stmts);
+    FREE_HANDLE(get_object_info_stmts);
 	FREE_HANDLE(get_object_ancestors_stmts);
 	FREE_HANDLE(get_object_descendants_stmts);
 	FREE_HANDLE(get_object_properties_stmts);
@@ -583,8 +584,9 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 	ALLOC_STMT(add_relation_property_stmts);
 	ALLOC_STMT(add_prefix_stmts);
 	ALLOC_STMT(get_session_info_stmts);
-	ALLOC_STMT(get_all_objects_stmts);
-	ALLOC_STMT(get_object_info_stmts);
+	ALLOC_STMT(get_all_objects_nt_stmts);
+    ALLOC_STMT(get_all_objects_t_stmts);
+    ALLOC_STMT(get_object_info_stmts);
 	ALLOC_STMT(get_object_ancestors_stmts);
 	ALLOC_STMT(get_object_descendants_stmts);
 	ALLOC_STMT(get_object_properties_stmts);
@@ -682,10 +684,15 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 		"            (id, prefix, iri)"
 		"     VALUES (?, ?, ?);");
 
-	PREPARE(get_all_objects_stmts,
+    PREPARE(get_all_objects_nt_stmts,
+            "SELECT id, creation_time, prefix, name, type"
+            "  FROM cpl_objects"
+            " WHERE id > 0 AND prefix = ?;");
+
+	PREPARE(get_all_objects_t_stmts,
 			"SELECT id, creation_time, prefix, name, type"
 			"  FROM cpl_objects"
-			" WHERE id > 0 AND type = 4 AND prefix = ?;");
+			" WHERE id > 0 AND prefix = ? AND type = ?;");
 
 	PREPARE(get_object_info_stmts,
 			"SELECT creation_time, prefix, name, type"
@@ -911,7 +918,8 @@ cpl_create_odbc_backend(const char* connection_string,
 	sema_init(odbc->add_relation_property_sem, 4);
 	sema_init(odbc->add_prefix_sem, 4);
 	sema_init(odbc->get_session_info_sem, 4);
-	sema_init(odbc->get_all_objects_sem, 4);
+    sema_init(odbc->get_all_objects_nt_sem, 4);
+    sema_init(odbc->get_all_objects_t_sem, 4);
 	sema_init(odbc->get_object_info_sem, 4);
 	sema_init(odbc->get_object_ancestors_sem, 4);
 	sema_init(odbc->get_object_descendants_sem, 4);
@@ -938,8 +946,9 @@ cpl_create_odbc_backend(const char* connection_string,
 	mutex_init(odbc->add_relation_property_lock);
 	mutex_init(odbc->add_prefix_lock);
 	mutex_init(odbc->get_session_info_lock);
-	mutex_init(odbc->get_all_objects_lock);
-	mutex_init(odbc->get_object_info_lock);
+	mutex_init(odbc->get_all_objects_nt_lock);
+    mutex_init(odbc->get_all_objects_t_lock);
+    mutex_init(odbc->get_object_info_lock);
 	mutex_init(odbc->get_object_ancestors_lock);
 	mutex_init(odbc->get_object_descendants_lock);
 	mutex_init(odbc->get_object_properties_lock);
@@ -979,8 +988,9 @@ err_sync:
 	sema_destroy(odbc->add_relation_property_sem);
 	sema_destroy(odbc->add_prefix_sem);
 	sema_destroy(odbc->get_session_info_sem);
-	sema_destroy(odbc->get_all_objects_sem);
-	sema_destroy(odbc->get_object_info_sem);
+	sema_destroy(odbc->get_all_objects_nt_sem);
+    sema_destroy(odbc->get_all_objects_t_sem);
+    sema_destroy(odbc->get_object_info_sem);
 	sema_destroy(odbc->get_object_ancestors_sem);
 	sema_destroy(odbc->get_object_descendants_sem);
 	sema_destroy(odbc->get_object_properties_sem);
@@ -1006,8 +1016,9 @@ err_sync:
 	mutex_destroy(odbc->add_relation_property_lock);
 	mutex_destroy(odbc->add_prefix_lock);
 	mutex_destroy(odbc->get_session_info_lock);
-	mutex_destroy(odbc->get_all_objects_lock);
-	mutex_destroy(odbc->get_object_info_lock);
+	mutex_destroy(odbc->get_all_objects_nt_lock);
+    mutex_destroy(odbc->get_all_objects_t_lock);
+    mutex_destroy(odbc->get_object_info_lock);
 	mutex_destroy(odbc->get_object_ancestors_lock);
 	mutex_destroy(odbc->get_object_descendants_lock);
 	mutex_destroy(odbc->get_object_properties_lock);
@@ -1097,8 +1108,9 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
 	sema_destroy(odbc->add_relation_property_sem);
 	sema_destroy(odbc->add_prefix_sem);
 	sema_destroy(odbc->get_session_info_sem);
-	sema_destroy(odbc->get_all_objects_sem);
-	sema_destroy(odbc->get_object_info_sem);
+	sema_destroy(odbc->get_all_objects_nt_sem);
+    sema_destroy(odbc->get_all_objects_t_sem);
+    sema_destroy(odbc->get_object_info_sem);
 	sema_destroy(odbc->get_object_ancestors_sem);
 	sema_destroy(odbc->get_object_descendants_sem);
 	sema_destroy(odbc->get_object_properties_sem);
@@ -1124,8 +1136,9 @@ cpl_odbc_destroy(struct _cpl_db_backend_t* backend)
 	mutex_destroy(odbc->add_relation_property_lock);
 	mutex_destroy(odbc->add_prefix_lock);
 	mutex_destroy(odbc->get_session_info_lock);
-	mutex_destroy(odbc->get_all_objects_lock);
-	mutex_destroy(odbc->get_object_info_lock);
+	mutex_destroy(odbc->get_all_objects_nt_lock);
+    mutex_destroy(odbc->get_all_objects_t_lock);
+    mutex_destroy(odbc->get_object_info_lock);
 	mutex_destroy(odbc->get_object_ancestors_lock);
 	mutex_destroy(odbc->get_object_descendants_lock);
 	mutex_destroy(odbc->get_object_properties_lock);
@@ -2017,6 +2030,7 @@ cpl_return_t
 cpl_odbc_get_all_objects(struct _cpl_db_backend_t* backend,
 						 const char* prefix,
 						 const int flags,
+						 const int type,
 						 cpl_object_info_iterator_t callback,
 						 void* context)
 {
@@ -2040,15 +2054,24 @@ cpl_odbc_get_all_objects(struct _cpl_db_backend_t* backend,
 		return CPL_E_INSUFFICIENT_RESOURCES;
 	}
 
-	SQLLEN cb_bundle_id = 0;
-
 	// Get and execute the statement
+    SQLHSTMT stmt;
+    enum {T, NT} e;
 
-	SQLHSTMT stmt = STMT_ACQUIRE(get_all_objects);
-	
+    if(type == 0){
+        stmt = STMT_ACQUIRE(get_all_objects_nt);
+        e = NT;
+    } else {
+        stmt = STMT_ACQUIRE(get_all_objects_t);
+        e = T;
+    }
+
 retry:
 
 	SQL_BIND_VARCHAR(stmt, 1, CPL_PREFIX_LEN, prefix);
+    switch(e){
+        case T: SQL_BIND_INTEGER(stmt, 2, type); break;
+    }
 
 	entries.clear();
 
@@ -2111,8 +2134,12 @@ retry:
 
 	// Unlock
 
-	STMT_RELEASE(get_all_objects, stmt);
-
+    switch (e) {
+        case T:
+            STMT_RELEASE(get_all_objects_t, stmt); break;
+        case NT:
+            STMT_RELEASE(get_all_objects_nt, stmt); break;
+    }
 
 	// If we did not get any data back, terminate
 
@@ -2154,7 +2181,12 @@ err_close:
 	}
 
 err:
-	STMT_RELEASE(get_all_objects, stmt);
+    switch (e) {
+        case T:
+            STMT_RELEASE(get_all_objects_t, stmt); break;
+        case NT:
+            STMT_RELEASE(get_all_objects_nt, stmt); break;
+    }
 	return CPL_E_STATEMENT_ERROR;
 }
 

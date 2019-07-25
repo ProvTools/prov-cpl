@@ -58,7 +58,8 @@ public class CPLObject {
 
 	public static final int ENTITY = CPLDirectConstants.CPL_ENTITY;
 	public static final int ACTIVITY = CPLDirectConstants.CPL_ACTIVITY;
-	public static final int AGENT = CPLDirectConstants.CPL_AGENT;	
+	public static final int AGENT = CPLDirectConstants.CPL_AGENT;
+	public static final int BUNDLE = CPLDirectConstants.CPL_BUNDLE;
 
 	/// The internal object ID
 	BigInteger id;
@@ -239,12 +240,21 @@ public class CPLObject {
 	}
 
 
+	/**
+	 * Get a collection of all provenance objects
+	 *
+	 * @return a vector of all provenance objects
+	 */
+	public static Vector<CPLObject> getAllObjects (String prefix) {
+		return getAllObjectsByType(prefix, 0);
+	}
+
     /**
-     * Get a collection of all provenance objects
+     * Get a collection of all provenance objects of a specific type
      *
      * @return a vector of all provenance objects
      */
-    public static Vector<CPLObject> getAllObjects(String prefix) {
+    public static Vector<CPLObject> getAllObjectsByType (String prefix, int type) {
 
 		SWIGTYPE_p_std_vector_cplxx_object_info_t pVector
 			= CPLDirect.new_std_vector_cplxx_object_info_tp();
@@ -253,7 +263,7 @@ public class CPLObject {
 		Vector<CPLObject> result = new Vector<CPLObject>();
 
 		try {
-            int r = CPLDirect.cpl_get_all_objects(prefix, CPLDirect.CPL_I_FAST,
+            int r = CPLDirect.cpl_get_all_objects(prefix, CPLDirect.CPL_I_FAST, type,
 					CPLDirect.cpl_cb_collect_object_info_vector, pv);
 			CPLException.assertSuccess(r);
 
@@ -464,10 +474,14 @@ public class CPLObject {
 	public Vector<CPLRelation> getRelations(int direction,
 			int flags) {
 
+		if (this.getType() == CPLDirect.CPL_BUNDLE) {
+			throw new CPLException("Cannot get object relations for a bundle", CPLDirect.CPL_E_INVALID_ARGUMENT);
+		}
+
 		SWIGTYPE_p_std_vector_cpl_relation_t pVector
-			= CPLDirect.new_std_vector_cpl_relation_tp();
+				= CPLDirect.new_std_vector_cpl_relation_tp();
 		SWIGTYPE_p_void pv = CPLDirect
-			.cpl_convert_p_std_vector_cpl_relation_t_to_p_void(pVector);
+				.cpl_convert_p_std_vector_cpl_relation_t_to_p_void(pVector);
 		Vector<CPLRelation> result = null;
 
 		try {
@@ -476,7 +490,7 @@ public class CPLObject {
 			CPLException.assertSuccess(r);
 
 			cpl_relation_t_vector v = CPLDirect
-				.cpl_dereference_p_std_vector_cpl_relation_t(pVector);
+					.cpl_dereference_p_std_vector_cpl_relation_t(pVector);
 			long l = v.size();
 			result = new Vector<CPLRelation>((int) l);
 			for (long i = 0; i < l; i++) {
@@ -495,7 +509,6 @@ public class CPLObject {
 
 		return result;
 	}
-
 
 	/**
 	 * Add a property
@@ -865,6 +878,105 @@ public class CPLObject {
 	public static Vector<CPLObject> tryLookupByBooleanProperty(String prefix, String key,
 														boolean value) {
 		return lookupByBooleanProperty(prefix, key, value, false);
+	}
+
+
+	/**
+	 * Add a prefix
+	 *
+	 * @param prefix the prefix
+	 * @param iri the namespace iri
+	 */
+	public void addPrefix(String prefix, String iri) {
+		if (this.type != CPLDirect.CPL_BUNDLE) {
+			throw new CPLException("Cannot add prefix to non-bundle", CPLDirect.CPL_E_INVALID_ARGUMENT);
+		}
+
+		int r = CPLDirect.cpl_add_prefix(id, prefix, iri);
+		CPLException.assertSuccess(r);
+	}
+
+
+	/**
+	 * Get all objects belonging to a bundle
+	 *
+	 * @return the vector of matching objects (empty if not found)
+	 */
+	public Vector<CPLObject> getBundleObjects() {
+		if (this.type != CPLDirect.CPL_BUNDLE) {
+			throw new CPLException("Cannot get bundle objects from non-bundle", CPLDirect.CPL_E_INVALID_ARGUMENT);
+		}
+
+		SWIGTYPE_p_std_vector_cplxx_object_info_t pVector
+				= CPLDirect.new_std_vector_cplxx_object_info_tp();
+		SWIGTYPE_p_void pv = CPLDirect
+				.cpl_convert_p_std_vector_cplxx_object_info_t_to_p_void(pVector);
+		Vector<CPLObject> result = new Vector<CPLObject>();
+
+		try {
+			int r = CPLDirect.cpl_get_bundle_objects(id,
+					CPLDirect.cpl_cb_collect_object_info_vector, pv);
+			CPLException.assertSuccess(r);
+
+			cplxx_object_info_t_vector v = CPLDirect
+					.cpl_dereference_p_std_vector_cplxx_object_info_t(pVector);
+			long l = v.size();
+			for (long i = 0; i < l; i++) {
+				cplxx_object_info_t e = v.get((int) i);
+				BigInteger obj_id = e.getId();
+
+				CPLObject o = new CPLObject(obj_id);
+
+				result.add(o);
+			}
+		}
+		finally {
+			CPLDirect.delete_std_vector_cplxx_object_info_tp(pVector);
+		}
+
+		return result;
+	}
+
+	/**
+	 * Get all relations belonging to a bundle
+	 *
+	 * @return the vector of matching relations (empty if not found)
+	 */
+	public Vector<CPLRelation> getBundleRelations() {
+		if (this.type != CPLDirect.CPL_BUNDLE) {
+			throw new CPLException("Cannot get bundle relation from non-bundle", CPLDirect.CPL_E_INVALID_ARGUMENT);
+		}
+
+		SWIGTYPE_p_std_vector_cpl_relation_t pVector
+				= CPLDirect.new_std_vector_cpl_relation_tp();
+		SWIGTYPE_p_void pv = CPLDirect
+				.cpl_convert_p_std_vector_cpl_relation_t_to_p_void(pVector);
+		Vector<CPLRelation> result = null;
+
+		try {
+			int r = CPLDirect.cpl_get_bundle_relations(id,
+					CPLDirect.cpl_cb_collect_relation_vector, pv);
+			CPLException.assertSuccess(r);
+
+			cpl_relation_t_vector v = CPLDirect
+					.cpl_dereference_p_std_vector_cpl_relation_t(pVector);
+			long l = v.size();
+			result = new Vector<CPLRelation>((int) l);
+			for (long i = 0; i < l; i++) {
+				cpl_relation_t e = v.get((int) i);
+				result.add(new CPLRelation(
+						e.getId(),
+						new CPLObject(e.getQuery_object_id()),
+						new CPLObject(e.getOther_object_id()),
+						e.getType(),
+						true));
+			}
+		}
+		finally {
+			CPLDirect.delete_std_vector_cpl_relation_tp(pVector);
+		}
+
+		return result;
 	}
 }
 
