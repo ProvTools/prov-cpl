@@ -585,27 +585,6 @@ class cpl_connection:
         return l
 
 
-    def lookup_relation(self, from_id, to_id, type):
-        ret, idp = CPLDirect.cpl_lookup_relation(from_id, to_id, type)
-
-        if not CPLDirect.cpl_is_ok(ret):
-            raise CPLException('Could not find' +
-                               ' relation: ' + CPLDirect.cpl_error_string(ret), ret)
-        r = cpl_relation(idp, to_id, from_id, type, D_ANCESTORS)
-        return r
-
-    def create_relation(self, src, dest, type):
-        '''
-        Add relation type from src to dest.
-        '''
-
-        ret, idp = CPLDirect.cpl_add_relation(src, dest, type)
-        if not CPLDirect.cpl_is_ok(ret):
-            raise CPLException('Could not add relation: ' +
-                               CPLDirect.cpl_error_string(ret), ret)
-        r = cpl_relation(idp, src, dest, type, D_ANCESTORS)
-        return r
-
     def get_all_objects(self, prefix, type = 0, fast=False):
         '''
         Return all objects in the provenance database. If fast = True, then
@@ -1051,6 +1030,62 @@ class cpl_object:
         Return a string representation of this object
         '''
         return str(self.id)
+
+    def lookup_relation_to(self, dest, type):
+        '''
+        Lookup relation from self to dest.
+        '''
+
+        ret, idp = CPLDirect.cpl_lookup_relation(self.id, dest.id, type)
+
+        if not CPLDirect.cpl_is_ok(ret):
+            raise CPLException('Could not find' +
+                               ' relation: ' + CPLDirect.cpl_error_string(ret), ret)
+        r = cpl_relation(idp, dest.id, self.id, type, D_ANCESTORS)
+        return r
+
+    def lookup_relation_from(self, src, type):
+        '''
+        Lookup relation from src to self.
+        '''
+
+        ret, idp = CPLDirect.cpl_lookup_relation(src.id, self.id, type)
+
+        if not CPLDirect.cpl_is_ok(ret):
+            raise CPLException('Could not find' +
+                               ' relation: ' + CPLDirect.cpl_error_string(ret), ret)
+        r = cpl_relation(idp, self.id, src.id, type, D_DESCENDANTS)
+        return r
+
+    def relation_to(self, dest, type):
+        '''
+        Add relation type from self to dest.
+        '''
+
+        ret, idp = CPLDirect.cpl_add_relation(self.id, dest.id, type)
+        if not CPLDirect.cpl_is_ok(ret):
+            raise CPLException('Could not add relation: ' +
+                    CPLDirect.cpl_error_string(ret), ret)
+
+        r = cpl_relation(idp, dest.id, self.id, type, D_ANCESTORS)
+
+        return r
+
+
+    def relation_from(self, src, type):
+        '''
+        Add relation type from src to self.
+        '''
+
+        ret, idp = CPLDirect.cpl_add_relation(src.id, self.id, type)
+        if not CPLDirect.cpl_is_ok(ret):
+            raise CPLException('Could not add relation: ' +
+                    CPLDirect.cpl_error_string(ret), ret)
+
+        r = cpl_relation(idp, self.id, src.id, type, D_DESCENDANTS)
+
+        return r
+
 
     def add_string_property(self, prefix, name, value):
         '''

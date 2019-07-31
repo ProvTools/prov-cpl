@@ -208,37 +208,37 @@ print '----- Create relation tests -----'
 print
 
 print 'relation wasAttributedTo from Entity to Agent'
-r1 = c.create_relation(entity.id, agent.id, CPL.WASATTRIBUTEDTO)
+r1 = entity.relation_to(agent, CPL.WASATTRIBUTEDTO)
 if not r1:
 	print 'ERROR: unable to create relation'
 	sys.exit(1)
 
 print 'relation wasGeneratedBy from Entity to Activity'
-r2 = c.create_relation(entity.id, activity.id, CPL.WASGENERATEDBY)
+r2 = activity.relation_from(entity, CPL.WASGENERATEDBY)
 if not r2:
 	print 'ERROR: unable to create relation'
 	sys.exit(1)
 
 print 'relation wasAssociatedWith from Agent to Activity'
-r3 = c.create_relation(agent.id, activity.id, CPL.WASASSOCIATEDWITH)
+r3 = agent.relation_to(activity, CPL.WASASSOCIATEDWITH)
 if not r3:
 	print 'ERROR: unable to create relation'
 	sys.exit(1)
 
 print 'relation bundleRelation from bundle to r1'
-r4 = c.create_relation(bundle.id, r1.id, CPL.BUNDLERELATION)
+r4 = bundle.relation_to(r1, CPL.BUNDLERELATION)
 if not r3:
 	print 'ERROR: unable to create relation'
 	sys.exit(1)
 
 print 'relation bundleRelation from bundle to r2'
-r5 = c.create_relation(bundle.id, r2.id, CPL.BUNDLERELATION)
+r5 = bundle.relation_to(r2, CPL.BUNDLERELATION)
 if not r3:
 	print 'ERROR: unable to create relation'
 	sys.exit(1)
 
 print 'relation bundleRelation from bundle to r3'
-r6 = c.create_relation(bundle.id, r3.id, CPL.BUNDLERELATION)
+r6 = bundle.relation_to(r3, CPL.BUNDLERELATION)
 if not r3:
 	print 'ERROR: unable to create relation'
 	sys.exit(1)
