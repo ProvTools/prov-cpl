@@ -12,6 +12,7 @@
 ifndef ROOT
 	ROOT := .
 endif
+LINK = CXX
 
 
 #

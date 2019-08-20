@@ -101,7 +101,6 @@ typedef struct _cpl_db_backend_t {
 							const char* prefix,
 							const char* name,
 							const int type,
-							const cpl_id_t bundle,
 							cpl_id_t* out_id);
 
 	/**
@@ -120,7 +119,6 @@ typedef struct _cpl_db_backend_t {
 							const char* prefix,
 							const char* name,
 					   		const int type,
-					   		const cpl_id_t bundle_id,
 							cpl_id_t* out_id);
 
 	/**
@@ -141,7 +139,6 @@ typedef struct _cpl_db_backend_t {
 								const char* prefix,
 								const char* name,
 								const int type,
-					   		    const cpl_id_t bundle_id,
 								const int flags,
 								cpl_id_timestamp_iterator_t callback,
 								void* context);
@@ -178,7 +175,6 @@ typedef struct _cpl_db_backend_t {
 								const cpl_id_t from_id,
 								const cpl_id_t to_id,
 								const int type,
-								const cpl_id_t bundle,
 								cpl_id_t* out_id);
 
     /**

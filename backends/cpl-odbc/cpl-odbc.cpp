@@ -640,30 +640,7 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 			"     VALUES (DEFAULT, ?, ?, ?, ?, ?)"
 			"   RETURNING id;");
 
-	PREPARE(create_object_stmts,
-			"INSERT INTO cpl_objects"
-			"            (id, prefix, name, type,"
-			"             bundle_id)"
-			"     VALUES (DEFAULT, ?, ?, ?, ?)"
-			"   RETURNING id;");
-
-	PREPARE(lookup_object_stmts,
-			"SELECT id"
-			"  FROM cpl_objects"
-			" WHERE prefix = ? AND name = ? AND type = ? AND bundle_id = ?"
-			" ORDER BY creation_time DESC"
-			" LIMIT 1;");
-
-	PREPARE(lookup_object_nt_stmts,
-			"SELECT id"
-			"  FROM cpl_objects"
-			" WHERE prefix = ? AND name = ? AND bundle_id = ?"
-			" ORDER BY creation_time DESC"
-			" LIMIT 1;");
-
-	PREPARE(lookup_object_nb_stmts,
-			"SELECT id"
-			"  FROM cpl_objects"
+	PREPARE(create_object_stmts,bjects"
 			" WHERE prefix = ? AND name = ? AND type = ?"
 			" ORDER BY creation_time DESC"
 			" LIMIT 1;");
@@ -678,12 +655,34 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 	PREPARE(lookup_object_ext_stmts,
 			"SELECT id, creation_time"
 			"  FROM cpl_objects"
-			" WHERE prefix = ? AND name = ? AND type = ? AND bundle_id = ?;");
+			" WHERE prefix = ? AND name = ? AND type = ?;");
 
 	PREPARE(lookup_object_nt_ext_stmts,
+			"INSERT INTO cpl_objects"
+			"            (id, prefix, name, type)"
+			"     VALUES (DEFAULT, ?, ?, ?)"
+			"   RETURNING id;");
+
+	PREPARE(lookup_object_stmts,
+			"SELECT id"
+			"  FROM cpl_objects"
+			" WHERE prefix = ? AND name = ? AND type = ?"
+			" ORDER BY creation_time DESC"
+			" LIMIT 1;");
+
+	PREPARE(lookup_object_nt_stmts,
+			"SELECT id"
+			"  FROM cpl_objects"
+			" WHERE prefix = ? AND name = ?"
+			" ORDER BY creation_time DESC"
+			" LIMIT 1;");
+
+	PREPARE(lookup_object_nb_stmts,
+			"SELECT id"
+			"  FROM cpl_o
 			"SELECT id, creation_time"
 			"  FROM cpl_objects"
-			" WHERE prefix = ? AND name = ? AND bundle_id = ?;");
+			" WHERE prefix = ? AND name = ?;");
 
 	PREPARE(lookup_object_nb_ext_stmts,
 			"SELECT id, creation_time"
@@ -698,8 +697,8 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 	PREPARE(add_relation_stmts,
 			"INSERT INTO cpl_relations"
 			"            (id, from_id,"
-			"             to_id, type, bundle_id)"
-			"     VALUES (DEFAULT, ?, ?, ?, ?)"
+			"             to_id, type)"
+			"     VALUES (DEFAULT, ?, ?, ?)"
 			"   RETURNING id;");
 
 	PREPARE(create_bundle_stmts,
@@ -741,14 +740,12 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 		"     VALUES (?, ?, ?);");
 
 	PREPARE(get_all_objects_stmts,
-			"SELECT id, creation_time, prefix, name, type,"
-			"       bundle_id"
+			"SELECT id, creation_time, prefix, name, type"
 			"  FROM cpl_objects"
 			" WHERE id > 0;");
 
 	PREPARE(get_object_info_stmts,
-			"SELECT creation_time, prefix, name, type,"
-			"       bundle_id"
+			"SELECT creation_time, prefix, name, type"
 			"  FROM cpl_objects"
 			" WHERE id = ?"
 			" LIMIT 1;");
@@ -761,14 +758,19 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 			" LIMIT 1;");
 
 	PREPARE(get_object_ancestors_stmts,
-			"SELECT id, to_id, type, bundle_id"
+			"SELECT id, to_id, type"
 			"  FROM cpl_relations"
 			" WHERE from_id = ?");
 
 	PREPARE(get_object_descendants_stmts,
-			"SELECT id, from_id, type, bundle_id"
+			"SELECT id, from_id, type"
 			"  FROM cpl_relations"
 			" WHERE to_id = ?");
+
+	PREPARE(get_object_relations_stmts,
+			"SELECT id, from_id, to_id, type"
+			"  FROM cpl_relations"
+			" WHERE from_id = ? OR to_id = ?");
 
 	PREPARE(get_object_properties_stmts,
 			"SELECT id, prefix, name, value"
@@ -812,9 +814,9 @@ cpl_odbc_connect(cpl_odbc_t* odbc)
 			" LIMIT 1;");
 
 	PREPARE(get_bundle_objects_stmts,
-			"SELECT id, creation_time, prefix, name, type"
-			"  FROM cpl_objects"
-			" WHERE bundle_id = ?;")
+			"SELECT O.id, O.creation_time, O.prefix, O.name, O.type"
+			"  FROM cpl_objects as O, cpl_relations as R"
+			" WHERE R.from_id = ? AND R.to_id = O.id;")
 
 	PREPARE(get_bundle_relations_stmts,
 			"SELECT id, from_id, to_id, type"
@@ -902,7 +904,7 @@ cpl_odbc_reconnect(cpl_odbc_t* odbc)
 
 static SQLHSTMT
 cpl_acquire_stmt(sema_t semaphore, mutex_t mutex, SQLHSTMT* stmt_array){
-	
+
 	sema_wait(semaphore);
 	mutex_lock(mutex);
 
@@ -1415,12 +1417,10 @@ cpl_odbc_create_object(struct _cpl_db_backend_t* backend,
 					   const char* prefix,
 					   const char* name,
 					   const int type,
-					   const cpl_id_t bundle,
 					   cpl_id_t* out_id)
 {
 	assert(backend != NULL && prefix != NULL
-			&& name != NULL && CPL_IS_OBJECT_TYPE(type)
-			&& bundle > 0); 
+			&& name != NULL && CPL_IS_OBJECT_TYPE(type));
 	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
 
 	SQL_START;
@@ -1437,7 +1437,6 @@ retry:
 	SQL_BIND_VARCHAR(stmt, 1, CPL_PREFIX_LEN, prefix);
 	SQL_BIND_VARCHAR(stmt, 2, CPL_NAME_LEN, name);
 	SQL_BIND_INTEGER(stmt, 3, type);
-	SQL_BIND_INTEGER(stmt, 4, bundle);
 
 	// Insert the new row to the objects table
 
@@ -1480,9 +1479,9 @@ cpl_odbc_lookup_object(struct _cpl_db_backend_t* backend,
 					   const char* prefix,
 					   const char* name,
 					   const int type,
-					   const cpl_id_t bundle_id,
 					   cpl_id_t* out_id)
 {
+	int bundle_id = 0;
 	assert(backend != NULL);
 	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
 
@@ -1496,21 +1495,11 @@ cpl_odbc_lookup_object(struct _cpl_db_backend_t* backend,
 	enum {A, NB, NT, NTNB} e;
 
 	if(type == 0){
-		if(bundle_id == CPL_NONE){
-			stmt = STMT_ACQUIRE(lookup_object_ntnb);
-			e = NTNB;
-		} else {
-			stmt = STMT_ACQUIRE(lookup_object_nt);
-			e = NT;
-		}
+		stmt = STMT_ACQUIRE(lookup_object_ntnb);
+		e = NTNB;
 	} else {
-		if(bundle_id == CPL_NONE){
-			stmt = STMT_ACQUIRE(lookup_object_nb);
-			e = NB;
-		} else {
-			stmt = STMT_ACQUIRE(lookup_object);
-			e = A;
-		}
+		stmt = STMT_ACQUIRE(lookup_object_nb);
+		e = NB;
 	}
 
 retry:
@@ -1588,11 +1577,11 @@ cpl_odbc_lookup_object_ext(struct _cpl_db_backend_t* backend,
 						   const char* prefix,
 						   const char* name,
 						   const int type,
-					       const cpl_id_t bundle_id,
 						   const int flags,
 						   cpl_id_timestamp_iterator_t callback,
 						   void* context)
 {
+	int bundle_id = 0;
 	assert(backend != NULL);
 	cpl_odbc_t* odbc = (cpl_odbc_t*) backend;
 
@@ -1608,21 +1597,11 @@ cpl_odbc_lookup_object_ext(struct _cpl_db_backend_t* backend,
 	enum {A, NB, NT, NTNB} e;
 
 	if(type == 0){
-		if(bundle_id == CPL_NONE){
-			stmt = STMT_ACQUIRE(lookup_object_ntnb_ext);
-			e = NTNB;
-		} else {
-			stmt = STMT_ACQUIRE(lookup_object_nt_ext);
-			e = NT;
-		}
+		stmt = STMT_ACQUIRE(lookup_object_ntnb_ext);
+		e = NTNB;
 	} else {
-		if(bundle_id == CPL_NONE){
-			stmt = STMT_ACQUIRE(lookup_object_nb_ext);
-			e = NB;
-		} else {
-			stmt = STMT_ACQUIRE(lookup_object_ext);
-			e = A;
-		}
+		stmt = STMT_ACQUIRE(lookup_object_nb_ext);
+		e = NB;
 	}
 
 retry:
@@ -1739,7 +1718,6 @@ cpl_odbc_add_relation(struct _cpl_db_backend_t* backend,
 						   const cpl_id_t from_id,
 						   const cpl_id_t to_id,
 						   const int type,
-						   const cpl_id_t bundle,
 						   cpl_id_t* out_id)
 {
 	assert(backend != NULL && from_id != CPL_NONE && to_id != CPL_NONE && CPL_IS_RELATION_TYPE(type));
@@ -1760,8 +1738,6 @@ retry:
 	SQL_BIND_INTEGER(stmt, 1, from_id);
 	SQL_BIND_INTEGER(stmt, 2, to_id);
 	SQL_BIND_INTEGER(stmt, 3, type);
-	SQL_BIND_INTEGER(stmt, 4, bundle);
-
 
 	// Execute
 	
@@ -2440,9 +2416,6 @@ retry:
 	ret = SQLBindCol(stmt, 5, SQL_C_SLONG, &entry.type, 0, NULL);
 	if (!SQL_SUCCEEDED(ret)) goto err_close;
 
-    ret = SQLBindCol(stmt, 6, SQL_C_UBIGINT, &entry.bundle_id, 0,
-                     &cb_bundle_id);
-    if (!SQL_SUCCEEDED(ret)) goto err_close;
 
 
 
@@ -2583,8 +2556,6 @@ retry:
 	CPL_SQL_SIMPLE_FETCH_EXT(dynamically_allocated_string, 3, &p->name, true);
 	if (r == CPL_E_DB_NULL) p->name = strdup("");
 	CPL_SQL_SIMPLE_FETCH(int, 4, (int*) &p->type);
-	CPL_SQL_SIMPLE_FETCH_EXT(llong, 5, (long long*) &p->bundle_id, true);
-	if (r == CPL_E_DB_NULL) p->bundle_id = CPL_NONE;
 	
 	ret = SQLCloseCursor(stmt);
 	if (!SQL_SUCCEEDED(ret)) {
@@ -2694,8 +2665,6 @@ retry:
 	ret = SQLBindCol(stmt, 3, SQL_C_SLONG, &entry.type, 0, &ind_type);
 	if (!SQL_SUCCEEDED(ret)) goto err_close;
 
-	ret = SQLBindCol(stmt, 4, SQL_C_UBIGINT, &entry.bundle_id, 0, NULL);
-	if (!SQL_SUCCEEDED(ret)) goto err_close;
 
 
 	// Fetch the result
@@ -3432,7 +3401,6 @@ retry:
 	if (prefix != NULL) {
 		SQL_BIND_VARCHAR(stmt, 2, CPL_PREFIX_LEN, prefix);
 	}
-
 
 	// Execute
 	

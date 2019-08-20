@@ -308,6 +308,7 @@ extern cpl_session_t cpl_session;
 #define HADPLAN					16
 #define	WASASSOCIATEDWITH		17
 #define ACTEDONBEHALFOF			18
+#define INBUNDLE                19
 
 #define WASINFLUENCEDBY_STR			"wasInfluencedBy"
 #define ALTERNATEOF_STR				"alternateOf"
@@ -327,10 +328,11 @@ extern cpl_session_t cpl_session;
 #define HADPLAN_STR					"hadPlan"
 #define	WASASSOCIATEDWITH_STR		"wasAssociatedWith"
 #define ACTEDONBEHALFOF_STR			"actedOnBehalfOf"
+#define INBUNDLE_STR                "inBundle"
 
-#define CPL_IS_RELATION_TYPE(r)			((r) > 0 && (r) < 19)
+#define CPL_IS_RELATION_TYPE(r)			((r) > 0 && (r) < 20)
 
-#define CPL_NUM_R_TYPES					18
+#define CPL_NUM_R_TYPES					19
 /***************************************************************************/
 /** Return Codes                                                          **/
 /***************************************************************************/

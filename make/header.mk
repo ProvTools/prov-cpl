@@ -174,11 +174,11 @@ endif
 #
 
 ifdef DEBUG
-	DEBUG_FLAGS := $(DEBUG_FLAGS) -ggdb -D_DEBUG
+	DEBUG_FLAGS := $(DEBUG_FLAGS) -ggdb -D_DEBUG -lpthread
 	CFLAGS      := $(CFLAGS)
 	CXXFLAGS    := $(CXXFLAGS)
 else
-	DEBUG_FLAGS := $(DEBUG_FLAGS) -g -DNDEBUG
+	DEBUG_FLAGS := $(DEBUG_FLAGS) -g -DNDEBUG -lpthread
 	CFLAGS      := $(CFLAGS)   -O3
 	CXXFLAGS    := $(CXXFLAGS) -O3
 endif

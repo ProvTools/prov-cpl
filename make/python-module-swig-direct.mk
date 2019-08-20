@@ -39,7 +39,7 @@ WRAP_OBJECT := $(patsubst %.cxx,%.o,$(WRAP_SOURCE))
 WRAP_LIBRARY := _$(PROJECT).$(SOLIBRARY_EXT)
 WRAP_CXX := $(CXX) $(CXXFLAGS) -fno-strict-aliasing $(INCLUDE_FLAGS) \
 			-c -O3 -fPIC -I$(PYTHON_INCLUDE)
-WRAP_LINK := $(CXX) $(LINKER_FLAGS) -L. $(SHARED_OPTION)
+WRAP_LINK := $(CXX) $(LINKER_FLAGS) -L. -lpthread $(SHARED_OPTION)
 
 PYTHON_INCLUDE="/usr/include/$(shell ls -1 /usr/include | grep python \
 			   | grep -v '_d' | tail -n 1)"
