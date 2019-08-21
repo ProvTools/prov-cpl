@@ -118,7 +118,7 @@ You can verify that the data driver is installed by running: `odbcinst -q -d`
 
 PostgreSQL might not work out of the box on Ubuntu. If you experience user
 authentication issues for the user cpl, please add the following line to your
-`pg_hba.conf` file:
+`/etc/postgresql/10/main/pg_hba.conf` file:
 
     local   cpl             cpl                                     md5
 
