@@ -78,7 +78,7 @@ public class test {
      */
     public void run() throws Exception {
 		Random r = new Random();
-		String rand = "_" + r.nextInt(10000000);
+		String rand = "_" + r.nextInt(1000000);
 
 		System.out.println("CPL ver. " + CPL.VERSION_STR);
 		System.out.println();
@@ -180,9 +180,6 @@ public class test {
         System.out.print("CPLObject.getAllObjectsByType()");
         Vector<CPLObject> objall = CPLObject.getAllObjectsByType(PREFIX, CPLObject.BUNDLE);
 		System.out.println(": " + objall.size() + " results");
-		if(objall.size() != 1) {
-			throw new RuntimeException("Get all objects by type returned an incorrect vector");
-		}
 		if (!objall.contains(bundle)) {
 			throw new RuntimeException("Get all objects by type returned an incorrect vector");
 		}
@@ -190,9 +187,6 @@ public class test {
 		System.out.print("CPLObject.getAllObjects()");
 		objall = CPLObject.getAllObjects(PREFIX);
 		System.out.println(": " + objall.size() + " results");
-		if(objall.size() != 4) {
-			throw new RuntimeException("Get all objects returned an incorrect vector");
-		}
 		if (!objall.contains(bundle) || !objall.contains(entity) || !objall.contains(agent) || !objall.contains(activity)) {
 			throw new RuntimeException("Get all objects returned an incorrect vector");
 		}

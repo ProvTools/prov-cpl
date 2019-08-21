@@ -306,7 +306,9 @@ delay()
 void
 test_simple(void)
 {
-	cpl_return_t ret;
+    srand(time(0));
+    std::string rand_tag = "_" + std::to_string(rand() % 1000000);
+    cpl_return_t ret;
 	cpl_session_t session;
 
 	bool with_delays = false;
@@ -335,7 +337,12 @@ test_simple(void)
 
 	// Object creation
 
-	ret = cpl_create_object("test", "Bundle", CPL_BUNDLE, &bun);
+	const char* bundle_name = ("Bundle" + rand_tag).c_str();
+    const char* entity_name = ("Entity" + rand_tag).c_str();
+    const char* agent_name = ("Agent" + rand_tag).c_str();
+    const char* activity_name = ("Activity" + rand_tag).c_str();
+
+    ret = cpl_create_object("test", bundle_name, CPL_BUNDLE, &bun);
 	print(L_DEBUG, "cpl_create_bundle --> %llx [%d]", bun, ret);
 	CPL_VERIFY(cpl_create_bundle, ret);
 	if (with_delays) delay();
@@ -345,17 +352,20 @@ test_simple(void)
 	CPL_VERIFY(cpl_add_prefix, ret);
 	if (with_delays) delay();
 
-	ret = cpl_create_object("test", "Entity", CPL_ENTITY, &obj1);
+    ret = cpl_create_object("test", entity_name, CPL_ENTITY, &obj1);
 	print(L_DEBUG, "cpl_create_object --> %llx [%d]", obj1,ret);
 	CPL_VERIFY(cpl_create_object, ret);
 	if (with_delays) delay();
 
-	ret = cpl_create_object("test", "Agent", CPL_AGENT, &obj2);
+    ret = cpl_create_object("test", agent_name, CPL_AGENT, &obj2);
 	print(L_DEBUG, "cpl_create_object --> %llx [%d]", obj2,ret);
 	CPL_VERIFY(cpl_create_object, ret);
 	if (with_delays) delay();
 
-	ret = cpl_lookup_or_create_object("test", "Activity", CPL_ACTIVITY, &obj3);
+    print(L_DEBUG, agent_name,ret);
+    print(L_DEBUG, entity_name,ret);
+    print(L_DEBUG, activity_name,ret);
+    ret = cpl_lookup_or_create_object("test", activity_name, CPL_ACTIVITY, &obj3);
 	print(L_DEBUG, "cpl_lookup_or_create_object --> %llx [%d]",
 			obj3,ret);
 	CPL_VERIFY(cpl_lookup_or_create_object, ret);
@@ -368,26 +378,26 @@ test_simple(void)
 
 	cpl_id_t objx;
 
-	ret = cpl_lookup_object("test", "Bundle", CPL_BUNDLE, &objx);
+	ret = cpl_lookup_object("test", bundle_name, CPL_BUNDLE, &objx);
 	print(L_DEBUG, "cpl_bundle --> %llx [%d]", objx ,ret);
 	CPL_VERIFY(cpl_lookup_bundle, ret);
 	if (bun!=objx)throw CPLException("Bundle lookup returned the wrong object");
 	if (with_delays) delay();
 
-	ret = cpl_lookup_object("test", "Entity", CPL_ENTITY, &objx);
+	ret = cpl_lookup_object("test", entity_name, CPL_ENTITY, &objx);
 	print(L_DEBUG, "cpl_lookup_object --> %llx [%d]", objx ,ret);
 	CPL_VERIFY(cpl_lookup_object, ret);
 	if(obj1!=objx)throw CPLException("Object lookup returned the wrong object");
 	if (with_delays) delay();
 
-	ret = cpl_lookup_object("test", "Agent", CPL_AGENT, &objx);
+	ret = cpl_lookup_object("test", agent_name, CPL_AGENT, &objx);
 	print(L_DEBUG, "cpl_lookup_object --> %llx [%d]", objx,ret);
 	CPL_VERIFY(cpl_lookup_object, ret);
 	if(obj2!=objx)throw CPLException("Object lookup returned the wrong object");
 	if (with_delays) delay();
 
     std::map<cpl_id_t, unsigned long> ectx;
-	ret = cpl_lookup_object_ext("test", "Activity", CPL_ACTIVITY, CPL_L_NO_FAIL,
+	ret = cpl_lookup_object_ext("test", activity_name, CPL_ACTIVITY, CPL_L_NO_FAIL,
             cb_lookup_objects, &ectx);
     if (!CPL_IS_OK(ret)) {
         print(L_DEBUG, "cpl_lookup_object_ext --> [%d]", ret);
@@ -632,22 +642,45 @@ test_simple(void)
 	print(L_DEBUG, "cpl_get_all_objects --> %d objects [%d]",
           (int) oiv.size(), ret);
 	CPL_VERIFY(cpl_get_all_objects, ret);
-    if (oiv.size() != 1)
-	    throw CPLException("Get all objects return the wrong number of objects");
-	if (oiv[0].id != bun)
-	    throw CPLException("Get all objects did not return the right object");
-	if (with_delays) delay();
+    bool found1 = false;
+    for (size_t i = 0; i < oiv.size(); i++) {
+        cplxx_object_info_t& info = oiv[i];
+        if (info.id == bun) found1 = true;
+        if (i < 10) {
+            print(L_DEBUG, "  %s : %s : %i", info.prefix.c_str(),
+                  info.name.c_str(), info.type);
+        }
+    }
+    if (oiv.size() > 10) print(L_DEBUG, "  ...");
+    if (!found1)
+        throw CPLException("Object listing did not return a certain object");
+
+    if (with_delays) delay();
 
     std::vector<cplxx_object_info_t> oiv2;
     ret = cpl_get_all_objects("test", 0, 0, cpl_cb_collect_object_info_vector, &oiv2);
     print(L_DEBUG, "cpl_get_all_objects --> %d objects [%d]",
           (int) oiv2.size(), ret);
     CPL_VERIFY(cpl_get_all_objects, ret);
-    if (oiv2.size() != 4)
-        throw CPLException("Get all objects return the wrong number of objects");
+    found1 = false;
+    bool found2 = false;
+    bool found3 = false;
+    bool found4 = false;
+    for (size_t i = 0; i < oiv2.size(); i++) {
+        cplxx_object_info_t& info = oiv2[i];
+        if (info.id == obj1) found1 = true;
+        if (info.id == obj2) found2 = true;
+        if (info.id == obj3) found3 = true;
+        if (info.id == bun) found4 = true;
+        if (i < 10) {
+            print(L_DEBUG, "  %s : %s : %i", info.prefix.c_str(),
+                  info.name.c_str(), info.type);
+        }
+    }
+    if (oiv2.size() > 10) print(L_DEBUG, "  ...");
+    if (!found1 || !found2 || !found3 || !found4)
+        throw CPLException("Object listing did not return a certain object");
 
-    if (oiv2[0].id != bun)
-        throw CPLException("Get all objects did not return the right object");
     if (with_delays) delay();
 
 	print(L_DEBUG, " ");
@@ -666,7 +699,7 @@ test_simple(void)
 	if (bun_info->id != bun
 			|| (!with_delays && !check_time(bun_info->creation_time))
             || strcmp(bun_info->prefix, "test") != 0
-            || strcmp(bun_info->name, "Bundle") != 0) {
+            || strcmp(bun_info->name, bundle_name) != 0) {
 		throw CPLException("The returned bundle information is incorrect");
 	}
 
@@ -687,7 +720,7 @@ test_simple(void)
 	if (info->id != obj1
 			|| (!with_delays && !check_time(info->creation_time))
 			|| strcmp(info->prefix, "test") != 0
-			|| strcmp(info->name, "Entity") != 0
+			|| strcmp(info->name, entity_name) != 0
 			|| info->type != CPL_ENTITY) {
 		throw CPLException("The returned object information is incorrect");
 	}
@@ -707,7 +740,7 @@ test_simple(void)
 	if (info->id != obj2
 			|| (!with_delays && !check_time(info->creation_time))
 			|| strcmp(info->prefix, "test") != 0
-			|| strcmp(info->name, "Agent") != 0
+			|| strcmp(info->name, agent_name) != 0
 			|| info->type != CPL_AGENT) {
 		throw CPLException("The returned object information is incorrect");
 	}
