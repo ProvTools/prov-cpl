@@ -58,14 +58,13 @@ print
 print '----- Create object tests -----'
 print
 
-rand = '_' + str(random.randint(0,10000000))
-bundle_name = 'Bundle' + rand
+bundle_name = 'Bundle'
 print ('Create bundle name:' +
 	bundle_name)
 bundle = c.create_bundle(bundle_name, prefix)
 CPL.p_object(bundle)
 
-entity_name = 'Entity' + rand
+entity_name = 'Entity'
 entity_type = CPL.ENTITY
 print ('Create object name:' + str(entity_name) + ' type:' + str(entity_type) +
     ' bundle:' + str(bundle.id))
@@ -75,7 +74,7 @@ if entity == None:
 	sys.exit(1)
 CPL.p_object(entity)
 
-agent_name = 'Agent' + rand
+agent_name = 'Agent'
 agent_type = CPL.AGENT
 print ('Create object name:' +
 	str(agent_name) + ' type:' + str(agent_type))
@@ -93,7 +92,7 @@ if entityt.id != entity.id:
 	print "ERROR: Lookup returned wrong object"
 	sys.exit(1)
 
-activity_name = 'Activity' + rand
+activity_name = 'Activity'
 activity_type = CPL.ACTIVITY
 print ('Create object name:' +
 	str(activity_name) + ' type:' + str(activity_type))
@@ -329,31 +328,31 @@ print '----- Properties -----'
 print
 
 print 'Adding LABEL to entity'
-ret = entity.add_string_property(prefix, 'LABEL' + rand, '1')
+ret = entity.add_string_property(prefix, 'LABEL', '1')
 if ret != CPL.OK:
 	print "ERROR: Unable to add string property. Ret: " + str(ret)
 	sys.exit(1)
 
 print 'Adding LABEL to agent'
-ret = agent.add_string_property(prefix, 'LABEL' + rand, '2')
+ret = agent.add_string_property(prefix, 'LABEL', '2')
 if ret != CPL.OK:
 	print "ERROR: Unable to add string property. Ret: " + str(ret)
 	sys.exit(1)
 
 print 'Adding LABEL/1 to activity'
-ret = activity.add_numerical_property(prefix, 'LABEL' + rand, 3.5)
+ret = activity.add_numerical_property(prefix, 'LABEL', 3.5)
 if ret != CPL.OK:
 	print "ERROR: Unable to add numerical property. Ret: " + str(ret)
 	sys.exit(1)
 
 print 'Adding LABEL/2 to activity'
-ret = activity.add_string_property(prefix, 'LABEL' + rand, '1')
+ret = activity.add_string_property(prefix, 'LABEL', '1')
 if ret != CPL.OK:
 	print "ERROR: Unable to add string property. Ret: " + str(ret)
 	sys.exit(1)
 
 print 'Adding TAG to activity'
-ret = activity.add_boolean_property(prefix, 'TAG'  + rand, True)
+ret = activity.add_boolean_property(prefix, 'TAG', True)
 if ret != CPL.OK:
 	print "ERROR: Unable to add boolean property. Ret: " + str(ret)
 	sys.exit(1)
@@ -363,7 +362,7 @@ string_properties = entity.string_properties()
 if len(string_properties) != 1:
 	print "ERROR: Wrong number of string properties: " + str(len(string_properties))
 	sys.exit(1)
-if [prefix, 'LABEL' + rand, '1'] not in string_properties:
+if [prefix, 'LABEL', '1'] not in string_properties:
 	print "ERROR: Wrong property was returned"
 	sys.exit(1)
 
@@ -372,7 +371,7 @@ string_properties = agent.string_properties()
 if len(string_properties) != 1:
 	print "ERROR: Wrong number of string properties: " + str(len(string_properties))
 	sys.exit(1)
-if [prefix, 'LABEL' + rand, '2'] not in string_properties:
+if [prefix, 'LABEL', '2'] not in string_properties:
 	print "ERROR: Wrong property was returned"
 	sys.exit(1)
 
@@ -381,7 +380,7 @@ string_properties = activity.numerical_properties()
 if len(string_properties) != 1:
 	print "ERROR: Wrong number of numerical properties: " + str(len(string_properties))
 	sys.exit(1)
-if [prefix, 'LABEL' + rand, 3.5] not in string_properties:
+if [prefix, 'LABEL', 3.5] not in string_properties:
 	print "ERROR: Wrong property was returned"
 	sys.exit(1)
 
@@ -390,12 +389,12 @@ string_properties = activity.boolean_properties()
 if len(string_properties) != 1:
 	print "ERROR: Wrong number of boolean properties: " + str(len(string_properties))
 	sys.exit(1)
-if [prefix, 'TAG' + rand, True] not in string_properties:
+if [prefix, 'TAG', True] not in string_properties:
 	print "ERROR: Wrong property was returned"
 	sys.exit(1)
 
 print 'Lookup by numerical property'
-numerical_obj = c.lookup_by_numerical_property(prefix, 'LABEL' + rand, 3.5)
+numerical_obj = c.lookup_by_numerical_property(prefix, 'LABEL', 3.5)
 if len(numerical_obj) != 1:
 	print 'ERROR: Returned the wrong number of objects:' + str(len(numerical_obj))
 	sys.exit(1)
@@ -404,7 +403,7 @@ if activity not in numerical_obj:
 	sys.exit(1)
 
 print 'Lookup by boolean property'
-boolean_obj = c.lookup_by_boolean_property(prefix, 'TAG' + rand, True)
+boolean_obj = c.lookup_by_boolean_property(prefix, 'TAG', True)
 if len(boolean_obj) != 1:
 	print 'ERROR: Returned the wrong number of objects:' + str(len(boolean_obj))
 	sys.exit(1)
@@ -413,7 +412,7 @@ if activity not in boolean_obj:
 	sys.exit(1)
 
 print 'Lookup by string property'
-string_obj = c.lookup_by_string_property(prefix, 'LABEL' + rand, '1')
+string_obj = c.lookup_by_string_property(prefix, 'LABEL', '1')
 if len(string_obj) != 2:
 	print 'ERROR: Returned the wrong number of objects:' + str(len(string_obj))
 	sys.exit(1)
@@ -426,31 +425,31 @@ if activity not in string_obj:
 
 
 print 'Adding LABEL to r1'
-ret = r1.add_string_property(prefix, 'LABEL' + rand, '1')
+ret = r1.add_string_property(prefix, 'LABEL', '1')
 if ret != CPL.OK:
 	print "ERROR: Unable to add string property. Ret: " + str(ret)
 	sys.exit(1)
 
 print 'Adding LABEL to r2'
-ret = r2.add_string_property(prefix, 'LABEL' + rand, '2')
+ret = r2.add_string_property(prefix, 'LABEL', '2')
 if ret != CPL.OK:
 	print "ERROR: Unable to add string property. Ret: " + str(ret)
 	sys.exit(1)
 
 print 'Adding LABEL/1 to r3'
-ret = r3.add_numerical_property(prefix, 'LABEL' + rand, 3.5)
+ret = r3.add_numerical_property(prefix, 'LABEL', 3.5)
 if ret != CPL.OK:
 	print "ERROR: Unable to add numerical property. Ret: " + str(ret)
 	sys.exit(1)
 
 print 'Adding LABEL/2 to r3'
-ret = r3.add_string_property(prefix, 'LABEL' + rand, '1')
+ret = r3.add_string_property(prefix, 'LABEL', '1')
 if ret != CPL.OK:
 	print "ERROR: Unable to add string property. Ret: " + str(ret)
 	sys.exit(1)
 
 print 'Adding TAG to r3'
-ret = r3.add_boolean_property(prefix, 'TAG'  + rand, True)
+ret = r3.add_boolean_property(prefix, 'TAG', True)
 if ret != CPL.OK:
 	print "ERROR: Unable to add boolean property. Ret: " + str(ret)
 	sys.exit(1)
@@ -460,7 +459,7 @@ string_properties = r1.string_properties()
 if len(string_properties) != 1:
 	print "ERROR: Wrong number of string properties: " + str(len(string_properties))
 	sys.exit(1)
-if [prefix, 'LABEL' + rand, '1'] not in string_properties:
+if [prefix, 'LABEL', '1'] not in string_properties:
 	print "ERROR: Wrong property was returned"
 	sys.exit(1)
 
@@ -469,7 +468,7 @@ string_properties = r2.string_properties()
 if len(string_properties) != 1:
 	print "ERROR: Wrong number of string properties: " + str(len(string_properties))
 	sys.exit(1)
-if [prefix, 'LABEL' + rand, '2'] not in string_properties:
+if [prefix, 'LABEL', '2'] not in string_properties:
 	print "ERROR: Wrong property was returned"
 	sys.exit(1)
 
@@ -478,7 +477,7 @@ string_properties = r3.numerical_properties()
 if len(string_properties) != 1:
 	print "ERROR: Wrong number of numerical properties: " + str(len(string_properties))
 	sys.exit(1)
-if [prefix, 'LABEL' + rand, 3.5] not in string_properties:
+if [prefix, 'LABEL', 3.5] not in string_properties:
 	print "ERROR: Wrong property was returned"
 	sys.exit(1)
 
@@ -487,7 +486,7 @@ string_properties = r3.boolean_properties()
 if len(string_properties) != 1:
 	print "ERROR: Wrong number of boolean properties: " + str(len(string_properties))
 	sys.exit(1)
-if [prefix, 'TAG' + rand, True] not in string_properties:
+if [prefix, 'TAG', True] not in string_properties:
 	print "ERROR: Wrong property was returned"
 	sys.exit(1)
 
