@@ -178,7 +178,7 @@ public class test {
 			throw new RuntimeException("Object lookup did not return the right object");
 
         System.out.print("CPLObject.getAllObjectsByType()");
-        Vector<CPLObject> objall = CPLObject.getAllObjectsByType(PREFIX, CPLDirect.CPL_BUNDLE);
+        Vector<CPLObject> objall = CPLObject.getAllObjectsByType(PREFIX, CPLObject.BUNDLE);
 		System.out.println(": " + objall.size() + " results");
 		if(objall.size() != 1) {
 			throw new RuntimeException("Get all objects by type returned an incorrect vector");
