@@ -77,6 +77,9 @@ public class test {
      * The real main function
      */
     public void run() throws Exception {
+		Random r = new Random();
+		String rand = "_" + r.nextInt(10000000);
+
 		System.out.println("CPL ver. " + CPL.VERSION_STR);
 		System.out.println();
 
@@ -96,7 +99,7 @@ public class test {
 		 * Create objects
 		 */
 
-		String bundle_name = "Bundle";
+		String bundle_name = "Bundle" + rand;
 		System.out.print("CPLObject.create(\" Bundle\")");
 		CPLObject bundle = CPLObject.create(PREFIX, bundle_name, CPLObject.BUNDLE);
 		System.out.println(": " + bundle);
@@ -104,13 +107,13 @@ public class test {
 		System.out.println("CPLObject.addPrefix()");
 		bundle.addPrefix(PREFIX, IRI);
 
-		String entity_name = "Entity";
+		String entity_name = "Entity" + rand;
 		System.out.print("CPLObject.create(\"Entity\")");
 		CPLObject entity = CPLObject.create(PREFIX, entity_name,
 										  CPLObject.ENTITY);
 		System.out.println(": " + entity);
 
-		String agent_name = "Agent";
+		String agent_name = "Agent" + rand;
 		System.out.print("CPLObject.create(\"Agent\")");
 		CPLObject agent = CPLObject.create(PREFIX, agent_name,
 										  CPLObject.AGENT);
@@ -123,7 +126,7 @@ public class test {
 		if (!entity.equals(entityt))
 			throw new RuntimeException("Object lookup returned the wrong object");
 
-		String activity_name = "Activity";
+		String activity_name = "Activity" + rand;
 		System.out.print("CPLObject.lookupOrCreate(\"Activity\")");
 		CPLObject activity = CPLObject.lookupOrCreate(PREFIX, activity_name,
 											  CPLObject.ACTIVITY);
