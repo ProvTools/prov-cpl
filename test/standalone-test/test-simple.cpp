@@ -338,10 +338,6 @@ test_simple(void)
 	// Object creation
 
 	const char* bundle_name = ("Bundle" + rand_tag).c_str();
-	const char* entity_name = ("Entity" + rand_tag).c_str();
-	const char* agent_name = ("Agent" + rand_tag).c_str();
-	const char* activity_name = ("Activity" + rand_tag).c_str();
-
 	ret = cpl_create_object("test", bundle_name, CPL_BUNDLE, &bun);
 	print(L_DEBUG, "cpl_create_bundle --> %llx [%d]", bun, ret);
 	CPL_VERIFY(cpl_create_bundle, ret);
@@ -352,16 +348,19 @@ test_simple(void)
 	CPL_VERIFY(cpl_add_prefix, ret);
 	if (with_delays) delay();
 
+	const char* entity_name = ("Entity" + rand_tag).c_str();
 	ret = cpl_create_object("test", entity_name, CPL_ENTITY, &obj1);
 	print(L_DEBUG, "cpl_create_object --> %llx [%d]", obj1,ret);
 	CPL_VERIFY(cpl_create_object, ret);
 	if (with_delays) delay();
 
+	const char* agent_name = ("Agent" + rand_tag).c_str();
 	ret = cpl_create_object("test", agent_name, CPL_AGENT, &obj2);
 	print(L_DEBUG, "cpl_create_object --> %llx [%d]", obj2,ret);
 	CPL_VERIFY(cpl_create_object, ret);
 	if (with_delays) delay();
 
+	const char* activity_name = ("Activity" + rand_tag).c_str();
 	ret = cpl_lookup_or_create_object("test", activity_name, CPL_ACTIVITY, &obj3);
 	print(L_DEBUG, "cpl_lookup_or_create_object --> %llx [%d]",
 			obj3,ret);
