@@ -159,7 +159,8 @@ typedef struct _cpl_db_backend_t {
                            const cpl_id_t id,
                            const char* prefix,
                            const char* key,
-                           const char* value);
+                           const char* value,
+                           const int type);
 	/**
 	 * Add a relation
 	 *
@@ -192,68 +193,39 @@ typedef struct _cpl_db_backend_t {
                            const cpl_id_t id,
                            const char* prefix,
                            const char* key,
-                           const char* value);
-	
-	/**
-	 * Create a bundle.
-	 *
-	 * @param backend the pointer to the backend structure
-	 * @param name the object name
-	 * @param out_id the pointer to store the ID of the newly created object
-	 * @return CPL_OK or an error code
-	 */
-    cpl_return_t
-    (*cpl_db_create_bundle)(struct _cpl_db_backend_t* backend,
-    						const char* name,
-					  		const cpl_session_t session,
-    						cpl_id_t* out_id);
+                           const char* value,
+                           const int type);
 
-	/**
-	 * Look up a bundle by name. If multiple bundles share the same name,
-	 * get the latest one.
-	 *
-	 * @param name the bundle name
-	 * @param out_id the pointer to store the object ID
-	 * @return CPL_OK or an error code
-	 */
-	cpl_return_t
-	(*cpl_db_lookup_bundle)(struct _cpl_db_backend_t* backend,
-							const char* name,
-					  		cpl_id_t* out_id);
-
-	/**
-	 * Look up a bundle by name. If multiple bundles share the same name,
-	 * return all of them.
-	 *
-	 * @param backend the pointer to the backend structure
-	 * @param name the bundle name
-	 * @param flags a logical combination of CPL_L_* flags
-	 * @param iterator the iterator to be called for each matching bundle
-	 * @param context the caller-provided iterator context
-	 * @return CPL_OK or an error code
-	 */
-	cpl_return_t
-	(*cpl_db_lookup_bundle_ext)(struct _cpl_db_backend_t* backend,
-						  	const char* name,
-						  	const int flags,
-	 					  	cpl_id_timestamp_iterator_t iterator,
-						  	void* context);
     /**
-     * Add a property to the given bundle
+     * Lookup an relation based on from_id, to_id and type
      *
-	 * @param backend the pointer to the backend structure
-	 * @param the namespace prefix
-     * @param id the object ID
-     * @param key the key
-     * @param value the value
+     * @param backend the pointer to the backend structure
+     * @param from_id source of the relation
+     * @param too_id destination of the relation
+     * @param type the type of the relation
+     * @param out_id pointer to store the object ID
      * @return CPL_OK or an error code
      */
     cpl_return_t
-    (*cpl_db_add_bundle_property)(struct _cpl_db_backend_t* backend,
-                           const cpl_id_t id,
-                           const char* prefix,
-                           const char* key,
-                           const char* value);
+    (*cpl_db_lookup_relation)(struct _cpl_db_backend_t* backend,
+                               const cpl_id_t from_id,
+                               const cpl_id_t to_id,
+                               const long type,
+                               cpl_id_t* out_id);
+
+    /**
+     * Lookup an object property based on value, with wildcards
+     *
+     * @param backend the pointer to the backend structure
+     * @param value the fragment to search for
+     * @param out_id pointer to store the object ID
+     * @return CPL_OK or an error code
+     */
+    cpl_return_t
+    (*cpl_db_lookup_object_property_wildcard)(struct _cpl_db_backend_t* backend,
+                              const char* value,
+                              cpl_id_t* out_id);
+
 
     /**
      * Add a prefix to the given bundle
@@ -314,7 +286,9 @@ typedef struct _cpl_db_backend_t {
      */
     cpl_return_t
     (*cpl_db_get_all_objects)(struct _cpl_db_backend_t* backend,
+                              const char * prefix,
                               const int flags,
+                              const int type,
                               cpl_object_info_iterator_t callback,
                               void* context);
 
@@ -371,6 +345,7 @@ typedef struct _cpl_db_backend_t {
 							 const cpl_id_t id,
 							 const char* prefix,
 							 const char* key,
+							 int type,
 							 cpl_property_iterator_t callback,
 							 void* context);
 
@@ -390,6 +365,7 @@ typedef struct _cpl_db_backend_t {
 								 const char* prefix,
 								 const char* key,
 								 const char* value,
+								 const int type,
 								 cpl_property_iterator_t callback,
 								 void* context);
 
@@ -411,32 +387,9 @@ typedef struct _cpl_db_backend_t {
 								 const cpl_id_t id,
 								 const char* prefix,
 								 const char* key,
+								 const int type,
 								 cpl_property_iterator_t callback,
 								 void* context);
-
-
-	/**
-	 * Deletes a bundle along with all objects and relations it contains.
-	 *
-	 * @param backend the pointer to the backend structure
-	 * @param id the bundle ID
-	 */
-	cpl_return_t
-	(*cpl_db_delete_bundle)(struct _cpl_db_backend_t* backend,
-								 const cpl_id_t id);
-	
-	/**
-	 * Get information about the given provenance bundle
-	 *
-	 * @param backend the pointer to the backend structure
-	 * @param id the bundle ID
-	 * @param out_info the pointer to store the bundle info structure
-	 * @return CPL_OK or an error code
-	 */
-	cpl_return_t
-	(*cpl_db_get_bundle_info)(struct _cpl_db_backend_t* backend,
-							  const cpl_id_t id,
-							  cpl_bundle_info_t** out_info);
 
 	/**
 	 * Returns all objects contained in a bundle.
@@ -466,27 +419,6 @@ typedef struct _cpl_db_backend_t {
 	(*cpl_db_get_bundle_relations)(struct _cpl_db_backend_t* backend,
 								 const cpl_id_t id,
 								 cpl_relation_iterator_t callback,
-								 void* context);
-
-	/**
-	 * Get the properties associated with the given provenance bundle.
-	 *
-	 * @param backend the pointer to the backend structure
-	 * @param id the the bundle ID
-	 * @param prefix the property prefix to fetch - or NULL 
-	 *               (along with key)for all properties
-	 * @param key the property key to fetch - or NULL 
-	 *            (along with prefix) for all keys
-	 * @param iterator the iterator callback function
-	 * @param context the user context to be passed to the iterator function
-	 * @return CPL_OK, CPL_S_NO_DATA, or an error code
-	 */
-	cpl_return_t
-	(*cpl_db_get_bundle_properties)(struct _cpl_db_backend_t* backend,
-								 const cpl_id_t id,
-								 const char* prefix,
-								 const char* key,
-								 cpl_property_iterator_t callback,
 								 void* context);
 
 	/**

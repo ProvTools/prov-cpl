@@ -72,14 +72,6 @@ CREATE TABLE IF NOT EXISTS cpl_sessions (
        initialization_time TIMESTAMP DEFAULT NOW(),
        PRIMARY KEY (id));
 
-CREATE TABLE IF NOT EXISTS cpl_bundles (
-        id BIGSERIAL,
-       prefix VARCHAR(255),
-       name VARCHAR(255),
-       type INT,
-       creation_time TIMESTAMP DEFAULT NOW(),
-       PRIMARY KEY(id));
-
 CREATE TABLE IF NOT EXISTS cpl_objects (
        id BIGSERIAL,
        prefix VARCHAR(255),
@@ -93,29 +85,14 @@ CREATE TABLE IF NOT EXISTS cpl_relations (
        from_id BIGINT,
        to_id BIGINT,
        type INT,
-       PRIMARY KEY(id),
-       FOREIGN KEY(from_id)
-                   REFERENCES cpl_objects(id)
-                   ON DELETE CASCADE,
-       FOREIGN KEY(to_id)
-                   REFERENCES cpl_objects(id)
-                   ON DELETE CASCADE);
+       PRIMARY KEY(id));
 
 CREATE TABLE IF NOT EXISTS cpl_prefixes (
       id BIGINT,
       prefix VARCHAR(255) NOT NULL,
       iri VARCHAR(4095) NOT NULL,
       FOREIGN KEY(id)
-            REFERENCES cpl_bundles(id)
-            ON DELETE CASCADE);
-
-CREATE TABLE IF NOT EXISTS cpl_bundle_properties (
-      id BIGINT,
-      prefix VARCHAR(255) NOT NULL,
-      name VARCHAR(255) NOT NULL,
-      value VARCHAR(4095) NOT NULL,
-      FOREIGN KEY(id)
-            REFERENCES cpl_bundles(id)
+            REFERENCES cpl_objects(id)
             ON DELETE CASCADE);
 
 CREATE TABLE IF NOT EXISTS cpl_relation_properties (
@@ -123,6 +100,7 @@ CREATE TABLE IF NOT EXISTS cpl_relation_properties (
       prefix VARCHAR(255) NOT NULL,
       name VARCHAR(255) NOT NULL,
       value VARCHAR(4095) NOT NULL,
+      type INT NOT NULL,
       FOREIGN KEY(id)
             REFERENCES cpl_relations(id)
             ON DELETE CASCADE);
@@ -132,18 +110,17 @@ CREATE TABLE IF NOT EXISTS cpl_object_properties (
        prefix VARCHAR(255) NOT NULL,
        name VARCHAR(255) NOT NULL,
        value VARCHAR(4095) NOT NULL,
+       type INT NOT NULL,
        FOREIGN KEY(id)
            REFERENCES cpl_objects(id)
            ON DELETE CASCADE);
 
 INSERT INTO cpl_sessions (id, mac_address, username, pid, program, cmdline)
   VALUES (0, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO cpl_bundles (id, prefix, name, type)
-  VALUES (0, NULL, NULL, NULL);
 INSERT INTO cpl_objects (id, prefix, name, type)
   VALUES (0, NULL, NULL, NULL);
-INSERT INTO cpl_relations (id, from_id, to_id, type, bundle_id)
-  VALUES (0, NULL, NULL, NULL, NULL);
+INSERT INTO cpl_relations (id, from_id, to_id, type)
+  VALUES (0, NULL, NULL, NULL);
 
 CREATE OR REPLACE RULE cpl_relation_properties_ignore_duplicate_inserts AS
     ON INSERT TO cpl_relation_properties
@@ -151,7 +128,8 @@ CREATE OR REPLACE RULE cpl_relation_properties_ignore_duplicate_inserts AS
            FROM cpl_relation_properties
           WHERE cpl_relation_properties.id = NEW.id 
           AND cpl_relation_properties.prefix = NEW.prefix
-          AND cpl_relation_properties.name = NEW.name)) 
+          AND cpl_relation_properties.name = NEW.name
+          AND cpl_relation_properties.type = NEW.type))
       DO INSTEAD NOTHING;
 
 CREATE OR REPLACE RULE cpl_object_properties_ignore_duplicate_inserts AS
@@ -160,16 +138,8 @@ CREATE OR REPLACE RULE cpl_object_properties_ignore_duplicate_inserts AS
            FROM cpl_object_properties
           WHERE cpl_object_properties.id = NEW.id 
           AND cpl_object_properties.prefix = NEW.prefix
-          AND cpl_object_properties.name = NEW.name)) 
-      DO INSTEAD NOTHING;
-
-CREATE OR REPLACE RULE cpl_bundle_properties_ignore_duplicate_inserts AS
-    ON INSERT TO cpl_bundle_properties
-   WHERE (EXISTS ( SELECT 1
-           FROM cpl_bundle_properties
-          WHERE cpl_bundle_properties.id = NEW.id
-          AND cpl_bundle_properties.prefix = NEW.prefix
-          AND cpl_bundle_properties.name = NEW.name)) 
+          AND cpl_object_properties.name = NEW.name
+          AND cpl_object_properties.type = NEW.type))
       DO INSTEAD NOTHING;
 
 CREATE OR REPLACE RULE cpl_prefixes_ignore_duplicate_inserts AS
@@ -186,14 +156,11 @@ CREATE OR REPLACE RULE cpl_prefixes_ignore_duplicate_inserts AS
 -- Grant the appropriate privileges
 --
 GRANT ALL PRIVILEGES ON TABLE cpl_sessions TO cpl WITH GRANT OPTION; 
-GRANT ALL PRIVILEGES ON TABLE cpl_bundles TO cpl WITH GRANT OPTION; 
 GRANT ALL PRIVILEGES ON TABLE cpl_objects TO cpl WITH GRANT OPTION;
 GRANT ALL PRIVILEGES ON TABLE cpl_relations TO cpl WITH GRANT OPTION;
 GRANT ALL PRIVILEGES ON TABLE cpl_relation_properties TO cpl WITH GRANT OPTION;
 GRANT ALL PRIVILEGES ON TABLE cpl_object_properties TO cpl WITH GRANT OPTION;
-GRANT ALL PRIVILEGES ON TABLE cpl_bundle_properties TO cpl WITH GRANT OPTION;
 GRANT ALL PRIVILEGES ON TABLE cpl_prefixes TO cpl WITH GRANT OPTION;
 GRANT ALL PRIVILEGES ON SEQUENCE cpl_objects_id_seq TO cpl WITH GRANT OPTION;
-GRANT ALL PRIVILEGES ON SEQUENCE cpl_bundles_id_seq TO cpl WITH GRANT OPTION;
 GRANT ALL PRIVILEGES ON SEQUENCE cpl_sessions_id_seq TO cpl WITH GRANT OPTION;
 GRANT ALL PRIVILEGES ON SEQUENCE cpl_relations_id_seq TO cpl WITH GRANT OPTION;

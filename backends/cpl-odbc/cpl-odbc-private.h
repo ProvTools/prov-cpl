@@ -111,55 +111,45 @@ typedef struct {
 	/**
 	 * The lock for lookup_object
 	 */
-	sema_t lookup_object_sem;
-	mutex_t lookup_object_lock;
 	sema_t lookup_object_nt_sem;
 	mutex_t lookup_object_nt_lock;
-	sema_t lookup_object_nb_sem;
-	mutex_t lookup_object_nb_lock;
-	sema_t lookup_object_ntnb_sem;
-	mutex_t lookup_object_ntnb_lock;
+	sema_t lookup_object_t_sem;
+	mutex_t lookup_object_t_lock;
 	/**
 	 * The statements for looking up an object by name and originator
-	 * and optionally type and bundle_id
+	 * and optionally type
 	 */
-	SQLHSTMT* lookup_object_stmts;
 	SQLHSTMT* lookup_object_nt_stmts;
-	SQLHSTMT* lookup_object_nb_stmts;
-	SQLHSTMT* lookup_object_ntnb_stmts;
+	SQLHSTMT* lookup_object_t_stmts;
 
 	/**
 	 * The lock for lookup_object_ext
 	 */
-	sema_t lookup_object_ext_sem;
-	mutex_t lookup_object_ext_lock;
 	sema_t lookup_object_nt_ext_sem;
 	mutex_t lookup_object_nt_ext_lock;
-	sema_t lookup_object_nb_ext_sem;
-	mutex_t lookup_object_nb_ext_lock;
-	sema_t lookup_object_ntnb_ext_sem;
-	mutex_t lookup_object_ntnb_ext_lock;
+	sema_t lookup_object_t_ext_sem;
+	mutex_t lookup_object_t_ext_lock;
 
 	/**
 	 * The statements for looking up objects by name and originator
-	 * and optionally type and bundle_id
+	 * and optionally type
 	 */
-	SQLHSTMT* lookup_object_ext_stmts;
 	SQLHSTMT* lookup_object_nt_ext_stmts;
-	SQLHSTMT* lookup_object_nb_ext_stmts;
-	SQLHSTMT* lookup_object_ntnb_ext_stmts;
+	SQLHSTMT* lookup_object_t_ext_stmts;
 
 	/**
 	 * The lock for add_relation_edge
 	 */
 	sema_t add_relation_sem;
 	mutex_t add_relation_lock;
+	sema_t bundle_relation_helper_sem;
+	mutex_t bundle_relation_helper_lock;
 
 	/**
 	 * The statement that adds a new relation
 	 */
 	SQLHSTMT* add_relation_stmts;
-
+	SQLHSTMT* bundle_relation_helper_stmts;
 	/**
 	 * Lock for bundle creation
 	 */
@@ -192,7 +182,29 @@ typedef struct {
 	 */
 	SQLHSTMT* lookup_bundle_ext_stmts;
 
-	/**
+    /**
+    * The lock for lookup_relation
+    */
+    sema_t lookup_relation_sem;
+    mutex_t lookup_relation_lock;
+
+    /**
+     * The statement for looking up a relation
+     */
+    SQLHSTMT* lookup_relation_stmts;
+
+    /**
+     * The lock for searching by object property value, with wildcards
+     */
+    sema_t lookup_object_property_wildcard_sem;
+    mutex_t lookup_object_property_wildcard_lock;
+
+    /**
+     * The statement for searching by object property value, with wildcards
+     */
+    SQLHSTMT* lookup_object_property_wildcard_stmts;
+
+    /**
 	 * The lock for add_object_property
 	 */
 	sema_t add_object_property_sem;
@@ -250,13 +262,24 @@ typedef struct {
 	/**
 	 * The lock for get_all_objects
 	 */
-	sema_t get_all_objects_sem;
-	mutex_t get_all_objects_lock;
+	sema_t get_all_objects_nt_sem;
+	mutex_t get_all_objects_nt_lock;
 
 	/**
 	 * The statement that returns information about all provenance objects
 	 */
-	SQLHSTMT* get_all_objects_stmts;
+	SQLHSTMT* get_all_objects_nt_stmts;
+
+    /**
+ * The lock for get_all_objects
+ */
+    sema_t get_all_objects_t_sem;
+    mutex_t get_all_objects_t_lock;
+
+    /**
+     * The statement that returns information about all provenance objects
+     */
+    SQLHSTMT* get_all_objects_t_stmts;
 
 	/**
 	 * The lock for get_object_info

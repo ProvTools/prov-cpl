@@ -122,15 +122,12 @@ typedef struct cplxx_object_info {
 	/// The object type.
 	int type;
 
-	/// The object ID of the bundle, or CPL_NONE if none.
-	cpl_id_t bundle_id;
-
 } cplxx_object_info_t;
 
 /**
  * An entry in the collection of properties
  */
-typedef struct cplxx_property_entry {
+typedef struct cplxx_string_property_entry {
 
 	/// The object ID
 	cpl_id_t id;
@@ -144,7 +141,45 @@ typedef struct cplxx_property_entry {
 	/// The property value
 	std::string value;
 
-} cplxx_property_entry_t;
+} cplxx_string_property_entry_t;
+
+/**
+ * An entry in the collection of properties
+ */
+typedef struct cplxx_numerical_property_entry {
+
+    /// The object ID
+    cpl_id_t id;
+
+    /// Namespace prefix
+    std::string prefix;
+
+    /// The property key (name)
+    std::string key;
+
+    /// The property value
+    double value;
+
+} cplxx_numerical_property_entry_t;
+
+/**
+ * An entry in the collection of properties
+ */
+typedef struct cplxx_boolean_property_entry {
+
+    /// The object ID
+    cpl_id_t id;
+
+    /// Namespace prefix
+    std::string prefix;
+
+    /// The property key (name)
+    std::string key;
+
+    /// The property value
+    bool value;
+
+} cplxx_boolean_property_entry_t;
 
 /**
  * An entry in the collection of prefixes
@@ -234,7 +269,6 @@ cpl_cb_collect_relation_list(const cpl_id_t relation_id,
 							 const cpl_id_t query_object_id,
 							 const cpl_id_t other_object_id,
 							 const int type,
-							 const cpl_id_t bundle_id,
 							 void* context);
 
 /**
@@ -258,7 +292,6 @@ cpl_cb_collect_relation_vector(const cpl_id_t relation_id,
 							   const cpl_id_t query_object_id,
 							   const cpl_id_t other_object_id,
 							   const int type,
-							   const cpl_id_t bundle_id,
 							   void* context);
 
 /**
@@ -280,6 +313,7 @@ cpl_cb_collect_properties_vector(const cpl_id_t id,
 								 const char* prefix,
 								 const char* key,
 								 const char* value,
+								 const int type,
 								 void* context);
 
 /**
@@ -320,6 +354,7 @@ cpl_cb_collect_property_lookup_vector(const cpl_id_t id,
 									  const char* prefix,
 									  const char* key,
 									  const char* value,
+									  const int type,
 									  void* context);
 
 

@@ -453,7 +453,6 @@ cpl_error_string(cpl_return_t code)
  * @param prefix the namespace prefix
  * @param name the object name
  * @param type the object type
- * @param bundle the ID of the object that should contain this object
  * @param out_id the pointer to store the ID of the newly created object
  * @return CPL_OK or an error code
  */
@@ -461,7 +460,6 @@ extern "C" EXPORT cpl_return_t
 cpl_create_object(const char* prefix,
 				  const char* name,
 				  const int type,
-				  const cpl_id_t bundle,
 				  cpl_id_t* out_id)
 {
 	CPL_ENSURE_INITIALIZED;
@@ -499,7 +497,6 @@ cpl_create_object(const char* prefix,
  * @param prefix the namespace prefix
  * @param name the object name
  * @param type the object type, CPL_NONE for no type
- * @param bundle_id the bundle ID, CPL_NONE for no bundle
  * @param out_id the pointer to store the object ID
  * @return CPL_OK or an error code
  */
@@ -507,7 +504,6 @@ extern "C" EXPORT cpl_return_t
 cpl_lookup_object(const char* prefix,
 				  const char* name,
 				  const int type,
-				  const cpl_id_t bundle_id,
 				  cpl_id_t* out_id)
 {
 	CPL_ENSURE_INITIALIZED;
@@ -543,7 +539,6 @@ cpl_lookup_object(const char* prefix,
  * @param prefix the object prefix
  * @param name the object name
  * @param type the object type, CPL_NONE for no type
- * @param bundle_id the bundle ID, CPL_NONE for no bundle
  * @param flags a logical combination of CPL_L_* flags
  * @param iterator the iterator to be called for each matching object
  * @param context the caller-provided iterator context
@@ -553,7 +548,6 @@ extern "C" EXPORT cpl_return_t
 cpl_lookup_object_ext(const char* prefix,
 					  const char* name,
 					  const int type,
-				  	  const cpl_id_t bundle_id,
 					  const int flags,
 					  cpl_id_timestamp_iterator_t iterator,
 					  void* context)
@@ -593,7 +587,6 @@ cpl_lookup_object_ext(const char* prefix,
  * @param prefix the namespace prefix
  * @param name the object name
  * @param type the object type
- * @param bundle the ID of the object that should contain this object
  * @param out_id the pointer to store the ID of the newly created object
  * @return CPL_OK or an error code
  */
@@ -601,7 +594,6 @@ extern "C" EXPORT cpl_return_t
 cpl_lookup_or_create_object(const char* prefix,
 							const char* name,
 							const int type,
-							const cpl_id_t bundle,
 							cpl_id_t* out_id)
 {
 	CPL_ENSURE_INITIALIZED;
@@ -611,10 +603,10 @@ cpl_lookup_or_create_object(const char* prefix,
 	//TODO think about locks here
 	cpl_shared_semaphore_wait(cpl_lookup_or_create_object_semaphore);
 
-	r = cpl_lookup_object(prefix, name, type, bundle, out_id);
+	r = cpl_lookup_object(prefix, name, type, out_id);
 	if (r != CPL_E_NOT_FOUND) goto out;
 
-	r = cpl_create_object(prefix, name, type, bundle, out_id);
+	r = cpl_create_object(prefix, name, type, out_id);
 	if (CPL_IS_OK(r)) r = CPL_S_OBJECT_CREATED;
 
 out:
@@ -633,7 +625,7 @@ out:
  * @return CPL_OK or an error code
  */
 extern "C" EXPORT cpl_return_t
-cpl_add_object_property(const cpl_id_t id,
+cpl_add_object_string_property(const cpl_id_t id,
 				 const char* prefix,
 				 const char* key,
                  const char* value)
@@ -641,21 +633,81 @@ cpl_add_object_property(const cpl_id_t id,
 	CPL_ENSURE_INITIALIZED;
 
 	// Check the arguments
-
 	CPL_ENSURE_NOT_NONE(id);
 	CPL_ENSURE_NOT_NULL(prefix);
 	CPL_ENSURE_NOT_NULL(key);
-	CPL_ENSURE_NOT_NULL(value);
+    CPL_ENSURE_NOT_NULL(value);
 
     // Call the backend
-
 	return cpl_db_backend->cpl_db_add_object_property(cpl_db_backend,
-											   id,
-											   prefix,
-											   key,
-											   value);
+                                                       id,
+                                                       prefix,
+                                                       key,
+                                                       value,
+                                                       STRINGPROPERTY);
 }
 
+/**
+ * Add a property to the given object.
+ *
+ * @param id the object ID
+ * @param prefix the namespace prefix
+ * @param key the key
+ * @param value the value
+ * @return CPL_OK or an error code
+ */
+extern "C" EXPORT cpl_return_t
+cpl_add_object_numerical_property(const cpl_id_t id,
+                        const char* prefix,
+                        const char* key,
+                        const double value)
+{
+    CPL_ENSURE_INITIALIZED;
+
+    // Check the arguments
+    CPL_ENSURE_NOT_NONE(id);
+    CPL_ENSURE_NOT_NULL(prefix);
+    CPL_ENSURE_NOT_NULL(key);
+
+    // Call the backend
+    return cpl_db_backend->cpl_db_add_object_property(cpl_db_backend,
+                                                      id,
+                                                      prefix,
+                                                      key,
+                                                      std::to_string(value).c_str(),
+                                                      NUMERICALPROPERTY);
+}
+
+/**
+ * Add a property to the given object.
+ *
+ * @param id the object ID
+ * @param prefix the namespace prefix
+ * @param key the key
+ * @param value the value
+ * @return CPL_OK or an error code
+ */
+extern "C" EXPORT cpl_return_t
+cpl_add_object_boolean_property(const cpl_id_t id,
+                        const char* prefix,
+                        const char* key,
+                        const bool value)
+{
+    CPL_ENSURE_INITIALIZED;
+
+    // Check the arguments
+    CPL_ENSURE_NOT_NONE(id);
+    CPL_ENSURE_NOT_NULL(prefix);
+    CPL_ENSURE_NOT_NULL(key);
+
+    // Call the backend
+    return cpl_db_backend->cpl_db_add_object_property(cpl_db_backend,
+                                                      id,
+                                                      prefix,
+                                                      key,
+                                                      std::to_string(value).c_str(),
+                                                      BOOLEANPROPERTY);
+}
 
 /**
  * Add a relation between two objects.
@@ -670,7 +722,6 @@ extern "C" EXPORT cpl_return_t
 cpl_add_relation(const cpl_id_t from_id,
 			  	   const cpl_id_t to_id,
 				   const int type,
-				   const cpl_id_t bundle,
 				   cpl_id_t* out_id)
 {
 	CPL_ENSURE_INITIALIZED;
@@ -711,7 +762,7 @@ cpl_add_relation(const cpl_id_t from_id,
  * @return CPL_OK or an error code
  */
 extern "C" EXPORT cpl_return_t
-cpl_add_relation_property(const cpl_id_t id,
+cpl_add_relation_string_property(const cpl_id_t id,
 				 		  const char* prefix,
 						  const char* key,
 						  const char* value)
@@ -731,58 +782,9 @@ cpl_add_relation_property(const cpl_id_t id,
 														id,
 														prefix,
 														key,
-														value);
+														value,
+														STRINGPROPERTY);
 };
-
-
-/**
- * Create a bundle.
- *
- * @param name the object name
- * @param out_id the pointer to store the ID of the newly created object
- * @return CPL_OK or an error code
- */
-extern "C" EXPORT cpl_return_t
-cpl_create_bundle(const char* name,
-				  cpl_id_t* out_id)
-{
-	return cpl_create_object("news_prov", name, 4, 0, out_id);
-}
-
-/**
- * Look up a bundle by name. If multiple bundles share the same name,
- * get the latest one.
- *
- * @param name the bundle name
- * @param out_id the pointer to store the object ID
- * @return CPL_OK or an error code
- */
-extern "C" EXPORT cpl_return_t
-cpl_lookup_bundle(const char* name,
-				  cpl_id_t* out_id)
-{
-	return cpl_lookup_object("news_prov", name, 4, 0, out_id);
-}
-
-
-/**
- * Look up a bundle by name. If multiple bundles share the same name,
- * return all of them.
- *
- * @param name the bundle name
- * @param flags a logical combination of CPL_L_* flags
- * @param iterator the iterator to be called for each matching bundle
- * @param context the caller-provided iterator context
- * @return CPL_OK or an error code
- */
-extern "C" EXPORT cpl_return_t
-cpl_lookup_bundle_ext(const char* name,
-					  const int flags,
-					  cpl_id_timestamp_iterator_t iterator,
-					  void* context)
-{
-	return cpl_lookup_object_ext("news_prov", name, 4, 0, flags, iterator, context);
-}
 
 /**
  * Add a property to the given relation.
@@ -794,13 +796,103 @@ cpl_lookup_bundle_ext(const char* name,
  * @return CPL_OK or an error code
  */
 extern "C" EXPORT cpl_return_t
-cpl_add_bundle_property(const cpl_id_t id,
-			 		    const char* prefix,
-					    const char* key,
-					    const char* value)
+cpl_add_relation_numerical_property(const cpl_id_t id,
+                                  const char* prefix,
+                                  const char* key,
+                                  const double value)
 {
-	return cpl_add_object_property(id, prefix, key, value);
+    CPL_ENSURE_INITIALIZED;
+
+    // Check the arguments
+
+    CPL_ENSURE_NOT_NONE(id);
+    CPL_ENSURE_NOT_NULL(prefix);
+    CPL_ENSURE_NOT_NULL(key);
+
+    // Call the backend
+
+    return cpl_db_backend->cpl_db_add_relation_property(cpl_db_backend,
+                                                        id,
+                                                        prefix,
+                                                        key,
+                                                        std::to_string(value).c_str(),
+                                                        NUMERICALPROPERTY);
 };
+
+/**
+ * Add a property to the given relation.
+ *
+ * @param id the object ID
+ * @param prefix the namespace prefix
+ * @param key the key
+ * @param value the value
+ * @return CPL_OK or an error code
+ */
+extern "C" EXPORT cpl_return_t
+cpl_add_relation_boolean_property(const cpl_id_t id,
+                                  const char* prefix,
+                                  const char* key,
+                                  const bool value)
+{
+    CPL_ENSURE_INITIALIZED;
+
+    // Check the arguments
+
+    CPL_ENSURE_NOT_NONE(id);
+    CPL_ENSURE_NOT_NULL(prefix);
+    CPL_ENSURE_NOT_NULL(key);
+
+    // Call the backend
+
+    return cpl_db_backend->cpl_db_add_relation_property(cpl_db_backend,
+                                                        id,
+                                                        prefix,
+                                                        key,
+                                                        std::to_string(value).c_str(),
+                                                        BOOLEANPROPERTY);
+};
+
+/**
+ * Look up a relation by from_id, to_id and type.
+ * If multiple relations match, get the latest one.
+ *
+ * @param from_id object id of source
+ * @param to_id object id of destination
+ * @param type the type of the relation
+ * @return CPL_OK or an error code
+ */
+extern "C" EXPORT cpl_return_t
+cpl_lookup_relation(const cpl_id_t from_id,
+                    const cpl_id_t to_id,
+                    const long type,
+                    cpl_id_t* out_id)
+{
+    CPL_ENSURE_INITIALIZED;
+    CPL_ENSURE_NOT_NONE(from_id);
+    CPL_ENSURE_NOT_NONE(to_id);
+    CPL_ENSURE_R_TYPE(type);
+
+    // Call the database backend
+    return cpl_db_backend->cpl_db_lookup_relation(cpl_db_backend,
+                                                            from_id, to_id, type,
+                                                            out_id);
+}
+
+/**
+ * Lookup object property by the value, with wildcards
+ *
+ * @param fragment the value of the object property
+ * @return CPL_OK or an error code
+ */
+extern "C" EXPORT cpl_return_t
+cpl_lookup_object_property_wildcard(const char* value,
+                    cpl_id_t* out_id)
+{
+    CPL_ENSURE_INITIALIZED;
+
+    // Call the database backend
+    return cpl_db_backend->cpl_db_lookup_object_property_wildcard(cpl_db_backend, value, out_id);
+}
 
 /**
  * Add a prefix to a bundle.
@@ -900,14 +992,16 @@ cpl_free_session_info(cpl_session_info_t* info)
  * @return CPL_OK or an error code
  */
 extern "C" EXPORT cpl_return_t
-cpl_get_all_objects(const int flags,
+cpl_get_all_objects(const char* prefix,
+                    const int flags,
+					const int type,
 					cpl_object_info_iterator_t iterator,
 					void* context)
 {
 	CPL_ENSURE_INITIALIZED;
 	CPL_ENSURE_NOT_NULL(iterator);
 
-	return cpl_db_backend->cpl_db_get_all_objects(cpl_db_backend, flags,
+	return cpl_db_backend->cpl_db_get_all_objects(cpl_db_backend, prefix, flags, type,
                                                   iterator, context);
 }
 
@@ -1006,7 +1100,7 @@ cpl_get_object_relations(const cpl_id_t id,
  * @return CPL_OK, CPL_S_NO_DATA, or an error code
  */
 extern "C" EXPORT cpl_return_t
-cpl_get_object_properties(const cpl_id_t id,
+cpl_get_object_string_properties(const cpl_id_t id,
 						  const char* prefix,
 						  const char* key,
 						  cpl_property_iterator_t iterator,
@@ -1020,10 +1114,67 @@ cpl_get_object_properties(const cpl_id_t id,
 	// Call the database backend
 
 	return cpl_db_backend->cpl_db_get_object_properties(cpl_db_backend,
-											    id, prefix, key,
+											    id, prefix, key, STRINGPROPERTY,
 											    iterator, context);
 }
 
+/**
+ * Get the properties associated with the given provenance object.
+ *
+ * @param id the the object ID
+ * @param prefix the prefix to fetch - or NULL for all prefixes
+ * @param key the property key to fetch - or NULL for all keys
+ * @param iterator the iterator callback function
+ * @param context the user context to be passed to the iterator function
+ * @return CPL_OK, CPL_S_NO_DATA, or an error code
+ */
+extern "C" EXPORT cpl_return_t
+cpl_get_object_numerical_properties(const cpl_id_t id,
+                          const char* prefix,
+                          const char* key,
+                          cpl_property_iterator_t iterator,
+                          void* context)
+{
+    CPL_ENSURE_INITIALIZED;
+
+    CPL_ENSURE_NOT_NONE(id);
+    CPL_ENSURE_NOT_NULL(iterator);
+
+    // Call the database backend
+
+    return cpl_db_backend->cpl_db_get_object_properties(cpl_db_backend,
+                                                        id, prefix, key, NUMERICALPROPERTY,
+                                                        iterator, context);
+}
+
+/**
+ * Get the properties associated with the given provenance object.
+ *
+ * @param id the the object ID
+ * @param prefix the prefix to fetch - or NULL for all prefixes
+ * @param key the property key to fetch - or NULL for all keys
+ * @param iterator the iterator callback function
+ * @param context the user context to be passed to the iterator function
+ * @return CPL_OK, CPL_S_NO_DATA, or an error code
+ */
+extern "C" EXPORT cpl_return_t
+cpl_get_object_boolean_properties(const cpl_id_t id,
+                          const char* prefix,
+                          const char* key,
+                          cpl_property_iterator_t iterator,
+                          void* context)
+{
+    CPL_ENSURE_INITIALIZED;
+
+    CPL_ENSURE_NOT_NONE(id);
+    CPL_ENSURE_NOT_NULL(iterator);
+
+    // Call the database backend
+
+    return cpl_db_backend->cpl_db_get_object_properties(cpl_db_backend,
+                                                        id, prefix, key, BOOLEANPROPERTY,
+                                                        iterator, context);
+}
 
 /**
  * Lookup an object based on a property value.
@@ -1035,7 +1186,7 @@ cpl_get_object_properties(const cpl_id_t id,
  * @return CPL_OK, CPL_E_NOT_FOUND, or an error code
  */
 extern "C" EXPORT cpl_return_t
-cpl_lookup_object_by_property(const char* prefix, 
+cpl_lookup_object_by_string_property(const char* prefix,
 							  const char* key,
 						      const char* value,
 						      cpl_property_iterator_t iterator,
@@ -1049,12 +1200,71 @@ cpl_lookup_object_by_property(const char* prefix,
 	CPL_ENSURE_NOT_NULL(value);
 
 	// Call the database backend
-
 	return cpl_db_backend->cpl_db_lookup_object_by_property(cpl_db_backend,
 											        prefix, key, value,
+											        STRINGPROPERTY,
 											        iterator, context);
 }
 
+/**
+ * Lookup an object based on a property value.
+ *
+ * @param key the property name
+ * @param value the property value
+ * @param iterator the iterator callback function
+ * @param context the user context to be passed to the iterator function
+ * @return CPL_OK, CPL_E_NOT_FOUND, or an error code
+ */
+extern "C" EXPORT cpl_return_t
+cpl_lookup_object_by_numerical_property(const char* prefix,
+                              const char* key,
+                              const double value,
+                              cpl_property_iterator_t iterator,
+                              void* context)
+{
+    CPL_ENSURE_INITIALIZED;
+
+    CPL_ENSURE_NOT_NULL(iterator);
+    CPL_ENSURE_NOT_NULL(prefix);
+    CPL_ENSURE_NOT_NULL(key);
+
+    // Call the database backend
+    return cpl_db_backend->cpl_db_lookup_object_by_property(cpl_db_backend,
+                                                            prefix, key,
+                                                            std::to_string(value).c_str(),
+                                                            NUMERICALPROPERTY,
+                                                            iterator, context);
+}
+
+/**
+ * Lookup an object based on a property value.
+ *
+ * @param key the property name
+ * @param value the property value
+ * @param iterator the iterator callback function
+ * @param context the user context to be passed to the iterator function
+ * @return CPL_OK, CPL_E_NOT_FOUND, or an error code
+ */
+extern "C" EXPORT cpl_return_t
+cpl_lookup_object_by_boolean_property(const char* prefix,
+                              const char* key,
+                              const bool value,
+                              cpl_property_iterator_t iterator,
+                              void* context)
+{
+    CPL_ENSURE_INITIALIZED;
+
+    CPL_ENSURE_NOT_NULL(iterator);
+    CPL_ENSURE_NOT_NULL(prefix);
+    CPL_ENSURE_NOT_NULL(key);
+
+    // Call the database backend
+    return cpl_db_backend->cpl_db_lookup_object_by_property(cpl_db_backend,
+                                                            prefix, key,
+                                                            std::to_string(value).c_str(),
+                                                            BOOLEANPROPERTY,
+                                                            iterator, context);
+}
 /**
  * Get the properties associated with the given provenance relations.
  * 
@@ -1065,7 +1275,7 @@ cpl_lookup_object_by_property(const char* prefix,
  * @return CPL_OK, CPL_S_NO_DATA, or an error code
  */
 extern "C" EXPORT cpl_return_t
-cpl_get_relation_properties(const cpl_id_t id,
+cpl_get_relation_string_properties(const cpl_id_t id,
 						    const char* prefix,
 						    const char* key,
 						    cpl_property_iterator_t iterator,
@@ -1079,56 +1289,64 @@ cpl_get_relation_properties(const cpl_id_t id,
 	// Call the database backend
 
 	return cpl_db_backend->cpl_db_get_relation_properties(cpl_db_backend,
-										          id, prefix, key,
+										          id, prefix, key, STRINGPROPERTY,
 										          iterator, context);
 }
 
 /**
- * Deletes a bundle and all objects and relations belonging to it.
+ * Get the properties associated with the given provenance relations.
  *
- * @param id the bundle ID
- * @return CPL_OK, or an error code
+ * @param id the the relation ID
+ * @param key the property to fetch - or NULL for all properties
+ * @param iterator the iterator callback function
+ * @param context the user context to be passed to the iterator function
+ * @return CPL_OK, CPL_S_NO_DATA, or an error code
  */
 extern "C" EXPORT cpl_return_t
-cpl_delete_bundle(const cpl_id_t id)
+cpl_get_relation_numerical_properties(const cpl_id_t id,
+                            const char* prefix,
+                            const char* key,
+                            cpl_property_iterator_t iterator,
+                            void* context)
 {
-	CPL_ENSURE_INITIALIZED;
-	CPL_ENSURE_NOT_NONE(id);
+    CPL_ENSURE_INITIALIZED;
 
-	return cpl_db_backend->cpl_db_delete_bundle(cpl_db_backend, id);
+    CPL_ENSURE_NOT_NONE(id);
+    CPL_ENSURE_NOT_NULL(iterator);
+
+    // Call the database backend
+
+    return cpl_db_backend->cpl_db_get_relation_properties(cpl_db_backend,
+                                                          id, prefix, key, NUMERICALPROPERTY,
+                                                          iterator, context);
 }
 
 /**
- * Get information about the given provenance bundle.
+ * Get the properties associated with the given provenance relations.
  *
- * @param id the bundle ID
- * @param out_info the pointer to store the bundle info structure
- * @return CPL_OK or an error code
+ * @param id the the relation ID
+ * @param key the property to fetch - or NULL for all properties
+ * @param iterator the iterator callback function
+ * @param context the user context to be passed to the iterator function
+ * @return CPL_OK, CPL_S_NO_DATA, or an error code
  */
 extern "C" EXPORT cpl_return_t
-cpl_get_bundle_info(const cpl_id_t id,
-					cpl_bundle_info_t** out_info)
+cpl_get_relation_boolean_properties(const cpl_id_t id,
+                            const char* prefix,
+                            const char* key,
+                            cpl_property_iterator_t iterator,
+                            void* context)
 {
-	return cpl_get_object_info(id, (cpl_object_info_t**) out_info);
+    CPL_ENSURE_INITIALIZED;
 
-}
+    CPL_ENSURE_NOT_NONE(id);
+    CPL_ENSURE_NOT_NULL(iterator);
 
+    // Call the database backend
 
-/**
- * Free cpl_bundle_info_t.
- *
- * @param info the pointer to the bundle info structure.
- * @return CPL_OK or an error code
- */
-extern "C" EXPORT cpl_return_t
-cpl_free_bundle_info(cpl_bundle_info_t* info)
-{
-	CPL_ENSURE_NOT_NULL(info);
-
-	if (info->name != NULL) free(info->name);
-
-	free(info);
-	return CPL_OK;
+    return cpl_db_backend->cpl_db_get_relation_properties(cpl_db_backend,
+                                                          id, prefix, key, BOOLEANPROPERTY,
+                                                          iterator, context);
 }
 
 /**
@@ -1141,16 +1359,16 @@ cpl_free_bundle_info(cpl_bundle_info_t* info)
  */
 extern "C" EXPORT cpl_return_t
 cpl_get_bundle_objects(const cpl_id_t id,
-					   cpl_object_info_iterator_t iterator,
-					   void* context)
+                       cpl_object_info_iterator_t iterator,
+                       void* context)
 {
-	CPL_ENSURE_INITIALIZED;
+    CPL_ENSURE_INITIALIZED;
 
-	CPL_ENSURE_NOT_NONE(id);
-	CPL_ENSURE_NOT_NULL(iterator);
+    CPL_ENSURE_NOT_NONE(id);
+    CPL_ENSURE_NOT_NULL(iterator);
 
-	return cpl_db_backend->cpl_db_get_bundle_objects(cpl_db_backend, id,
-												iterator, context);
+    return cpl_db_backend->cpl_db_get_bundle_objects(cpl_db_backend, id,
+                                                     iterator, context);
 }
 
 /**
@@ -1170,35 +1388,10 @@ cpl_get_bundle_relations(const cpl_id_t id,
 
 	CPL_ENSURE_NOT_NONE(id);
 	CPL_ENSURE_NOT_NULL(iterator);
-//
-//	return cpl_db_backend->cpl_db_get_bundle_relations(cpl_db_backend, id,
-//												iterator, context);
-    return cpl_db_backend->cpl_db_get_object_relations(cpl_db_backend,
-                                                    id, CPL_D_ANCESTORS,
-                                                    0, iterator,
-                                                    context);
-}
 
-/**
- * Get the properties associated with the given provenance bundle.
- *
- * @param id the the bundle ID
- * @param prefix the property prefix to fetch - or NULL 
- *               (along with key)for all properties
- * @param key the property key to fetch - or NULL 
- *            (along with prefix) for all keys
- * @param iterator the iterator callback function
- * @param context the user context to be passed to the iterator function
- * @return CPL_OK, CPL_S_NO_DATA, or an error code
- */
-extern "C" EXPORT cpl_return_t
-cpl_get_bundle_properties(const cpl_id_t id,
-						  const char* prefix,
-						  const char* key,
-						  cpl_property_iterator_t iterator,
-						  void* context)
-{
-	return cpl_get_object_properties(id, prefix, key, iterator, context);
+	return cpl_db_backend->cpl_db_get_bundle_relations(cpl_db_backend, id,
+												iterator, context);
+
 }
 
 /**
@@ -1316,7 +1509,6 @@ cpl_cb_collect_relation_list(const cpl_id_t relation_id,
 							 const cpl_id_t query_object_id,
 							 const cpl_id_t other_object_id,
 							 const int type,
-							 const cpl_id_t bundle_id,
 							 void* context)
 {
 	if (context == NULL) return CPL_E_INVALID_ARGUMENT;
@@ -1355,7 +1547,6 @@ cpl_cb_collect_relation_vector(const cpl_id_t relation_id,
 							   const cpl_id_t query_object_id,
 							   const cpl_id_t other_object_id,
 							   const int type,
-							   const cpl_id_t bundle_id,
 							   void* context)
 {
 	if (context == NULL) return CPL_E_INVALID_ARGUMENT;
@@ -1393,19 +1584,51 @@ cpl_cb_collect_properties_vector(const cpl_id_t id,
 	                             const char* prefix,
 								 const char* key,
 								 const char* value,
+								 const int type,
 								 void* context)
 {
 	if (context == NULL) return CPL_E_INVALID_ARGUMENT;
 
-	cplxx_property_entry_t e;
-	e.id = id;
-	e.prefix = prefix;
-	e.key = key;
-	e.value = value;
+	switch (type) {
+	    case STRINGPROPERTY: {
+            cplxx_string_property_entry_t e;
+            e.id = id;
+            e.prefix = prefix;
+            e.key = key;
+            e.value = value;
 
-	std::vector<cplxx_property_entry_t>& l =
-		*((std::vector<cplxx_property_entry_t>*) context);
-	l.push_back(e);
+            std::vector<cplxx_string_property_entry_t> &l =
+                    *((std::vector<cplxx_string_property_entry_t> *) context);
+            l.push_back(e);
+            break;
+        }
+	    case NUMERICALPROPERTY:  {
+            cplxx_numerical_property_entry_t e;
+            e.id = id;
+            e.prefix = prefix;
+            e.key = key;
+            e.value = std::stod(value);
+
+            std::vector<cplxx_numerical_property_entry_t> &l =
+                    *((std::vector<cplxx_numerical_property_entry_t> *) context);
+            l.push_back(e);
+            break;
+        }
+	    case BOOLEANPROPERTY:  {
+            cplxx_boolean_property_entry_t e;
+            e.id = id;
+            e.prefix = prefix;
+            e.key = key;
+            e.value = (strcmp(value, "1") == 0);
+
+            std::vector<cplxx_boolean_property_entry_t> &l =
+                    *((std::vector<cplxx_boolean_property_entry_t> *) context);
+            l.push_back(e);
+            break;
+        }
+        default:
+            break;
+	}
 
 	return CPL_OK;
 }
@@ -1462,6 +1685,7 @@ cpl_cb_collect_property_lookup_vector(const cpl_id_t id,
 	                                  const char* prefix,
 									  const char* key,
 									  const char* value,
+									  const int type,
 									  void* context)
 {
 	if (context == NULL) return CPL_E_INVALID_ARGUMENT;
@@ -1540,7 +1764,16 @@ prov_relation_data_t rdata_array[] =
 	"prov:agent", CPL_AGENT},
 	{ACTEDONBEHALFOF, ACTEDONBEHALFOF_STR,
 	"prov:delegate", CPL_AGENT,
-	"prov:responsible", CPL_AGENT}
+	"prov:responsible", CPL_AGENT},
+	{INBUNDLE, INBUNDLE_STR,
+      "prov:bundle", CPL_BUNDLE,
+      "prov:object", CPL_ENTITY},
+      {INBUNDLE, INBUNDLE_STR,
+      "prov:bundle", CPL_BUNDLE,
+      "prov:object", CPL_AGENT},
+      {INBUNDLE, INBUNDLE_STR,
+      "prov:bundle", CPL_BUNDLE,
+      "prov:object", CPL_ACTIVITY}
 };
 
 using json = nlohmann::json;
@@ -1683,7 +1916,6 @@ import_bundle_prefixes_json(const cpl_id_t bundle,
 cpl_return_t
 import_objects_json(const int type,
 					const std::string& type_str,
-					const cpl_id_t bundle_id,
 					std::map<std::string, cpl_id_t>& lookup_tbl,
 					json& document)
 {
@@ -1699,7 +1931,7 @@ import_objects_json(const int type,
 
 		token_pair_t pair = name_to_tokens(it.key());
 
-		if(!CPL_IS_OK(cpl_create_object(pair.first.c_str(), pair.second.c_str(), type, bundle_id, &obj_id))){
+		if(!CPL_IS_OK(cpl_create_object(pair.first.c_str(), pair.second.c_str(), type, &obj_id))){
 			return CPL_E_INTERNAL_ERROR;
 		}
 
@@ -1711,20 +1943,29 @@ import_objects_json(const int type,
 			pair = name_to_tokens(it2.key());
 
 			json val_json = *it2;
-			if(!val_json.is_array() && !val_json.is_object()){
-				if(!CPL_IS_OK(cpl_add_object_property(obj_id, 
-													  pair.first.c_str(), 
-													  pair.second.c_str(), 
-													  val_json.get<std::string>().c_str()))){
-					return CPL_E_INTERNAL_ERROR;
-				}
-			} else {
-				if(!CPL_IS_OK(cpl_add_object_property(obj_id, 
-													  pair.first.c_str(), 
-													  pair.second.c_str(), 
-													  val_json.dump().c_str()))){
-					return CPL_E_INTERNAL_ERROR;
-				}
+			switch (val_json.type()) {
+                case json::value_t::string:
+                    cpl_add_object_string_property(obj_id,
+                                                   pair.first.c_str(),
+                                                   pair.second.c_str(),
+                                                   val_json.get<std::string>().c_str());
+                    break;
+                case json::value_t::number_integer:
+                case json::value_t::number_unsigned:
+                case json::value_t::number_float:
+                    cpl_add_object_numerical_property(obj_id,
+                                                  pair.first.c_str(),
+                                                  pair.second.c_str(),
+                                                  val_json.get<float>());
+                    break;
+                case json::value_t::boolean:
+                    cpl_add_object_boolean_property(obj_id,
+                                                    pair.first.c_str(),
+                                                    pair.second.c_str(),
+                                                    val_json.get<bool>());
+                    break;
+			    default:
+                    return CPL_E_INVALID_ARGUMENT;
 			}
 		}
 	}
@@ -1769,7 +2010,6 @@ import_relations_json(const cpl_id_t bundle_id,
 					if(!CPL_IS_OK(cpl_lookup_object(pair.first.c_str(), 
 													pair.second.c_str(),
 													entry.source_t,
-													CPL_NONE,
 													&source))){
 						return CPL_E_INTERNAL_ERROR;
 					}				
@@ -1792,7 +2032,6 @@ import_relations_json(const cpl_id_t bundle_id,
 					if(!CPL_IS_OK(cpl_lookup_object(pair.first.c_str(), 
 													pair.second.c_str(),
 													entry.dest_t,
-													CPL_NONE,
 													&dest))){
 						return CPL_E_INTERNAL_ERROR;
 					}				
@@ -1800,9 +2039,12 @@ import_relations_json(const cpl_id_t bundle_id,
 					return CPL_E_INTERNAL_ERROR;
 				}
 
-				if(!CPL_IS_OK(cpl_add_relation(source, dest, entry.type, bundle_id, &relation_id))){
+				if(!CPL_IS_OK(cpl_add_relation(source, dest, entry.type, &relation_id))){
 					return CPL_E_INTERNAL_ERROR;
 				}
+                if(!CPL_IS_OK(cpl_add_relation(bundle_id, relation_id, BUNDLERELATION, NULL))){
+                    return CPL_E_INTERNAL_ERROR;
+                }
 
 				json properties = it.value();
 				for (json::iterator it2 = properties.begin(); it2 != properties.end(); ++it2){
@@ -1812,22 +2054,30 @@ import_relations_json(const cpl_id_t bundle_id,
 						pair = name_to_tokens(it2.key());
 
 						json val_json = *it2;
-
-						if(!val_json.is_array() && !val_json.is_object()){
-							if(!CPL_IS_OK(cpl_add_relation_property(relation_id, 
-																  	pair.first.c_str(), 
-																  	pair.second.c_str(), 
-																  	val_json.get<std::string>().c_str()))){
-								return CPL_E_INTERNAL_ERROR;
-							}
-						} else {
-							if(!CPL_IS_OK(cpl_add_relation_property(relation_id, 
-																  	pair.first.c_str(), 
-																  	pair.second.c_str(), 
-																  	val_json.dump().c_str()))){
-								return CPL_E_INTERNAL_ERROR;
-							}		
-						}	
+                        switch (val_json.type()) {
+                            case json::value_t::string:
+                                cpl_add_relation_string_property(relation_id,
+                                                               pair.first.c_str(),
+                                                               pair.second.c_str(),
+                                                               val_json.get<std::string>().c_str());
+                                break;
+                            case json::value_t::number_integer:
+                            case json::value_t::number_unsigned:
+                            case json::value_t::number_float:
+                                cpl_add_relation_numerical_property(relation_id,
+                                                                  pair.first.c_str(),
+                                                                  pair.second.c_str(),
+                                                                  val_json.get<float>());
+                                break;
+                            case json::value_t::boolean:
+                                cpl_add_relation_boolean_property(relation_id,
+                                                                pair.first.c_str(),
+                                                                pair.second.c_str(),
+                                                                val_json.get<bool>());
+                                break;
+                            default:
+                                return CPL_E_INVALID_ARGUMENT;
+                        }
 					}
 				}
 			}
@@ -1867,7 +2117,7 @@ import_document_json(const std::string& json_string,
 
 	// Create bundle
 	cpl_id_t bundle_id;
-	if(!CPL_IS_OK(cpl_create_bundle(bundle_name.c_str(), &bundle_id))){
+	if(!CPL_IS_OK(cpl_create_object(bundle_name.c_str(), "", CPL_BUNDLE, &bundle_id))){
 		goto error;
 	}
 
@@ -1875,13 +2125,13 @@ import_document_json(const std::string& json_string,
 		goto error;
 	}
 	// Import objects
-	if(!CPL_IS_OK(import_objects_json(CPL_ENTITY, CPL_ENTITY_STR, bundle_id, lookup_tbl, document))){
+	if(!CPL_IS_OK(import_objects_json(CPL_ENTITY, CPL_ENTITY_STR, lookup_tbl, document))){
 		goto error;
 	}
-	if(!CPL_IS_OK(import_objects_json(CPL_AGENT, CPL_AGENT_STR, bundle_id, lookup_tbl, document))){
+	if(!CPL_IS_OK(import_objects_json(CPL_AGENT, CPL_AGENT_STR, lookup_tbl, document))){
 		goto error;
 	}
-	if(!CPL_IS_OK(import_objects_json(CPL_ACTIVITY, CPL_ACTIVITY_STR, bundle_id, lookup_tbl, document))){
+	if(!CPL_IS_OK(import_objects_json(CPL_ACTIVITY, CPL_ACTIVITY_STR, lookup_tbl, document))){
 		goto error;
 	}
 
@@ -1891,12 +2141,16 @@ import_document_json(const std::string& json_string,
 		token_pair_t pair = name_to_tokens(id_string.second);
 
 		cpl_id_t source;
-		if(CPL_IS_OK(cpl_lookup_object(pair.first.c_str(), pair.second.c_str(), CPL_NONE, bundle_id, &source))){
-
+		if(CPL_IS_OK(cpl_lookup_object(pair.first.c_str(), pair.second.c_str(), CPL_NONE, &source))){
+            cpl_id_t relation_id;
 			if(!CPL_IS_OK(cpl_add_relation(source, id_string.first,
-						ALTERNATEOF, bundle_id, NULL))){
+						ALTERNATEOF, &relation_id))){
 				goto error;		
 			}
+            if(!CPL_IS_OK(cpl_add_relation(bundle_id, relation_id,
+                                           BUNDLERELATION, NULL))){
+                goto error;
+            }
 		}
 	}
 
@@ -1909,7 +2163,7 @@ import_document_json(const std::string& json_string,
 	return CPL_OK;
 
 error:
-	cpl_delete_bundle(bundle_id);
+    //Delete bundle?
 	return CPL_E_INTERNAL_ERROR;
 }
 
@@ -1917,9 +2171,9 @@ error:
  * Retrieves bundle prefixes. export_bundle_json helper function.
  */
 cpl_return_t
-export_bundle_prefixes_json(const std::vector<cpl_id_t>& bundles, 
+export_bundle_prefixes_json(const std::vector<cpl_id_t>& bundles,
 							json& document)
-{	
+{
 	if(bundles.size() == 1){
 
 		cpl_return_t ret;
@@ -1932,7 +2186,7 @@ export_bundle_prefixes_json(const std::vector<cpl_id_t>& bundles,
 		json prefixes;
 		if (!prefix_vec.empty()){
 			for(auto & entry: prefix_vec){
-				
+
 				prefixes[entry.prefix] = entry.iri;
 			}
 
@@ -2008,22 +2262,24 @@ export_objects_json(const std::vector<cpl_id_t>& bundles,
 			return ret;
 
 		if(object_vec.empty()){
-			document["empty"] = "the initial vector was empty";
 			return CPL_OK;
-		} else {
-			document["empty"] = "the initial vector was not empty";
 		}
 
-		std::vector<cplxx_property_entry_t> property_vec;
+		std::vector<cplxx_string_property_entry_t> string_property_vec;
+        std::vector<cplxx_numerical_property_entry_t> numerical_property_vec;
+        std::vector<cplxx_boolean_property_entry_t> boolean_property_vec;
 
 		for(auto & obj: object_vec){
 
 			json properties;
-			if(!CPL_IS_OK(ret = cpl_get_object_properties(obj.id, NULL, NULL, 
-				cpl_cb_collect_properties_vector, &property_vec))) return ret;
+			if(!CPL_IS_OK(ret = cpl_get_object_string_properties(obj.id, NULL, NULL,
+				cpl_cb_collect_properties_vector, &string_property_vec))) return ret;
+            if(!CPL_IS_OK(ret = cpl_get_object_numerical_properties(obj.id, NULL, NULL,
+                cpl_cb_collect_properties_vector, &numerical_property_vec))) return ret;
+            if(!CPL_IS_OK(ret = cpl_get_object_boolean_properties(obj.id, NULL, NULL,
+                cpl_cb_collect_properties_vector, &boolean_property_vec))) return ret;
 
-			for(auto & property: property_vec){
-
+			for(auto & property: string_property_vec){
 				std::string full_prop_name(property.prefix);
 				if(full_prop_name != "") full_prop_name.append(":");
 				full_prop_name.append(property.key);
@@ -2031,7 +2287,25 @@ export_objects_json(const std::vector<cpl_id_t>& bundles,
 				properties[full_prop_name] = property.value;
 			}
 
-			property_vec.clear();
+            for(auto & property: numerical_property_vec){
+                std::string full_prop_name(property.prefix);
+                if(full_prop_name != "") full_prop_name.append(":");
+                full_prop_name.append(property.key);
+
+                properties[full_prop_name] = property.value;
+            }
+
+            for(auto & property: boolean_property_vec){
+                std::string full_prop_name(property.prefix);
+                if(full_prop_name != "") full_prop_name.append(":");
+                full_prop_name.append(property.key);
+
+                properties[full_prop_name] = property.value;
+            }
+
+            string_property_vec.clear();
+            numerical_property_vec.clear();
+            boolean_property_vec.clear();
 
 			std::string full_obj_name(obj.prefix);
 			if(full_obj_name != "") full_obj_name.append(":");
@@ -2068,35 +2342,61 @@ export_relations_json(const std::vector<cpl_id_t>& bundles,
 				      json& document)
 {	
 	if(bundles.size() == 1){
-
 		cpl_return_t ret;
 		cpl_id_t bundle = bundles.at(0);
 
 		std::vector<cpl_relation_t> relation_vec;
 
-		if(!CPL_IS_OK(ret = cpl_get_bundle_relations(bundle, cpl_cb_collect_relation_vector, &relation_vec)))
-				return ret;
+		if(!CPL_IS_OK(ret = cpl_get_bundle_relations(bundle, cpl_cb_collect_relation_vector, &relation_vec))) {
+		    return ret;
+		}
 
-		if(relation_vec.empty()) return CPL_OK;
 
-		std::vector<cplxx_property_entry_t> property_vec;
+		if(relation_vec.empty()) {
+			return CPL_OK;
+		}
+
+        std::vector<cplxx_string_property_entry_t> string_property_vec;
+        std::vector<cplxx_numerical_property_entry_t> numerical_property_vec;
+        std::vector<cplxx_boolean_property_entry_t> boolean_property_vec;
 
 		for(auto & relation: relation_vec){
 
 			json properties;
-			if(!CPL_IS_OK(ret = cpl_get_relation_properties(relation.id, NULL, NULL,
-				cpl_cb_collect_properties_vector, &property_vec))) return ret;
+			if(!CPL_IS_OK(ret = cpl_get_relation_string_properties(relation.id, NULL, NULL,
+				cpl_cb_collect_properties_vector, &string_property_vec))) return ret;
+            if(!CPL_IS_OK(ret = cpl_get_relation_numerical_properties(relation.id, NULL, NULL,
+                cpl_cb_collect_properties_vector, &numerical_property_vec))) return ret;
+            if(!CPL_IS_OK(ret = cpl_get_relation_boolean_properties(relation.id, NULL, NULL,
+                cpl_cb_collect_properties_vector, &boolean_property_vec))) return ret;
 
-			for(auto & property: property_vec){
+            for(auto & property: string_property_vec){
+                std::string full_prop_name(property.prefix);
+                if(full_prop_name != "") full_prop_name.append(":");
+                full_prop_name.append(property.key);
 
-				std::string full_prop_name(property.prefix);
-				if(full_prop_name != "") full_prop_name.append(":");
-				full_prop_name.append(property.key);
+                properties[full_prop_name] = property.value;
+            }
 
-				properties[full_prop_name] = property.value;
-			}
+            for(auto & property: numerical_property_vec){
+                std::string full_prop_name(property.prefix);
+                if(full_prop_name != "") full_prop_name.append(":");
+                full_prop_name.append(property.key);
 
-			property_vec.clear();
+                properties[full_prop_name] = property.value;
+            }
+
+            for(auto & property: boolean_property_vec){
+                std::string full_prop_name(property.prefix);
+                if(full_prop_name != "") full_prop_name.append(":");
+                full_prop_name.append(property.key);
+
+                properties[full_prop_name] = property.value;
+            }
+
+            string_property_vec.clear();
+            numerical_property_vec.clear();
+            boolean_property_vec.clear();
 
 			cpl_object_info *from_info, *to_info;
 			bool is_from_info = false;
@@ -2169,14 +2469,16 @@ export_bundle_json(const std::vector<cpl_id_t>& bundles,
 //	if(!CPL_IS_OK(ret = export_bundle_prefixes_json(bundles, document))){
 //		return ret;
 //	}
+    for (int i = 0; i<bundles.size(); i++) {
+        const std::vector<cpl_id_t>& sub_bundles = {bundles.at(i)};
+        if(!CPL_IS_OK(ret = export_objects_json(sub_bundles, lookup_tbl, document))){
+		    return ret;
+	    }
+	    if(!CPL_IS_OK(ret = export_relations_json(sub_bundles, lookup_tbl, document))){
+		    return ret;
+	    }
+    }
 
-	if(!CPL_IS_OK(ret = export_objects_json(bundles, lookup_tbl, document))){
-		return ret;
-	}
-//
-//	if(!CPL_IS_OK(ret = export_relations_json(bundles, lookup_tbl, document))){
-//		return ret;
-//	}
 
 	json_string = document.dump();
 

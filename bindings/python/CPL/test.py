@@ -44,6 +44,7 @@ tests as well.
 import CPL
 import sys
 import tempfile
+import random
 
 prefix = 'ptst'
 iri = "python.test"
@@ -57,42 +58,49 @@ print
 print '----- Create object tests -----'
 print
 
-bundle_name = 'Bundle'
+rand = '_' + str(random.randint(0,1000000))
+bundle_name = 'Bundle' + rand
 print ('Create bundle name:' +
 	bundle_name)
-bundle = c.create_bundle(bundle_name)
-CPL.p_bundle(bundle, False)
+bundle = c.create_bundle(bundle_name, prefix)
+CPL.p_object(bundle)
 
-print ('Add bundle prefix:' + prefix + ':' + iri)
-bundle.add_prefix(prefix, iri)
-
-entity_name = 'Entity'
+entity_name = 'Entity' + rand
 entity_type = CPL.ENTITY
 print ('Create object name:' + str(entity_name) + ' type:' + str(entity_type) +
     ' bundle:' + str(bundle.id))
-entity = c.create_object(prefix, entity_name, entity_type, bundle)
+entity = c.create_object(prefix, entity_name, entity_type)
+if entity == None:
+	print "ERROR: Could not create Entity object"
+	sys.exit(1)
 CPL.p_object(entity)
 
-agent_name = 'Agent'
+agent_name = 'Agent' + rand
 agent_type = CPL.AGENT
 print ('Create object name:' +
-	str(agent_name) + ' type:' + str(agent_type) + ' bundle:' + str(bundle.id))
-agent = c.create_object(prefix, agent_name, agent_type, bundle)
+	str(agent_name) + ' type:' + str(agent_type))
+agent = c.create_object(prefix, agent_name, agent_type)
+if entity == None:
+	print "ERROR: Could not create Agent object"
+	sys.exit(1)
 CPL.p_object(agent)
 
 print('Lookup or create object:' + str(entity_name) + ' type:' + str(entity_type) +
  	' bundle:' + str(bundle.id))
-entityt = c.get_object(prefix, entity_name, entity_type, bundle = bundle)
+entityt = c.get_object(prefix, entity_name, entity_type)
 CPL.p_object(entityt)
-if entity.id != entity.id:
-	print "Lookup returned wrong object!"
+if entityt.id != entity.id:
+	print "ERROR: Lookup returned wrong object"
 	sys.exit(1)
 
-activity_name = 'Activity'
+activity_name = 'Activity' + rand
 activity_type = CPL.ACTIVITY
 print ('Create object name:' +
-	str(activity_name) + ' type:' + str(activity_type) + ' bundle:' + str(bundle.id))
-activity = c.create_object(prefix, activity_name, activity_type, bundle)
+	str(activity_name) + ' type:' + str(activity_type))
+activity = c.create_object(prefix, activity_name, activity_type)
+if activity == None:
+	print "ERROR: Could not create Activity object"
+	sys.exit(1)
 CPL.p_object(activity)
 
 # Lookup Objects
@@ -101,83 +109,91 @@ print '----- Lookup object tests -----'
 print
 
 print ('Looking up bundle name:' + str(bundle_name))
-bundle_check = c.lookup_bundle(bundle_name)
+bundle_check = c.lookup_bundle(bundle_name, prefix)
 if bundle.id != bundle_check.id:
-	sys.stdout.write('Lookup returned wrong bundle:' + str(bundle_check.id))
+	print('ERROR: Lookup returned wrong bundle:' + str(bundle_check.id))
 	sys.exit(1)
 
 print ('Looking up object name:' + str(entity_name) + ' type:' + str(entity_type))
-entity_check = c.lookup_object(prefix, entity_name, entity_type, bundle)
+entity_check = c.lookup_object(prefix, entity_name, entity_type)
 if entity.id != entity_check.id:
-	sys.stdout.write('Lookup returned wrong object:' + str(entity_check.id))
+	print('ERROR: Lookup returned wrong object:' + str(entity_check.id))
 	sys.exit(1)
 
 print ('Looking up object name:' + str(agent_name) + ' type:' + str(agent_type))
-agent_check = c.lookup_object(prefix, agent_name, agent_type, bundle)
+agent_check = c.lookup_object(prefix, agent_name, agent_type)
 if agent.id != agent_check.id:
-	sys.stdout.write('Lookup returned wrong object:' + str(agent_check.id))
+	print('ERROR: Lookup returned wrong object:' + str(agent_check.id))
 	sys.exit(1)
 
 print ('Looking up object name:' + str(activity_name) + ' type:' + str(activity_type))
-activity_check = c.lookup_object(prefix, activity_name, activity_type, bundle)
+activity_check = c.lookup_object(prefix, activity_name, activity_type)
 if activity.id != activity_check.id:
-	sys.stdout.write('Lookup returned wrong object:' + str(activity_check.id))
+	print('ERROR: Lookup returned wrong object:' + str(activity_check.id))
 	sys.exit(1)
-
-print ('Looking up object in wrong bundle name:' +
- 	str(entity_name) + ' type:' + str(entity_type) + ' bundle:Agent')
-try:
-	fail0 = c.lookup_object(prefix, entity_name, entity_type, agent)
-except LookupError:
-	pass
-else:
-	if fail0 != None:
-	 	sys.stdout.write('Lookup returned an object:' + str(fail0.id))
-	 	sys.exit(1)
 
 print 'Look up non-existent object (type failure)'
 fail1 = c.try_lookup_object(prefix, bundle_name, entity_type)
 if fail1:
-	print 'Returned an object:' + str(fail1.id)
+	print 'ERROR: Returned an object:' + str(fail1.id)
 	sys.exit(1)
 
 print 'Look up non-existent object (name failure)'
 fail2 = c.try_lookup_object(prefix, 'no-name', entity_type)
 if fail2:
-	print 'Returned an object:' + str(fail2.id)
+	print 'ERROR: Returned an object:' + str(fail2.id)
 	sys.exit(1)
 
 print 'Look up non-existent object (prefix failure)'
 fail3 = c.try_lookup_object('no-prefix', agent_name, agent_type)
 if fail3:
-	print 'Returned an object:' + str(fail3.id)
+	print 'ERROR: Returned an object:' + str(fail3.id)
 	sys.exit(1)
 
 print 'Look up all objects with name:' + str(entity_name) + ' type:' + str(entity_type)
-entity_all = c.lookup_all_objects(prefix, entity_name, entity_type, bundle)
-i = 0
-for t in entity_all:
-	CPL.p_id(t.id, with_newline = True)
-	i += 1
-	if i >= 10 and len(bundle_all) > 10:
-		print '  ... (' + str(len(entity_all)) + ' objects total)'
-		break
-
-print 'All objects'
-all_objects = c.get_all_objects(True)
-i = 0
-for t in all_objects:
-	CPL.p_id(t.object.id, with_newline = False)
-	i += 1
-	if i >= 10 and len(all_objects) > 10:
-		print '  ... (' + str(len(all_objects)) + ' objects total)'
-		break
-
-print "Lookup all objects with bundle_id:" + str(bundle.id)
-bundle_objects = c.get_bundle_objects(bundle)
-if len(bundle_objects) != 3:
-	print 'Returned wrong number of objects:' + str(len(bundle_objects))
+entity_all = c.lookup_all_objects(prefix, entity_name, entity_type)
+if len(entity_all) != 1:
+	print 'ERROR: Returned the wrong number of objects:' + str(len(entity_all))
 	sys.exit(1)
+if entity not in entity_all:
+	print 'ERROR: Lookup all objects with name is missing an object:' + str(entity.id)
+	sys.exit(1)
+
+# for t in entity_all:
+# 	CPL.p_id(t.id, with_newline = True)
+# 	i += 1
+# 	if i >= 10 and len(bundle_all) > 10:
+# 		print '  ... (' + str(len(entity_all)) + ' objects total)'
+# 		break
+
+print 'Get objects'
+all_object_infos = c.get_all_objects(prefix)
+all_objects = [e.object for e in all_object_infos]
+if bundle not in all_objects:
+	print 'ERROR: Get objects is missing an object:' + str(bundle.id)
+	sys.exit(1)
+if activity not in all_objects:
+	print 'ERROR: Get objects is missing an object:' + str(activity.id)
+	sys.exit(1)
+if agent not in all_objects:
+	print 'ERROR: Get objects is missing an object:' + str(agent.id)
+	sys.exit(1)
+if entity not in all_objects:
+	print 'ERROR: Get objects is missing an object:' + str(entity.id)
+	sys.exit(1)
+
+all_object_infos = c.get_all_objects(prefix, CPL.BUNDLE)
+all_objects = [e.object for e in all_object_infos]
+if bundle not in all_objects:
+	print 'ERROR: Get objects is missing an object object:' + str(bundle.id)
+	sys.exit(1)
+
+# for t in all_objects:
+# 	CPL.p_id(t.object.id, with_newline = False)
+# 	i += 1
+# 	if i >= 10 and len(all_objects) > 10:
+# 		print '  ... (' + str(len(all_objects)) + ' objects total)'
+# 		break
 
 # Relations
 
@@ -186,21 +202,54 @@ print '----- Create relation tests -----'
 print
 
 print 'relation wasAttributedTo from Entity to Agent'
-r1 = entity.relation_to(agent, CPL.WASATTRIBUTEDTO, bundle)
+r1 = entity.relation_to(agent, CPL.WASATTRIBUTEDTO)
 if not r1:
-	print 'ERROR: ignoring duplicate'
+	print 'ERROR: unable to create relation'
 	sys.exit(1)
 
 print 'relation wasGeneratedBy from Entity to Activity'
-r2 = entity.relation_to(activity, CPL.WASGENERATEDBY, bundle)
+r2 = activity.relation_from(entity, CPL.WASGENERATEDBY)
 if not r2:
-	print 'ERROR: ignoring duplicate'
+	print 'ERROR: unable to create relation'
 	sys.exit(1)
 
-print 'relation wasAssociatedWith from Activity to Agent'
-r3 = agent.relation_from(activity, CPL.WASASSOCIATEDWITH, bundle)
+print 'relation wasAssociatedWith from Agent to Activity'
+r3 = agent.relation_to(activity, CPL.WASASSOCIATEDWITH)
 if not r3:
-	print 'ERROR: ignoring duplicate'
+	print 'ERROR: unable to create relation'
+	sys.exit(1)
+
+print 'relation bundleRelation from bundle to r1'
+r4 = bundle.relation_to(r1, CPL.BUNDLERELATION)
+if not r3:
+	print 'ERROR: unable to create relation'
+	sys.exit(1)
+
+print 'relation bundleRelation from bundle to r2'
+r5 = bundle.relation_to(r2, CPL.BUNDLERELATION)
+if not r3:
+	print 'ERROR: unable to create relation'
+	sys.exit(1)
+
+print 'relation bundleRelation from bundle to r3'
+r6 = bundle.relation_to(r3, CPL.BUNDLERELATION)
+if not r3:
+	print 'ERROR: unable to create relation'
+	sys.exit(1)
+
+print "Lookup all objects with bundle_id:" + str(bundle.id)
+bundle_objects = c.get_bundle_objects(bundle)
+if len(bundle_objects) != 3:
+	print 'ERROR: Returned wrong number of objects:' + str(len(bundle_objects))
+	sys.exit(1)
+if entity not in bundle_objects:
+	print 'ERROR: Bundle is missing an object:' + str(entity.id)
+	sys.exit(1)
+if agent not in bundle_objects:
+	print 'ERROR: Bundle is missing an object:' + str(agent.id)
+	sys.exit(1)
+if activity not in bundle_objects:
+	print 'ERROR: Bundle is missing an object:' + str(activity.id)
 	sys.exit(1)
 
 print
@@ -210,37 +259,44 @@ print
 print 'getting relations from Entity'
 entity_anc = entity.relations(CPL.D_ANCESTORS)
 if len(entity_anc) != 2:
-	print 'Returned wrong number of relations:' + str(len(entity_anc))
+	print 'ERROR: Returned wrong number of relations:' + str(len(entity_anc))
+	sys.exit(1)
+
 
 print 'getting relations to Entity'
 entity_desc = entity.relations(CPL.D_DESCENDANTS)
 if len(entity_desc) != 0:
-	print 'Returned wrong number of relations: ' + str(len(entity_anc))
+	print 'ERROR: Returned wrong number of relations: ' + str(len(entity_anc))
+	sys.exit(1)
 
 print 'getting relations from Agent'
 agent_anc = agent.relations(CPL.D_ANCESTORS)
-if len(agent_anc) != 0:
-	print 'Returned wrong number of relations: ' + str(len(agent_anc))
+if len(agent_anc) != 1:
+	print 'ERROR: Returned wrong number of relations: ' + str(len(agent_anc))
+	sys.exit(1)
 
 print 'getting relations to Agent'
 agent_desc = agent.relations(CPL.D_DESCENDANTS)
-if len(agent_desc) != 2:
-	print 'Returned wrong number of relations: ' + str(len(agent_anc))
+if len(agent_desc) != 1:
+	print 'ERROR: Returned wrong number of relations: ' + str(len(agent_anc))
+	sys.exit(1)
 
 print 'getting relations from Activity'
 activity_anc = activity.relations(CPL.D_ANCESTORS)
-if len(activity_anc) != 1:
-	print 'Returned wrong number of relations: ' + str(len(activity_anc))
+if len(activity_anc) != 0:
+	print 'ERROR: Returned wrong number of relations: ' + str(len(activity_anc))
+	sys.exit(1)
 
 print 'getting relations to Activity'
 activity_desc = activity.relations(CPL.D_DESCENDANTS)
-if len(activity_desc) != 1:
-	print 'Returned wrong number of relations: ' + str(len(activity_anc))
+if len(activity_desc) != 2:
+	print 'ERROR: Returned wrong number of relations: ' + str(len(activity_anc))
+	sys.exit(1)
 
 print "Lookup all relations with bundle " + bundle_name
 bundle_relations = c.get_bundle_relations(bundle)
 if len(bundle_relations) != 3:
-	print 'Returned wrong number of relation: ' + str(len(bundle_relations))
+	print 'ERROR: Returned wrong number of relation: ' + str(len(bundle_relations))
 	sys.exit(1)
 
 
@@ -249,7 +305,7 @@ print
 print '----- Bundle Info -----'
 print
 
-CPL.p_bundle(bundle)
+CPL.p_object(bundle)
 
 #Object info
 print
@@ -266,70 +322,163 @@ print
 print '----- Properties -----'
 print
 
-print 'Adding LABEL/1 to entity'
-entity.add_property(prefix, 'LABEL', '1')
+print 'Adding LABEL to entity'
+ret = entity.add_string_property(prefix, 'LABEL', '1')
+if ret != CPL.OK:
+	print "ERROR: Unable to add string property. Ret: " + str(ret)
+	sys.exit(1)
 
-print 'Adding LABEL/2 to bundle'
-agent.add_property(prefix, 'LABEL', '2')
+print 'Adding LABEL to agent'
+ret = agent.add_string_property(prefix, 'LABEL', '2')
+if ret != CPL.OK:
+	print "ERROR: Unable to add string property. Ret: " + str(ret)
+	sys.exit(1)
 
-print 'Adding LABEL/3 to entity'
-activity.add_property(prefix, 'LABEL', '3')
+print 'Adding LABEL/1 to activity'
+ret = activity.add_numerical_property(prefix, 'LABEL', 3.5)
+if ret != CPL.OK:
+	print "ERROR: Unable to add numerical property. Ret: " + str(ret)
+	sys.exit(1)
 
-print 'Adding TAG/Hello to agent'
-activity.add_property(prefix, 'TAG', 'HELLO')
+print 'Adding LABEL/2 to activity'
+ret = activity.add_string_property(prefix, 'LABEL', '1')
+if ret != CPL.OK:
+	print "ERROR: Unable to add string property. Ret: " + str(ret)
+	sys.exit(1)
 
-print 'Getting properties for entity'
-print entity.properties()
+print 'Adding TAG to activity'
+ret = activity.add_boolean_property(prefix, 'TAG', True)
+if ret != CPL.OK:
+	print "ERROR: Unable to add boolean property. Ret: " + str(ret)
+	sys.exit(1)
 
-print 'Getting properties for agent'
-print agent.properties()
+print 'Getting string properties for entity'
+string_properties = entity.string_properties()
+if len(string_properties) != 1:
+	print "ERROR: Wrong number of string properties: " + str(len(string_properties))
+	sys.exit(1)
+if [prefix, 'LABEL', '1'] not in string_properties:
+	print "ERROR: Wrong property was returned"
+	sys.exit(1)
 
-print 'Getting properties for activity'
-print activity.properties()
+print 'Getting string properties for agent'
+string_properties = agent.string_properties()
+if len(string_properties) != 1:
+	print "ERROR: Wrong number of string properties: " + str(len(string_properties))
+	sys.exit(1)
+if [prefix, 'LABEL', '2'] not in string_properties:
+	print "ERROR: Wrong property was returned"
+	sys.exit(1)
 
-print 'Getting all objects with LABEL/3 property'
-tuples = c.lookup_by_property(prefix, 'LABEL', '3')
-i = 0
-for t in tuples:
-	print str(t)
-	i += 1
-	if i >= 10 and len(tuples) > 10:
-		print '  ... (' + str(len(tuples)) + ' tuples total)'
-		break
+print 'Getting numerical properties for activity'
+string_properties = activity.numerical_properties()
+if len(string_properties) != 1:
+	print "ERROR: Wrong number of numerical properties: " + str(len(string_properties))
+	sys.exit(1)
+if [prefix, 'LABEL', 3.5] not in string_properties:
+	print "ERROR: Wrong property was returned"
+	sys.exit(1)
 
-print 'Adding LABEL/1 to r1'
-r1.add_property(prefix, 'LABEL', '1')
+print 'Getting boolean properties for activity'
+string_properties = activity.boolean_properties()
+if len(string_properties) != 1:
+	print "ERROR: Wrong number of boolean properties: " + str(len(string_properties))
+	sys.exit(1)
+if [prefix, 'TAG', True] not in string_properties:
+	print "ERROR: Wrong property was returned"
+	sys.exit(1)
 
-print 'Adding LABEL/2 to r2'
-r2.add_property(prefix, 'LABEL', '2')
+print 'Lookup by numerical property'
+numerical_obj = c.lookup_by_numerical_property(prefix, 'LABEL', 3.5)
+if activity not in numerical_obj:
+	print 'ERROR: Lookup by numerical property is missing an object:' + str(activity.id)
+	sys.exit(1)
 
-print 'Adding LABEL/3 to r3'
-r3.add_property(prefix, 'LABEL', '3')
+print 'Lookup by boolean property'
+boolean_obj = c.lookup_by_boolean_property(prefix, 'TAG', True)
+if activity not in boolean_obj:
+	print 'ERROR: Lookup by boolean property is missing an object:' + str(activity.id)
+	sys.exit(1)
 
-print 'Adding TAG/Hello to r3'
-r3.add_property(prefix, 'TAG', 'Hello')
-
-print 'Getting properties for r1'
-print r1.properties()
-
-print 'Getting properties for r2'
-print r2.properties()
-
-print 'Getting properties for r3'
-print r3.properties()
+print 'Lookup by string property'
+string_obj = c.lookup_by_string_property(prefix, 'LABEL', '1')
+if entity not in string_obj:
+	print 'ERROR: Lookup by string property is missing an object:' + str(entity.id)
+	sys.exit(1)
+if activity not in string_obj:
+	print 'ERROR: Lookup by string property is missing an object:' + str(activity.id)
+	sys.exit(1)
 
 
-print 'Adding LABEL/3 to bundle'
-bundle.add_property(prefix, 'LABEL', '3')
+print 'Adding LABEL to r1'
+ret = r1.add_string_property(prefix, 'LABEL', '1')
+if ret != CPL.OK:
+	print "ERROR: Unable to add string property. Ret: " + str(ret)
+	sys.exit(1)
 
-print 'Adding TAG/Hello to bundle'
-bundle.add_property(prefix, 'TAG', 'Hello')
+print 'Adding LABEL to r2'
+ret = r2.add_string_property(prefix, 'LABEL', '2')
+if ret != CPL.OK:
+	print "ERROR: Unable to add string property. Ret: " + str(ret)
+	sys.exit(1)
 
-print 'Getting properties for bundle'
-print bundle.properties()
+print 'Adding LABEL/1 to r3'
+ret = r3.add_numerical_property(prefix, 'LABEL', 3.5)
+if ret != CPL.OK:
+	print "ERROR: Unable to add numerical property. Ret: " + str(ret)
+	sys.exit(1)
 
+print 'Adding LABEL/2 to r3'
+ret = r3.add_string_property(prefix, 'LABEL', '1')
+if ret != CPL.OK:
+	print "ERROR: Unable to add string property. Ret: " + str(ret)
+	sys.exit(1)
+
+print 'Adding TAG to r3'
+ret = r3.add_boolean_property(prefix, 'TAG', True)
+if ret != CPL.OK:
+	print "ERROR: Unable to add boolean property. Ret: " + str(ret)
+	sys.exit(1)
+
+print 'Getting string properties for r1'
+string_properties = r1.string_properties()
+if len(string_properties) != 1:
+	print "ERROR: Wrong number of string properties: " + str(len(string_properties))
+	sys.exit(1)
+if [prefix, 'LABEL', '1'] not in string_properties:
+	print "ERROR: Wrong property was returned"
+	sys.exit(1)
+
+print 'Getting string properties for r2'
+string_properties = r2.string_properties()
+if len(string_properties) != 1:
+	print "ERROR: Wrong number of string properties: " + str(len(string_properties))
+	sys.exit(1)
+if [prefix, 'LABEL', '2'] not in string_properties:
+	print "ERROR: Wrong property was returned"
+	sys.exit(1)
+
+print 'Getting numerical properties for r3'
+string_properties = r3.numerical_properties()
+if len(string_properties) != 1:
+	print "ERROR: Wrong number of numerical properties: " + str(len(string_properties))
+	sys.exit(1)
+if [prefix, 'LABEL', 3.5] not in string_properties:
+	print "ERROR: Wrong property was returned"
+	sys.exit(1)
+
+print 'Getting boolean properties for r3'
+string_properties = r3.boolean_properties()
+if len(string_properties) != 1:
+	print "ERROR: Wrong number of boolean properties: " + str(len(string_properties))
+	sys.exit(1)
+if [prefix, 'TAG', True] not in string_properties:
+	print "ERROR: Wrong property was returned"
+	sys.exit(1)
 
 # Exit
-print
 print "Closing connection"
 c.close()
+
+print
+print "All tests passed."

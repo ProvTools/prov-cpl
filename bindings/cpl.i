@@ -54,7 +54,6 @@
 typedef cpl_db_backend_t* p_cpl_db_backend_t;
 typedef cpl_session_info_t* p_cpl_session_info_t;
 typedef cpl_object_info_t* p_cpl_object_info_t;
-typedef cpl_bundle_info_t* p_cpl_bundle_info_t;
 
 inline _cpl_db_backend_t*
 cpl_dereference_pp_cpl_db_backend_t(p_cpl_db_backend_t* p) {
@@ -71,11 +70,6 @@ cpl_dereference_pp_cpl_object_info_t(p_cpl_object_info_t* p) {
     return *p;
 }
 
-inline cpl_bundle_info_t*
-cpl_dereference_pp_cpl_bundle_info_t(p_cpl_bundle_info_t* p) {
-    return *p;
-}
-
 inline cpl_session_info_t**
 cpl_convert_pp_cpl_session_info_t(p_cpl_session_info_t* p) {
     return p;
@@ -83,11 +77,6 @@ cpl_convert_pp_cpl_session_info_t(p_cpl_session_info_t* p) {
 
 inline cpl_object_info_t**
 cpl_convert_pp_cpl_object_info_t(p_cpl_object_info_t* p) {
-    return p;
-}
-
-inline cpl_bundle_info_t**
-cpl_convert_pp_cpl_bundle_info_t(p_cpl_bundle_info_t* p) {
     return p;
 }
 
@@ -141,20 +130,47 @@ cpl_convert_p_std_vector_cplxx_object_info_t_to_p_void(
     return (void*) p;
 }
 
-typedef std::vector<cplxx_property_entry_t> std_vector_cplxx_property_entry_t;
+typedef std::vector<cplxx_string_property_entry_t> std_vector_cplxx_string_property_entry_t;
 
-inline std::vector<cplxx_property_entry_t>&
-cpl_dereference_p_std_vector_cplxx_property_entry_t(
-        std_vector_cplxx_property_entry_t* p) {
+inline std::vector<cplxx_string_property_entry_t>&
+cpl_dereference_p_std_vector_cplxx_string_property_entry_t(
+        std_vector_cplxx_string_property_entry_t* p) {
     return *p;
 }
 
+typedef std::vector<cplxx_numerical_property_entry_t> std_vector_cplxx_numerical_property_entry_t;
+
+inline std::vector<cplxx_numerical_property_entry_t>&
+cpl_dereference_p_std_vector_cplxx_numerical_property_entry_t(
+        std_vector_cplxx_numerical_property_entry_t* p) {
+return *p;
+}
+
+typedef std::vector<cplxx_boolean_property_entry_t> std_vector_cplxx_boolean_property_entry_t;
+
+inline std::vector<cplxx_boolean_property_entry_t>&
+cpl_dereference_p_std_vector_cplxx_boolean_property_entry_t(
+        std_vector_cplxx_boolean_property_entry_t* p) {
+return *p;
+}
+
 inline void*
-cpl_convert_p_std_vector_cplxx_property_entry_t_to_p_void(
-        std_vector_cplxx_property_entry_t* p) {
+cpl_convert_p_std_vector_cplxx_string_property_entry_t_to_p_void(
+        std_vector_cplxx_string_property_entry_t* p) {
     return (void*) p;
 }
 
+inline void*
+cpl_convert_p_std_vector_cplxx_numerical_property_entry_t_to_p_void(
+        std_vector_cplxx_numerical_property_entry_t* p) {
+    return (void*) p;
+}
+
+inline void*
+cpl_convert_p_std_vector_cplxx_boolean_property_entry_t_to_p_void(
+        std_vector_cplxx_boolean_property_entry_t* p) {
+    return (void*) p;
+}
 typedef std::vector<cplxx_prefix_entry_t> std_vector_cplxx_prefix_entry_t;
 
 inline std::vector<cplxx_prefix_entry_t>&
@@ -198,17 +214,11 @@ cpl_dereference_pp_cpl_session_info_t(p_cpl_session_info_t* p);
 inline cpl_object_info_t*
 cpl_dereference_pp_cpl_object_info_t(p_cpl_object_info_t* p);
 
-inline cpl_bundle_info_t*
-cpl_dereference_pp_cpl_bundle_info_t(p_cpl_bundle_info_t* p);
-
 inline cpl_session_info_t**
 cpl_convert_pp_cpl_session_info_t(p_cpl_session_info_t* p);
 
 inline cpl_object_info_t**
 cpl_convert_pp_cpl_object_info_t(p_cpl_object_info_t* p);
-
-inline cpl_bundle_info_t**
-cpl_convert_pp_cpl_bundle_info_t(p_cpl_bundle_info_t* p);
 
 inline int
 cpl_is_ok(cpl_return_t ret);
@@ -230,38 +240,37 @@ cpl_is_ok(cpl_return_t ret);
 %include typemaps.i
 
 cpl_return_t
-cpl_create_bundle(const char* name,
-                  unsigned long long* OUTPUT);
+cpl_lookup_relation(const cpl_id_t from_id,
+                    const cpl_id_t to_id,
+                    const long type,
+                    unsigned long long* OUTPUT);
+
 cpl_return_t
-cpl_lookup_bundle(const char* name,
-                  unsigned long long* OUTPUT);
+cpl_lookup_object_property_wildcard(const char* value,
+                    unsigned long long* OUTPUT);
 
 cpl_return_t
 cpl_create_object(const char* prefix,
                   const char* name,
                   const int type,
-                  const cpl_id_t bundle,
                   unsigned long long* OUTPUT);
 
 cpl_return_t
 cpl_lookup_object(const char* prefix,
                   const char* name,
                   const int type,
-                  const cpl_id_t bundle_id,
                   unsigned long long* OUTPUT);
 
 cpl_return_t
 cpl_lookup_or_create_object(const char* prefix,
                             const char* name,
                             const int type,
-                            const cpl_id_t bundle,
                             unsigned long long* OUTPUT);
 
 cpl_return_t
 cpl_add_relation(const cpl_id_t from_id,
                  const cpl_id_t to_id,
                  const int type,
-                 const cpl_id_t bundle,
                  unsigned long long* OUTPUT);
 
 cpl_return_t
@@ -309,15 +318,35 @@ inline void*
 cpl_convert_p_std_vector_cplxx_object_info_t_to_p_void(
         std_vector_cplxx_object_info_t* p);
 
-%template (cplxx_property_entry_t_vector) std::vector<cplxx_property_entry_t>;
+%template (cplxx_string_property_entry_t_vector) std::vector<cplxx_string_property_entry_t>;
 
-inline std::vector<cplxx_property_entry_t>&
-cpl_dereference_p_std_vector_cplxx_property_entry_t(
-    std_vector_cplxx_property_entry_t* p);
+inline std::vector<cplxx_string_property_entry_t>&
+cpl_dereference_p_std_vector_cplxx_string_property_entry_t(
+    std_vector_cplxx_string_property_entry_t* p);
+
+%template (cplxx_numerical_property_entry_t_vector) std::vector<cplxx_numerical_property_entry_t>;
+
+inline std::vector<cplxx_numerical_property_entry_t>&
+cpl_dereference_p_std_vector_cplxx_numerical_property_entry_t(
+        std_vector_cplxx_numerical_property_entry_t* p);
+
+%template (cplxx_boolean_property_entry_t_vector) std::vector<cplxx_boolean_property_entry_t>;
+
+inline std::vector<cplxx_boolean_property_entry_t>&
+cpl_dereference_p_std_vector_cplxx_boolean_property_entry_t(
+        std_vector_cplxx_boolean_property_entry_t* p);
 
 inline void*
-cpl_convert_p_std_vector_cplxx_property_entry_t_to_p_void(
-        std_vector_cplxx_property_entry_t* p);
+cpl_convert_p_std_vector_cplxx_string_property_entry_t_to_p_void(
+        std_vector_cplxx_string_property_entry_t* p);
+
+inline void*
+cpl_convert_p_std_vector_cplxx_numerical_property_entry_t_to_p_void(
+        std_vector_cplxx_numerical_property_entry_t* p);
+
+inline void*
+cpl_convert_p_std_vector_cplxx_boolean_property_entry_t_to_p_void(
+        std_vector_cplxx_boolean_property_entry_t* p);
 
 %template (cplxx_prefix_entry_t_vector) std::vector<cplxx_prefix_entry_t>;
 
@@ -378,14 +407,12 @@ cpl_convert_p_std_vector_cpl_id_t_to_p_void(
 %pointer_functions(p_cpl_db_backend_t, cpl_db_backend_tpp);
 %pointer_functions(p_cpl_session_info_t, cpl_session_info_tpp);
 %pointer_functions(p_cpl_object_info_t, cpl_object_info_tpp);
-%pointer_functions(p_cpl_bundle_info_t, cpl_bundle_info_tpp);
 
 %pointer_functions(cpl_session_t, cpl_session_tp);
 %pointer_functions(cpl_id_t, cpl_id_tp);
 
 %pointer_functions(cpl_session_info_t, cpl_session_info_tp);
 %pointer_functions(cpl_object_info_t, cpl_object_info_tp);
-%pointer_functions(cpl_bundle_info_t, cpl_bundle_info_tp);
 
 %pointer_functions(std_vector_cpl_id_timestamp_t,
         std_vector_cpl_id_timestamp_tp);
@@ -397,8 +424,14 @@ cpl_convert_p_std_vector_cpl_id_t_to_p_void(
 %pointer_functions(std_vector_cplxx_object_info_t,
         std_vector_cplxx_object_info_tp);
 
-%pointer_functions(std_vector_cplxx_property_entry_t,
-        std_vector_cplxx_property_entry_tp);
+%pointer_functions(std_vector_cplxx_string_property_entry_t,
+        std_vector_cplxx_string_property_entry_tp);
+
+%pointer_functions(std_vector_cplxx_numerical_property_entry_t,
+        std_vector_cplxx_numerical_property_entry_tp);
+
+%pointer_functions(std_vector_cplxx_boolean_property_entry_t,
+        std_vector_cplxx_boolean_property_entry_tp);
 
 %pointer_functions(std_vector_cplxx_prefix_entry_t,
         std_vector_cplxx_prefix_entry_tp);

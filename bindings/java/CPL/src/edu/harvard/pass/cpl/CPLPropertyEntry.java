@@ -45,7 +45,7 @@ import java.util.Vector;
  *
  * @author Jackson Okuhn
  */
-public class CPLPropertyEntry {
+public class CPLPropertyEntry<T> {
 
 
     /// The namespace prefix
@@ -55,7 +55,7 @@ public class CPLPropertyEntry {
 	private String key;
 
 	/// The property value
-	private String value;
+	private T value;
 
 
 	/**
@@ -65,7 +65,7 @@ public class CPLPropertyEntry {
      * @param key the property name
      * @param value the property value
 	 */
-	CPLPropertyEntry(String prefix, String key, String value) {
+	public CPLPropertyEntry(String prefix, String key, T value) {
 		this.prefix = prefix;
         this.key = key;
         this.value = value;
@@ -141,7 +141,7 @@ public class CPLPropertyEntry {
 	 *
 	 * @return the value
 	 */
-	public String getValue() {
+	public T getValue() {
 		return value;
 	}
 
